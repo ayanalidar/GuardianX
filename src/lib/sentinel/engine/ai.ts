@@ -29,6 +29,25 @@ export interface GeneratedPatch {
   confidence: number;
 }
 
+export interface GeneratedExploit {
+  exploitCode: string;
+  description: string;
+  expectedBehavior: string; // what success looks like
+}
+
+export interface AttackerBypass {
+  bypassFound: boolean;
+  bypassCode: string; // empty if not found
+  reasoning: string;
+  technique: string; // e.g. "unicode normalization bypass"
+}
+
+export interface DefenderIteration {
+  patchedCode: string;
+  reasoning: string;
+  technique: string; // e.g. "added allowlist validation"
+}
+
 export interface ScanResult {
   vulnerabilities: DetectedVulnerability[];
 }
@@ -213,6 +232,245 @@ export async function generatePatch(
     explanation: String(parsed.explanation ?? vuln.explanation),
     reasoning: String(parsed.reasoning ?? vuln.reasoning),
     confidence: clamp01(Number(parsed.confidence) ?? vuln.confidence),
+  };
+}
+
+/**
+ * Generate a self-contained proof-of-concept exploit that demonstrates the
+ * vulnerability is genuinely exploitable in the ORIGINAL code.
+ *
+ * The exploit must:
+ *   - stub all external deps the target uses (e.g. './db', 'express')
+ *   - require the target source file by its filename
+ *   - invoke the vulnerable function with a crafted attack payload
+ *   - print EXACTLY one marker: `EXPLOIT_SUCCESS: <detail>` (vuln confirmed)
+ *     or `EXPLOIT_BLOCKED: <detail>` (vuln not exploitable)
+ *   - exit 0 on success, exit 2 if blocked
+ *
+ * We later run the SAME exploit against the patched code to prove the fix.
+ */
+export async function generateExploit(
+  filename: string,
+  sourceCode: string,
+  vuln: DetectedVulnerability
+): Promise<GeneratedExploit> {
+  const z = await sdk();
+
+  const system = [
+    "You are SentinelPatch's Red Team module. You write minimal, self-contained proof-of-concept exploits that DEMONSTRATE a vulnerability is real and exploitable.",
+    "",
+    "EXPLOIT REQUIREMENTS (runs in an isolated temp dir with ONLY the exploit file + the target source file):",
+    "- The exploit MUST require the target source file by its exact filename (e.g. require('./" + filename + "')).",
+    "- BEFORE requiring the target, stub ALL its external dependencies by writing fake module files to __dirname (e.g. write a ./db.js stub that captures queries; write a minimal ./node_modules placeholder if needed).",
+    "- Use ONLY Node.js built-ins (fs, path, crypto, etc.). NO third-party packages.",
+    "- Invoke the vulnerable function with a crafted attack payload that demonstrates exploitation.",
+    "- Detect whether exploitation succeeded (e.g. the raw query string contains your payload unescaped; a file outside the allowlist was read; an error leaked internals).",
+    "- Print EXACTLY one marker line: `EXPLOIT_SUCCESS: <short detail>` if the vuln is confirmed, or `EXPLOIT_BLOCKED: <short detail>` if it isn't.",
+    "- Call process.exit(0) on EXPLOIT_SUCCESS, process.exit(2) on EXPLOIT_BLOCKED.",
+    "- Wrap async logic in an async main() with try/catch; on error print `EXPLOIT_ERROR: <msg>` and exit(1).",
+    "",
+    "Respond with STRICT JSON only — no prose, no markdown fences.",
+  ].join("\n");
+
+  const user = [
+    `Target file: ${filename}`,
+    "",
+    "Target source:",
+    "```js",
+    sourceCode,
+    "```",
+    "",
+    "Vulnerability to exploit:",
+    `- Title: ${vuln.title}`,
+    `- Severity: ${vuln.severity}`,
+    `- Explanation: ${vuln.explanation}`,
+    `- Vulnerable snippet: ${vuln.vulnerableSnippet}`,
+    "",
+    "Write a PoC exploit. Respond with JSON in this exact shape:",
+    '{"exploitCode":string,"description":string,"expectedBehavior":string}',
+    "- description: one sentence naming the attack technique (e.g. \"SQLi auth bypass via OR 1=1\").",
+    "- expectedBehavior: what the exploit observes to confirm success.",
+  ].join("\n");
+
+  const completion = await z.chat.completions.create({
+    messages: [
+      { role: "assistant", content: system },
+      { role: "user", content: user },
+    ],
+    thinking: { type: "disabled" },
+  });
+
+  const raw = completion.choices[0]?.message?.content ?? "";
+  const parsed = safeParse<GeneratedExploit>(raw, {
+    exploitCode: "",
+    description: vuln.title,
+    expectedBehavior: "exploit demonstrates the vulnerability",
+  });
+
+  return {
+    exploitCode: String(parsed.exploitCode ?? ""),
+    description: String(parsed.description ?? vuln.title),
+    expectedBehavior: String(parsed.expectedBehavior ?? ""),
+  };
+}
+
+/**
+ * Attacker persona: given the PATCHED code + the original vuln + the original
+ * exploit, try to craft a NEW payload that bypasses the patch and re-exploits
+ * the vulnerability.
+ *
+ * If no bypass is possible, the attacker concedes (bypassFound = false).
+ */
+export async function generateBypass(
+  filename: string,
+  patchedCode: string,
+  vuln: DetectedVulnerability,
+  originalExploitCode: string,
+  previousAttempts: { technique: string; outcome: string }[]
+): Promise<AttackerBypass> {
+  const z = await sdk();
+
+  const system = [
+    "You are SentinelPatch's ADVERSARIAL ATTACKER. Your job is to break the defender's patch.",
+    "You are given the PATCHED source and the original vulnerability. Find a REAL input payload that STILL triggers the vulnerability despite the patch.",
+    "Do NOT invent theoretical issues. Only report a bypass if you can construct a concrete payload that demonstrably re-exploits the vuln.",
+    "If the patch genuinely blocks all attack vectors you can think of, concede honestly (bypassFound=false).",
+    "",
+    "BYPASS EXPLOIT REQUIREMENTS (same format as a PoC exploit):",
+    "- require the target by filename, stub external deps first, use only node built-ins.",
+    "- Print `EXPLOIT_SUCCESS: <detail>` if the bypass works, `EXPLOIT_BLOCKED: <detail>` if it doesn't.",
+    "- exit(0) on success, exit(2) on blocked.",
+    "",
+    "Respond with STRICT JSON only — no prose, no markdown fences.",
+  ].join("\n");
+
+  const user = [
+    `Target file: ${filename}`,
+    "",
+    "PATCHED source:",
+    "```js",
+    patchedCode,
+    "```",
+    "",
+    "Original vulnerability:",
+    `- Title: ${vuln.title}`,
+    `- Explanation: ${vuln.explanation}`,
+    `- Vulnerable snippet: ${vuln.vulnerableSnippet}`,
+    "",
+    "Original exploit (for reference — you must find a DIFFERENT bypass):",
+    "```js",
+    originalExploitCode,
+    "```",
+    "",
+    previousAttempts.length
+      ? "Previous bypass attempts (do NOT repeat these):\n" +
+        previousAttempts
+          .map((a, i) => `  ${i + 1}. ${a.technique} → ${a.outcome}`)
+          .join("\n")
+      : "No previous attempts.",
+    "",
+    "Find a bypass OR concede. Respond with JSON in this exact shape:",
+    '{"bypassFound":boolean,"bypassCode":string,"reasoning":string,"technique":string}',
+    "- If bypassFound is false, leave bypassCode empty and explain in reasoning why the patch holds.",
+    "- technique: short name for the attack (e.g. \"double-encoded path traversal\", \"comment-based SQLi\").",
+  ].join("\n");
+
+  const completion = await z.chat.completions.create({
+    messages: [
+      { role: "assistant", content: system },
+      { role: "user", content: user },
+    ],
+    thinking: { type: "disabled" },
+  });
+
+  const raw = completion.choices[0]?.message?.content ?? "";
+  const parsed = safeParse<AttackerBypass>(raw, {
+    bypassFound: false,
+    bypassCode: "",
+    reasoning: "Attacker conceded.",
+    technique: "none",
+  });
+
+  return {
+    bypassFound: Boolean(parsed.bypassFound),
+    bypassCode: String(parsed.bypassCode ?? ""),
+    reasoning: String(parsed.reasoning ?? ""),
+    technique: String(parsed.technique ?? "unknown"),
+  };
+}
+
+/**
+ * Defender persona: given the current patched code + the vuln + the attacker's
+ * successful bypass, produce an IMPROVED patch that blocks BOTH the original
+ * exploit AND the new bypass, without breaking legitimate functionality.
+ */
+export async function generateImprovedPatch(
+  filename: string,
+  originalCode: string,
+  currentPatchedCode: string,
+  vuln: DetectedVulnerability,
+  bypassCode: string,
+  attackerTechnique: string
+): Promise<DefenderIteration> {
+  const z = await sdk();
+
+  const system = [
+    "You are SentinelPatch's ADVERSARIAL DEFENDER. The attacker found a bypass of your patch. Iterate.",
+    "Produce a NEW full patched file that blocks the original vulnerability AND the attacker's new bypass, while preserving all legitimate behavior of the original code.",
+    "Be surgical — change as little as possible while closing the bypass.",
+    "",
+    "Respond with STRICT JSON only — no prose, no markdown fences.",
+  ].join("\n");
+
+  const user = [
+    `Target file: ${filename}`,
+    "",
+    "ORIGINAL (vulnerable) source:",
+    "```js",
+    originalCode,
+    "```",
+    "",
+    "CURRENT patched code (was bypassed):",
+    "```js",
+    currentPatchedCode,
+    "```",
+    "",
+    "Vulnerability:",
+    `- Title: ${vuln.title}`,
+    `- Explanation: ${vuln.explanation}`,
+    "",
+    "Attacker's bypass technique: " + attackerTechnique,
+    "",
+    "Attacker's bypass exploit (your new patch MUST block this):",
+    "```js",
+    bypassCode,
+    "```",
+    "",
+    "Produce an improved patch. Respond with JSON in this exact shape:",
+    '{"patchedCode":string,"reasoning":string,"technique":string}',
+    "- patchedCode is the COMPLETE improved file.",
+    "- technique: short name for your defensive change (e.g. \"switched to allowlist validation\").",
+  ].join("\n");
+
+  const completion = await z.chat.completions.create({
+    messages: [
+      { role: "assistant", content: system },
+      { role: "user", content: user },
+    ],
+    thinking: { type: "disabled" },
+  });
+
+  const raw = completion.choices[0]?.message?.content ?? "";
+  const parsed = safeParse<DefenderIteration>(raw, {
+    patchedCode: currentPatchedCode,
+    reasoning: "Defender kept the current patch.",
+    technique: "no change",
+  });
+
+  return {
+    patchedCode: String(parsed.patchedCode ?? currentPatchedCode),
+    reasoning: String(parsed.reasoning ?? ""),
+    technique: String(parsed.technique ?? "unknown"),
   };
 }
 

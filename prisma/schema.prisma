@@ -54,6 +54,14 @@ model Patch {
   testCode       String
   sandboxLogs    String
   sandboxPassed  Boolean  @default(false)
+  // PoC exploit playground
+  exploitCode    String? // self-contained PoC that demonstrates exploitation
+  exploitOriginalResult String? // JSON: {success, output} running exploit vs original
+  exploitPatchedResult  String? // JSON: {success, output} running exploit vs patched
+  // Adversarial red-team / blue-team loop
+  adversarialRounds    Int      @default(0)
+  adversarialWon       Boolean  @default(false) // defender won (attacker conceded)
+  adversarialTranscript String? // JSON array of rounds
   status         String   @default("pending") // pending | approved | rejected
   createdAt      DateTime @default(now())
   approvedAt     DateTime?

@@ -11,9 +11,11 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Crosshair,
   FileCode2,
   ShieldX,
   Sparkles,
+  Swords,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -100,17 +102,37 @@ export function PatchCard({ patch, onSelect }: PatchCardProps) {
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
-          {patch.sandbox_passed ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
-              <CheckCircle2 className="size-3" />
-              Sandbox Passed
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-red-300">
-              <ShieldX className="size-3" />
-              Sandbox Failed
-            </span>
-          )}
+          <div className="flex flex-col items-end gap-1.5">
+            {patch.sandbox_passed ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                <CheckCircle2 className="size-3" />
+                Sandbox Passed
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-red-300">
+                <ShieldX className="size-3" />
+                Sandbox Failed
+              </span>
+            )}
+            {patch.exploit_confirmed && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-red-300">
+                <Crosshair className="size-2.5" />
+                Exploit proven
+              </span>
+            )}
+            {patch.adversarial_rounds > 0 && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+                  patch.adversarial_won
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                    : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                }`}
+              >
+                <Swords className="size-2.5" />
+                {patch.adversarial_won ? "Defended" : `R${patch.adversarial_rounds}`}
+              </span>
+            )}
+          </div>
           <ChevronRight className="size-4 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-400" />
         </div>
       </div>

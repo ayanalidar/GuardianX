@@ -80,3 +80,43 @@ Stage Summary:
 - Delivered a genuinely novel, fully-working autonomous AI security patch tool — not a mock. Real AI vulnerability detection → real patch generation → real isolated sandbox execution (bun, with real exit codes) → live socket.io pipeline streaming → human-in-the-loop review with AI chat → real application of approved patches.
 - Key artifacts: prisma/schema.prisma (5 models), scripts/seed.ts (3 vulnerable codebases), src/lib/sentinel/engine/{ai,sandbox,diff,pipeline}.ts, src/lib/sentinel/{api,broadcaster,use-pipeline-socket}.ts, mini-services/sentinel-engine/index.ts (socket.io relay, port 3003), src/app/api/{codebases,scans,patches,stats}/**, src/components/sentinel/{stats-bar,patch-card,patch-review-dialog,diff-viewer,sandbox-logs,chat-panel,codebase-card,codebase-viewer,pipeline-view}.tsx, src/app/page.tsx.
 - Verified: real scan produced 4 patches (2 sandbox-passed), live event streaming, AI chat gave context-aware technical answers, approve applied the patch. `bun run lint` clean. Both services (Next.js :3000 + engine :3003) functional.
+
+---
+Task ID: 3
+Agent: main (Z.ai Code)
+Task: Add PoC Exploit Playground + Adversarial Red-Team/Blue-Team Loop to SentinelPatch — AI proves each vuln is exploitable, patches it, then a second AI persona attacks its own patch and iterates until the defender wins.
+
+Work Log:
+- Extended Prisma Patch model with: exploitCode, exploitOriginalResult (JSON), exploitPatchedResult (JSON), adversarialRounds, adversarialWon, adversarialTranscript (JSON array of rounds). Pushed schema (additive, no data loss).
+- Added 3 new AI functions to src/lib/sentinel/engine/ai.ts:
+  - generateExploit(): red-team PoC that requires the target file, stubs external deps, fires a crafted payload, prints EXPLOIT_SUCCESS/EXPLOIT_BLOCKED markers.
+  - generateBypass(): attacker persona that finds a NEW payload bypassing the current patch, or concedes honestly.
+  - generateImprovedPatch(): defender persona that iterates the patch to block both the original exploit and the new bypass.
+- Added runExploit() to sandbox.ts: writes exploit + target source to an isolated temp dir, runs `bun run exploit.js`, parses EXPLOIT_SUCCESS/EXPLOIT_BLOCKED/EXPLOIT_ERROR markers from stdout/stderr, returns {success, blocked, detail, logs}.
+- Rewrote the per-vuln pipeline loop in pipeline.ts to run 3 phases per vulnerability:
+  - Phase A (exploit): generate PoC → run vs ORIGINAL (should succeed, proves vuln) → run vs PATCHED (should be blocked, proves fix).
+  - Phase B (functionality): existing sandbox test run.
+  - Phase C (adversarial arena, ≤2 rounds): attacker tries a bypass → if found & confirmed by runExploit, defender iterates → re-verify original exploit blocked + bypass blocked → loop. Defender wins when attacker concedes or all bypasses blocked.
+  - Persists exploitCode, exploit results, adversarialRounds, adversarialWon, adversarialTranscript (full round-by-round JSON) on the Patch.
+  - Streams ~15 live pipeline events per vuln (exploit gen, vs original, vs patched, each adversarial round, defender iterate, verdict).
+- Capped analyzeCodebase maxFindings=2 and MAX_ROUNDS=2 so a full scan (2 vulns × 2 rounds) completes in ~95s.
+- Extended API: GET /api/patches/[id] now returns exploit_code, exploit_original_result, exploit_patched_result, adversarial_rounds, adversarial_won, adversarial_transcript. GET /api/patches/pending now returns has_exploit, exploit_confirmed, adversarial_rounds, adversarial_won for card badges.
+- Added POST /api/patches/[id]/run-exploit endpoint: lets the UI re-run the stored PoC against original OR patched code live, returns real stdout/stderr/exit/logs.
+- Updated API client types (PatchDetail, PatchSummary, RunExploitResponse, AdversarialRound, ExploitRunResult) + sentinelApi.runExploit() method.
+- Built ExploitPlayground component: side-by-side "vs Original (vulnerable)" / "vs Patched (fixed)" cards each with a Run button; shows EXPLOITED (red) / BLOCKED (green) / INCONCLUSIVE badges + detail + truncated logs after running; shows the full exploit code in a terminal panel.
+- Built AdversarialArena component: verdict banner (Defender Victory / Inconclusive) + round-by-round cards, each split into Attacker (technique, reasoning, bypass result) vs Defender (technique, reasoning, verification chips showing "original blocked"/"bypass blocked"). Animated entry.
+- Wired both into PatchReviewDialog as 2 new tabs (Exploit, Arena), making 6 tabs total. Exploit tab is the default when an exploit exists. Tab triggers show status dots (red dot = exploit proven, green/amber dot = arena outcome).
+- Updated PatchCard to show "EXPLOIT PROVEN" + "DEFENDED"/"R{n}" badges when applicable.
+- Verified end-to-end with Agent Browser + VLM:
+  - Scan on auth-service.js completed in 95s, produced 2 patches.
+  - Both patches: exploit_confirmed=True, adversarial_won=True (defender won).
+  - Patch cards show EXPLOIT PROVEN + DEFENDED badges (VLM confirmed).
+  - Modal opens on Exploit tab by default with side-by-side vs Original / vs Patched cards + Run buttons (VLM confirmed).
+  - Clicked Run → vs Original shows EXPLOITED (red), vs Patched shows BLOCKED (green) — the exact "wow" moment: same exploit proves the vuln is real AND the fix works (VLM confirmed).
+  - Arena tab shows "Defender Victory" banner + round-by-round Attacker vs Defender cards with "Patch held" outcome (VLM confirmed).
+  - `bun run lint` clean.
+
+Stage Summary:
+- Delivered the two headline features: PoC Exploit Playground + Adversarial Red-Team/Blue-Team Loop. SentinelPatch is now a closed autonomous arena: AI finds vuln → AI proves it's exploitable (real PoC, real execution) → AI patches it → AI tries to break its own patch → AI iterates → human watches the exploit fail against the final fix.
+- Key artifacts: 3 new AI functions (generateExploit, generateBypass, generateImprovedPatch), runExploit sandbox runner, extended pipeline with 3-phase per-vuln loop + adversarial arena, run-exploit API endpoint, ExploitPlayground + AdversarialArena components, 6-tab modal.
+- Verified: scan produced 2 patches both with exploit-proven + defender-won; exploit playground shows EXPLOITED vs original + BLOCKED vs patched live; arena shows Defender Victory with round transcript. Lint clean. Both services running.

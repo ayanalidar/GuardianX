@@ -23,6 +23,12 @@ export async function GET() {
       ai_explanation: p.aiExplanation,
       confidence: p.confidence,
       sandbox_passed: p.sandboxPassed,
+      has_exploit: !!p.exploitCode,
+      exploit_confirmed:
+        !!p.exploitOriginalResult &&
+        /"success":\s*true/.test(p.exploitOriginalResult),
+      adversarial_rounds: p.adversarialRounds,
+      adversarial_won: p.adversarialWon,
       created_at: p.createdAt.toISOString(),
     }))
   );

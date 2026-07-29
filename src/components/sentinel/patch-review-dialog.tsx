@@ -15,6 +15,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DiffViewer } from "./diff-viewer";
 import { SandboxLogs } from "./sandbox-logs";
 import { ChatPanel } from "./chat-panel";
+import { ExploitPlayground } from "./exploit-playground";
+import { AdversarialArena } from "./adversarial-arena";
 import { useToast } from "@/hooks/use-toast";
 import {
   sentinelApi,
@@ -31,6 +33,7 @@ import {
   Brain,
   CheckCircle2,
   Clock,
+  Crosshair,
   FileCode2,
   Gauge,
   Loader2,
@@ -38,6 +41,7 @@ import {
   ShieldCheck,
   ShieldX,
   Sparkles,
+  Swords,
   XCircle,
 } from "lucide-react";
 
@@ -240,36 +244,58 @@ export function PatchReviewDialog({
                 </section>
               )}
 
-              {/* Tabbed: Diff / Sandbox / Test / Chat */}
-              <Tabs defaultValue="diff" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 bg-zinc-900/60 text-zinc-400">
+              {/* Tabbed: Diff / Sandbox / Exploit / Arena / Test / Chat */}
+              <Tabs defaultValue={detail.exploit_code ? "exploit" : "diff"} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 bg-zinc-900/60 text-zinc-400 sm:grid-cols-6">
                   <TabsTrigger
                     value="diff"
                     className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
                   >
                     <FileCode2 className="size-3.5" />
-                    Diff
+                    <span className="hidden sm:inline">Diff</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="sandbox"
                     className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
                   >
                     <ShieldCheck className="size-3.5" />
-                    Sandbox
+                    <span className="hidden sm:inline">Sandbox</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="exploit"
+                    className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+                  >
+                    <Crosshair className="size-3.5" />
+                    <span className="hidden sm:inline">Exploit</span>
+                    {detail.exploit_original_result?.success && (
+                      <span className="ml-0.5 size-1.5 rounded-full bg-red-500" />
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="arena"
+                    className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+                  >
+                    <Swords className="size-3.5" />
+                    <span className="hidden sm:inline">Arena</span>
+                    {detail.adversarial_rounds > 0 && (
+                      <span
+                        className={`ml-0.5 size-1.5 rounded-full ${detail.adversarial_won ? "bg-emerald-500" : "bg-amber-500"}`}
+                      />
+                    )}
                   </TabsTrigger>
                   <TabsTrigger
                     value="test"
                     className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
                   >
                     <FileCode2 className="size-3.5" />
-                    Test
+                    <span className="hidden sm:inline">Test</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="chat"
                     className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
                   >
                     <MessageSquare className="size-3.5" />
-                    Chat
+                    <span className="hidden sm:inline">Chat</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -281,6 +307,22 @@ export function PatchReviewDialog({
                 </TabsContent>
                 <TabsContent value="sandbox" className="mt-3">
                   <SandboxLogs logs={detail.sandbox_logs} />
+                </TabsContent>
+                <TabsContent value="exploit" className="mt-3">
+                  <ExploitPlayground
+                    patchId={detail.patch_id}
+                    exploitCode={detail.exploit_code}
+                    originalResult={detail.exploit_original_result}
+                    patchedResult={detail.exploit_patched_result}
+                    description={detail.exploit_code ? "AI-generated proof of concept" : undefined}
+                  />
+                </TabsContent>
+                <TabsContent value="arena" className="mt-3">
+                  <AdversarialArena
+                    rounds={detail.adversarial_transcript}
+                    won={detail.adversarial_won}
+                    totalRounds={detail.adversarial_rounds}
+                  />
                 </TabsContent>
                 <TabsContent value="test" className="mt-3">
                   <DiffViewer

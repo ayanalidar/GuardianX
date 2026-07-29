@@ -52,6 +52,10 @@ export interface PatchSummary {
   ai_explanation: string;
   confidence: number;
   sandbox_passed: boolean;
+  has_exploit: boolean;
+  exploit_confirmed: boolean;
+  adversarial_rounds: number;
+  adversarial_won: boolean;
   created_at: string;
 }
 
@@ -60,6 +64,42 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   created_at: string;
+}
+
+export interface ExploitRunResult {
+  success: boolean;
+  blocked: boolean;
+  detail: string;
+  logs: string;
+  durationMs?: number;
+}
+
+export interface AdversarialRound {
+  round: number;
+  attackerTechnique: string;
+  attackerReasoning: string;
+  bypassFound: boolean;
+  bypassResult: {
+    success: boolean;
+    detail: string;
+    logs: string;
+  } | null;
+  defender: {
+    technique: string;
+    reasoning: string;
+    patchedCode: string;
+  } | null;
+  defenseVerification: {
+    originalBlocked: boolean;
+    bypassBlocked: boolean;
+    originalLogs: string | null;
+    bypassLogs: string;
+  } | null;
+  outcome:
+    | "attacker-conceded"
+    | "bypass-unconfirmed"
+    | "defender-won-round"
+    | "defender-partial";
 }
 
 export interface PatchDetail extends PatchSummary {
@@ -72,7 +112,28 @@ export interface PatchDetail extends PatchSummary {
   sandbox_logs: string;
   status: PatchStatus;
   approved_at: string | null;
+  // exploit playground
+  exploit_code: string | null;
+  exploit_original_result: ExploitRunResult | null;
+  exploit_patched_result: ExploitRunResult | null;
+  // adversarial arena
+  adversarial_rounds: number;
+  adversarial_won: boolean;
+  adversarial_transcript: AdversarialRound[];
   chat: ChatMessage[];
+}
+
+export interface RunExploitResponse {
+  target: "original" | "patched";
+  success: boolean;
+  blocked: boolean;
+  detail: string;
+  exit_code: number | null;
+  duration_ms: number;
+  timed_out: boolean;
+  stdout: string;
+  stderr: string;
+  logs: string;
 }
 
 export interface PatchStats {
@@ -151,6 +212,11 @@ export const sentinelApi = {
     http<{ role: "assistant"; content: string; created_at: string }>(
       `/api/patches/${encodeURIComponent(patchId)}/chat`,
       { method: "POST", body: JSON.stringify({ message }) }
+    ),
+  runExploit: (patchId: string, target: "original" | "patched") =>
+    http<RunExploitResponse>(
+      `/api/patches/${encodeURIComponent(patchId)}/run-exploit`,
+      { method: "POST", body: JSON.stringify({ target }) }
     ),
 
   // stats
