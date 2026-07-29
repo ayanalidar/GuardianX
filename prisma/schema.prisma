@@ -1,0 +1,27 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Patch {
+  id             String   @id @default(cuid())
+  patchId        String   @unique
+  title          String
+  severity       String   @default("high") // critical | high | medium | low
+  cve            String?
+  affectedFile   String
+  aiExplanation  String
+  diffPayload    String
+  sandboxLogs    String
+  sandboxPassed  Boolean  @default(true)
+  status         String   @default("pending") // pending | approved | rejected
+  createdAt      DateTime @default(now())
+  approvedAt     DateTime?
+}
