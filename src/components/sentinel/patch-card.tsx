@@ -12,13 +12,32 @@ import {
   ChevronRight,
   Clock,
   FileCode2,
-  ShieldCheck,
+  ShieldX,
+  Sparkles,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface PatchCardProps {
   patch: PatchSummary;
   onSelect: (patch: PatchSummary) => void;
+}
+
+function ConfidencePill({ value }: { value: number }) {
+  const pct = Math.round(value * 100);
+  const color =
+    pct >= 80
+      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+      : pct >= 60
+        ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+        : "border-red-500/40 bg-red-500/10 text-red-300";
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${color}`}
+    >
+      <Sparkles className="size-2.5" />
+      {pct}% confidence
+    </span>
+  );
 }
 
 export function PatchCard({ patch, onSelect }: PatchCardProps) {
@@ -54,6 +73,9 @@ export function PatchCard({ patch, onSelect }: PatchCardProps) {
             <span className="font-mono text-[11px] text-zinc-500">
               {patch.patch_id}
             </span>
+            <span className="rounded-full border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-[10px] text-zinc-400">
+              {patch.codebase_name}
+            </span>
           </div>
 
           <h3 className="truncate text-base font-semibold text-zinc-100">
@@ -73,6 +95,7 @@ export function PatchCard({ patch, onSelect }: PatchCardProps) {
               <Clock className="size-3" />
               {formatRelativeTime(patch.created_at)}
             </span>
+            <ConfidencePill value={patch.confidence} />
           </div>
         </div>
 
@@ -84,7 +107,7 @@ export function PatchCard({ patch, onSelect }: PatchCardProps) {
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-red-300">
-              <ShieldCheck className="size-3" />
+              <ShieldX className="size-3" />
               Sandbox Failed
             </span>
           )}

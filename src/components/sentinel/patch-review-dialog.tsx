@@ -11,13 +11,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DiffViewer } from "./diff-viewer";
 import { SandboxLogs } from "./sandbox-logs";
+import { ChatPanel } from "./chat-panel";
 import { useToast } from "@/hooks/use-toast";
 import {
   sentinelApi,
   type PatchDetail,
   type PatchSummary,
+  type ChatMessage,
 } from "@/lib/sentinel/api";
 import {
   severityStyles,
@@ -25,11 +28,15 @@ import {
 } from "@/lib/sentinel/utils";
 import {
   Bug,
+  Brain,
   CheckCircle2,
   Clock,
   FileCode2,
+  Gauge,
   Loader2,
+  MessageSquare,
   ShieldCheck,
+  ShieldX,
   Sparkles,
   XCircle,
 } from "lucide-react";
@@ -51,6 +58,7 @@ export function PatchReviewDialog({
   const [detail, setDetail] = useState<PatchDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<"approve" | "reject" | null>(null);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
 
   const patchId = patch?.patch_id ?? null;
 
@@ -59,31 +67,28 @@ export function PatchReviewDialog({
       setDetail(null);
       setLoading(false);
       setAction(null);
+      setChat([]);
       return;
     }
-
     let cancelled = false;
     setLoading(true);
     setDetail(null);
-
     sentinelApi
       .getPatch(patchId)
-      .then((data) => {
-        if (!cancelled) setDetail(data);
+      .then((d) => {
+        if (cancelled) return;
+        setDetail(d);
+        setChat(d.chat ?? []);
       })
       .catch((err: Error) => {
-        if (!cancelled) {
-          toast({
-            variant: "destructive",
-            title: "Failed to load patch",
-            description: err.message,
-          });
-        }
+        if (cancelled) return;
+        toast({
+          variant: "destructive",
+          title: "Failed to load patch",
+          description: err.message,
+        });
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
+      .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
@@ -124,10 +129,12 @@ export function PatchReviewDialog({
 
   const severity = detail?.severity ?? patch?.severity ?? "high";
   const style = severityStyles[severity];
+  const confidence = detail?.confidence ?? patch?.confidence ?? 0;
+  const sandboxPassed = detail?.sandbox_passed ?? patch?.sandbox_passed ?? false;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] w-full gap-0 overflow-hidden border-zinc-800 bg-zinc-950 p-0 text-zinc-100 sm:max-w-3xl">
+      <DialogContent className="max-h-[94vh] w-full gap-0 overflow-hidden border-zinc-800 bg-zinc-950 p-0 text-zinc-100 sm:max-w-4xl">
         {/* Header */}
         <DialogHeader className="gap-3 border-b border-zinc-800 px-5 py-4 sm:px-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -147,76 +154,148 @@ export function PatchReviewDialog({
             <span className="font-mono text-[11px] text-zinc-500">
               {patchId}
             </span>
+            <span className="rounded-full border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-[10px] text-zinc-400">
+              {patch?.codebase_name}
+            </span>
           </div>
-          <DialogTitle className="text-lg font-semibold text-zinc-50">
+          <DialogTitle className="pr-8 text-lg font-semibold text-zinc-50">
             {patch?.title ?? "Review AI Patch"}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            Review the proposed AI-generated security patch, inspect the diff
-            and sandbox logs, then approve or reject it.
+            Review the AI-generated security patch with diff, sandbox logs, AI
+            reasoning, and a live chat with the model.
           </DialogDescription>
         </DialogHeader>
 
         {/* Body */}
-        <div className="custom-scrollbar max-h-[calc(92vh-9rem)] overflow-y-auto px-5 py-5 sm:px-6">
+        <div className="custom-scrollbar max-h-[calc(94vh-10rem)] overflow-y-auto px-5 py-5 sm:px-6">
           {loading ? (
             <ReviewSkeleton />
           ) : detail ? (
-            <div className="space-y-6">
-              {/* Meta row */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-500">
-                <span className="inline-flex items-center gap-1.5 font-mono">
-                  <FileCode2 className="size-3.5" />
-                  {detail.affected_file}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock className="size-3.5" />
-                  {formatRelativeTime(detail.created_at)}
-                </span>
-                {detail.sandbox_passed ? (
-                  <span className="inline-flex items-center gap-1.5 text-emerald-300">
-                    <CheckCircle2 className="size-3.5" />
-                    Sandbox Passed
+            <div className="space-y-5">
+              {/* Meta + confidence + sandbox verdict */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <MetaCard icon={FileCode2} label="Affected File" value={detail.affected_file} mono />
+                <MetaCard
+                  icon={Clock}
+                  label="Generated"
+                  value={formatRelativeTime(detail.created_at)}
+                />
+                <MetaCard
+                  icon={sandboxPassed ? CheckCircle2 : ShieldX}
+                  label="Sandbox"
+                  value={sandboxPassed ? "PASSED" : "FAILED"}
+                  accent={sandboxPassed ? "text-emerald-300" : "text-red-300"}
+                />
+              </div>
+
+              {/* Confidence meter */}
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    <Gauge className="size-3.5 text-emerald-400" />
+                    AI Confidence
+                  </div>
+                  <span
+                    className={`text-sm font-semibold tabular-nums ${
+                      confidence >= 0.8
+                        ? "text-emerald-300"
+                        : confidence >= 0.6
+                          ? "text-amber-300"
+                          : "text-red-300"
+                    }`}
+                  >
+                    {(confidence * 100).toFixed(0)}%
                   </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-red-300">
-                    <ShieldCheck className="size-3.5" />
-                    Sandbox Failed
-                  </span>
-                )}
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      confidence >= 0.8
+                        ? "bg-emerald-500"
+                        : confidence >= 0.6
+                          ? "bg-amber-500"
+                          : "bg-red-500"
+                    }`}
+                    style={{ width: `${Math.round(confidence * 100)}%` }}
+                  />
+                </div>
               </div>
 
               {/* AI explanation */}
               <section className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  <Sparkles className="size-3.5 text-emerald-400" />
-                  AI Analysis
-                </div>
+                <SectionLabel icon={Sparkles} text="AI Explanation" />
                 <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 text-sm leading-relaxed text-zinc-300">
                   {detail.ai_explanation}
                 </div>
               </section>
 
-              {/* Diff */}
-              <section className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  <FileCode2 className="size-3.5 text-emerald-400" />
-                  Proposed Changes
-                </div>
-                <DiffViewer
-                  diff={detail.diff_payload}
-                  filename={detail.affected_file}
-                />
-              </section>
+              {/* AI reasoning */}
+              {detail.ai_reasoning && (
+                <section className="space-y-2">
+                  <SectionLabel icon={Brain} text="AI Reasoning Trace" />
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-sm leading-relaxed text-zinc-400">
+                    {detail.ai_reasoning}
+                  </div>
+                </section>
+              )}
 
-              {/* Sandbox logs */}
-              <section className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  <ShieldCheck className="size-3.5 text-emerald-400" />
-                  Sandbox Verification Logs
-                </div>
-                <SandboxLogs logs={detail.sandbox_logs} />
-              </section>
+              {/* Tabbed: Diff / Sandbox / Test / Chat */}
+              <Tabs defaultValue="diff" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 bg-zinc-900/60 text-zinc-400">
+                  <TabsTrigger
+                    value="diff"
+                    className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+                  >
+                    <FileCode2 className="size-3.5" />
+                    Diff
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="sandbox"
+                    className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+                  >
+                    <ShieldCheck className="size-3.5" />
+                    Sandbox
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="test"
+                    className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+                  >
+                    <FileCode2 className="size-3.5" />
+                    Test
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="chat"
+                    className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+                  >
+                    <MessageSquare className="size-3.5" />
+                    Chat
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="diff" className="mt-3">
+                  <DiffViewer
+                    diff={detail.diff_payload}
+                    filename={detail.affected_file}
+                  />
+                </TabsContent>
+                <TabsContent value="sandbox" className="mt-3">
+                  <SandboxLogs logs={detail.sandbox_logs} />
+                </TabsContent>
+                <TabsContent value="test" className="mt-3">
+                  <DiffViewer
+                    diff={detail.test_code}
+                    filename="generated-test.js"
+                  />
+                </TabsContent>
+                <TabsContent value="chat" className="mt-3">
+                  <ChatPanel
+                    patchId={detail.patch_id}
+                    initialMessages={chat}
+                    onMessagesChange={setChat}
+                  />
+                </TabsContent>
+              </Tabs>
             </div>
           ) : (
             <div className="py-16 text-center text-sm text-zinc-500">
@@ -228,12 +307,11 @@ export function PatchReviewDialog({
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 border-t border-zinc-800 bg-zinc-950/80 px-5 py-4 sm:px-6">
           <p className="hidden text-xs text-zinc-500 sm:block">
-            Approving will apply the patch to the target codebase.
+            Approving applies the patch to the codebase source.
           </p>
           <div className="flex w-full gap-3 sm:w-auto">
             <Button
               variant="outline"
-              size="default"
               onClick={() => handleAction("reject")}
               disabled={loading || action !== null}
               className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white"
@@ -246,7 +324,6 @@ export function PatchReviewDialog({
               Reject
             </Button>
             <Button
-              size="default"
               onClick={() => handleAction("approve")}
               disabled={loading || action !== null}
               className="bg-emerald-600 text-white hover:bg-emerald-500"
@@ -265,26 +342,62 @@ export function PatchReviewDialog({
   );
 }
 
+function SectionLabel({
+  icon: Icon,
+  text,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  text: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+      <Icon className="size-3.5 text-emerald-400" />
+      {text}
+    </div>
+  );
+}
+
+function MetaCard({
+  icon: Icon,
+  label,
+  value,
+  mono,
+  accent,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  mono?: boolean;
+  accent?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+      <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+        <Icon className="size-3" />
+        {label}
+      </div>
+      <div
+        className={`mt-1 truncate text-sm ${mono ? "font-mono" : ""} ${accent ?? "text-zinc-200"}`}
+        title={value}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function ReviewSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="flex gap-3">
-        <Skeleton className="h-4 w-24 bg-zinc-800" />
-        <Skeleton className="h-4 w-32 bg-zinc-800" />
-        <Skeleton className="h-4 w-20 bg-zinc-800" />
+    <div className="space-y-5">
+      <div className="grid grid-cols-3 gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 bg-zinc-800" />
+        ))}
       </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-32 bg-zinc-800" />
-        <Skeleton className="h-20 w-full bg-zinc-800" />
-      </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-32 bg-zinc-800" />
-        <Skeleton className="h-48 w-full bg-zinc-800" />
-      </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-32 bg-zinc-800" />
-        <Skeleton className="h-40 w-full bg-zinc-800" />
-      </div>
+      <Skeleton className="h-4 w-32 bg-zinc-800" />
+      <Skeleton className="h-20 w-full bg-zinc-800" />
+      <Skeleton className="h-4 w-32 bg-zinc-800" />
+      <Skeleton className="h-40 w-full bg-zinc-800" />
     </div>
   );
 }

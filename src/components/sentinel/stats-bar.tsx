@@ -1,7 +1,13 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { Clock, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
+import {
+  Clock,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldX,
+  Database,
+} from "lucide-react";
 import type { PatchStats } from "@/lib/sentinel/api";
 
 interface StatsBarProps {
@@ -46,11 +52,18 @@ const STATS: StatDef[] = [
     accent: "text-zinc-300",
     iconWrap: "bg-zinc-500/10 border-zinc-500/30 text-zinc-400",
   },
+  {
+    key: "codebases",
+    label: "Codebases",
+    icon: Database,
+    accent: "text-sky-300",
+    iconWrap: "bg-sky-500/10 border-sky-500/30 text-sky-400",
+  },
 ];
 
 export function StatsBar({ stats, loading }: StatsBarProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
       {STATS.map((s) => {
         const value = stats ? stats[s.key] : null;
         return (

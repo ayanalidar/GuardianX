@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// SentinelPatch — autonomous AI security patch pipeline.
+// Data model: Codebase -> Scan -> Patch(es) -> PipelineEvent(s) + ChatMessage(s).
 
 generator client {
   provider = "prisma-client-js"
@@ -10,18 +10,72 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Codebase {
+  id          String   @id @default(cuid())
+  name        String
+  language    String   @default("javascript")
+  description String?
+  sourceCode  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  scans       Scan[]
+  patches     Patch[]
+}
+
+model Scan {
+  id          String   @id @default(cuid())
+  codebaseId  String
+  codebase    Codebase @relation(fields: [codebaseId], references: [id], onDelete: Cascade)
+  status      String   @default("queued") // queued | analyzing | patching | sandboxing | completed | failed
+  stageLabel  String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  patches     Patch[]
+  events      PipelineEvent[]
+}
+
 model Patch {
   id             String   @id @default(cuid())
-  patchId        String   @unique
+  patchId        String   @unique // SP-YYYY-NNNN
+  codebaseId     String
+  codebase       Codebase @relation(fields: [codebaseId], references: [id], onDelete: Cascade)
+  scanId         String
+  scan           Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
   title          String
-  severity       String   @default("high") // critical | high | medium | low
+  severity       String // critical | high | medium | low
   cve            String?
   affectedFile   String
   aiExplanation  String
+  aiReasoning    String
+  confidence     Float    @default(0)
+  originalCode   String
+  patchedCode    String
   diffPayload    String
+  testCode       String
   sandboxLogs    String
-  sandboxPassed  Boolean  @default(true)
+  sandboxPassed  Boolean  @default(false)
   status         String   @default("pending") // pending | approved | rejected
   createdAt      DateTime @default(now())
   approvedAt     DateTime?
+  chatMessages   ChatMessage[]
+}
+
+model PipelineEvent {
+  id        String   @id @default(cuid())
+  scanId    String
+  scan      Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  stage     String // queued | analyzing | patching | sandboxing | reviewing | completed | failed
+  message   String
+  level     String   @default("info") // info | success | warning | error
+  meta      String?
+  createdAt DateTime @default(now())
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  patchId   String
+  patch     Patch    @relation(fields: [patchId], references: [id], onDelete: Cascade)
+  role      String // user | assistant
+  content   String
+  createdAt DateTime @default(now())
 }
