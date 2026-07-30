@@ -31,6 +31,7 @@ import { FindingDialog } from "./finding-dialog";
 import {
   AlertTriangle,
   Crosshair,
+  FileDown,
   Loader2,
   Plus,
   ShieldCheck,
@@ -272,9 +273,22 @@ export function RedAgentPanel() {
           {/* findings */}
           {findings.length > 0 && (
             <div>
-              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                <Skull className="size-3 text-red-400" />
-                Findings ({findings.length})
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  <Skull className="size-3 text-red-400" />
+                  Findings ({findings.length})
+                </div>
+                {activeEngagement && findings.length > 0 && (
+                  <a
+                    href={sentinelApi.reportUrl(activeEngagement.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-emerald-600 bg-emerald-600/10 px-2.5 py-1 text-[11px] font-medium text-emerald-300 transition-colors hover:bg-emerald-600/20"
+                  >
+                    <FileDown className="size-3" />
+                    VAPT Report (PDF)
+                  </a>
+                )}
               </div>
               <div className="space-y-2">
                 <AnimatePresence mode="popLayout">

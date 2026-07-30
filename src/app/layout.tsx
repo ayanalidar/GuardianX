@@ -14,32 +14,35 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SentinelPatch — AI Security Patch Review",
+  title: "GuardianX — Autonomous Security Operations Platform",
   description:
-    "SentinelPatch autonomously generates, sandboxes, and queues security patches for human approval. Review diffs, inspect sandbox logs, and ship fixes with confidence.",
+    "GuardianX autonomously scans code, generates + sandbox-tests patches, attacks live targets with the RedAgent VAPT engine, and documents exposed secrets. AI-driven SAST, DAST, and human-in-the-loop patch approval in one platform.",
   keywords: [
-    "SentinelPatch",
+    "GuardianX",
+    "VAPT",
+    "penetration testing",
     "security",
     "vulnerability",
     "patch management",
     "AI security",
-    "code review",
+    "DAST",
+    "SAST",
   ],
-  authors: [{ name: "SentinelPatch" }],
+  authors: [{ name: "GuardianX" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/guardianx-logo.png",
   },
   openGraph: {
-    title: "SentinelPatch — AI Security Patch Review",
+    title: "GuardianX — Autonomous Security Operations Platform",
     description:
-      "Autonomous security patch generation, sandboxing, and human-in-the-loop approval.",
-    siteName: "SentinelPatch",
+      "AI-driven SAST, DAST, exploit generation, adversarial patching, and VAPT reporting.",
+    siteName: "GuardianX",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SentinelPatch",
-    description: "AI security patch review dashboard.",
+    title: "GuardianX",
+    description: "Autonomous security operations platform.",
   },
 };
 

@@ -1,4 +1,4 @@
-// AI core for the SentinelPatch engine.
+// AI core for the GuardianX engine.
 // Wraps z-ai-web-dev-sdk to: analyze code for vulnerabilities, generate
 // patches with diffs + tests, and chat with humans about a patch.
 //
@@ -99,7 +99,7 @@ export async function analyzeCodebase(
   const z = await sdk();
 
   const system = [
-    "You are SentinelPatch, an elite application security engineer.",
+    "You are GuardianX, an elite application security engineer.",
     "You analyze source code for real, exploitable security vulnerabilities.",
     "You are precise: only report vulnerabilities you are confident actually exist in the provided code.",
     "Do NOT report style issues, theoretical problems, or things that require external context not present.",
@@ -167,7 +167,7 @@ export async function generatePatch(
   const z = await sdk();
 
   const system = [
-    "You are SentinelPatch, an elite security engineer that writes correct, minimal patches.",
+    "You are GuardianX, an elite security engineer that writes correct, minimal patches.",
     "You produce: (1) the FULL patched file, (2) a unified diff, (3) a FULLY SELF-CONTAINED Node.js test file.",
     "",
     "CRITICAL TEST REQUIREMENTS (the sandbox runs the test in an EMPTY temp dir with only the test file):",
@@ -257,7 +257,7 @@ export async function generateExploit(
   const z = await sdk();
 
   const system = [
-    "You are SentinelPatch's Red Team module. You write minimal, self-contained proof-of-concept exploits that DEMONSTRATE a vulnerability is real and exploitable.",
+    "You are GuardianX's Red Team module. You write minimal, self-contained proof-of-concept exploits that DEMONSTRATE a vulnerability is real and exploitable.",
     "",
     "EXPLOIT REQUIREMENTS (runs in an isolated temp dir with ONLY the exploit file + the target source file):",
     "- The exploit MUST require the target source file by its exact filename (e.g. require('./" + filename + "')).",
@@ -331,7 +331,7 @@ export async function generateBypass(
   const z = await sdk();
 
   const system = [
-    "You are SentinelPatch's ADVERSARIAL ATTACKER. Your job is to break the defender's patch.",
+    "You are GuardianX's ADVERSARIAL ATTACKER. Your job is to break the defender's patch.",
     "You are given the PATCHED source and the original vulnerability. Find a REAL input payload that STILL triggers the vulnerability despite the patch.",
     "Do NOT invent theoretical issues. Only report a bypass if you can construct a concrete payload that demonstrably re-exploits the vuln.",
     "If the patch genuinely blocks all attack vectors you can think of, concede honestly (bypassFound=false).",
@@ -415,7 +415,7 @@ export async function generateImprovedPatch(
   const z = await sdk();
 
   const system = [
-    "You are SentinelPatch's ADVERSARIAL DEFENDER. The attacker found a bypass of your patch. Iterate.",
+    "You are GuardianX's ADVERSARIAL DEFENDER. The attacker found a bypass of your patch. Iterate.",
     "Produce a NEW full patched file that blocks the original vulnerability AND the attacker's new bypass, while preserving all legitimate behavior of the original code.",
     "Be surgical — change as little as possible while closing the bypass.",
     "",
@@ -488,7 +488,7 @@ export async function chatAboutPatch(
     {
       role: "assistant",
       content: [
-        "You are SentinelPatch, an elite security engineer.",
+        "You are GuardianX, an elite security engineer.",
         "You are discussing a specific security patch with a human reviewer.",
         "Be concise, technical, and honest. If the patch has limitations, say so.",
         "Context about the patch:",

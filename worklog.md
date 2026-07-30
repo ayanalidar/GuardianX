@@ -217,3 +217,43 @@ Stage Summary:
 - Delivered the Sensitive Data Exposure Scanner — RedAgent now systematically hunts for leaked secrets + PII on authorized targets and documents them with redacted samples for remediation. This is the responsible version of "pull leaked data from a website": it finds and proves exposures (AWS keys, Stripe keys, GitHub PATs, JWTs, private keys, DB strings, passwords, SSNs, credit cards, emails) and known exposure paths (.env, .git/, backups, swagger, etc.) without ever storing full secret values.
 - Key artifacts: src/lib/sentinel/engine/exposure-scanner.ts (detectors + prober + redaction), Stage 4b integration in redagent-pipeline.ts, redacted-sample banner in FindingDialog.
 - Responsible-use guarantees: runs only on authorized targets (existing gate), redacts all secret samples to first4…last4, never stores full credentials, maps every finding to OWASP Top 10, includes rotate-the-credential remediation advice. Lint clean. All services running.
+
+---
+Task ID: 7
+Agent: main (Z.ai Code)
+Task: Rebrand to GuardianX + build a professional multi-page VAPT report PDF with full structure (front page, blank page, TOC+doc control, exec summary+scope, methodology+tooling, findings master table, detailed findings, strategic recs+retests+appendices). Cyber security theme, GuardianX branding, contact info.
+
+Work Log:
+- Processed the user's logo (upload/guardianx logoo.png, 1563×1563 RGB): removed white background using PIL (threshold 240 + edge feathering for anti-aliasing), saved as public/guardianx-logo.png (RGBA, transparent background).
+- Rebranded the entire app from "SentinelPatch" to "GuardianX":
+  - layout.tsx metadata (title, description, keywords, icons → /guardianx-logo.png, OG, twitter).
+  - page.tsx header: replaced ShieldHalf icon with the GuardianX logo image, "Guardian" + green "X" wordmark, "Autonomous SOC" badge, "Autonomous Security Operations Platform" subtitle.
+  - page.tsx hero: "Autonomous Security Operations" + GuardianX-branded description.
+  - page.tsx footer: GuardianX logo + "GuardianX · Autonomous Security Operations Platform" + contact links (www.guardianx.in, hello@guardianx.in, +91 70067 12347).
+  - All AI prompts + engine code + seed scripts: SentinelPatch → GuardianX.
+- Built scripts/generate-vapt-report.py — a ReportLab-based VAPT report generator (990 lines) with the complete structure:
+  1. Front Page: dark cyber-themed cover (grid background, emerald accents), GuardianX logo, "GUARDIANX" title with green X, subtitle, OVERALL RISK badge (color-coded by severity), engagement metadata table (client, target URL, ID, date, version, prepared by, classification), CONFIDENTIAL notice.
+  2. Blank Page: intentionally blank with tiny footer note (for double-sided printing).
+  3. Table of Contents + Document Control: indexed TOC (sections 1-9 with subsections), 1.1 Revision History table, 1.2 Sign-off & Approvals table (lead pentester, client reviewer, authorizing officer), 1.3 Distribution List (confidential classification, authorized recipients).
+  4. Executive Summary: 2.1 Risk Posture (colored risk badge card + description), 2.2 Severity Distribution (custom SeverityBar flowable showing proportional colored segments + severity count table with color-coded rows), 2.3 Top Strategic Threats (top 3 findings table).
+  5. Scope & Rules of Engagement: 3.1 Target Assets table, 3.2 Rules of Engagement (5 bullet points), 3.3 Out of Scope (5 bullet points).
+  6. Methodology & Tooling: 4.1 Frameworks Applied (OWASP Top 10:2021, OWASP WSTG, CVSS v3.1, NIST SP 800-115), 4.2 CVSS Scoring Criteria table (score ranges → severity → description), 4.3 Tooling (RedAgent engine description).
+  7. Findings Master Table: indexed table (F-001…F-NNN, severity, category, finding, endpoint), sorted by severity.
+  8. Detailed Technical Findings: per-finding — colored severity header bar, meta table (category, OWASP, endpoint, confidence), Impact Analysis, Attack Payload (red on dark), Proof of Concept HTTP Request (green on dark), HTTP Response Evidence (gray on dark, truncated to 2500 chars), Remediation.
+  9. Strategic Recommendations: 5 root-cause recommendations (input validation, access control, secret management, security headers, continuous testing).
+  10. Retest Status: table tracking each finding (ref, title, severity, status=OPEN, retest date, notes).
+  11. Appendices: 9.1 Compliance Mapping (PCI-DSS, ISO 27001, SOC 2, OWASP ASVS, NIST SP 800-53), 9.2 Glossary (VAPT, CVSS, OWASP, IDOR, PoC, CWE, PII, SAST/DAST), 9.3 Cleanup Certificate (green certified box + end-of-report marker with contact info).
+  - All dynamic text escaped via esc() helper to prevent ReportLab paraparser errors.
+  - Page templates: cover (dark bg + grid + emerald bars), blank (white), body (light with header logo + GuardianX name + "VAPT Report — Confidential" + footer with contact info + page numbers).
+- Built API route GET /api/engagements/[id]/report: fetches engagement + target + findings from DB, serializes to JSON, spawns the Python ReportLab generator in a temp dir, streams the PDF back with Content-Disposition attachment header.
+- Added sentinelApi.reportUrl() to the API client.
+- Added "VAPT Report (PDF)" download button (emerald, FileDown icon) to the RedAgent panel findings section header — appears when an engagement has findings, links directly to the report endpoint (opens/downloads the PDF).
+- Verified end-to-end:
+  - Generated a 15-page PDF via the API (HTTP 200, 4.9 MB).
+  - VLM-verified all key pages: cover (logo + GuardianX title + green X + risk badge + metadata + confidential + dark cyber theme), blank page, TOC + document control (revision history + sign-offs + distribution), exec summary (risk posture + severity bar chart + count table + top threats), scope (target assets + ROE + out of scope), methodology (OWASP/NIST/CVSS frameworks + scoring criteria), findings master table (F-001 to F-007), detailed findings (colored headers + meta + impact + remediation), strategic recommendations, retest status, appendices (compliance mapping + glossary + green cleanup certificate + end of report with contact info).
+  - `bun run lint` clean. All 3 services running.
+
+Stage Summary:
+- Delivered full GuardianX rebrand + professional VAPT report generation. The app is now branded GuardianX throughout (header, footer, metadata, AI prompts, all UI text) with the user's logo (white background removed) and contact info (www.guardianx.in, hello@guardianx.in, +91 70067 12347). The VAPT report is a 15-page professional PDF with the complete structure the user specified: front page with branding, blank page, TOC + document control, executive summary + scope, methodology + tooling, findings master table, detailed technical findings with PoC HTTP evidence, strategic recommendations, retest status, and appendices (compliance mapping, glossary, cleanup certificate). Cyber-security dark theme with emerald accents throughout.
+- Key artifacts: public/guardianx-logo.png (transparent), scripts/generate-vapt-report.py (ReportLab generator), /api/engagements/[id]/report (PDF streaming route), "VAPT Report (PDF)" button in RedAgent panel, rebrand across all files.
+- Verified: 15-page PDF generated via API with all sections VLM-confirmed. Lint clean. All services running.

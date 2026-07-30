@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 
 // Real, runnable JavaScript samples containing genuine vulnerabilities.
-// The SentinelPatch engine will scan these, generate patches, and run real
+// The GuardianX engine will scan these, generate patches, and run real
 // sandbox tests against the patched code.
 const codebases = [
   {

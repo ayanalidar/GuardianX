@@ -139,7 +139,7 @@ function formatLogs(args: {
 }): string {
   const ts = () => new Date().toISOString().slice(11, 19);
   const lines: string[] = [];
-  lines.push(`[${ts()}] SentinelPatch sandbox runtime (bun)`);
+  lines.push(`[${ts()}] GuardianX sandbox runtime (bun)`);
   lines.push(`[${ts()}] Working dir: isolated temp directory`);
   lines.push(`[${ts()}] Test file: ${args.testFile}`);
   lines.push(`[${ts()}] Timeout: 12000ms`);
@@ -316,7 +316,7 @@ function formatExploitLogs(args: {
 }): string {
   const ts = () => new Date().toISOString().slice(11, 19);
   const lines: string[] = [];
-  lines.push(`[${ts()}] SentinelPatch exploit runner — ${args.label}`);
+  lines.push(`[${ts()}] GuardianX exploit runner — ${args.label}`);
   lines.push(`[${ts()}] Target: ${args.targetFile}`);
   lines.push(`[${ts()}] Timeout: 12000ms`);
   lines.push(`[${ts()}] --- stdout ---`);

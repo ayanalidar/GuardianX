@@ -256,24 +256,26 @@ export default function Home() {
         <header className="sticky top-0 z-30 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-500/15 ring-1 ring-emerald-500/40">
-                <ShieldHalf className="size-5 text-emerald-400" />
-              </div>
+              <img
+                src="/guardianx-logo.png"
+                alt="GuardianX"
+                className="size-9 rounded-lg object-contain"
+              />
               <div className="leading-tight">
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-zinc-50">
-                    SentinelPatch
+                  <span className="text-base font-semibold tracking-tight text-zinc-50">
+                    Guardian<span className="text-emerald-400">X</span>
                   </span>
                   <Badge
                     variant="outline"
                     className="hidden border-emerald-500/30 bg-emerald-500/10 text-[10px] font-medium uppercase tracking-wider text-emerald-300 sm:inline-flex"
                   >
                     <Sparkles className="size-2.5" />
-                    Autonomous
+                    Autonomous SOC
                   </Badge>
                 </div>
                 <span className="hidden text-[11px] text-zinc-500 sm:block">
-                  AI security patch pipeline
+                  Autonomous Security Operations Platform
                 </span>
               </div>
             </div>
@@ -319,11 +321,13 @@ export default function Home() {
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
-                  Autonomous Patch Operations
+                  Autonomous Security Operations
                 </h1>
                 <p className="mt-1 max-w-2xl text-sm text-zinc-400">
-                  AI scans code for real vulnerabilities, generates patches,
-                  sandbox-tests them, and queues them here for your approval.
+                  GuardianX scans code for real vulnerabilities, generates
+                  patches, sandbox-tests them, and queues them here for your
+                  approval. Run the RedAgent VAPT engine against live targets
+                  and export professional reports.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-zinc-500">
@@ -513,14 +517,19 @@ export default function Home() {
         <footer className="mt-auto border-t border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
           <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-5 text-xs text-zinc-500 sm:flex-row sm:px-6">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="size-3.5 text-emerald-500" />
-              <span>SentinelPatch · Human-in-the-loop autonomous security</span>
+              <img src="/guardianx-logo.png" alt="GuardianX" className="size-4 object-contain" />
+              <span>GuardianX · Autonomous Security Operations Platform</span>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="inline-flex items-center gap-1.5">
-                <Zap className="size-3.5 text-zinc-600" />
-                AI pipeline · real sandbox execution
-              </span>
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+              <a href="https://www.guardianx.in" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-emerald-400">
+                www.guardianx.in
+              </a>
+              <a href="mailto:hello@guardianx.in" className="transition-colors hover:text-emerald-400">
+                hello@guardianx.in
+              </a>
+              <a href="tel:+917006712347" className="transition-colors hover:text-emerald-400">
+                +91 70067 12347
+              </a>
             </div>
           </div>
         </footer>

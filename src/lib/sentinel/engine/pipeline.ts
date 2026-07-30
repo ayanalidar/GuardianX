@@ -1,4 +1,4 @@
-// The SentinelPatch pipeline orchestrator.
+// The GuardianX pipeline orchestrator.
 // Runs: analyze -> generate patch (per vuln) -> sandbox test -> persist.
 // Emits real-time events through a callback so the socket.io server can
 // broadcast them to connected clients.

@@ -1,4 +1,4 @@
-// Shared types and API client for the SentinelPatch autonomous pipeline.
+// Shared types and API client for the GuardianX autonomous pipeline.
 
 export type Severity = "critical" | "high" | "medium" | "low";
 export type PatchStatus = "pending" | "approved" | "rejected";
@@ -363,4 +363,6 @@ export const sentinelApi = {
     http<RedAgentEvent[]>(`/api/engagements/${engagementId}/events`),
   getFindings: (engagementId: string) =>
     http<Finding[]>(`/api/engagements/${engagementId}/findings`),
+  reportUrl: (engagementId: string) =>
+    `/api/engagements/${engagementId}/report`,
 };

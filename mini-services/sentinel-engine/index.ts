@@ -1,4 +1,4 @@
-// SentinelPatch Engine — pure socket.io relay (port 3003).
+// GuardianX Engine — pure socket.io relay (port 3003).
 //
 // Receives pipeline events from the Next.js producer (server-side socket.io
 // client) and broadcasts them to subscribed browser clients.
