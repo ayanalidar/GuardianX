@@ -87,3 +87,29 @@ model ChatMessage {
   content   String
   createdAt DateTime @default(now())
 }
+
+// Encrypted credentials for connecting to remote Git repositories.
+// The secret (token/PAT) is NEVER stored in plaintext — only as an
+// AES-256-GCM ciphertext + IV + auth tag, encrypted with SENTINEL_ENC_KEY.
+model Credential {
+  id          String   @id @default(cuid())
+  label       String
+  kind        String   // github | gitlab | git
+  target      String   // host or org, e.g. "github.com"
+  username    String?  // for generic git; github uses "x-access-token"
+  secretCipher String  // base64 AES-256-GCM ciphertext of the token
+  secretIv    String   // base64 12-byte nonce
+  secretTag   String   // base64 16-byte auth tag
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime?
+  audits      CredentialAudit[]
+}
+
+model CredentialAudit {
+  id           String   @id @default(cuid())
+  credentialId String
+  credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  action       String   // created | decrypted | used | deleted
+  context      String?  // e.g. "cloned github.com/acme/repo"
+  createdAt    DateTime @default(now())
+}

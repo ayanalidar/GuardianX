@@ -15,6 +15,7 @@ import {
   CodebaseViewer,
   AddCodebaseDialog,
 } from "@/components/sentinel/codebase-viewer";
+import { CredentialsDialog } from "@/components/sentinel/credentials-dialog";
 import { PipelineView } from "@/components/sentinel/pipeline-view";
 import { usePipelineSocket } from "@/lib/sentinel/use-pipeline-socket";
 import {
@@ -29,6 +30,7 @@ import {
   Activity,
   Boxes,
   Inbox,
+  KeyRound,
   Loader2,
   Plus,
   RefreshCw,
@@ -59,6 +61,7 @@ export default function Home() {
   const [viewCodebase, setViewCodebase] = useState<Codebase | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [credsOpen, setCredsOpen] = useState(false);
 
   // live scan state
   const [activeScan, setActiveScan] = useState<Scan | null>(null);
@@ -295,6 +298,15 @@ export default function Home() {
                 )}
                 Refresh
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCredsOpen(true)}
+                className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+              >
+                <KeyRound className="size-4" />
+                <span className="hidden sm:inline">Credentials</span>
+              </Button>
             </div>
           </div>
         </header>
@@ -524,6 +536,15 @@ export default function Home() {
         open={addOpen}
         onOpenChange={setAddOpen}
         onCreated={() => loadAll({ silent: true })}
+        onOpenCredentials={() => {
+          setAddOpen(false);
+          setCredsOpen(true);
+        }}
+      />
+      <CredentialsDialog
+        open={credsOpen}
+        onOpenChange={setCredsOpen}
+        onChanged={() => loadAll({ silent: true })}
       />
     </div>
   );

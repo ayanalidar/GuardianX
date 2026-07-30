@@ -120,3 +120,33 @@ Stage Summary:
 - Delivered the two headline features: PoC Exploit Playground + Adversarial Red-Team/Blue-Team Loop. SentinelPatch is now a closed autonomous arena: AI finds vuln → AI proves it's exploitable (real PoC, real execution) → AI patches it → AI tries to break its own patch → AI iterates → human watches the exploit fail against the final fix.
 - Key artifacts: 3 new AI functions (generateExploit, generateBypass, generateImprovedPatch), runExploit sandbox runner, extended pipeline with 3-phase per-vuln loop + adversarial arena, run-exploit API endpoint, ExploitPlayground + AdversarialArena components, 6-tab modal.
 - Verified: scan produced 2 patches both with exploit-proven + defender-won; exploit playground shows EXPLOITED vs original + BLOCKED vs patched live; arena shows Defender Victory with round transcript. Lint clean. Both services running.
+
+---
+Task ID: 4
+Agent: main (Z.ai Code)
+Task: Add encrypted credential management + Git repo cloning so SentinelPatch can scan real private repos, not just pasted code. Credentials must be encrypted at rest, never leaked in API responses/logs, and audit-logged.
+
+Work Log:
+- Generated a 32-byte base64 SENTINEL_ENC_KEY via `openssl rand -base64 32` and appended to .env (gitignored).
+- Added Prisma models: Credential (label, kind, target, username, secretCipher, secretIv, secretTag, lastUsedAt) + CredentialAudit (action, context, createdAt). Pushed schema (additive).
+- Built src/lib/sentinel/crypto.ts: AES-256-GCM encrypt/decrypt using SENTINEL_ENC_KEY. encryptSecret() generates a random 12-byte IV per credential, returns {cipher, iv, tag} as base64. decryptSecret() reverses in-memory only. buildAuthedCloneUrl() embeds the decrypted token into a https URL (x-access-token for github, oauth2 for gitlab, configurable username for generic git).
+- Built src/lib/sentinel/git.ts: cloneRepoWithCredential() decrypts the token, builds the authed URL, runs `git clone --depth 1` in an isolated temp dir with a sanitized env (GIT_TERMINAL_PROMPT=0, GIT_ASKPASS=/bin/true, GIT_SSH_COMMAND=/bin/false, GIT_CONFIG_NOSYSTEM=1 — no credential helpers, no SSH), lists scannable source files (.js/.ts/.py/.go/.rb/.php/etc, skipping node_modules/.git/dist/build, capping at 256KB), records audit entries (decrypted + used), updates lastUsedAt. readFileFromClone() reads a file with path-traversal protection. cleanupClone() removes the temp dir. Error messages are sanitized to redact any token from the URL.
+- Built API routes:
+  - GET/POST /api/credentials — list (metadata ONLY: id/label/kind/target/username/timestamps/audit_count, zero secret fields) + create (encrypts token, audits "created").
+  - GET/DELETE /api/credentials/[id] — metadata+audit history (never secret) + delete (audits "deleted", wipes ciphertext).
+  - POST /api/git/explore — clone repo with credential, return scannable file list, cleanup.
+  - POST /api/git/import — clone, read chosen file, create a Codebase from it, cleanup.
+- Updated API client (src/lib/sentinel/api.ts): added Credential, GitFile, ExploreResult types + listCredentials/addCredential/deleteCredential/exploreRepo/importFile methods.
+- Built CredentialsDialog component: lists credentials (label/kind/target/timestamps/audit_count with delete buttons — never shows the token), add form (label, kind toggle github/gitlab/git, target, masked token input with eye toggle, optional username), "Save & Encrypt" button. Security note banner explaining encryption + that the token never enters AI prompts/sandbox/API responses.
+- Updated AddCodebaseDialog with a "Paste Source" / "Clone from Git" mode toggle. Git mode: credential selector (with "Manage credentials" shortcut), repo URL + Explore button, file list with search filter, file picker, "Import & Scan" button. Wired onOpenCredentials to switch from AddCodebase → Credentials dialog.
+- Added a "Credentials" button to the main page header and wired both dialogs.
+- Verified end-to-end:
+  - Backend: added a credential with a dummy token → list API returns ZERO secret fields (verified key list: audit_count/created_at/id/kind/label/last_used_at/target/username) → DB stores secretCipher as encrypted base64 blob, plaintext token NOT present in cipher → audit log recorded "created" → delete wipes ciphertext.
+  - Explore endpoint: returns clean error on auth failure, NO token leak in the error message (verified the token string is not present).
+  - UI (Agent Browser + VLM): Credentials dialog shows AES-256-GCM security note + Add button; add form has Label/Type/Target/Token fields with masked token + eye toggle + "Save & Encrypt"; saved credential shows label + metadata but NOT the token, with delete button; "Clone from Git" mode shows credential dropdown (Demo GitHub PAT), repo URL field, Explore button, Manage credentials link.
+  - `bun run lint` clean.
+
+Stage Summary:
+- Delivered encrypted credential management + Git repo cloning. SentinelPatch now connects to real private repos: add a GitHub/GitLab PAT (encrypted at rest with AES-256-GCM, never shown again, never leaked in API/logs), then clone a repo, pick a source file, and scan it through the full AI pipeline (analyze → exploit → patch → adversarial arena).
+- Key artifacts: SENTINEL_ENC_KEY in .env, Credential + CredentialAudit Prisma models, src/lib/sentinel/crypto.ts (AES-256-GCM), src/lib/sentinel/git.ts (isolated git clone), /api/credentials + /api/git/explore + /api/git/import routes, CredentialsDialog + updated AddCodebaseDialog (Clone from Git mode), Credentials button in header.
+- Security guarantees verified: token encrypted at rest (plaintext not in DB), list API returns metadata only (zero secret fields), git clone errors are token-sanitized, audit log tracks created/decrypted/used/deleted, decrypted token used ONLY for the clone child process (never in AI prompts, sandbox, or API responses). Lint clean. Both services running.

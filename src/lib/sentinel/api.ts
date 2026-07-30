@@ -136,6 +136,29 @@ export interface RunExploitResponse {
   logs: string;
 }
 
+// ── Credentials ────────────────────────────────────────────────────────────
+export interface Credential {
+  id: string;
+  label: string;
+  kind: "github" | "gitlab" | "git";
+  target: string;
+  username: string | null;
+  created_at: string;
+  last_used_at: string | null;
+  audit_count: number;
+}
+
+export interface GitFile {
+  path: string;
+  size: number;
+}
+
+export interface ExploreResult {
+  repo_url: string;
+  file_count: number;
+  files: GitFile[];
+}
+
 export interface PatchStats {
   pending: number;
   approved: number;
@@ -217,6 +240,44 @@ export const sentinelApi = {
     http<RunExploitResponse>(
       `/api/patches/${encodeURIComponent(patchId)}/run-exploit`,
       { method: "POST", body: JSON.stringify({ target }) }
+    ),
+
+  // credentials (metadata only — secrets never leave the server)
+  listCredentials: () => http<Credential[]>("/api/credentials"),
+  addCredential: (data: {
+    label: string;
+    kind: "github" | "gitlab" | "git";
+    target: string;
+    token: string;
+    username?: string;
+  }) =>
+    http<{ id: string; message: string }>("/api/credentials", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deleteCredential: (id: string) =>
+    http<{ ok: boolean; message: string }>(`/api/credentials/${id}`, {
+      method: "DELETE",
+    }),
+
+  // git integration
+  exploreRepo: (credentialId: string, repoUrl: string) =>
+    http<ExploreResult>("/api/git/explore", {
+      method: "POST",
+      body: JSON.stringify({ credentialId, repoUrl }),
+    }),
+  importFile: (
+    credentialId: string,
+    repoUrl: string,
+    filePath: string,
+    name?: string
+  ) =>
+    http<{ id: string; name: string; message: string; source_lines: number }>(
+      "/api/git/import",
+      {
+        method: "POST",
+        body: JSON.stringify({ credentialId, repoUrl, filePath, name }),
+      }
     ),
 
   // stats
