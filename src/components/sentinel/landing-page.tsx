@@ -10,6 +10,7 @@ import {
   FileCode2,
   KeyRound,
   Gauge,
+  Gavel,
   Globe,
   Wand2,
   Heart,
@@ -139,6 +140,24 @@ const FEATURES = [
     color: "text-teal-400",
     border: "border-teal-500/30",
     glow: "hover:shadow-[0_0_20px_rgba(20,184,166,0.15)]",
+  },
+  {
+    icon: Gavel,
+    title: "DPDPA & Multi-Framework Compliance",
+    category: "GRC",
+    desc: "Map every finding to DPDPA 2023, GDPR, HIPAA, PCI-DSS, ISO 27001, and SOC 2. Track section-level compliance, generate audit reports, and auto-draft 72-hour breach notifications.",
+    color: "text-purple-400",
+    border: "border-purple-500/30",
+    glow: "hover:shadow-[0_0_20px_rgba(168,85,247,0.15)]",
+  },
+  {
+    icon: Lock,
+    title: "Data Privacy Scanner",
+    category: "Privacy",
+    desc: "Detect PII collection without consent, plaintext password storage, cross-border data transfer risks, and data retention violations — all mapped to specific DPDPA sections.",
+    color: "text-indigo-400",
+    border: "border-indigo-500/30",
+    glow: "hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]",
   },
 ];
 

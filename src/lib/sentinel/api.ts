@@ -300,6 +300,78 @@ export interface RuntimeStatus {
   functions: RuntimeFunction[];
 }
 
+// ── Compliance ──────────────────────────────────────────────────────────────
+export interface FrameworkSection {
+  section: string;
+  title: string;
+  status: "compliant" | "violated" | "at-risk" | "pending-review" | "not-assessed";
+}
+export interface Framework {
+  name: string;
+  full_name: string;
+  score: number;
+  status: "compliant" | "at-risk" | "non-compliant";
+  icon: string;
+  color: string;
+  mapped_findings: number;
+  sections: FrameworkSection[];
+}
+export interface ComplianceStatus {
+  overall_score: number;
+  overall_status: string;
+  total_findings: number;
+  critical_open: number;
+  high_open: number;
+  frameworks: Framework[];
+  dpdpa_findings: Array<{ issue_id: string; title: string; severity: string; source: string; target: string; dpdpa_section: string; dpdpa_title: string; dpdpa_requirement: string; status: string }>;
+  breach_notification_required: boolean;
+  mapped_issues: unknown[];
+}
+
+// ── Data Privacy ────────────────────────────────────────────────────────────
+export interface PrivacyRisk {
+  risk_type: string;
+  dpdpa_section: string;
+  severity: string;
+  description: string;
+  source: string;
+  recommendation: string;
+}
+export interface DataPrivacyStatus {
+  privacy_score: number;
+  privacy_status: string;
+  total_risks: number;
+  critical_risks: number;
+  high_risks: number;
+  medium_risks: number;
+  dpdpa_sections_assessed: string[];
+  risks: PrivacyRisk[];
+}
+
+// ── Breach Notification ─────────────────────────────────────────────────────
+export interface BreachNotification {
+  target: string;
+  target_url: string;
+  breach_detected: boolean;
+  notification_required: boolean;
+  first_detected: string;
+  hours_since_detection: number;
+  hours_remaining: number;
+  is_overdue: boolean;
+  breach_severity: string;
+  finding_count: number;
+  data_types_compromised: string[];
+  notification_draft: { to: string; subject: string; date: string; body: string };
+}
+export interface BreachNotificationStatus {
+  breach_detected: boolean;
+  notification_required: boolean;
+  notification_count?: number;
+  any_overdue?: boolean;
+  message?: string;
+  notifications?: BreachNotification[];
+}
+
 export interface PatchStats {
   pending: number;
   approved: number;
@@ -482,4 +554,9 @@ export const sentinelApi = {
       `/api/runtime-monitor/${encodeURIComponent(patchId)}/heal`,
       { method: "POST" }
     ),
+
+  // Compliance + Privacy
+  compliance: () => http<ComplianceStatus>("/api/compliance"),
+  dataPrivacy: () => http<DataPrivacyStatus>("/api/data-privacy"),
+  breachNotification: () => http<BreachNotificationStatus>("/api/breach-notification"),
 };

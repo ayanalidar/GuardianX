@@ -19,6 +19,7 @@ import { CredentialsDialog } from "@/components/sentinel/credentials-dialog";
 import { RedAgentPanel } from "@/components/sentinel/redagent-panel";
 import { MatrixRain } from "@/components/sentinel/matrix-rain";
 import { LandingPage } from "@/components/sentinel/landing-page";
+import { ComplianceDashboard } from "@/components/sentinel/compliance-dashboard";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
@@ -36,6 +37,7 @@ import {
   Activity,
   Boxes,
   Crosshair,
+  Gavel,
   Inbox,
   KeyRound,
   Loader2,
@@ -49,7 +51,7 @@ import {
   Zap,
 } from "lucide-react";
 
-type Tab = "patches" | "codebases" | "redagent";
+type Tab = "patches" | "codebases" | "redagent" | "compliance";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -408,9 +410,11 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
             <RuntimeMonitor />
           </section>
 
-          {/* two-column: main list + live pipeline (patches/codebases) OR full-width RedAgent */}
+          {/* full-width panels (RedAgent / Compliance) OR two-column (patches/codebases) */}
           {tab === "redagent" ? (
             <RedAgentPanel />
+          ) : tab === "compliance" ? (
+            <ComplianceDashboard />
           ) : (
           <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
             {/* left: tabs (patches / codebases) */}
@@ -439,6 +443,10 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
                   <TabButton active={tab === "redagent"} onClick={() => setTab("redagent")}>
                     <Crosshair className="size-3.5 text-red-400" />
                     RedAgent
+                  </TabButton>
+                  <TabButton active={tab === "compliance"} onClick={() => setTab("compliance")}>
+                    <Gavel className="size-3.5 text-purple-400" />
+                    Compliance
                   </TabButton>
                 </div>
 
