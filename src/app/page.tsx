@@ -18,6 +18,7 @@ import {
 import { CredentialsDialog } from "@/components/sentinel/credentials-dialog";
 import { RedAgentPanel } from "@/components/sentinel/redagent-panel";
 import { MatrixRain } from "@/components/sentinel/matrix-rain";
+import { LandingPage } from "@/components/sentinel/landing-page";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
@@ -52,6 +53,28 @@ type Tab = "patches" | "codebases" | "redagent";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
+  const [view, setView] = useState<"landing" | "console">("landing");
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("guardianx-view") : null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (saved === "console") setView("console");
+  }, []);
+  const enterConsole = () => {
+    setView("console");
+    localStorage.setItem("guardianx-view", "console");
+  };
+  const backToLanding = () => {
+    setView("landing");
+    localStorage.setItem("guardianx-view", "landing");
+  };
+
+  if (view === "landing") {
+    return <LandingPage onEnter={enterConsole} />;
+  }
+  return <ConsoleView onBackToLanding={backToLanding} />;
+}
+
+function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
   // live clock for the HUD
   const [clock, setClock] = useState("--:--:--");
   useEffect(() => {
@@ -61,6 +84,7 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
+  const backToLanding = onBackToLanding;
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("patches");
   const [patches, setPatches] = useState<PatchSummary[]>([]);
@@ -272,13 +296,18 @@ export default function Home() {
         {/* header */}
         <header className="sticky top-0 z-30 border-b border-emerald-500/20 bg-zinc-950/90 backdrop-blur-md">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-            <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={backToLanding}
+              className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+              title="Back to landing page"
+            >
               <img
                 src="/guardianx-logo.png"
                 alt="GuardianX"
                 className="size-9 rounded-lg object-contain neon-border"
               />
-              <div className="leading-tight">
+              <div className="leading-tight text-left">
                 <div className="flex items-center gap-2">
                   <span className="text-base font-bold tracking-tight text-zinc-50 neon-emerald">
                     Guardian<span className="text-emerald-400">X</span>
@@ -295,7 +324,7 @@ export default function Home() {
                   {"// Security Operations Lab"}
                 </span>
               </div>
-            </div>
+            </button>
 
             <div className="flex items-center gap-2">
               {/* HUD live clock */}
