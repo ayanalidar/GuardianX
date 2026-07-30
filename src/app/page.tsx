@@ -16,6 +16,7 @@ import {
   AddCodebaseDialog,
 } from "@/components/sentinel/codebase-viewer";
 import { CredentialsDialog } from "@/components/sentinel/credentials-dialog";
+import { RedAgentPanel } from "@/components/sentinel/redagent-panel";
 import { PipelineView } from "@/components/sentinel/pipeline-view";
 import { usePipelineSocket } from "@/lib/sentinel/use-pipeline-socket";
 import {
@@ -29,6 +30,7 @@ import { severityRank } from "@/lib/sentinel/utils";
 import {
   Activity,
   Boxes,
+  Crosshair,
   Inbox,
   KeyRound,
   Loader2,
@@ -42,7 +44,7 @@ import {
   Zap,
 } from "lucide-react";
 
-type Tab = "patches" | "codebases";
+type Tab = "patches" | "codebases" | "redagent";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -336,7 +338,10 @@ export default function Home() {
             <StatsBar stats={stats} loading={statsLoading} />
           </section>
 
-          {/* two-column: main list + live pipeline */}
+          {/* two-column: main list + live pipeline (patches/codebases) OR full-width RedAgent */}
+          {tab === "redagent" ? (
+            <RedAgentPanel />
+          ) : (
           <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
             {/* left: tabs (patches / codebases) */}
             <section>
@@ -360,6 +365,10 @@ export default function Home() {
                         {codebases.length}
                       </span>
                     )}
+                  </TabButton>
+                  <TabButton active={tab === "redagent"} onClick={() => setTab("redagent")}>
+                    <Crosshair className="size-3.5 text-red-400" />
+                    RedAgent
                   </TabButton>
                 </div>
 
@@ -497,6 +506,7 @@ export default function Home() {
               )}
             </aside>
           </div>
+          )}
         </main>
 
         {/* footer */}

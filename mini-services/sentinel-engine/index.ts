@@ -46,6 +46,12 @@ io.on("connection", (socket) => {
   socket.on("unsubscribe:scan", (scanId: string) => {
     socket.leave(`scan:${scanId}`);
   });
+  socket.on("subscribe:engagement", (engagementId: string) => {
+    socket.join(`engagement:${engagementId}`);
+  });
+  socket.on("unsubscribe:engagement", (engagementId: string) => {
+    socket.leave(`engagement:${engagementId}`);
+  });
   socket.on("subscribe:global", () => {
     socket.join("global");
   });
@@ -55,6 +61,12 @@ io.on("connection", (socket) => {
     if (!event || !event.scanId) return;
     io.to(`scan:${event.scanId}`).emit("pipeline:event", event);
     io.to("global").emit("pipeline:event", event);
+  });
+
+  // RedAgent engagement events
+  socket.on("redagent:event", (event: { engagementId?: string }) => {
+    if (!event || !event.engagementId) return;
+    io.to(`engagement:${event.engagementId}`).emit("redagent:event", event);
   });
 
   socket.on("disconnect", () => {

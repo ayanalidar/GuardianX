@@ -18,6 +18,15 @@ export interface PipelineEventPayload {
   ts: string;
 }
 
+export interface RedAgentEventPayload {
+  engagementId: string;
+  stage: string;
+  message: string;
+  level: "info" | "success" | "warning" | "error";
+  meta?: Record<string, unknown> | null;
+  ts: string;
+}
+
 let socket: Socket | null = null;
 let connecting: Promise<Socket> | null = null;
 
@@ -62,5 +71,14 @@ export async function broadcast(event: PipelineEventPayload): Promise<void> {
     s.emit("pipeline:event", event);
   } catch (err) {
     console.warn("[broadcaster] emit failed:", err);
+  }
+}
+
+export async function broadcastRedAgent(event: RedAgentEventPayload): Promise<void> {
+  try {
+    const s = await getSocket();
+    s.emit("redagent:event", event);
+  } catch (err) {
+    console.warn("[broadcaster] redagent emit failed:", err);
   }
 }

@@ -159,6 +159,54 @@ export interface ExploreResult {
   files: GitFile[];
 }
 
+// ── RedAgent VAPT ───────────────────────────────────────────────────────────
+export interface Target {
+  id: string;
+  name: string;
+  base_url: string;
+  auth_header_set: boolean;
+  notes: string | null;
+  authorized: boolean;
+  created_at: string;
+  engagement_count: number;
+}
+
+export interface Engagement {
+  id: string;
+  status: string;
+  stage_label: string | null;
+  started_at: string;
+  completed_at: string | null;
+  target: { name: string; baseUrl: string };
+  finding_count: number;
+}
+
+export interface Finding {
+  id: string;
+  title: string;
+  severity: Severity | "info";
+  category: string;
+  owasp: string | null;
+  endpoint: string;
+  method: string;
+  description: string;
+  proof_request: string;
+  proof_response: string;
+  payload: string | null;
+  confidence: number;
+  remediation: string | null;
+  created_at: string;
+}
+
+export interface RedAgentEvent {
+  engagementId: string;
+  stage: string;
+  message: string;
+  level: "info" | "success" | "warning" | "error";
+  meta?: Record<string, unknown> | null;
+  ts: string;
+}
+
 export interface PatchStats {
   pending: number;
   approved: number;
@@ -282,4 +330,37 @@ export const sentinelApi = {
 
   // stats
   stats: () => http<PatchStats>("/api/stats"),
+
+  // RedAgent VAPT — targets
+  listTargets: () => http<Target[]>("/api/targets"),
+  addTarget: (data: {
+    name: string;
+    baseUrl: string;
+    authHeader?: string;
+    notes?: string;
+    authorized?: boolean;
+  }) =>
+    http<{ id: string; message: string }>("/api/targets", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  authorizeTarget: (id: string) =>
+    http<{ id: string; authorized: boolean }>(`/api/targets/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ authorized: true }),
+    }),
+  deleteTarget: (id: string) =>
+    http<{ ok: boolean }>(`/api/targets/${id}`, { method: "DELETE" }),
+
+  // RedAgent — engagements
+  listEngagements: () => http<Engagement[]>("/api/engagements"),
+  startEngagement: (targetId: string) =>
+    http<{ engagementId: string; status: string }>("/api/engagements", {
+      method: "POST",
+      body: JSON.stringify({ targetId }),
+    }),
+  getEngagementEvents: (engagementId: string) =>
+    http<RedAgentEvent[]>(`/api/engagements/${engagementId}/events`),
+  getFindings: (engagementId: string) =>
+    http<Finding[]>(`/api/engagements/${engagementId}/findings`),
 };

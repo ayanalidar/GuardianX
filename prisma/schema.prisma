@@ -113,3 +113,64 @@ model CredentialAudit {
   context      String?  // e.g. "cloned github.com/acme/repo"
   createdAt    DateTime @default(now())
 }
+
+// ── RedAgent VAPT ───────────────────────────────────────────────────────────
+// A live target URL that RedAgent is authorized to attack.
+
+model Target {
+  id          String   @id @default(cuid())
+  name        String
+  baseUrl     String   // e.g. http://localhost:3004
+  authHeader  String?  // optional raw Authorization header for authenticated scanning
+  notes       String?
+  authorized  Boolean  @default(false) // user must confirm authorization
+  createdAt   DateTime @default(now())
+  engagements Engagement[]
+}
+
+// A single VAPT engagement (scan) against a target.
+
+model Engagement {
+  id          String   @id @default(cuid())
+  targetId    String
+  target      Target   @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  status      String   @default("queued") // queued | crawling | attacking | analyzing | completed | failed
+  stageLabel  String?
+  crawlSummary String? // JSON: { endpointsFound, paramsFound, ... }
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  findings    Finding[]
+  events      RedAgentEvent[]
+}
+
+// A confirmed vulnerability found against the live target.
+
+model Finding {
+  id           String   @id @default(cuid())
+  engagementId String
+  engagement   Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  title        String
+  severity     String   // critical | high | medium | low | info
+  category     String   // e.g. SQL Injection, XSS, IDOR, Path Traversal
+  owasp        String?  // OWASP Top 10 category, e.g. A03:2021-Injection
+  endpoint     String   // the attacked URL/path
+  method       String   // GET | POST | ...
+  description  String
+  proofRequest String   // the HTTP request that proves it (method + url + body)
+  proofResponse String  // the HTTP response evidence (status + excerpt)
+  payload      String?  // the attack payload used
+  confidence   Float    @default(0)
+  remediation  String?
+  createdAt    DateTime @default(now())
+}
+
+model RedAgentEvent {
+  id           String   @id @default(cuid())
+  engagementId String
+  engagement   Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  stage        String   // crawling | planning | attacking | analyzing | completed | failed
+  message      String
+  level        String   @default("info") // info | success | warning | error
+  meta         String?
+  createdAt    DateTime @default(now())
+}
