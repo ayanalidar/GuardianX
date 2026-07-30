@@ -121,7 +121,7 @@ export function AttackStream({
                         ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
                         : current
                           ? "border-amber-500/50 bg-amber-500/10 text-amber-300"
-                          : "border-zinc-700 bg-zinc-800/30 text-zinc-500"
+                          : "border-zinc-700 bg-zinc-800/30 text-zinc-400"
                   }`}
                 >
                   {failed ? (
@@ -150,14 +150,14 @@ export function AttackStream({
       </div>
 
       <div className="p-3">
-        <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
           <Terminal className="size-3" />
           Attack Log
         </div>
         <ScrollArea className="h-72 w-full rounded-lg border border-zinc-800 bg-zinc-950">
           <div ref={scrollRef} className="p-3 font-mono text-xs">
             {events.length === 0 ? (
-              <div className="flex h-64 flex-col items-center justify-center gap-2 text-zinc-600">
+              <div className="flex h-64 flex-col items-center justify-center gap-2 text-zinc-500">
                 <Crosshair className="size-6" />
                 <p className="text-center text-[11px]">
                   {active
@@ -176,7 +176,7 @@ export function AttackStream({
                       animate={{ opacity: 1, x: 0 }}
                       className={`flex items-start gap-2 py-0.5 ${isFinding ? "rounded bg-red-500/5 px-1" : ""}`}
                     >
-                      <span className="shrink-0 text-zinc-600">
+                      <span className="shrink-0 text-zinc-500">
                         [{e.ts.slice(11, 19)}]
                       </span>
                       <span className="shrink-0">
@@ -200,7 +200,7 @@ export function AttackStream({
                                 ? "text-red-400"
                                 : e.level === "warning"
                                   ? "text-amber-400"
-                                  : "text-zinc-500"
+                                  : "text-zinc-400"
                         }`}
                       >
                         {e.stage}

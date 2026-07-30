@@ -59,8 +59,8 @@ export function RuntimeMonitor() {
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full bg-emerald-500/10" />)}
         </div>
       ) : !status || status.monitored_functions === 0 ? (
-        <div className="flex items-center justify-center py-6 text-xs text-zinc-500">
-          <Heart className="mr-2 size-4 text-zinc-600" /> No functions monitored.
+        <div className="flex items-center justify-center py-6 text-xs text-zinc-400">
+          <Heart className="mr-2 size-4 text-zinc-500" /> No functions monitored.
         </div>
       ) : (
         <>
@@ -68,15 +68,15 @@ export function RuntimeMonitor() {
           <div className="mb-3 grid grid-cols-3 gap-2 text-center">
             <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-2">
               <div className="font-mono text-lg font-bold text-emerald-400">{status.healed_functions}</div>
-              <div className="text-[9px] uppercase text-zinc-500">Healed</div>
+              <div className="text-[9px] uppercase text-zinc-400">Healed</div>
             </div>
             <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-2">
               <div className="font-mono text-lg font-bold text-red-400">{status.vulnerable_functions}</div>
-              <div className="text-[9px] uppercase text-zinc-500">Vulnerable</div>
+              <div className="text-[9px] uppercase text-zinc-400">Vulnerable</div>
             </div>
             <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-2">
               <div className="font-mono text-lg font-bold text-amber-400">{status.total_attack_attempts}</div>
-              <div className="text-[9px] uppercase text-zinc-500">Attacks</div>
+              <div className="text-[9px] uppercase text-zinc-400">Attacks</div>
             </div>
           </div>
 
@@ -98,7 +98,7 @@ export function RuntimeMonitor() {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[11px] text-zinc-300">{f.title}</p>
-                  <p className="truncate font-mono text-[9px] text-zinc-600">
+                  <p className="truncate font-mono text-[9px] text-zinc-500">
                     {f.codebase} · {f.attack_attempts > 0 ? `${f.attack_attempts} attacks` : "no attacks"}
                   </p>
                 </div>

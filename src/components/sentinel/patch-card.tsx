@@ -72,7 +72,7 @@ export function PatchCard({ patch, onSelect }: PatchCardProps) {
                 {patch.cve}
               </Badge>
             ) : null}
-            <span className="font-mono text-[11px] text-zinc-500">
+            <span className="font-mono text-[11px] text-zinc-400">
               {patch.patch_id}
             </span>
             <span className="rounded-full border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-[10px] text-zinc-400">
@@ -88,7 +88,7 @@ export function PatchCard({ patch, onSelect }: PatchCardProps) {
             {patch.ai_explanation}
           </p>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-[11px] text-zinc-500">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-[11px] text-zinc-400">
             <span className="inline-flex items-center gap-1 font-mono">
               <FileCode2 className="size-3" />
               {patch.affected_file}
@@ -133,7 +133,7 @@ export function PatchCard({ patch, onSelect }: PatchCardProps) {
               </span>
             )}
           </div>
-          <ChevronRight className="size-4 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-400" />
+          <ChevronRight className="size-4 text-zinc-500 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-400" />
         </div>
       </div>
     </motion.button>

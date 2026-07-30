@@ -340,7 +340,7 @@ export default function Home() {
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
           {/* hero */}
-          <section className="mb-6 sm:mb-8">
+          <section className="mb-6 sm:mb-8 fade-in-up" style={{ animationDelay: "0.1s" }}>
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
@@ -358,20 +358,22 @@ export default function Home() {
                   and export professional reports.
                 </p>
               </div>
-              <div className="flex items-center gap-2 font-mono text-xs text-emerald-400/70">
-                <Activity className="size-3.5 text-emerald-400" />
-                {connected ? "Live pipeline connected" : "Connecting…"}
+              <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5 font-mono text-xs">
+                <span className={`size-1.5 rounded-full ${connected ? "bg-emerald-500 pulse-dot" : "bg-amber-500 animate-pulse"}`} />
+                <span className={connected ? "text-emerald-300" : "text-amber-300"}>
+                  {connected ? "LIVE — pipeline connected" : "connecting…"}
+                </span>
               </div>
             </div>
           </section>
 
           {/* stats */}
-          <section className="mb-6 sm:mb-8">
+          <section className="mb-6 sm:mb-8 fade-in-up" style={{ animationDelay: "0.2s" }}>
             <StatsBar stats={stats} loading={statsLoading} />
           </section>
 
           {/* Ops Center: PostureScore + Threat Intel + Runtime Monitor */}
-          <section className="mb-6 sm:mb-8 grid gap-4 lg:grid-cols-3">
+          <section className="mb-6 sm:mb-8 grid gap-4 fade-in-up lg:grid-cols-3" style={{ animationDelay: "0.3s" }}>
             <PostureScoreCard />
             <ThreatIntelPanel />
             <RuntimeMonitor />
@@ -414,12 +416,12 @@ export default function Home() {
                 {tab === "patches" ? (
                   <div className="flex items-center gap-2">
                     <div className="relative w-full sm:w-56">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
                       <Input
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search patches…"
-                        className="border-zinc-800 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-500 focus-visible:border-emerald-500/50"
+                        className="border-zinc-800 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-400 focus-visible:border-emerald-500/50"
                       />
                     </div>
                     <div className="hidden items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1 text-xs sm:flex">
@@ -537,7 +539,7 @@ export default function Home() {
                 stageLabel={activeScan?.stage_label}
               />
               {!activeScan && (
-                <p className="mt-3 px-1 text-[11px] leading-relaxed text-zinc-600">
+                <p className="mt-3 px-1 text-[11px] leading-relaxed text-zinc-500">
                   Tip: open the <span className="text-zinc-400">Codebases</span>{" "}
                   tab and hit <span className="text-emerald-400">Run AI Scan</span>{" "}
                   to watch the autonomous pipeline work in real time.
@@ -550,7 +552,7 @@ export default function Home() {
 
         {/* footer */}
         <footer className="mt-auto border-t border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
-          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-5 text-xs text-zinc-500 sm:flex-row sm:px-6">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-5 text-xs text-zinc-400 sm:flex-row sm:px-6">
             <div className="flex items-center gap-2">
               <img src="/guardianx-logo.png" alt="GuardianX" className="size-4 object-contain" />
               <span>GuardianX · Autonomous Security Operations Platform</span>
@@ -617,8 +619,10 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium transition-colors ${
-        active ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"
+      className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+        active
+          ? "bg-emerald-500/15 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.2)] ring-1 ring-emerald-500/30"
+          : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
       }`}
     >
       {children}
@@ -702,7 +706,7 @@ function EmptyState({
         <Icon className="size-7 text-emerald-400" />
       </div>
       <h3 className="mt-4 text-base font-semibold text-zinc-200">{title}</h3>
-      <p className="mt-1 max-w-sm text-sm text-zinc-500">{body}</p>
+      <p className="mt-1 max-w-sm text-sm text-zinc-400">{body}</p>
       {action && <div className="mt-4">{action}</div>}
     </motion.div>
   );

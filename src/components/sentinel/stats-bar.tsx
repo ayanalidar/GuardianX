@@ -69,7 +69,7 @@ export function StatsBar({ stats, loading }: StatsBarProps) {
         return (
           <Card
             key={s.key}
-            className="holo-card hud-corners gap-0 rounded-lg py-4"
+            className="holo-card hud-corners glow-hover gap-0 rounded-lg py-4"
           >
             <div className="flex items-center gap-3 px-4">
               <div
@@ -78,7 +78,7 @@ export function StatsBar({ stats, loading }: StatsBarProps) {
                 <s.icon className="size-4" />
               </div>
               <div className="min-w-0">
-                <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">
                   {s.label}
                 </div>
                 <div

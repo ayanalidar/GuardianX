@@ -36,7 +36,7 @@ export function ThreatIntelPanel() {
               {intel.high_relevance} high relevance
             </Badge>
           )}
-          <Button size="icon" variant="ghost" onClick={load} disabled={loading} className="size-6 text-zinc-500 hover:text-emerald-400">
+          <Button size="icon" variant="ghost" onClick={load} disabled={loading} className="size-6 text-zinc-400 hover:text-emerald-400">
             {loading ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
           </Button>
         </div>
@@ -46,8 +46,8 @@ export function ThreatIntelPanel() {
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full bg-emerald-500/10" />)}
         </div>
       ) : !intel || intel.threats.length === 0 ? (
-        <div className="flex items-center justify-center py-6 text-xs text-zinc-500">
-          <Globe className="mr-2 size-4 text-zinc-600" /> No recent threats detected.
+        <div className="flex items-center justify-center py-6 text-xs text-zinc-400">
+          <Globe className="mr-2 size-4 text-zinc-500" /> No recent threats detected.
         </div>
       ) : (
         <div className="custom-scrollbar max-h-64 space-y-2 overflow-y-auto">
@@ -79,9 +79,9 @@ export function ThreatIntelPanel() {
                     )}
                   </div>
                   <p className="mt-0.5 line-clamp-2 text-[11px] text-zinc-300">{t.title}</p>
-                  <p className="mt-0.5 truncate text-[9px] text-zinc-600">{t.source} · {t.date}</p>
+                  <p className="mt-0.5 truncate text-[9px] text-zinc-500">{t.source} · {t.date}</p>
                 </div>
-                <ExternalLink className="size-3 shrink-0 text-zinc-600" />
+                <ExternalLink className="size-3 shrink-0 text-zinc-500" />
               </div>
             </a>
           ))}

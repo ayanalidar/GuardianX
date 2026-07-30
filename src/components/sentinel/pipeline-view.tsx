@@ -83,10 +83,10 @@ export function PipelineView({
             >
               <span
                 className={`size-1.5 rounded-full ${
-                  connected ? "bg-emerald-400" : "bg-zinc-500"
+                  connected ? "bg-emerald-400 pulse-dot" : active ? "bg-amber-400 animate-pulse" : "bg-zinc-600"
                 }`}
               />
-              {connected ? "socket connected" : "disconnected"}
+              {connected ? "socket connected" : active ? "connecting…" : "standby"}
             </span>
             {active && (
               <span className="inline-flex items-center gap-1 text-[11px] text-emerald-300">
@@ -114,7 +114,7 @@ export function PipelineView({
                         ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
                         : current
                           ? "border-amber-500/50 bg-amber-500/10 text-amber-300"
-                          : "border-zinc-700 bg-zinc-800/30 text-zinc-500"
+                          : "border-zinc-700 bg-zinc-800/30 text-zinc-400"
                   }`}
                 >
                   {failed ? (
@@ -144,20 +144,30 @@ export function PipelineView({
 
       {/* Event log */}
       <div className="p-3">
-        <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
           <Terminal className="size-3" />
           Event Stream
         </div>
         <ScrollArea className="h-72 w-full rounded-lg border border-zinc-800 bg-zinc-950">
           <div ref={scrollRef} className="p-3 font-mono text-xs">
             {events.length === 0 ? (
-              <div className="flex h-64 flex-col items-center justify-center gap-2 text-zinc-600">
-                <Terminal className="size-6" />
-                <p className="text-center text-[11px]">
-                  {active
-                    ? "Waiting for first event…"
-                    : "Trigger a scan to see live pipeline events."}
-                </p>
+              <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
+                <div className="relative">
+                  <Terminal className="size-8 text-emerald-500/30" />
+                  {active && (
+                    <span className="absolute -right-1 -top-1 size-2 animate-ping rounded-full bg-emerald-500" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-mono text-[11px] text-emerald-400/60">
+                    {active ? "awaiting telemetry…" : "system idle"}
+                  </p>
+                  <p className="mt-1 max-w-[12rem] text-[10px] text-zinc-500">
+                    {active
+                      ? "Pipeline is running — events will stream here in real time."
+                      : "Open the Codebases tab and hit Run AI Scan to start the autonomous pipeline."}
+                  </p>
+                </div>
               </div>
             ) : (
               <AnimatePresence initial={false}>
@@ -168,7 +178,7 @@ export function PipelineView({
                     animate={{ opacity: 1, x: 0 }}
                     className="flex items-start gap-2 py-0.5"
                   >
-                    <span className="shrink-0 text-zinc-600">
+                    <span className="shrink-0 text-zinc-500">
                       [{e.ts.slice(11, 19)}]
                     </span>
                     <span className="shrink-0">
@@ -190,7 +200,7 @@ export function PipelineView({
                             ? "text-red-400"
                             : e.level === "warning"
                               ? "text-amber-400"
-                              : "text-zinc-500"
+                              : "text-zinc-400"
                       }`}
                     >
                       {e.stage}
