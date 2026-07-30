@@ -42,6 +42,7 @@ import {
   Inbox,
   KeyRound,
   Loader2,
+  Menu,
   Plus,
   Radar,
   RefreshCw,
@@ -105,6 +106,7 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [credsOpen, setCredsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // live scan state
   const [activeScan, setActiveScan] = useState<Scan | null>(null);
@@ -296,325 +298,162 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
         <div className="absolute top-1/3 -right-40 h-80 w-80 rounded-full bg-cyan-700/10 blur-3xl" />
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col">
-        {/* header */}
-        <header className="sticky top-0 z-30 border-b border-emerald-500/20 bg-zinc-950/90 backdrop-blur-md">
-          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-            <button
-              type="button"
-              onClick={backToLanding}
-              className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
-              title="Back to landing page"
-            >
-              <img
-                src="/guardianx-logo.png"
-                alt="GuardianX"
-                className="size-9 rounded-lg object-contain neon-border"
-              />
-              <div className="leading-tight text-left">
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-bold tracking-tight text-zinc-50 neon-emerald">
-                    Guardian<span className="text-emerald-400">X</span>
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className="hidden border-emerald-500/30 bg-emerald-500/10 text-[10px] font-medium uppercase tracking-wider text-emerald-300 sm:inline-flex"
-                  >
-                    <Sparkles className="size-2.5" />
-                    Autonomous SOC
-                  </Badge>
-                </div>
-                <span className="hidden font-mono text-[10px] uppercase tracking-widest text-emerald-500/50 sm:block">
-                  {"// Security Operations Lab"}
-                </span>
-              </div>
-            </button>
-
-            <div className="flex items-center gap-2">
-              {/* HUD live clock */}
-              <div className="hidden items-center gap-2 rounded-md border border-emerald-500/20 bg-zinc-950/60 px-3 py-1.5 font-mono text-xs text-emerald-400/80 md:flex">
-                <span className="relative flex size-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-                </span>
-                <span className="neon-emerald">{clock}</span>
-                <span className="text-emerald-500/40">UTC</span>
-              </div>
-              <div className="hidden items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-xs text-emerald-300 lg:flex">
-                <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
-                <span className="font-mono uppercase tracking-wider">SYS ONLINE</span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadAll({ silent: true })}
-                disabled={refreshing}
-                className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white"
-              >
-                {refreshing ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="size-4" />
-                )}
-                Refresh
+      <div className="relative z-10 flex min-h-screen">
+        {/* SIDEBAR */}
+        <aside className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-emerald-500/15 bg-zinc-950/95 backdrop-blur-md transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}>
+          <button type="button" onClick={backToLanding} className="flex items-center gap-2.5 border-b border-emerald-500/15 px-4 py-4 transition-opacity hover:opacity-80" title="Back to landing page">
+            <img src="/guardianx-logo.png" alt="GuardianX" className="size-8 rounded-lg object-contain neon-border" />
+            <div className="leading-tight text-left">
+              <span className="text-sm font-bold tracking-tight text-zinc-50 neon-emerald">Guardian<span className="text-emerald-400">X</span></span>
+              <div className="font-mono text-[9px] uppercase tracking-widest text-emerald-500/50">SOC Lab</div>
+            </div>
+          </button>
+          <nav className="custom-scrollbar flex-1 overflow-y-auto p-2">
+            <NavGroup label="Operations">
+              <NavItem active={tab === "patches"} onClick={() => { setTab("patches"); setSidebarOpen(false); }} icon={ShieldAlert} label="Patches" badge={patches.length || undefined} badgeColor="emerald" />
+              <NavItem active={tab === "codebases"} onClick={() => { setTab("codebases"); setSidebarOpen(false); }} icon={Boxes} label="Codebases" badge={codebases.length || undefined} badgeColor="sky" />
+            </NavGroup>
+            <NavGroup label="Offensive Security">
+              <NavItem active={tab === "redagent"} onClick={() => { setTab("redagent"); setSidebarOpen(false); }} icon={Crosshair} label="RedAgent VAPT" iconColor="text-red-400" />
+            </NavGroup>
+            <NavGroup label="Governance">
+              <NavItem active={tab === "compliance"} onClick={() => { setTab("compliance"); setSidebarOpen(false); }} icon={Gavel} label="Compliance" iconColor="text-purple-400" />
+            </NavGroup>
+            <NavGroup label="Monitoring">
+              <NavItem active={tab === "soc"} onClick={() => { setTab("soc"); setSidebarOpen(false); }} icon={Radar} label="SOC & DevSecOps" iconColor="text-cyan-400" />
+            </NavGroup>
+          </nav>
+          <div className="border-t border-emerald-500/15 p-3">
+            <div className="mb-2 flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs">
+              <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
+              <span className="font-mono text-emerald-300">SYS ONLINE</span>
+              <span className="ml-auto font-mono text-emerald-400/60">{clock}</span>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => loadAll({ silent: true })} disabled={refreshing} className="flex-1 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
+                {refreshing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                <span className="ml-1 hidden sm:inline">Refresh</span>
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCredsOpen(true)}
-                className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white"
-              >
-                <KeyRound className="size-4" />
-                <span className="hidden sm:inline">Credentials</span>
+              <Button size="sm" variant="outline" onClick={() => setCredsOpen(true)} className="flex-1 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
+                <KeyRound className="size-3.5" />
+                <span className="ml-1 hidden sm:inline">Creds</span>
               </Button>
             </div>
           </div>
-        </header>
-
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
-          {/* hero */}
-          <section className="mb-6 sm:mb-8 fade-in-up" style={{ animationDelay: "0.1s" }}>
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
-                  <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
-                  guardianx@lab:~$
-                  <span className="type-cursor" />
-                </div>
-                <h1 className="text-2xl font-bold tracking-tight text-zinc-50 neon-emerald sm:text-3xl">
-                  Autonomous Security Operations
+        </aside>
+        {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={() => setSidebarOpen(false)} />}
+        {/* MAIN CONTENT */}
+        <div className="flex flex-1 flex-col md:ml-64">
+          <header className="sticky top-0 z-30 border-b border-emerald-500/20 bg-zinc-950/90 backdrop-blur-md">
+            <div className="flex h-14 items-center justify-between px-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setSidebarOpen(true)} className="text-zinc-400 hover:text-emerald-400 md:hidden">
+                  <Menu className="size-5" />
+                </button>
+                <h1 className="text-sm font-bold text-zinc-50 sm:text-base">
+                  {tab === "patches" ? "Patch Review Queue" : tab === "codebases" ? "Codebase Library" : tab === "redagent" ? "RedAgent VAPT Engine" : tab === "compliance" ? "GRC & Compliance Center" : "SOC & DevSecOps Center"}
                 </h1>
-                <p className="mt-1 max-w-2xl text-sm text-zinc-400">
-                  GuardianX scans code for real vulnerabilities, generates
-                  patches, sandbox-tests them, and queues them here for your
-                  approval. Run the RedAgent VAPT engine against live targets
-                  and export professional reports.
-                </p>
               </div>
-              <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5 font-mono text-xs">
+              <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-mono text-xs">
                 <span className={`size-1.5 rounded-full ${connected ? "bg-emerald-500 pulse-dot" : "bg-amber-500 animate-pulse"}`} />
-                <span className={connected ? "text-emerald-300" : "text-amber-300"}>
-                  {connected ? "LIVE — pipeline connected" : "connecting…"}
-                </span>
+                <span className={connected ? "text-emerald-300" : "text-amber-300"}>{connected ? "LIVE" : "…"}</span>
               </div>
             </div>
-          </section>
-
-          {/* stats */}
-          <section className="mb-6 sm:mb-8 fade-in-up" style={{ animationDelay: "0.2s" }}>
-            <StatsBar stats={stats} loading={statsLoading} />
-          </section>
-
-          {/* Ops Center: PostureScore + Threat Intel + Runtime Monitor */}
-          <section className="mb-6 sm:mb-8 grid gap-4 fade-in-up lg:grid-cols-3" style={{ animationDelay: "0.3s" }}>
-            <PostureScoreCard />
-            <ThreatIntelPanel />
-            <RuntimeMonitor />
-          </section>
-
-          {/* full-width panels (RedAgent / Compliance / SOC) OR two-column (patches/codebases) */}
-          {tab === "redagent" ? (
-            <RedAgentPanel />
-          ) : tab === "compliance" ? (
-            <ComplianceDashboard />
-          ) : tab === "soc" ? (
-            <SocPanel />
-          ) : (
-          <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
-            {/* left: tabs (patches / codebases) */}
-            <section>
-              {/* tab header + controls */}
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1 text-xs">
-                  <TabButton active={tab === "patches"} onClick={() => setTab("patches")}>
-                    <ShieldAlert className="size-3.5" />
-                    Patches
-                    {patches.length > 0 && (
-                      <span className="ml-1 rounded-full bg-emerald-500/20 px-1.5 text-[10px] text-emerald-300">
-                        {patches.length}
-                      </span>
-                    )}
-                  </TabButton>
-                  <TabButton active={tab === "codebases"} onClick={() => setTab("codebases")}>
-                    <Boxes className="size-3.5" />
-                    Codebases
-                    {codebases.length > 0 && (
-                      <span className="ml-1 rounded-full bg-sky-500/20 px-1.5 text-[10px] text-sky-300">
-                        {codebases.length}
-                      </span>
-                    )}
-                  </TabButton>
-                  <TabButton active={tab === "redagent"} onClick={() => setTab("redagent")}>
-                    <Crosshair className="size-3.5 text-red-400" />
-                    RedAgent
-                  </TabButton>
-                  <TabButton active={tab === "compliance"} onClick={() => setTab("compliance")}>
-                    <Gavel className="size-3.5 text-purple-400" />
-                    Compliance
-                  </TabButton>
-                  <TabButton active={tab === "soc"} onClick={() => setTab("soc")}>
-                    <Radar className="size-3.5 text-cyan-400" />
-                    SOC
-                  </TabButton>
-                </div>
-
-                {tab === "patches" ? (
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-full sm:w-56">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
-                      <Input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search patches…"
-                        className="border-zinc-800 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-400 focus-visible:border-emerald-500/50"
-                      />
-                    </div>
-                    <div className="hidden items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1 text-xs sm:flex">
-                      <SortToggle active={sortKey === "severity"} onClick={() => setSortKey("severity")}>
-                        Severity
-                      </SortToggle>
-                      <SortToggle active={sortKey === "recent"} onClick={() => setSortKey("recent")}>
-                        Recent
-                      </SortToggle>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => setAddOpen(true)}
-                    className="bg-emerald-600 text-white hover:bg-emerald-500"
-                  >
-                    <Plus className="size-4" />
-                    Add Codebase
-                  </Button>
-                )}
-              </div>
-
-              {/* content */}
-              {tab === "patches" ? (
-                loading ? (
-                  <PatchListSkeleton />
-                ) : visiblePatches.length === 0 ? (
-                  <EmptyState
-                    title={query ? "No patches match your search" : "No patches pending"}
-                    body={
-                      query
-                        ? `No results for "${query}".`
-                        : "Run a scan on a codebase to generate patches. The AI will detect vulnerabilities, write fixes, and sandbox-test them autonomously."
-                    }
-                    icon={Inbox}
-                    action={
-                      !query ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setTab("codebases")}
-                          className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
-                        >
-                          <Boxes className="size-4" />
-                          Browse Codebases
-                        </Button>
-                      ) : null
-                    }
-                  />
-                ) : (
-                  <div className="space-y-3">
-                    <AnimatePresence mode="popLayout">
-                      {visiblePatches.map((p) => (
-                        <motion.div
-                          key={p.patch_id}
-                          layout
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.98 }}
-                          transition={{ duration: 0.18 }}
-                        >
-                          <PatchCard patch={p} onSelect={handleSelectPatch} />
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                )
-              ) : loading ? (
-                <CodebaseGridSkeleton />
-              ) : codebases.length === 0 ? (
-                <EmptyState
-                  title="No codebases yet"
-                  body="Add a codebase with vulnerable code, or seed the sample library."
-                  icon={Boxes}
-                  action={
-                    <Button
-                      size="sm"
-                      onClick={() => setAddOpen(true)}
-                      className="bg-emerald-600 text-white hover:bg-emerald-500"
-                    >
-                      <Plus className="size-4" />
-                      Add Codebase
-                    </Button>
-                  }
-                />
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <AnimatePresence mode="popLayout">
-                    {codebases.map((cb) => (
-                      <CodebaseCard
-                        key={cb.id}
-                        codebase={cb}
-                        onScan={handleScan}
-                        onView={(c) => {
-                          setViewCodebase(c);
-                          setViewerOpen(true);
-                        }}
-                        onDelete={handleDeleteCodebase}
-                        busy={scanning}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
+          </header>
+          <main className="flex-1 p-4 sm:p-6">
+            <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>
+              <StatsBar stats={stats} loading={statsLoading} />
             </section>
-
-            {/* right: live pipeline */}
-            <aside className="lg:sticky lg:top-20 lg:self-start">
-              <PipelineView
-                events={events}
-                connected={connected}
-                active={scanning}
-                scanStatus={activeScan?.status}
-                stageLabel={activeScan?.stage_label}
-              />
-              {!activeScan && (
-                <p className="mt-3 px-1 text-[11px] leading-relaxed text-zinc-500">
-                  Tip: open the <span className="text-zinc-400">Codebases</span>{" "}
-                  tab and hit <span className="text-emerald-400">Run AI Scan</span>{" "}
-                  to watch the autonomous pipeline work in real time.
-                </p>
-              )}
-            </aside>
-          </div>
-          )}
-        </main>
-
-        {/* footer */}
-        <footer className="mt-auto border-t border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
-          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-5 text-xs text-zinc-400 sm:flex-row sm:px-6">
-            <div className="flex items-center gap-2">
-              <img src="/guardianx-logo.png" alt="GuardianX" className="size-4 object-contain" />
-              <span>GuardianX · Autonomous Security Operations Platform</span>
+            <section className="mb-5 grid gap-4 fade-in-up lg:grid-cols-3" style={{ animationDelay: "0.15s" }}>
+              <PostureScoreCard />
+              <ThreatIntelPanel />
+              <RuntimeMonitor />
+            </section>
+            {tab === "redagent" ? (
+              <RedAgentPanel />
+            ) : tab === "compliance" ? (
+              <ComplianceDashboard />
+            ) : tab === "soc" ? (
+              <SocPanel />
+            ) : (
+              <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
+                <section>
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1 text-xs">
+                      <TabButton active={tab === "patches"} onClick={() => setTab("patches")}>
+                        <ShieldAlert className="size-3.5" /> Patches
+                        {patches.length > 0 && <span className="ml-1 rounded-full bg-emerald-500/20 px-1.5 text-[10px] text-emerald-300">{patches.length}</span>}
+                      </TabButton>
+                      <TabButton active={tab === "codebases"} onClick={() => setTab("codebases")}>
+                        <Boxes className="size-3.5" /> Codebases
+                        {codebases.length > 0 && <span className="ml-1 rounded-full bg-sky-500/20 px-1.5 text-[10px] text-sky-300">{codebases.length}</span>}
+                      </TabButton>
+                    </div>
+                    {tab === "patches" ? (
+                      <div className="flex items-center gap-2">
+                        <div className="relative w-full sm:w-56">
+                          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search patches…" className="border-zinc-800 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-500 focus-visible:border-emerald-500/50" />
+                        </div>
+                        <div className="hidden items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1 text-xs sm:flex">
+                          <SortToggle active={sortKey === "severity"} onClick={() => setSortKey("severity")}>Severity</SortToggle>
+                          <SortToggle active={sortKey === "recent"} onClick={() => setSortKey("recent")}>Recent</SortToggle>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button size="sm" onClick={() => setAddOpen(true)} className="bg-emerald-600 text-white hover:bg-emerald-500"><Plus className="size-4" /> Add Codebase</Button>
+                    )}
+                  </div>
+                  {tab === "patches" ? (
+                    loading ? <PatchListSkeleton /> :
+                    visiblePatches.length === 0 ? (
+                      <EmptyState title={query ? "No patches match your search" : "No patches pending"} body={query ? `No results for "${query}".` : "Run a scan on a codebase to generate patches."} icon={Inbox}
+                        action={!query ? <Button size="sm" variant="outline" onClick={() => setTab("codebases")} className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"><Boxes className="size-4" /> Browse Codebases</Button> : null} />
+                    ) : (
+                      <div className="space-y-3">
+                        <AnimatePresence mode="popLayout">
+                          {visiblePatches.map((p) => (
+                            <motion.div key={p.patch_id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.18 }}>
+                              <PatchCard patch={p} onSelect={handleSelectPatch} />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                    )
+                  ) : loading ? <CodebaseGridSkeleton /> :
+                  codebases.length === 0 ? (
+                    <EmptyState title="No codebases yet" body="Add a codebase with vulnerable code." icon={Boxes}
+                      action={<Button size="sm" onClick={() => setAddOpen(true)} className="bg-emerald-600 text-white hover:bg-emerald-500"><Plus className="size-4" /> Add Codebase</Button>} />
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <AnimatePresence mode="popLayout">
+                        {codebases.map((cb) => (
+                          <CodebaseCard key={cb.id} codebase={cb} onScan={handleScan} onView={(c) => { setViewCodebase(c); setViewerOpen(true); }} onDelete={handleDeleteCodebase} busy={scanning} />
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </section>
+                <aside className="lg:sticky lg:top-20 lg:self-start">
+                  <PipelineView events={events} connected={connected} active={scanning} scanStatus={activeScan?.status} stageLabel={activeScan?.stage_label} />
+                </aside>
+              </div>
+            )}
+          </main>
+          <footer className="mt-auto border-t border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
+            <div className="flex flex-col items-center justify-between gap-3 px-4 py-4 text-xs text-zinc-400 sm:flex-row sm:px-6">
+              <div className="flex items-center gap-2">
+                <img src="/guardianx-logo.png" alt="GuardianX" className="size-4 object-contain" />
+                <span>GuardianX · Autonomous Security Operations Platform</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+                <a href="https://www.guardianx.in" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-emerald-400">www.guardianx.in</a>
+                <a href="mailto:hello@guardianx.in" className="transition-colors hover:text-emerald-400">hello@guardianx.in</a>
+                <a href="tel:+917006712347" className="transition-colors hover:text-emerald-400">+91 70067 12347</a>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-              <a href="https://www.guardianx.in" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-emerald-400">
-                www.guardianx.in
-              </a>
-              <a href="mailto:hello@guardianx.in" className="transition-colors hover:text-emerald-400">
-                hello@guardianx.in
-              </a>
-              <a href="tel:+917006712347" className="transition-colors hover:text-emerald-400">
-                +91 70067 12347
-              </a>
-            </div>
-          </div>
-        </footer>
+          </footer>
+        </div>
       </div>
 
       {/* dialogs */}
@@ -754,5 +593,53 @@ function EmptyState({
       <p className="mt-1 max-w-sm text-sm text-zinc-400">{body}</p>
       {action && <div className="mt-4">{action}</div>}
     </motion.div>
+  );
+}
+
+function NavGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-3">
+      <div className="px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest text-zinc-600">{label}</div>
+      <div className="space-y-0.5">{children}</div>
+    </div>
+  );
+}
+
+function NavItem({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+  badge,
+  badgeColor = "emerald",
+  iconColor,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  badge?: number;
+  badgeColor?: "emerald" | "sky";
+  iconColor?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all ${
+        active
+          ? "bg-emerald-500/10 text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)]"
+          : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
+      }`}
+    >
+      <Icon className={`size-4 shrink-0 ${active ? "text-emerald-400" : iconColor ?? "text-zinc-500"}`} />
+      <span className="flex-1 text-left font-medium">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className={`rounded-full px-1.5 text-[10px] font-bold ${
+          badgeColor === "sky" ? "bg-sky-500/20 text-sky-300" : "bg-emerald-500/20 text-emerald-300"
+        }`}>{badge}</span>
+      )}
+      {active && <span className="ml-auto size-1.5 rounded-full bg-emerald-500 pulse-dot" />}
+    </button>
   );
 }
