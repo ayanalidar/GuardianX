@@ -20,6 +20,7 @@ import { RedAgentPanel } from "@/components/sentinel/redagent-panel";
 import { MatrixRain } from "@/components/sentinel/matrix-rain";
 import { LandingPage } from "@/components/sentinel/landing-page";
 import { ComplianceDashboard } from "@/components/sentinel/compliance-dashboard";
+import { SocPanel } from "@/components/sentinel/soc-panel";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
@@ -42,6 +43,7 @@ import {
   KeyRound,
   Loader2,
   Plus,
+  Radar,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -51,7 +53,7 @@ import {
   Zap,
 } from "lucide-react";
 
-type Tab = "patches" | "codebases" | "redagent" | "compliance";
+type Tab = "patches" | "codebases" | "redagent" | "compliance" | "soc";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -410,11 +412,13 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
             <RuntimeMonitor />
           </section>
 
-          {/* full-width panels (RedAgent / Compliance) OR two-column (patches/codebases) */}
+          {/* full-width panels (RedAgent / Compliance / SOC) OR two-column (patches/codebases) */}
           {tab === "redagent" ? (
             <RedAgentPanel />
           ) : tab === "compliance" ? (
             <ComplianceDashboard />
+          ) : tab === "soc" ? (
+            <SocPanel />
           ) : (
           <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
             {/* left: tabs (patches / codebases) */}
@@ -447,6 +451,10 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
                   <TabButton active={tab === "compliance"} onClick={() => setTab("compliance")}>
                     <Gavel className="size-3.5 text-purple-400" />
                     Compliance
+                  </TabButton>
+                  <TabButton active={tab === "soc"} onClick={() => setTab("soc")}>
+                    <Radar className="size-3.5 text-cyan-400" />
+                    SOC
                   </TabButton>
                 </div>
 

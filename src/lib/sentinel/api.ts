@@ -372,6 +372,82 @@ export interface BreachNotificationStatus {
   notifications?: BreachNotification[];
 }
 
+// ── Dark Web Monitoring ─────────────────────────────────────────────────────
+export interface DarkWebExposure {
+  title: string;
+  url: string;
+  source: string;
+  date: string;
+  snippet: string;
+  data_types: string[];
+  severity: string;
+  verified_source: boolean;
+}
+export interface DarkWebStatus {
+  monitoring_active: boolean;
+  exposure_count: number;
+  critical_exposures: number;
+  last_scan: string;
+  search_terms?: string;
+  exposures: DarkWebExposure[];
+  error?: string;
+}
+
+// ── Security KPIs ───────────────────────────────────────────────────────────
+export interface SecurityKpis {
+  mttd_seconds: number | null;
+  mttr_hours: number | null;
+  patch_latency_hours: number | null;
+  vuln_density_per_kloc: number;
+  sandbox_pass_rate: number;
+  adversarial_win_rate: number;
+  resolution_rate: number;
+  avg_confidence: number;
+  total_vulns: number;
+  pending_vulns: number;
+  resolved_vulns: number;
+  severity_breakdown: { critical: number; high: number; medium: number; low: number; info: number };
+  total_lines_scanned: number;
+  codebases_scanned: number;
+  scans_completed: number;
+  trend: Array<{ day: string; vulns: number; resolved: number }>;
+  kpi_score: number;
+}
+
+// ── Attack Surface ──────────────────────────────────────────────────────────
+export interface ExposedService {
+  path: string;
+  label: string;
+  status: number;
+  found: boolean;
+  responseSize: number;
+}
+export interface OpenPort {
+  port: number;
+  label: string;
+  open: boolean;
+  status: number;
+}
+export interface SecurityHeaderCheck {
+  header: string;
+  present: boolean;
+  label: string;
+}
+export interface AttackSurfaceStatus {
+  target: string;
+  base_url: string;
+  scan_time: string;
+  exposed_services: number;
+  open_ports: number;
+  missing_security_headers: number;
+  services: ExposedService[];
+  all_services: ExposedService[];
+  open_ports_list: OpenPort[];
+  security_headers: SecurityHeaderCheck[];
+  risk_level: string;
+  summary: string;
+}
+
 export interface PatchStats {
   pending: number;
   approved: number;
@@ -559,4 +635,10 @@ export const sentinelApi = {
   compliance: () => http<ComplianceStatus>("/api/compliance"),
   dataPrivacy: () => http<DataPrivacyStatus>("/api/data-privacy"),
   breachNotification: () => http<BreachNotificationStatus>("/api/breach-notification"),
+
+  // SOC / DevSecOps
+  darkWeb: () => http<DarkWebStatus>("/api/dark-web"),
+  securityKpis: () => http<SecurityKpis>("/api/security-kpis"),
+  attackSurface: (targetId?: string) =>
+    http<AttackSurfaceStatus>(`/api/attack-surface${targetId ? `?targetId=${targetId}` : ""}`),
 };
