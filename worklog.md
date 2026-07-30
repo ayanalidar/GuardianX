@@ -185,3 +185,35 @@ Stage Summary:
 - Key artifacts: 4 new Prisma models, mini-services/vuln-target (deliberately vulnerable app, port 3004), src/lib/sentinel/engine/{redagent-ai,http-attacker,redagent-pipeline}.ts, /api/{targets,engagements}/** routes, broadcaster + engine relay extensions, use-engagement-socket hook, AttackStream + FindingDialog + RedAgentPanel + AddTargetDialog components, RedAgent tab in main page.
 - Safety: authorization gate (target.authorized must be true before any engagement runs), explicit legal warning in the add-target dialog, built-in vulnerable target for safe demos, same-origin crawl only, sanitized errors.
 - Verified: real engagement found 3 real vulns in 40s with 100% confidence + full HTTP evidence. Lint clean. All services running.
+
+---
+Task ID: 6
+Agent: main (Z.ai Code)
+Task: Add a Sensitive Data Exposure Scanner to RedAgent — systematically detect + document exposed secrets (AWS/Stripe/GitHub keys, JWTs, private keys, DB strings, passwords) and PII (SSNs, credit cards, emails) on authorized targets, plus probe known exposure paths (.env/.git/.DS_Store/backups/swagger/etc). Responsible design: redacted samples only, never stores full secret values.
+
+Work Log:
+- Built src/lib/sentinel/engine/exposure-scanner.ts:
+  - 13 secret detectors (AWS Access Key, AWS Secret, Google API Key, Stripe Secret/Restricted Key, GitHub PAT, Slack Token, JWT, Private Key, DB Connection String, Generic API Key, Password in Source, Bearer Token) with regex + OWASP mapping + severity.
+  - 3 PII detectors (SSN, Credit Card, Email).
+  - 22 known exposure paths to probe (.env variants, .git/HEAD + config, .DS_Store, .sql backups, robots.txt, server-status/info, phpinfo, swagger, api-docs, wp-config.bak, config.bak, package.json, composer.json, admin, .svn, .aws/credentials) each with an optional content indicator regex to avoid false positives.
+  - redactSecret() — reduces any matched secret to first4…last4 (e.g. sk_l…p7dc), fully redacts secrets ≤12 chars. NEVER stores the full value.
+  - scanResponse() — runs all detectors against an HTTP response body, returns ExposureHit[] with redacted samples + count + redacted context window.
+  - probeKnownPaths() — fetches each known path concurrently (batch of 4), returns only confirmed exposures (200 + indicator match + not a generic 404 page).
+- Integrated a "Stage 4b: Sensitive Data Exposure Sweep" into redagent-pipeline.ts, runs after the AI-driven attacks and before completion:
+  - Scans every crawled endpoint's response for secrets/PII, creates a Finding per hit with redacted sample in proofResponse.
+  - Probes all 22 known exposure paths, creates a Finding per confirmed exposure.
+  - Streams live events (🔎 sweep start, per-endpoint hits, per-path exposures, sweep summary) with redacted samples in the messages.
+  - All Finding descriptions + proof explicitly note redaction and that the credential should be considered compromised + rotated.
+- Updated FindingDialog to show a red "Sensitive Data Exposure — Sample Redacted" banner for exposure-category findings, explaining the full secret is intentionally not stored and the credential must be rotated.
+- Verified end-to-end against the built-in VulnShop target:
+  - Engagement completed in 95s with 7 total findings.
+  - Exposure scanner found 3 sensitive data exposures: CRITICAL Environment File Exposure at /.env (preview DB_P…API_), CRITICAL Exposed Stripe Secret Key on /.env (redacted sk_l…p7dc, with context showing it appeared next to STRIPE_API_KEY=), MEDIUM Admin Panel Exposed at /admin.
+  - AI attacks found 4 more: Info Disclosure (.env), Open Redirect, Path Traversal, Reflected XSS.
+  - The full Stripe key (sk_live_4eC39HqLyjWDarjtT1zdp7dc) was DETECTED but only sk_l…p7dc was stored — proving the exposure without exfiltrating the credential.
+  - UI (Agent Browser + VLM): findings list shows all 7 with severity badges + redacted samples; Stripe finding detail shows the red "Sample Redacted" banner, redacted sk_l…p7dc, HTTP request/response evidence, and remediation.
+  - `bun run lint` clean. All 3 services running.
+
+Stage Summary:
+- Delivered the Sensitive Data Exposure Scanner — RedAgent now systematically hunts for leaked secrets + PII on authorized targets and documents them with redacted samples for remediation. This is the responsible version of "pull leaked data from a website": it finds and proves exposures (AWS keys, Stripe keys, GitHub PATs, JWTs, private keys, DB strings, passwords, SSNs, credit cards, emails) and known exposure paths (.env, .git/, backups, swagger, etc.) without ever storing full secret values.
+- Key artifacts: src/lib/sentinel/engine/exposure-scanner.ts (detectors + prober + redaction), Stage 4b integration in redagent-pipeline.ts, redacted-sample banner in FindingDialog.
+- Responsible-use guarantees: runs only on authorized targets (existing gate), redacts all secret samples to first4…last4, never stores full credentials, maps every finding to OWASP Top 10, includes rotate-the-credential remediation advice. Lint clean. All services running.

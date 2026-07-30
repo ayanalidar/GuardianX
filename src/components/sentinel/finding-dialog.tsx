@@ -13,10 +13,17 @@ import { severityStyles, formatRelativeTime } from "@/lib/sentinel/utils";
 import {
   Bug,
   Crosshair,
+  EyeOff,
   Lightbulb,
   ShieldAlert,
   Webhook,
 } from "lucide-react";
+
+function isExposureFinding(f: Finding): boolean {
+  return (
+    f.category === "Sensitive Data Exposure" || f.category === "PII Exposure"
+  );
+}
 
 interface FindingDialogProps {
   finding: Finding | null;
@@ -94,6 +101,24 @@ export function FindingDialog({ finding, open, onOpenChange }: FindingDialogProp
               {finding.description}
             </div>
           </section>
+
+          {/* Redacted secret banner for exposure findings */}
+          {isExposureFinding(finding) && (
+            <div className="flex items-start gap-3 rounded-lg border border-red-500/40 bg-red-500/10 p-4">
+              <EyeOff className="mt-0.5 size-5 shrink-0 text-red-400" />
+              <div className="min-w-0">
+                <div className="text-xs font-semibold uppercase tracking-wider text-red-300">
+                  Sensitive Data Exposure — Sample Redacted
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-300">
+                  The full secret value is intentionally NOT stored. Only a
+                  redacted preview (first 4 + last 4 characters) is kept to
+                  prove the exposure for remediation. The credential should be
+                  considered compromised and rotated immediately.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Payload */}
           {finding.payload && (

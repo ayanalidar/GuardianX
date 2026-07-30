@@ -14,8 +14,10 @@ import {
   crawlTarget,
   executeAttack,
   formatProof,
+  fetchUrl,
   type HttpResponse,
 } from "./http-attacker";
+import { scanResponse, probeKnownPaths } from "./exposure-scanner";
 
 export interface RedAgentEvent {
   engagementId: string;
@@ -246,6 +248,126 @@ export async function runEngagement(
           meta: { category: plan.category, endpoint: plan.endpoint },
         });
       }
+    }
+
+    // ── Stage 4b: Sensitive Data Exposure Sweep ──────────────────────────
+    // Systematically scan all crawled endpoint responses for exposed secrets
+    // (AWS keys, Stripe keys, JWTs, private keys, passwords in source, etc.)
+    // and PII (SSNs, credit cards, emails), plus probe known exposure paths
+    // (.env, .git/, .DS_Store, backups, swagger, etc.).
+    // All samples are REDACTED — only first4...last4 is stored, never the
+    // full secret value.
+    await db.engagement.update({
+      where: { id: engagementId },
+      data: { status: "attacking", stageLabel: "Sweeping for exposed secrets + PII…" },
+    });
+    await emitAndStore({
+      stage: "attacking",
+      message: `🔎 Sensitive data exposure sweep — scanning responses for leaked secrets/PII…`,
+      level: "info",
+      meta: { phase: "exposure-sweep" },
+    });
+
+    let exposureCount = 0;
+
+    // 1. Scan each crawled endpoint's response for secrets/PII
+    for (const ep of crawl.endpoints) {
+      try {
+        const url = new URL(ep.path, target.baseUrl).toString();
+        const res = await fetchUrl(url, {
+          headers: target.authHeader ? { Authorization: target.authHeader } : {},
+          timeoutMs: 8000,
+        });
+        const hit = scanResponse(url, "GET", res);
+        if (hit) {
+          for (const h of hit.hits) {
+            const proof = `GET ${url}\nHTTP ${res.status}\n\nDetected: ${h.type} (${h.count} match${h.count === 1 ? "" : "es"})\nRedacted sample: ${h.redactedSample}\nContext: ${h.context}`;
+            await db.finding.create({
+              data: {
+                engagementId,
+                title: `Exposed ${h.type} on ${ep.path}`,
+                severity: h.severity,
+                category: h.category === "secret" ? "Sensitive Data Exposure" : "PII Exposure",
+                owasp: h.owasp,
+                endpoint: ep.path,
+                method: "GET",
+                description: `The response from ${ep.path} exposes ${h.count} instance(s) of ${h.type.toLowerCase()}. This ${h.category} could be harvested by an attacker. Sample redacted: ${h.redactedSample}.`,
+                proofRequest: `GET ${url} HTTP/1.1\nHost: ${new URL(url).host}`,
+                proofResponse: proof,
+                payload: null,
+                confidence: 0.95,
+                remediation:
+                  h.category === "secret"
+                    ? "Remove the secret from the response immediately. Rotate the exposed credential (it must be considered compromised). Never serve source/config files or include secrets in client-visible responses."
+                    : "Do not return PII in API responses unless strictly necessary. Apply field-level authorization (return SSN/CC only to authorized roles). Mask sensitive fields (e.g. •••-••-1234).",
+              },
+            });
+            exposureCount++;
+            findingCount++;
+          }
+          await emitAndStore({
+            stage: "attacking",
+            message: `🔴 EXPOSURE: ${hit.hits.length} sensitive data type(s) found on ${ep.path} (${hit.hits.map((h) => `${h.type}×${h.count}`).join(", ")})`,
+            level: "success",
+            meta: { phase: "exposure", endpoint: ep.path, types: hit.hits.map((h) => h.type) },
+          });
+        }
+      } catch {
+        /* skip unreachable endpoint */
+      }
+    }
+
+    // 2. Probe known exposure paths
+    await emitAndStore({
+      stage: "attacking",
+      message: `🔎 Probing ${22} known exposure paths (.env, .git/, backups, swagger, etc.)…`,
+      level: "info",
+      meta: { phase: "exposure-probe" },
+    });
+
+    const probes = await probeKnownPaths(target.baseUrl, target.authHeader);
+    for (const p of probes) {
+      await db.finding.create({
+        data: {
+          engagementId,
+          title: `${p.label} at ${p.path}`,
+          severity: p.severity,
+          category: "Sensitive Data Exposure",
+          owasp: p.owasp,
+          endpoint: p.path,
+          method: "GET",
+          description: `The path ${p.path} is accessible (HTTP ${p.status}) and exposes ${p.label.toLowerCase()}. ${p.bodySize} bytes returned. Redacted preview: ${p.redactedSample || "(binary/non-text)"}.`,
+          proofRequest: `GET ${target.baseUrl}${p.path} HTTP/1.1\nHost: ${new URL(target.baseUrl).host}`,
+          proofResponse: `HTTP/1.1 ${p.status}\nContent-Length: ${p.bodySize}\n\nRedacted preview: ${p.redactedSample || "(binary content)"}\n\n[Full content redacted — exposure confirmed, value not stored.]`,
+          payload: null,
+          confidence: 0.9,
+          remediation: `Block access to ${p.path} at the web server / reverse proxy level. If the file shouldn't exist in production, remove it from the deployment. Add to the server's deny list.`,
+        },
+      });
+      exposureCount++;
+      findingCount++;
+      await emitAndStore({
+        stage: "attacking",
+        message: `🔴 EXPOSURE: ${p.label} at ${p.path} (HTTP ${p.status}, ${p.bodySize} bytes)`,
+        level: "success",
+        meta: { phase: "exposure-probe", path: p.path, label: p.label },
+      });
+    }
+
+    if (exposureCount > 0) {
+      await emitAndStore({
+        stage: "attacking",
+        message: `🔎 Exposure sweep complete — ${exposureCount} sensitive data exposure(s) documented (samples redacted).`,
+        level: "warning",
+        meta: { phase: "exposure-sweep-end", exposureCount },
+      });
+    } else {
+      await emitAndStore({
+        stage: "attacking",
+        message: `🔎 Exposure sweep complete — no exposed secrets or PII detected.`,
+        level: "success",
+        meta: { phase: "exposure-sweep-end" },
+      });
     }
 
     // ── Stage 5: Complete ───────────────────────────────────────────────
