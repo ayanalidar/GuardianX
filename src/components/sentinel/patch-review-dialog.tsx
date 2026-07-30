@@ -17,6 +17,7 @@ import { SandboxLogs } from "./sandbox-logs";
 import { ChatPanel } from "./chat-panel";
 import { ExploitPlayground } from "./exploit-playground";
 import { AdversarialArena } from "./adversarial-arena";
+import { CopilotPanel } from "./copilot-panel";
 import { useToast } from "@/hooks/use-toast";
 import {
   sentinelApi,
@@ -42,6 +43,7 @@ import {
   ShieldX,
   Sparkles,
   Swords,
+  Wand2,
   XCircle,
 } from "lucide-react";
 
@@ -246,7 +248,7 @@ export function PatchReviewDialog({
 
               {/* Tabbed: Diff / Sandbox / Exploit / Arena / Test / Chat */}
               <Tabs defaultValue={detail.exploit_code ? "exploit" : "diff"} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-zinc-900/60 text-zinc-400 sm:grid-cols-6">
+                <TabsList className="grid w-full grid-cols-4 bg-zinc-900/60 text-zinc-400 sm:grid-cols-7">
                   <TabsTrigger
                     value="diff"
                     className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
@@ -297,6 +299,13 @@ export function PatchReviewDialog({
                     <MessageSquare className="size-3.5" />
                     <span className="hidden sm:inline">Chat</span>
                   </TabsTrigger>
+                  <TabsTrigger
+                    value="copilot"
+                    className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+                  >
+                    <Wand2 className="size-3.5" />
+                    <span className="hidden sm:inline">Copilot</span>
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="diff" className="mt-3">
@@ -336,6 +345,9 @@ export function PatchReviewDialog({
                     initialMessages={chat}
                     onMessagesChange={setChat}
                   />
+                </TabsContent>
+                <TabsContent value="copilot" className="mt-3">
+                  <CopilotPanel patchId={detail.patch_id} />
                 </TabsContent>
               </Tabs>
             </div>

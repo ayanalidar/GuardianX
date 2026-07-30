@@ -66,6 +66,7 @@ model Patch {
   createdAt      DateTime @default(now())
   approvedAt     DateTime?
   chatMessages   ChatMessage[]
+  attestations   Attestation[]
 }
 
 model PipelineEvent {
@@ -173,4 +174,19 @@ model RedAgentEvent {
   level        String   @default("info") // info | success | warning | error
   meta         String?
   createdAt    DateTime @default(now())
+}
+
+// ── Cryptographic Patch Attestation ────────────────────────────────────────
+// Every approved patch is hash-chained into an immutable ledger.
+// Each attestation links to the previous one via prevHash, forming a chain
+// that can be independently verified for integrity (tamper-evidence).
+
+model Attestation {
+  id        String   @id @default(cuid())
+  patchId   String   @unique // one attestation per patch
+  patch     Patch    @relation(fields: [patchId], references: [id], onDelete: Cascade)
+  prevHash  String   // hash of the previous attestation in the chain (genesis = "0")
+  hash      String   // SHA-256 of (prevHash + patchId + patchedCode + timestamp)
+  data      String   // JSON: {patchId, codebase, severity, approvedAt, patchedCodeHash}
+  createdAt DateTime @default(now())
 }

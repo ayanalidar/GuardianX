@@ -279,3 +279,21 @@ Stage Summary:
 - Delivered a full sci-fi security operations lab aesthetic for GuardianX. The dashboard now feels like a tactical SOC / hacking interface: matrix rain falls behind content, a cyber grid pans, CRT scanlines overlay everything, the header has a live UTC clock + "SYS ONLINE" pulse, stat cards are holographic with neon glow + corner brackets, and the RedAgent panel features a circular threat radar with a sweeping line + severity-colored blips. The overall VLM-confirmed vibe is "Iron Man's JARVIS meets The Matrix."
 - Key artifacts: globals.css sci-fi animation system, MatrixRain component, ThreatRadar component, HUD header with live clock, holographic StatsBar.
 - Verified: VLM confirmed all 6 sci-fi elements present. Lint clean. All services running.
+
+---
+Task ID: 9
+Agent: main (Z.ai Code)
+Task: Fix preview blank page (cross-origin dev origins) + add 5 advanced features: Continuous Threat Intel, PostureScore, AI Remediation Copilot, Cryptographic Patch Attestation, Self-Healing Runtime.
+
+Work Log:
+- FIXED PREVIEW: added `allowedDevOrigins: ["*.space-z.ai", "*.chatglm.cn", "*.z.ai"]` to next.config.ts. The cross-origin warning was blocking the sandbox preview from loading Next.js dev assets.
+- PostureScore: GET /api/posture-score computes a 0-100 score per codebase from open critical/high vulns (negative), sandbox pass rate (positive), adversarial win rate (positive), approval rate (positive). Returns overall org score + per-codebase breakdown with letter grades (A-F). Frontend: PostureScoreCard with circular SVG gauge + per-codebase progress bars.
+- Cryptographic Patch Attestation: new Attestation Prisma model (patchId, prevHash, hash, data). Updated approve route to create a hash-chained attestation on every approval: SHA-256(prevHash + patchId + patchedCodeHash + timestamp). GET /api/attestations verifies the full chain integrity (recomputes each hash, checks prevHash linkage). The chain is tamper-evident — any modification to a past attestation breaks all subsequent hashes.
+- Continuous Threat Intel: GET /api/threat-intel uses the web-search skill (z-ai-web-dev-sdk) to fetch latest CVE disclosures from the last 30 days, then cross-references each codebase's name/description keywords against the CVE text. Returns threats with CVE IDs, relevance (high/info), and related codebases. Frontend: ThreatIntelPanel with auto-refresh every 2 minutes, high-relevance badge, clickable links.
+- AI Remediation Copilot: POST /api/patches/[id]/copilot with 3 actions: "explain" (developer-friendly explanation), "generate-fix" (improved production-ready fix), "hardened-fix" (defense-in-depth with input validation, rate limiting, logging). Accepts optional custom instruction. Frontend: CopilotPanel added as 7th tab in the patch review dialog, with 3 action buttons + instruction textarea + result display (code with copy button + explanation + hardening suggestions).
+- Self-Healing Runtime: GET /api/runtime-monitor shows live runtime health (which functions are vulnerable vs healed, simulated attack attempts, blocked attacks). POST /api/runtime-monitor/[patchId]/heal hot-swaps a vulnerable function at runtime (approves the patch + applies to codebase + creates attestation, simulating zero-downtime healing). Frontend: RuntimeMonitor panel with health indicator, summary stats (healed/vulnerable/attacks), function list with Heal buttons.
+- Wired all 5 features into the main page as an "Ops Center" row (PostureScore + Threat Intel + Runtime Monitor) below the stats bar, visible on all tabs.
+- Verified all APIs return real data: posture-score (overall=96, grade=A), runtime-monitor (3 vulnerable functions), attestations (chain_valid=true), threat-intel (10 threats, 7 high-relevance). Lint clean.
+
+Stage Summary:
+- Fixed the preview blank page by adding allowedDevOrigins to next.config.ts. Added all 5 advanced features: PostureScore (0-100 gauge with letter grades), Cryptographic Patch Attestation (SHA-256 hash-chained ledger, tamper-evident), Continuous Threat Intel (live CVE feed via web-search, cross-referenced with codebases), AI Remediation Copilot (3-mode fix generator: explain/improve/harden), Self-Healing Runtime (live function monitoring + one-click hot-swap healing). All verified with real data. Lint clean. All services running.

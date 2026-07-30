@@ -18,6 +18,9 @@ import {
 import { CredentialsDialog } from "@/components/sentinel/credentials-dialog";
 import { RedAgentPanel } from "@/components/sentinel/redagent-panel";
 import { MatrixRain } from "@/components/sentinel/matrix-rain";
+import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
+import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
+import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
 import { PipelineView } from "@/components/sentinel/pipeline-view";
 import { usePipelineSocket } from "@/lib/sentinel/use-pipeline-socket";
 import {
@@ -365,6 +368,13 @@ export default function Home() {
           {/* stats */}
           <section className="mb-6 sm:mb-8">
             <StatsBar stats={stats} loading={statsLoading} />
+          </section>
+
+          {/* Ops Center: PostureScore + Threat Intel + Runtime Monitor */}
+          <section className="mb-6 sm:mb-8 grid gap-4 lg:grid-cols-3">
+            <PostureScoreCard />
+            <ThreatIntelPanel />
+            <RuntimeMonitor />
           </section>
 
           {/* two-column: main list + live pipeline (patches/codebases) OR full-width RedAgent */}

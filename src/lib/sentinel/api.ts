@@ -207,6 +207,99 @@ export interface RedAgentEvent {
   ts: string;
 }
 
+// ── PostureScore ────────────────────────────────────────────────────────────
+export interface CodebaseScore {
+  codebase_id: string;
+  codebase_name: string;
+  score: number;
+  grade: string;
+  color: string;
+  total_patches: number;
+  pending: number;
+  approved: number;
+  pending_critical: number;
+  pending_high: number;
+  sandbox_pass_rate: number;
+  adversarial_win_rate: number;
+}
+export interface PostureScore {
+  overall: number;
+  overall_grade: string;
+  codebases: CodebaseScore[];
+}
+
+// ── Attestations ────────────────────────────────────────────────────────────
+export interface Attestation {
+  id: string;
+  patch_id: string;
+  title: string;
+  severity: string;
+  prev_hash: string;
+  hash: string;
+  hash_ok: boolean;
+  link_ok: boolean;
+  created_at: string;
+  data: { patchId: string; codebase: string; title: string; severity: string; approvedAt: string; patchedCodeHash: string; selfHealed?: boolean };
+}
+export interface AttestationLedger {
+  chain_valid: boolean;
+  count: number;
+  genesis_hash: string | null;
+  latest_hash: string | null;
+  attestations: Attestation[];
+}
+
+// ── Threat Intel ────────────────────────────────────────────────────────────
+export interface ThreatItem {
+  title: string;
+  url: string;
+  source: string;
+  date: string;
+  snippet: string;
+  cve: string | null;
+  related_codebases: string[];
+  relevance: "high" | "info";
+}
+export interface ThreatIntel {
+  threat_count: number;
+  high_relevance: number;
+  fetched_at: string;
+  threats: ThreatItem[];
+}
+
+// ── AI Copilot ──────────────────────────────────────────────────────────────
+export interface CopilotResult {
+  action: string;
+  code: string | null;
+  explanation: string;
+  suggestions: string[];
+}
+
+// ── Runtime Monitor ─────────────────────────────────────────────────────────
+export interface RuntimeFunction {
+  patch_id: string;
+  title: string;
+  severity: string;
+  codebase: string;
+  affected_file: string;
+  runtime_status: "healed" | "vulnerable";
+  sandbox_passed: boolean;
+  exploit_proven: boolean;
+  attack_attempts: number;
+  blocked_attacks: number;
+  last_incident: string | null;
+}
+export interface RuntimeStatus {
+  runtime_health: "secure" | "at-risk" | "critical";
+  monitored_functions: number;
+  vulnerable_functions: number;
+  healed_functions: number;
+  total_attack_attempts: number;
+  total_attacks_blocked: number;
+  auto_heal_enabled: boolean;
+  functions: RuntimeFunction[];
+}
+
 export interface PatchStats {
   pending: number;
   approved: number;
@@ -365,4 +458,28 @@ export const sentinelApi = {
     http<Finding[]>(`/api/engagements/${engagementId}/findings`),
   reportUrl: (engagementId: string) =>
     `/api/engagements/${engagementId}/report`,
+
+  // PostureScore
+  postureScore: () => http<PostureScore>("/api/posture-score"),
+
+  // Attestations
+  attestations: () => http<AttestationLedger>("/api/attestations"),
+
+  // Threat Intel
+  threatIntel: () => http<ThreatIntel>("/api/threat-intel"),
+
+  // AI Remediation Copilot
+  copilot: (patchId: string, action: "generate-fix" | "explain" | "hardened-fix", instruction?: string) =>
+    http<CopilotResult>(`/api/patches/${encodeURIComponent(patchId)}/copilot`, {
+      method: "POST",
+      body: JSON.stringify({ action, instruction }),
+    }),
+
+  // Self-Healing Runtime
+  runtimeMonitor: () => http<RuntimeStatus>("/api/runtime-monitor"),
+  runtimeHeal: (patchId: string) =>
+    http<{ patch_id: string; runtime_status: string; message: string }>(
+      `/api/runtime-monitor/${encodeURIComponent(patchId)}/heal`,
+      { method: "POST" }
+    ),
 };
