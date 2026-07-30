@@ -27,6 +27,7 @@ import {
 } from "@/lib/sentinel/api";
 import { useEngagementSocket } from "@/lib/sentinel/use-engagement-socket";
 import { AttackStream } from "./attack-stream";
+import { ThreatRadar } from "./threat-radar";
 import { FindingDialog } from "./finding-dialog";
 import {
   AlertTriangle,
@@ -372,8 +373,21 @@ export function RedAgentPanel() {
           )}
         </section>
 
-        {/* right: live attack stream */}
-        <aside className="lg:sticky lg:top-20 lg:self-start">
+        {/* right: threat radar + live attack stream */}
+        <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+          {findings.length > 0 && (
+            <div className="holo-card hud-corners rounded-xl p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-400/70">
+                  Threat Scope
+                </span>
+                <span className="font-mono text-[9px] text-emerald-500/50">
+                  {findings.length} blips
+                </span>
+              </div>
+              <ThreatRadar findings={findings} active={running} />
+            </div>
+          )}
           <AttackStream
             events={events}
             connected={connected}

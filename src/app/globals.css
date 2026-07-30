@@ -124,21 +124,212 @@
 /* Custom scrollbar for the SentinelPatch dashboard dark surfaces */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgb(63 63 70) transparent;
+  scrollbar-color: rgb(16 185 129 / 0.4) transparent;
 }
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgb(63 63 70);
+  background-color: rgb(16 185 129 / 0.4);
   border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: content-box;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(82 82 91);
+  background-color: rgb(16 185 129 / 0.7);
+}
+
+/* ── Sci-Fi Lab Theme ──────────────────────────────────────────────────── */
+
+/* Animated cyber grid background */
+.cyber-grid {
+  background-image:
+    linear-gradient(rgba(16, 185, 129, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.07) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: grid-pan 20s linear infinite;
+}
+@keyframes grid-pan {
+  0% { background-position: 0 0; }
+  100% { background-position: 40px 40px; }
+}
+
+/* Scanline overlay */
+.scanlines::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 2px,
+    rgba(16, 185, 129, 0.015) 3px,
+    rgba(16, 185, 129, 0.015) 3px
+  );
+  animation: scanline-sweep 8s linear infinite;
+}
+@keyframes scanline-sweep {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+
+/* Vignette + ambient glow */
+.cyber-vignette::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  background:
+    radial-gradient(ellipse at top, rgba(16, 185, 129, 0.08), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(6, 182, 212, 0.05), transparent 50%),
+    radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+/* Holographic card */
+.holo-card {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.04), rgba(6, 182, 212, 0.02));
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+.holo-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.08), transparent);
+  animation: holo-sweep 6s ease-in-out infinite;
+}
+@keyframes holo-sweep {
+  0%, 100% { left: -100%; }
+  50% { left: 200%; }
+}
+
+/* Neon glow text */
+.neon-emerald {
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.6), 0 0 20px rgba(16, 185, 129, 0.3);
+}
+.neon-red {
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.6), 0 0 20px rgba(239, 68, 68, 0.3);
+}
+.neon-cyan {
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.3);
+}
+
+/* Neon border pulse */
+.neon-border {
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 0 12px rgba(16, 185, 129, 0.15), inset 0 0 12px rgba(16, 185, 129, 0.03);
+}
+.neon-border-red {
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3), 0 0 12px rgba(239, 68, 68, 0.15), inset 0 0 12px rgba(239, 68, 68, 0.03);
+}
+
+/* Glitch effect */
+.glitch {
+  position: relative;
+  animation: glitch-skew 4s infinite linear alternate-reverse;
+}
+@keyframes glitch-skew {
+  0%, 100% { transform: skew(0deg); }
+  20% { transform: skew(0.3deg); }
+  40% { transform: skew(-0.2deg); }
+  60% { transform: skew(0.1deg); }
+  80% { transform: skew(-0.3deg); }
+}
+
+/* Pulse / heartbeat */
+.pulse-dot {
+  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Radar sweep */
+.radar-sweep {
+  animation: radar-rotate 4s linear infinite;
+  transform-origin: center;
+}
+@keyframes radar-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Blip appearance */
+.blip-appear {
+  animation: blip-pop 0.5s ease-out;
+}
+@keyframes blip-pop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.5); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Typing cursor */
+.type-cursor::after {
+  content: "▊";
+  animation: blink 1s step-end infinite;
+  color: rgb(16 185 129);
+}
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Data stream (vertical falling chars) */
+.data-stream {
+  animation: data-fall linear infinite;
+}
+@keyframes data-fall {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+/* Flicker */
+.flicker {
+  animation: flicker 3s linear infinite;
+}
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  41% { opacity: 1; }
+  42% { opacity: 0.5; }
+  43% { opacity: 1; }
+  45% { opacity: 0.3; }
+  46% { opacity: 1; }
+}
+
+/* Corner brackets (HUD frame) */
+.hud-corners {
+  position: relative;
+}
+.hud-corners::before,
+.hud-corners::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  pointer-events: none;
+}
+.hud-corners::before {
+  top: 0; left: 0;
+  border-right: none;
+  border-bottom: none;
+}
+.hud-corners::after {
+  bottom: 0; right: 0;
+  border-left: none;
+  border-top: none;
 }

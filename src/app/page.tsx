@@ -17,6 +17,7 @@ import {
 } from "@/components/sentinel/codebase-viewer";
 import { CredentialsDialog } from "@/components/sentinel/credentials-dialog";
 import { RedAgentPanel } from "@/components/sentinel/redagent-panel";
+import { MatrixRain } from "@/components/sentinel/matrix-rain";
 import { PipelineView } from "@/components/sentinel/pipeline-view";
 import { usePipelineSocket } from "@/lib/sentinel/use-pipeline-socket";
 import {
@@ -48,6 +49,15 @@ type Tab = "patches" | "codebases" | "redagent";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
+  // live clock for the HUD
+  const [clock, setClock] = useState("--:--:--");
+  useEffect(() => {
+    const id = setInterval(() => {
+      setClock(new Date().toLocaleTimeString("en-US", { hour12: false }));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("patches");
   const [patches, setPatches] = useState<PatchSummary[]>([]);
@@ -241,29 +251,33 @@ export default function Home() {
   }, [patches, query, sortKey]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="scanlines cyber-vignette min-h-screen bg-zinc-950 text-zinc-100">
+      {/* matrix rain + cyber grid background */}
+      <MatrixRain />
+      <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-60" />
+
       {/* ambient backdrop */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
       >
         <div className="absolute -top-40 left-1/2 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="absolute top-1/3 -right-40 h-80 w-80 rounded-full bg-emerald-700/10 blur-3xl" />
+        <div className="absolute top-1/3 -right-40 h-80 w-80 rounded-full bg-cyan-700/10 blur-3xl" />
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* header */}
-        <header className="sticky top-0 z-30 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
+        <header className="sticky top-0 z-30 border-b border-emerald-500/20 bg-zinc-950/90 backdrop-blur-md">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
               <img
                 src="/guardianx-logo.png"
                 alt="GuardianX"
-                className="size-9 rounded-lg object-contain"
+                className="size-9 rounded-lg object-contain neon-border"
               />
               <div className="leading-tight">
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold tracking-tight text-zinc-50">
+                  <span className="text-base font-bold tracking-tight text-zinc-50 neon-emerald">
                     Guardian<span className="text-emerald-400">X</span>
                   </span>
                   <Badge
@@ -274,19 +288,25 @@ export default function Home() {
                     Autonomous SOC
                   </Badge>
                 </div>
-                <span className="hidden text-[11px] text-zinc-500 sm:block">
-                  Autonomous Security Operations Platform
+                <span className="hidden font-mono text-[10px] uppercase tracking-widest text-emerald-500/50 sm:block">
+                  {"// Security Operations Lab"}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="hidden items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/5 px-3 py-1 text-xs text-emerald-300 md:flex">
-                <span className="relative flex size-2">
+              {/* HUD live clock */}
+              <div className="hidden items-center gap-2 rounded-md border border-emerald-500/20 bg-zinc-950/60 px-3 py-1.5 font-mono text-xs text-emerald-400/80 md:flex">
+                <span className="relative flex size-1.5">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
                 </span>
-                Engine online
+                <span className="neon-emerald">{clock}</span>
+                <span className="text-emerald-500/40">UTC</span>
+              </div>
+              <div className="hidden items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-xs text-emerald-300 lg:flex">
+                <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
+                <span className="font-mono uppercase tracking-wider">SYS ONLINE</span>
               </div>
               <Button
                 variant="outline"
@@ -320,7 +340,12 @@ export default function Home() {
           <section className="mb-6 sm:mb-8">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
+                <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+                  <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
+                  guardianx@lab:~$
+                  <span className="type-cursor" />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight text-zinc-50 neon-emerald sm:text-3xl">
                   Autonomous Security Operations
                 </h1>
                 <p className="mt-1 max-w-2xl text-sm text-zinc-400">
@@ -330,7 +355,7 @@ export default function Home() {
                   and export professional reports.
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <div className="flex items-center gap-2 font-mono text-xs text-emerald-400/70">
                 <Activity className="size-3.5 text-emerald-400" />
                 {connected ? "Live pipeline connected" : "Connecting…"}
               </div>

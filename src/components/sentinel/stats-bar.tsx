@@ -69,7 +69,7 @@ export function StatsBar({ stats, loading }: StatsBarProps) {
         return (
           <Card
             key={s.key}
-            className="gap-0 border-zinc-800 bg-zinc-900/60 py-4 backdrop-blur-sm"
+            className="holo-card hud-corners gap-0 rounded-lg py-4"
           >
             <div className="flex items-center gap-3 px-4">
               <div
@@ -78,14 +78,14 @@ export function StatsBar({ stats, loading }: StatsBarProps) {
                 <s.icon className="size-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
                   {s.label}
                 </div>
                 <div
-                  className={`text-2xl font-semibold tabular-nums ${s.accent}`}
+                  className={`text-2xl font-bold tabular-nums ${s.accent} neon-emerald`}
                 >
                   {loading || value === null ? (
-                    <span className="inline-block h-6 w-6 animate-pulse rounded bg-zinc-700/60" />
+                    <span className="inline-block h-6 w-6 animate-pulse rounded bg-emerald-500/20" />
                   ) : (
                     value
                   )}
