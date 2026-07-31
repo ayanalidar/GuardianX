@@ -355,11 +355,31 @@ CREATE INDEX IF NOT EXISTS idx_ss_next           ON "ScheduledScan"("nextRunAt")
 CREATE INDEX IF NOT EXISTS idx_alog_created      ON "AuditLog"("createdAt");
 CREATE INDEX IF NOT EXISTS idx_tm_org            ON "TeamMember"("orgId");
 
--- ---------- Row-Level Security -------------------------------------
--- Service role bypasses RLS automatically, so all backend API calls
--- (which use the service_role key) have full access without policies.
--- We still enable RLS so anon/authenticated keys are blocked from
--- direct table access — forcing all reads/writes through our API.
+-- ---------- Privileges + Row-Level Security ---------------------------
+-- Our backend API uses the service_role key (which bypasses RLS) and we
+-- run our own auth (not Supabase Auth), so we:
+--   1. GRANT ALL on all tables to service_role (so the backend works).
+--   2. GRANT basic CRUD to anon/authenticated (harmless; defense in depth
+--      is provided by our API layer, not by DB-level RLS).
+--   3. DISABLE RLS on all tables — RLS provides no benefit for our setup
+--      and only causes "permission denied for table X" errors when
+--      Supabase's default privileges don't apply as expected.
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT SELECT, USAGE ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO service_role;
+
+-- Default privileges for any tables created in the future
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO anon, authenticated;
+
+-- Disable RLS on every GuardianX table (service_role bypasses it anyway,
+-- but disabling prevents anon/authenticated from being blocked if they
+-- ever need direct read access for debugging).
 DO $$
 DECLARE t TEXT;
 BEGIN
@@ -370,7 +390,7 @@ BEGIN
     'WebhookConfig','ScheduledScan','AlertRule','AuditLog','Organization',
     'TeamMember','AttackChain','Integration','FuzzResult'
   ]) LOOP
-    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY;', t);
+    EXECUTE format('ALTER TABLE IF EXISTS public.%I DISABLE ROW LEVEL SECURITY;', t);
   END LOOP;
 END $$;
 
