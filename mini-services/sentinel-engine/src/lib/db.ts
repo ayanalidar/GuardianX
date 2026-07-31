@@ -60,9 +60,11 @@ const MODEL_TO_TABLE: Record<string, string> = {
   fuzzResult: "FuzzResult",
 };
 
-// ── Relation metadata: model → { relationName: { table, foreignKey, isList } } ─
+// ── Relation metadata: model → { relationName: { table, fk, isList, localFk? } } ─
+// For hasMany: fk = the FK column on the child table that points to this model's id
+// For belongsTo: localFk = the FK column on THIS model that points to the parent's id
 // Used by include/_count to do follow-up queries. Derived from schema.prisma.
-const RELATIONS: Record<string, Record<string, { table: string; fk: string; isList: boolean }>> = {
+const RELATIONS: Record<string, Record<string, { table: string; fk: string; isList: boolean; localFk?: string }>> = {
   Codebase: {
     scans: { table: "Scan", fk: "codebaseId", isList: true },
     patches: { table: "Patch", fk: "codebaseId", isList: true },
@@ -70,18 +72,18 @@ const RELATIONS: Record<string, Record<string, { table: string; fk: string; isLi
   Scan: {
     patches: { table: "Patch", fk: "scanId", isList: true },
     events: { table: "PipelineEvent", fk: "scanId", isList: true },
-    codebase: { table: "Codebase", fk: "id", isList: false }, // belongsTo (reverse)
+    codebase: { table: "Codebase", fk: "id", isList: false, localFk: "codebaseId" },
   },
   Patch: {
     chatMessages: { table: "ChatMessage", fk: "patchId", isList: true },
     attestations: { table: "Attestation", fk: "patchId", isList: true },
-    codebase: { table: "Codebase", fk: "id", isList: false },
-    scan: { table: "Scan", fk: "id", isList: false },
+    codebase: { table: "Codebase", fk: "id", isList: false, localFk: "codebaseId" },
+    scan: { table: "Scan", fk: "id", isList: false, localFk: "scanId" },
   },
   Engagement: {
     findings: { table: "Finding", fk: "engagementId", isList: true },
     events: { table: "RedAgentEvent", fk: "engagementId", isList: true },
-    target: { table: "Target", fk: "id", isList: false },
+    target: { table: "Target", fk: "id", isList: false, localFk: "targetId" },
   },
   Credential: {
     audits: { table: "CredentialAudit", fk: "credentialId", isList: true },
@@ -93,6 +95,35 @@ const RELATIONS: Record<string, Record<string, { table: string; fk: string; isLi
     members: { table: "TeamMember", fk: "orgId", isList: true },
   },
 };
+
+// ── Date field hydration ───────────────────────────────────────────────────
+// Supabase REST returns date/timestamp columns as ISO strings, but Prisma
+// returns Date objects. All 50 existing routes call `.toISOString()` on
+// date fields, so we convert strings → Date objects on read.
+const DATE_FIELD_SUFFIXES = ["At", "Date", "Timestamp", "Time", "timestamp", "Run"];
+
+function hydrateDates(record: unknown): unknown {
+  if (!record || typeof record !== "object") return record;
+  if (Array.isArray(record)) return record.map(hydrateDates);
+  const obj = record as Record<string, unknown>;
+  for (const key of Object.keys(obj)) {
+    const val = obj[key];
+    // Convert ISO date strings to Date objects for fields that look like dates
+    if (typeof val === "string" && DATE_FIELD_SUFFIXES.some(s => key.endsWith(s))) {
+      // Validate it's actually a date string (ISO format)
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val) || /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          obj[key] = d;
+        }
+      }
+    } else if (val && typeof val === "object") {
+      // Recurse into nested objects (but not arrays of primitives)
+      obj[key] = hydrateDates(val);
+    }
+  }
+  return obj;
+}
 
 // ── where-clause builder → returns a filter function applied to a query ────
 type WhereValue = unknown;
@@ -160,13 +191,18 @@ function buildSelect(select: Record<string, boolean> | undefined): string | null
 }
 
 // ── orderBy builder ─────────────────────────────────────────────────────────
+// Supports both single-object ({ field: "desc" }) and array-of-objects
+// ([{ field1: "asc" }, { field2: "desc" }]) syntax (Prisma allows both).
 function applyOrderBy(
   q: ReturnType<SupabaseClient["from"]>,
-  orderBy: Record<string, "asc" | "desc"> | undefined
+  orderBy: Record<string, "asc" | "desc"> | Record<string, "asc" | "desc">[] | undefined
 ): ReturnType<SupabaseClient["from"]> {
   if (!orderBy) return q;
-  for (const [field, dir] of Object.entries(orderBy)) {
-    q = q.order(field, { ascending: dir === "asc" });
+  const entries = Array.isArray(orderBy) ? orderBy : [orderBy];
+  for (const entry of entries) {
+    for (const [field, dir] of Object.entries(entry)) {
+      q = q.order(field, { ascending: dir === "asc" });
+    }
   }
   return q;
 }
@@ -178,11 +214,17 @@ async function resolveIncludes(
   include: Record<string, unknown> | undefined
 ): Promise<void> {
   if (!include || !records) return;
-  const rels = RELATIONS[modelName];
-  if (!rels) return;
+  const rels = RELATIONS[modelName] || {};
 
   const recordList = Array.isArray(records) ? records : [records];
   for (const [relName, relOpts] of Object.entries(include)) {
+    // Handle _count inside include (Prisma's `_count: { select: { patches: true } }` syntax)
+    if (relName === "_count") {
+      const countSpec = (relOpts as { select?: Record<string, boolean> }).select || (relOpts as Record<string, boolean>);
+      await resolveCounts(modelName, records, countSpec);
+      continue;
+    }
+
     const rel = rels[relName];
     if (!rel) continue; // unknown relation — skip silently
 
@@ -196,17 +238,18 @@ async function resolveIncludes(
           .from(rel.table)
           .select(selectStr)
           .eq(rel.fk, record.id as string);
-        (record as Record<string, unknown>)[relName] = data || [];
+        (record as Record<string, unknown>)[relName] = (data || []).map(hydrateDates);
       } else {
-        // belongsTo: fetch the parent where id = this record's fk
-        const fkValue = (record as Record<string, unknown>)[rel.fk];
+        // belongsTo: fetch the parent where id = this record's localFk
+        const fkField = rel.localFk || rel.fk;
+        const fkValue = (record as Record<string, unknown>)[fkField];
         if (fkValue) {
           const { data } = await supabase
             .from(rel.table)
             .select(selectStr)
             .eq("id", fkValue as string)
             .maybeSingle();
-          (record as Record<string, unknown>)[relName] = data;
+          (record as Record<string, unknown>)[relName] = data ? hydrateDates(data) : data;
         }
       }
     }
@@ -220,8 +263,7 @@ async function resolveCounts(
   countSpec: Record<string, boolean> | undefined
 ): Promise<void> {
   if (!countSpec || !records) return;
-  const rels = RELATIONS[modelName];
-  if (!rels) return;
+  const rels = RELATIONS[modelName] || {};
 
   const recordList = Array.isArray(records) ? records : [records];
   for (const record of recordList) {
@@ -290,8 +332,9 @@ function createModelHandler(modelKey: string): ModelHandler {
       q = applyWhere(q, where);
       const { data, error } = await q.limit(1).maybeSingle();
       if (error) throw new Error(`[${table}.findUnique] ${error.message}`);
-      if (data && include) await resolveIncludes(table, data, include);
-      return data;
+      const result = data ? hydrateDates(data) : data;
+      if (result && include) await resolveIncludes(table, result, include);
+      return result;
     },
 
     async findFirst(args: {
@@ -306,8 +349,9 @@ function createModelHandler(modelKey: string): ModelHandler {
       q = applyOrderBy(q, orderBy);
       const { data, error } = await q.limit(1).maybeSingle();
       if (error) throw new Error(`[${table}.findFirst] ${error.message}`);
-      if (data && include) await resolveIncludes(table, data, include);
-      return data;
+      const result = data ? hydrateDates(data) : data;
+      if (result && include) await resolveIncludes(table, result, include);
+      return result;
     },
 
     async findMany(args: {
@@ -325,7 +369,7 @@ function createModelHandler(modelKey: string): ModelHandler {
       if (take) q = q.limit(take);
       const { data, error } = await q;
       if (error) throw new Error(`[${table}.findMany] ${error.message}`);
-      const records = data || [];
+      const records = (data || []).map(hydrateDates);
       if (include && records.length > 0) await resolveIncludes(table, records, include);
       if (_count && records.length > 0) await resolveCounts(table, records, _count);
       return records;
@@ -349,8 +393,9 @@ function createModelHandler(modelKey: string): ModelHandler {
         .select(buildSelect(select) || "*")
         .single();
       if (error) throw new Error(`[${table}.create] ${error.message}`);
-      if (result && include) await resolveIncludes(table, result, include);
-      return result;
+      const hydrated = result ? hydrateDates(result) : result;
+      if (hydrated && include) await resolveIncludes(table, hydrated, include);
+      return hydrated;
     },
 
     async update(args: {
@@ -364,8 +409,9 @@ function createModelHandler(modelKey: string): ModelHandler {
       q = applyWhere(q, where);
       const { data: result, error } = await q.select(buildSelect(select) || "*").single();
       if (error) throw new Error(`[${table}.update] ${error.message}`);
-      if (result && include) await resolveIncludes(table, result, include);
-      return result;
+      const hydrated = result ? hydrateDates(result) : result;
+      if (hydrated && include) await resolveIncludes(table, hydrated, include);
+      return hydrated;
     },
 
     async delete(args: { where: WhereClause } = {} as any) {
@@ -374,7 +420,7 @@ function createModelHandler(modelKey: string): ModelHandler {
       q = applyWhere(q, where);
       const { data: result, error } = await q.select().single();
       if (error) throw new Error(`[${table}.delete] ${error.message}`);
-      return result || { ok: true };
+      return result ? hydrateDates(result) : { ok: true };
     },
 
     async count(args?: { where?: WhereClause }) {

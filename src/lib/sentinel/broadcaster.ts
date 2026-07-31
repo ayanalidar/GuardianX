@@ -1,12 +1,14 @@
-// Server-side broadcaster: pushes pipeline events to the sentinel-engine
-// socket.io relay (port 3003) which forwards them to subscribed browsers.
+// GuardianX broadcaster — NO-OP on Vercel.
 //
-// This is a server-to-server internal connection (Next.js API route -> engine).
-// We connect once at module load and reuse the connection.
-
-import { io, type Socket } from "socket.io-client";
-
-const ENGINE_URL = process.env.ENGINE_URL || "http://localhost:3003";
+// Previously this connected to the sentinel-engine socket.io relay and
+// forwarded pipeline events. After the Railway refactor, Vercel routes
+// are thin proxies — they don't run pipelines locally anymore, so they
+// don't need to broadcast events. The Railway engine handles all
+// broadcasting directly to browsers via its own socket.io server.
+//
+// This file is kept as a no-op stub so any residual imports don't crash.
+// It will be deleted in a future cleanup once all engine code is removed
+// from the Vercel project.
 
 export interface PipelineEventPayload {
   scanId: string;
@@ -26,58 +28,10 @@ export interface RedAgentEventPayload {
   ts: string;
 }
 
-let socket: Socket | null = null;
-let connecting: Promise<Socket> | null = null;
-
-async function getSocket(): Promise<Socket> {
-  if (socket && socket.connected) return socket;
-  if (connecting) return connecting;
-
-  connecting = new Promise<Socket>((resolve, reject) => {
-    const s = io(ENGINE_URL, {
-      path: "/",
-      transports: ["websocket"],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      timeout: 5000,
-    });
-    s.on("connect", () => {
-      console.log("[broadcaster] connected to engine:", s.id);
-      socket = s;
-      resolve(s);
-    });
-    s.on("connect_error", (err) => {
-      console.warn("[broadcaster] connect error:", err.message);
-      // don't reject — keep trying to reconnect; resolve with the socket so
-      // emits queue/buffer internally and flush when reconnected.
-      socket = s;
-      resolve(s);
-    });
-    s.on("disconnect", () => {
-      console.warn("[broadcaster] disconnected from engine");
-    });
-  });
-  return connecting;
+export async function broadcast(_event: PipelineEventPayload): Promise<void> {
+  // No-op — Railway engine broadcasts directly.
 }
 
-// Kick off the connection eagerly so it's warm by the time a scan starts.
-void getSocket();
-
-export async function broadcast(event: PipelineEventPayload): Promise<void> {
-  try {
-    const s = await getSocket();
-    s.emit("pipeline:event", event);
-  } catch (err) {
-    console.warn("[broadcaster] emit failed:", err);
-  }
-}
-
-export async function broadcastRedAgent(event: RedAgentEventPayload): Promise<void> {
-  try {
-    const s = await getSocket();
-    s.emit("redagent:event", event);
-  } catch (err) {
-    console.warn("[broadcaster] redagent emit failed:", err);
-  }
+export async function broadcastRedAgent(_event: RedAgentEventPayload): Promise<void> {
+  // No-op — Railway engine broadcasts directly.
 }

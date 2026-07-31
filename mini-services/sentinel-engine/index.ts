@@ -258,37 +258,63 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
 
     // ── POST /api/run-scraper ────────────────────────────────────────────
     if (path === "/api/run-scraper" && method === "POST") {
-      const config = json;
+      // Ensure audit_id is present (scraper requires it as a UUID)
+      const config = { ...json };
+      if (!config.audit_id) {
+        config.audit_id = randomUUID();
+      }
+
       const dir = await mkdtemp(join(tmpdir(), "guardianx-scraper-"));
       try {
         const configPath = join(dir, "config.json");
-        const outputPath = join(dir, "result.json");
         const scriptPath = join(process.cwd(), "audit-scraper", "run.py");
 
         await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
 
-        const exitCode = await new Promise<number>((resolve) => {
-          const child = spawn("python3", [scriptPath, configPath, outputPath], {
+        // The scraper reads config from argv[1] and writes JSON result to stdout.
+        // We capture stdout and return it as the response.
+        const { exitCode, stdout, stderr } = await new Promise<{
+          exitCode: number;
+          stdout: string;
+          stderr: string;
+        }>((resolve) => {
+          const child = spawn("python3", [scriptPath, configPath], {
             cwd: dir,
             env: { ...process.env, PYTHONUNBUFFERED: "1" },
           });
-          let stderr = "";
-          child.stderr.on("data", (d) => (stderr += d.toString()));
+          let out = "";
+          let err = "";
+          child.stdout.on("data", (d) => (out += d.toString()));
+          child.stderr.on("data", (d) => (err += d.toString()));
           child.on("close", (code) => {
-            if (code !== 0) console.error("[run-scraper] python stderr:", stderr);
-            resolve(code ?? 1);
+            if (code !== 0) console.error("[run-scraper] python stderr:", err);
+            resolve({ exitCode: code ?? 1, stdout: out, stderr: err });
+          });
+          child.on("error", (e) => {
+            resolve({ exitCode: 1, stdout: "", stderr: String(e) });
           });
         });
 
         if (exitCode !== 0) {
           res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Scraper failed", exitCode }));
+          res.end(JSON.stringify({
+            error: "Scraper failed",
+            exit_code: exitCode,
+            stderr: stderr.slice(-2000),
+          }));
           return;
         }
 
-        const resultBuffer = await readFile(outputPath);
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(resultBuffer);
+        // The scraper writes JSON to stdout — parse + re-serialize to validate
+        try {
+          const parsed = JSON.parse(stdout);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify(parsed));
+        } catch {
+          // stdout wasn't valid JSON — return raw
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(stdout);
+        }
       } catch (err) {
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({
