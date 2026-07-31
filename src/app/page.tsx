@@ -346,27 +346,27 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             </div>
           </button>
           <nav className="custom-scrollbar flex-1 overflow-y-auto p-2">
-            <NavGroup label="Operations">
-              <NavItem active={tab === "patches"} onClick={() => { setTab("patches"); setSidebarOpen(false); }} icon={ShieldAlert} label="Patches" badge={patches.length || undefined} badgeColor="emerald" />
-              <NavItem active={tab === "codebases"} onClick={() => { setTab("codebases"); setSidebarOpen(false); }} icon={Boxes} label="Codebases" badge={codebases.length || undefined} badgeColor="sky" />
+            <NavGroup label="Operations" color="emerald">
+              <NavItem active={tab === "patches"} onClick={() => { setTab("patches"); setSidebarOpen(false); }} icon={ShieldAlert} label="Patches" badge={patches.length || undefined} badgeColor="emerald" accentColor="emerald" />
+              <NavItem active={tab === "codebases"} onClick={() => { setTab("codebases"); setSidebarOpen(false); }} icon={Boxes} label="Codebases" badge={codebases.length || undefined} badgeColor="sky" accentColor="sky" iconColor="text-sky-400" />
             </NavGroup>
-            <NavGroup label="Offensive Security">
-              <NavItem active={tab === "redagent"} onClick={() => { setTab("redagent"); setSidebarOpen(false); }} icon={Crosshair} label="RedAgent VAPT" iconColor="text-red-400" />
+            <NavGroup label="Offensive Security" color="red">
+              <NavItem active={tab === "redagent"} onClick={() => { setTab("redagent"); setSidebarOpen(false); }} icon={Crosshair} label="RedAgent VAPT" iconColor="text-red-400" accentColor="red" />
             </NavGroup>
-            <NavGroup label="Governance">
-              <NavItem active={tab === "compliance"} onClick={() => { setTab("compliance"); setSidebarOpen(false); }} icon={Gavel} label="Compliance" iconColor="text-purple-400" />
+            <NavGroup label="Governance" color="purple">
+              <NavItem active={tab === "compliance"} onClick={() => { setTab("compliance"); setSidebarOpen(false); }} icon={Gavel} label="Compliance" iconColor="text-purple-400" accentColor="purple" />
             </NavGroup>
-            <NavGroup label="Monitoring">
-              <NavItem active={tab === "soc"} onClick={() => { setTab("soc"); setSidebarOpen(false); }} icon={Radar} label="SOC & DevSecOps" iconColor="text-cyan-400" />
-              <NavItem active={tab === "exfil"} onClick={() => { setTab("exfil"); setSidebarOpen(false); }} icon={Shield} label="Exfil Defense" iconColor="text-rose-400" />
-              <NavItem active={tab === "scraper"} onClick={() => { setTab("scraper"); setSidebarOpen(false); }} icon={ScanSearch} label="Audit Scraper" iconColor="text-violet-400" />
+            <NavGroup label="Monitoring" color="cyan">
+              <NavItem active={tab === "soc"} onClick={() => { setTab("soc"); setSidebarOpen(false); }} icon={Radar} label="SOC & DevSecOps" iconColor="text-cyan-400" accentColor="cyan" />
+              <NavItem active={tab === "exfil"} onClick={() => { setTab("exfil"); setSidebarOpen(false); }} icon={Shield} label="Exfil Defense" iconColor="text-rose-400" accentColor="rose" />
+              <NavItem active={tab === "scraper"} onClick={() => { setTab("scraper"); setSidebarOpen(false); }} icon={ScanSearch} label="Audit Scraper" iconColor="text-violet-400" accentColor="violet" />
             </NavGroup>
-            <NavGroup label="Advanced">
-              <NavItem active={tab === "advanced"} onClick={() => { setTab("advanced"); setSidebarOpen(false); }} icon={Sparkles} label="Advanced Platform" iconColor="text-amber-400" />
+            <NavGroup label="Advanced" color="amber">
+              <NavItem active={tab === "advanced"} onClick={() => { setTab("advanced"); setSidebarOpen(false); }} icon={Sparkles} label="Advanced Platform" iconColor="text-amber-400" accentColor="amber" />
             </NavGroup>
             {currentUser?.role === "admin" && (
-              <NavGroup label="Administration">
-                <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" />
+              <NavGroup label="Administration" color="emerald">
+                <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" accentColor="emerald" />
               </NavGroup>
             )}
           </nav>
@@ -411,7 +411,17 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                 <button onClick={() => setSidebarOpen(true)} className="text-zinc-400 hover:text-emerald-400 md:hidden">
                   <Menu className="size-5" />
                 </button>
-                <h1 className="text-sm font-bold text-zinc-50 sm:text-base">
+                <h1 className={`text-sm font-bold sm:text-base ${
+                  tab === "patches" ? "neon-emerald text-emerald-300" :
+                  tab === "codebases" ? "neon-sky text-sky-300" :
+                  tab === "redagent" ? "neon-red text-red-300" :
+                  tab === "compliance" ? "neon-purple text-purple-300" :
+                  tab === "soc" ? "neon-cyan text-cyan-300" :
+                  tab === "exfil" ? "neon-rose text-rose-300" :
+                  tab === "scraper" ? "neon-violet text-violet-300" :
+                  tab === "users" ? "neon-emerald text-emerald-300" :
+                  "neon-amber text-amber-300"
+                }`}>
                   {tab === "patches" ? "Patch Review Queue" : tab === "codebases" ? "Codebase Library" : tab === "redagent" ? "RedAgent VAPT Engine" : tab === "compliance" ? "GRC & Compliance Center" : tab === "soc" ? "SOC & DevSecOps Center" : tab === "exfil" ? "Data Exfiltration Defense" : tab === "scraper" ? "Web Scraping Audit Engine" : tab === "users" ? "User Management" : "Advanced Security Platform"}
                 </h1>
               </div>
@@ -665,10 +675,20 @@ function EmptyState({
   );
 }
 
-function NavGroup({ label, children }: { label: string; children: React.ReactNode }) {
+function NavGroup({ label, children, color = "emerald" }: { label: string; children: React.ReactNode; color?: string }) {
+  const colorMap: Record<string, string> = {
+    emerald: "text-emerald-500/60",
+    sky: "text-sky-500/60",
+    red: "text-red-500/60",
+    cyan: "text-cyan-500/60",
+    purple: "text-purple-500/60",
+    rose: "text-rose-500/60",
+    violet: "text-violet-500/60",
+    amber: "text-amber-500/60",
+  };
   return (
     <div className="mb-3">
-      <div className="px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest text-zinc-600">{label}</div>
+      <div className={`section-header px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest ${colorMap[color] || colorMap.emerald}`}>{label}</div>
       <div className="space-y-0.5">{children}</div>
     </div>
   );
@@ -682,33 +702,45 @@ function NavItem({
   badge,
   badgeColor = "emerald",
   iconColor,
+  accentColor = "emerald",
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   badge?: number;
-  badgeColor?: "emerald" | "sky";
+  badgeColor?: "emerald" | "sky" | "red" | "cyan" | "purple" | "rose" | "violet" | "amber";
   iconColor?: string;
+  accentColor?: "emerald" | "sky" | "red" | "cyan" | "purple" | "rose" | "violet" | "amber";
 }) {
+  const accentMap: Record<string, { bg: string; text: string; ring: string; dot: string; badgeBg: string; badgeText: string }> = {
+    emerald: { bg: "bg-emerald-500/10", text: "text-emerald-300", ring: "shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4),0_0_12px_rgba(16,185,129,0.15)]", dot: "bg-emerald-500", badgeBg: "bg-emerald-500/20", badgeText: "text-emerald-300" },
+    sky:     { bg: "bg-sky-500/10",     text: "text-sky-300",     ring: "shadow-[inset_0_0_0_1px_rgba(14,165,233,0.4),0_0_12px_rgba(14,165,233,0.15)]",     dot: "bg-sky-500",     badgeBg: "bg-sky-500/20",     badgeText: "text-sky-300" },
+    red:     { bg: "bg-red-500/10",     text: "text-red-300",     ring: "shadow-[inset_0_0_0_1px_rgba(239,68,68,0.4),0_0_12px_rgba(239,68,68,0.15)]",     dot: "bg-red-500",     badgeBg: "bg-red-500/20",     badgeText: "text-red-300" },
+    cyan:    { bg: "bg-cyan-500/10",    text: "text-cyan-300",    ring: "shadow-[inset_0_0_0_1px_rgba(6,182,212,0.4),0_0_12px_rgba(6,182,212,0.15)]",    dot: "bg-cyan-500",    badgeBg: "bg-cyan-500/20",    badgeText: "text-cyan-300" },
+    purple:  { bg: "bg-purple-500/10",  text: "text-purple-300",  ring: "shadow-[inset_0_0_0_1px_rgba(168,85,247,0.4),0_0_12px_rgba(168,85,247,0.15)]",  dot: "bg-purple-500",  badgeBg: "bg-purple-500/20",  badgeText: "text-purple-300" },
+    rose:    { bg: "bg-rose-500/10",    text: "text-rose-300",    ring: "shadow-[inset_0_0_0_1px_rgba(244,63,94,0.4),0_0_12px_rgba(244,63,94,0.15)]",    dot: "bg-rose-500",    badgeBg: "bg-rose-500/20",    badgeText: "text-rose-300" },
+    violet:  { bg: "bg-violet-500/10",  text: "text-violet-300",  ring: "shadow-[inset_0_0_0_1px_rgba(139,92,246,0.4),0_0_12px_rgba(139,92,246,0.15)]",  dot: "bg-violet-500",  badgeBg: "bg-violet-500/20",  badgeText: "text-violet-300" },
+    amber:   { bg: "bg-amber-500/10",   text: "text-amber-300",   ring: "shadow-[inset_0_0_0_1px_rgba(245,158,11,0.4),0_0_12px_rgba(245,158,11,0.15)]",   dot: "bg-amber-500",   badgeBg: "bg-amber-500/20",   badgeText: "text-amber-300" },
+  };
+  const a = accentMap[accentColor] || accentMap.emerald;
+  const badgeA = accentMap[badgeColor] || accentMap.emerald;
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all ${
+      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-200 ${
         active
-          ? "bg-emerald-500/10 text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)]"
+          ? `${a.bg} ${a.text} ${a.ring}`
           : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
       }`}
     >
-      <Icon className={`size-4 shrink-0 ${active ? "text-emerald-400" : iconColor ?? "text-zinc-500"}`} />
+      <Icon className={`size-4 shrink-0 ${active ? iconColor ?? a.text : iconColor ?? "text-zinc-500"}`} />
       <span className="flex-1 text-left font-medium">{label}</span>
       {badge !== undefined && badge > 0 && (
-        <span className={`rounded-full px-1.5 text-[10px] font-bold ${
-          badgeColor === "sky" ? "bg-sky-500/20 text-sky-300" : "bg-emerald-500/20 text-emerald-300"
-        }`}>{badge}</span>
+        <span className={`rounded-full px-1.5 text-[10px] font-bold ${badgeA.badgeBg} ${badgeA.badgeText}`}>{badge}</span>
       )}
-      {active && <span className="ml-auto size-1.5 rounded-full bg-emerald-500 pulse-dot" />}
+      {active && <span className={`ml-auto size-1.5 rounded-full ${a.dot} pulse-dot`} />}
     </button>
   );
 }

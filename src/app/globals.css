@@ -228,23 +228,156 @@
   50% { left: 200%; }
 }
 
-/* Neon glow text */
+/* Neon glow text — vibrant multi-color system */
 .neon-emerald {
-  text-shadow: 0 0 8px rgba(16, 185, 129, 0.6), 0 0 20px rgba(16, 185, 129, 0.3);
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.8), 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2);
+  color: rgb(52, 211, 153);
 }
 .neon-red {
-  text-shadow: 0 0 8px rgba(239, 68, 68, 0.6), 0 0 20px rgba(239, 68, 68, 0.3);
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(239, 68, 68, 0.2);
+  color: rgb(248, 113, 113);
 }
 .neon-cyan {
-  text-shadow: 0 0 8px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.3);
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4), 0 0 40px rgba(6, 182, 212, 0.2);
+  color: rgb(34, 211, 238);
+}
+.neon-amber {
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.2);
+  color: rgb(251, 191, 36);
+}
+.neon-violet {
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.8), 0 0 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(139, 92, 246, 0.2);
+  color: rgb(167, 139, 250);
+}
+.neon-rose {
+  text-shadow: 0 0 8px rgba(244, 63, 94, 0.8), 0 0 20px rgba(244, 63, 94, 0.4), 0 0 40px rgba(244, 63, 94, 0.2);
+  color: rgb(251, 113, 133);
+}
+.neon-sky {
+  text-shadow: 0 0 8px rgba(14, 165, 233, 0.8), 0 0 20px rgba(14, 165, 233, 0.4), 0 0 40px rgba(14, 165, 233, 0.2);
+  color: rgb(56, 189, 248);
+}
+.neon-teal {
+  text-shadow: 0 0 8px rgba(20, 184, 166, 0.8), 0 0 20px rgba(20, 184, 166, 0.4), 0 0 40px rgba(20, 184, 166, 0.2);
+  color: rgb(45, 212, 191);
+}
+.neon-purple {
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.8), 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2);
+  color: rgb(192, 132, 252);
+}
+.neon-orange {
+  text-shadow: 0 0 8px rgba(249, 115, 22, 0.8), 0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2);
+  color: rgb(251, 146, 60);
 }
 
-/* Neon border pulse */
+/* Neon border pulse — per-color variants */
 .neon-border {
-  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 0 12px rgba(16, 185, 129, 0.15), inset 0 0 12px rgba(16, 185, 129, 0.03);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.5), 0 0 16px rgba(16, 185, 129, 0.25), inset 0 0 16px rgba(16, 185, 129, 0.04);
+  border: 1px solid rgba(16, 185, 129, 0.5);
 }
 .neon-border-red {
-  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3), 0 0 12px rgba(239, 68, 68, 0.15), inset 0 0 12px rgba(239, 68, 68, 0.03);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.25), inset 0 0 16px rgba(239, 68, 68, 0.04);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+.neon-border-cyan {
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.5), 0 0 16px rgba(6, 182, 212, 0.25), inset 0 0 16px rgba(6, 182, 212, 0.04);
+  border: 1px solid rgba(6, 182, 212, 0.5);
+}
+.neon-border-amber {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.5), 0 0 16px rgba(245, 158, 11, 0.25), inset 0 0 16px rgba(245, 158, 11, 0.04);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+}
+.neon-border-violet {
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.5), 0 0 16px rgba(139, 92, 246, 0.25), inset 0 0 16px rgba(139, 92, 246, 0.04);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+}
+.neon-border-rose {
+  box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.5), 0 0 16px rgba(244, 63, 94, 0.25), inset 0 0 16px rgba(244, 63, 94, 0.04);
+  border: 1px solid rgba(244, 63, 94, 0.5);
+}
+.neon-border-sky {
+  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.5), 0 0 16px rgba(14, 165, 233, 0.25), inset 0 0 16px rgba(14, 165, 233, 0.04);
+  border: 1px solid rgba(14, 165, 233, 0.5);
+}
+.neon-border-purple {
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.5), 0 0 16px rgba(168, 85, 247, 0.25), inset 0 0 16px rgba(168, 85, 247, 0.04);
+  border: 1px solid rgba(168, 85, 247, 0.5);
+}
+
+/* Sharp glowing card — intensified */
+.holo-card-sharp {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(6, 182, 212, 0.03));
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  border-radius: 2px;
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.15),
+    0 0 24px rgba(16, 185, 129, 0.12),
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(16, 185, 129, 0.1);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  transition: all 0.3s ease;
+}
+.holo-card-sharp:hover {
+  border-color: rgba(16, 185, 129, 0.8);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.3),
+    0 0 32px rgba(16, 185, 129, 0.25),
+    0 4px 32px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(16, 185, 129, 0.2);
+}
+.holo-card-sharp::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.8), transparent);
+  animation: sharp-sweep 4s ease-in-out infinite;
+}
+@keyframes sharp-sweep {
+  0%, 100% { opacity: 0.3; transform: translateX(-100%); }
+  50% { opacity: 1; transform: translateX(100%); }
+}
+
+/* Section header with glowing accent line */
+.section-header {
+  position: relative;
+  padding-left: 12px;
+}
+.section-header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, rgb(16, 185, 129), rgb(6, 182, 212));
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  border-radius: 2px;
+}
+
+/* Animated gradient text */
+.gradient-text {
+  background: linear-gradient(90deg, rgb(16, 185, 129), rgb(6, 182, 212), rgb(139, 92, 246), rgb(16, 185, 129));
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 6s linear infinite;
+}
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+/* Glowing badge */
+.glow-badge {
+  box-shadow: 0 0 12px currentColor;
 }
 
 /* Glitch effect */

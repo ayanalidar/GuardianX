@@ -29,6 +29,9 @@ COPY scripts/requirements.txt /tmp/scripts-req.txt
 COPY audit-scraper/requirements.txt /tmp/scraper-req.txt
 RUN pip install --no-cache-dir -r /tmp/scripts-req.txt -r /tmp/scraper-req.txt
 
+# Install Playwright + Chromium browser (for scraper "browser" mode)
+RUN playwright install chromium --with-deps
+
 # ── Copy source code ─────────────────────────────────────────────────────────
 COPY tsconfig.json ./
 COPY index.ts ./
