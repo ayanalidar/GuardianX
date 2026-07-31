@@ -22,6 +22,7 @@ import { LandingPage } from "@/components/sentinel/landing-page";
 import { ComplianceDashboard } from "@/components/sentinel/compliance-dashboard";
 import { SocPanel } from "@/components/sentinel/soc-panel";
 import { DataExfilPanel } from "@/components/sentinel/data-exfil-panel";
+import { AuditScraperPanel } from "@/components/sentinel/audit-scraper-panel";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
@@ -48,6 +49,7 @@ import {
   Radar,
   RefreshCw,
   Search,
+  ScanSearch,
   Shield,
   ShieldAlert,
   ShieldCheck,
@@ -56,7 +58,7 @@ import {
   Zap,
 } from "lucide-react";
 
-type Tab = "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil";
+type Tab = "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -324,6 +326,7 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
             <NavGroup label="Monitoring">
               <NavItem active={tab === "soc"} onClick={() => { setTab("soc"); setSidebarOpen(false); }} icon={Radar} label="SOC & DevSecOps" iconColor="text-cyan-400" />
               <NavItem active={tab === "exfil"} onClick={() => { setTab("exfil"); setSidebarOpen(false); }} icon={Shield} label="Exfil Defense" iconColor="text-rose-400" />
+              <NavItem active={tab === "scraper"} onClick={() => { setTab("scraper"); setSidebarOpen(false); }} icon={ScanSearch} label="Audit Scraper" iconColor="text-violet-400" />
             </NavGroup>
           </nav>
           <div className="border-t border-emerald-500/15 p-3">
@@ -354,7 +357,7 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
                   <Menu className="size-5" />
                 </button>
                 <h1 className="text-sm font-bold text-zinc-50 sm:text-base">
-                  {tab === "patches" ? "Patch Review Queue" : tab === "codebases" ? "Codebase Library" : tab === "redagent" ? "RedAgent VAPT Engine" : tab === "compliance" ? "GRC & Compliance Center" : tab === "soc" ? "SOC & DevSecOps Center" : "Data Exfiltration Defense"}
+                  {tab === "patches" ? "Patch Review Queue" : tab === "codebases" ? "Codebase Library" : tab === "redagent" ? "RedAgent VAPT Engine" : tab === "compliance" ? "GRC & Compliance Center" : tab === "soc" ? "SOC & DevSecOps Center" : tab === "exfil" ? "Data Exfiltration Defense" : "Web Scraping Audit Engine"}
                 </h1>
               </div>
               <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-mono text-xs">
@@ -380,6 +383,8 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
               <SocPanel />
             ) : tab === "exfil" ? (
               <DataExfilPanel />
+            ) : tab === "scraper" ? (
+              <AuditScraperPanel />
             ) : (
               <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
                 <section>

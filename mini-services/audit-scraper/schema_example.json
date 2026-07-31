@@ -1,0 +1,40 @@
+{
+  "audit_id": "550e8400-e29b-41d4-a716-446655440000",
+  "target_url": "http://localhost:3004",
+  "execution_mode": "lightweight",
+  "rate_limit_delay_ms": 500,
+  "timeout_ms": 15000,
+  "max_retries": 3,
+  "headers": {
+    "User-Agent": "GuardianX-Audit-Bot/1.0",
+    "Accept": "text/html"
+  },
+  "target_selectors": [
+    {
+      "field_name": "page_title",
+      "selector": "h1",
+      "selector_type": "css",
+      "required": true
+    },
+    {
+      "field_name": "all_links",
+      "selector": "a",
+      "selector_type": "css",
+      "attribute": "href",
+      "multiple": true,
+      "required": false
+    },
+    {
+      "field_name": "env_content",
+      "selector": "//pre/text()",
+      "selector_type": "xpath",
+      "required": false
+    }
+  ],
+  "sanitization_rules": [
+    {"key": "email", "replacement": "[EMAIL_REDACTED]"},
+    {"key": "phone", "replacement": "[PHONE_REDACTED]"},
+    {"key": "api_key", "replacement": "[API_KEY_REDACTED]"},
+    {"key": "ssn", "replacement": "[SSN_REDACTED]"}
+  ]
+}
