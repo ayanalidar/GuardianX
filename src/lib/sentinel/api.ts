@@ -513,6 +513,49 @@ export interface PrArtifacts {
   message: string;
 }
 
+// ── Data Exfiltration Defense ───────────────────────────────────────────────
+export interface CanaryRecord {
+  id: string;
+  label: string;
+  canary_type: string;
+  canary_value: string;
+  injected_endpoint: string;
+  is_active: boolean;
+  detected: boolean;
+  detected_at: string | null;
+  detected_on: string | null;
+  created_at: string;
+}
+export interface CanaryStatus {
+  total_canaries: number;
+  active_canaries: number;
+  detected_canaries: number;
+  canaries: CanaryRecord[];
+}
+
+export interface SuspiciousIp {
+  ip: string;
+  requestCount: number;
+  uniqueEndpoints: number;
+  lastAccess: string;
+  scrapingScore: number;
+  isBot: boolean;
+}
+export interface DataFlowStatus {
+  total_requests: number;
+  total_data_transferred: number;
+  unique_ips: number;
+  unique_endpoints: number;
+  honeypot_hits: number;
+  suspicious_ips: number;
+  monitoring_window_minutes: number;
+  requests_per_minute: number;
+  top_endpoints: Array<{ endpoint: string; count: number }>;
+  suspicious_ips_list: SuspiciousIp[];
+  honeypot_hits_list: Array<{ endpoint: string; ipAddress: string; userAgent: string; method: string; timestamp: string }>;
+  recent_requests: Array<{ ipAddress: string; method: string; endpoint: string; statusCode: number; responseSize: number; timestamp: string }>;
+}
+
 export interface PatchStats {
   pending: number;
   approved: number;
@@ -719,4 +762,9 @@ export const sentinelApi = {
     ),
   generatePr: (patchId: string) =>
     http<PrArtifacts>(`/api/patches/${encodeURIComponent(patchId)}/generate-pr`, { method: "POST" }),
+
+  // Data Exfiltration Defense
+  canaries: () => http<CanaryStatus>("/api/canaries"),
+  checkCanaries: () => http<{ checked: number; detected: number; message: string }>("/api/canaries/check", { method: "POST" }),
+  dataFlowMonitor: () => http<DataFlowStatus>("/api/data-flow/monitor"),
 };

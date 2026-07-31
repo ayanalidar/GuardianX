@@ -183,10 +183,54 @@ model RedAgentEvent {
 
 model Attestation {
   id        String   @id @default(cuid())
-  patchId   String   @unique // one attestation per patch
+  patchId   String   @unique
   patch     Patch    @relation(fields: [patchId], references: [id], onDelete: Cascade)
-  prevHash  String   // hash of the previous attestation in the chain (genesis = "0")
-  hash      String   // SHA-256 of (prevHash + patchId + patchedCode + timestamp)
-  data      String   // JSON: {patchId, codebase, severity, approvedAt, patchedCodeHash}
+  prevHash  String
+  hash      String
+  data      String
   createdAt DateTime @default(now())
+}
+
+// ── Data Exfiltration Defense ───────────────────────────────────────────────
+// Canary records: invisible fake data injected into API responses.
+// If any canary value appears externally, we know the data was scraped.
+
+model Canary {
+  id          String   @id @default(cuid())
+  targetId    String?
+  label       String   // e.g. "Fake user: john_canary_001"
+  canaryType  String   // user | product | pricing | api_key | email
+  canaryValue String   @unique // the unique fake value (e.g. email, fake id)
+  injectedEndpoint String // where it was injected
+  isActive    Boolean  @default(true)
+  detected    Boolean  @default(false)
+  detectedAt  DateTime?
+  detectedOn  String?  // URL where it was found
+  createdAt   DateTime @default(now())
+}
+
+// API access log: every request to a monitored target.
+
+model ApiAccessLog {
+  id          String   @id @default(cuid())
+  targetId    String?
+  ipAddress   String
+  method      String
+  endpoint    String
+  statusCode  Int
+  userAgent   String
+  responseSize Int
+  timestamp   DateTime @default(now())
+}
+
+// Honeypot endpoint hits: when a scraper/attacker hits a fake endpoint.
+
+model HoneypotHit {
+  id          String   @id @default(cuid())
+  targetId    String?
+  endpoint    String   // the honeypot path that was hit
+  ipAddress   String
+  userAgent   String
+  method      String
+  timestamp   DateTime @default(now())
 }
