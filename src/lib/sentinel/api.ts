@@ -448,6 +448,71 @@ export interface AttackSurfaceStatus {
   summary: string;
 }
 
+// ── SCA Scanner ─────────────────────────────────────────────────────────────
+export interface ScaDependency {
+  name: string;
+  vulnerable: boolean;
+}
+export interface ScaVulnerability {
+  dependency: string;
+  cve: string | null;
+  severity: string;
+  title: string;
+  url: string;
+  fixed_in: string | null;
+}
+export interface ScaScanResult {
+  codebase?: string;
+  codebase_id?: string;
+  total_dependencies?: number;
+  scanned_dependencies?: number;
+  vulnerabilities_found?: number;
+  critical?: number;
+  high?: number;
+  sca_score?: number;
+  dependencies?: ScaDependency[];
+  vulnerabilities?: ScaVulnerability[];
+  message?: string;
+  codebases?: Array<{ codebase_id: string; codebase_name: string; dependencies: string[] }>;
+  total_deps?: number;
+}
+
+// ── Patch History ───────────────────────────────────────────────────────────
+export interface PatchVersion {
+  version: number;
+  label: string;
+  source: string;
+  technique: string | null;
+  reasoning: string | null;
+  timestamp: string;
+  code_hash: string;
+  code_preview: string;
+}
+export interface PatchHistory {
+  patch_id: string;
+  title: string;
+  codebase: string;
+  adversarial_rounds: number;
+  adversarial_won: boolean;
+  total_versions: number;
+  versions: PatchVersion[];
+}
+
+// ── PR Artifacts ────────────────────────────────────────────────────────────
+export interface PrArtifacts {
+  patch_id: string;
+  branch_name: string;
+  commit_message: string;
+  diff: string;
+  files_changed: number;
+  additions: number;
+  deletions: number;
+  patched_code: string;
+  instructions: string;
+  auto_push_available: boolean;
+  message: string;
+}
+
 export interface PatchStats {
   pending: number;
   approved: number;
@@ -641,4 +706,17 @@ export const sentinelApi = {
   securityKpis: () => http<SecurityKpis>("/api/security-kpis"),
   attackSurface: (targetId?: string) =>
     http<AttackSurfaceStatus>(`/api/attack-surface${targetId ? `?targetId=${targetId}` : ""}`),
+
+  // Testing & Patching
+  scaScan: (codebaseId?: string) =>
+    http<ScaScanResult>(`/api/sca-scan${codebaseId ? `?codebaseId=${codebaseId}` : ""}`),
+  patchHistory: (patchId: string) =>
+    http<PatchHistory>(`/api/patches/${encodeURIComponent(patchId)}/history`),
+  rollbackPatch: (patchId: string, reason?: string) =>
+    http<{ patch_id: string; status: string; message: string }>(
+      `/api/patches/${encodeURIComponent(patchId)}/rollback`,
+      { method: "POST", body: JSON.stringify({ reason }) }
+    ),
+  generatePr: (patchId: string) =>
+    http<PrArtifacts>(`/api/patches/${encodeURIComponent(patchId)}/generate-pr`, { method: "POST" }),
 };

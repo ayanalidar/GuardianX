@@ -24,6 +24,8 @@ import {
   type PatchDetail,
   type PatchSummary,
   type ChatMessage,
+  type PatchHistory,
+  type PrArtifacts,
 } from "@/lib/sentinel/api";
 import {
   severityStyles,
@@ -34,15 +36,19 @@ import {
   Brain,
   CheckCircle2,
   Clock,
+  Copy,
   Crosshair,
   FileCode2,
   Gauge,
+  GitBranch,
+  History,
   Loader2,
   MessageSquare,
   ShieldCheck,
   ShieldX,
   Sparkles,
   Swords,
+  Undo2,
   Wand2,
   XCircle,
 } from "lucide-react";
@@ -65,6 +71,12 @@ export function PatchReviewDialog({
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<"approve" | "reject" | null>(null);
   const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [prLoading, setPrLoading] = useState(false);
+  const [rollbackLoading, setRollbackLoading] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [prOpen, setPrOpen] = useState(false);
+  const [historyData, setHistoryData] = useState<PatchHistory | null>(null);
+  const [prData, setPrData] = useState<PrArtifacts | null>(null);
 
   const patchId = patch?.patch_id ?? null;
 
@@ -132,6 +144,47 @@ export function PatchReviewDialog({
     },
     [patchId, patch, onResolved, onOpenChange, toast]
   );
+
+  const loadHistory = useCallback(async () => {
+    if (!patchId) return;
+    try {
+      const h = await sentinelApi.patchHistory(patchId);
+      setHistoryData(h);
+      setHistoryOpen(true);
+    } catch (err) {
+      toast({ variant: "destructive", title: "Failed to load history", description: err instanceof Error ? err.message : "unknown" });
+    }
+  }, [patchId, toast]);
+
+  const generatePrArtifact = useCallback(async () => {
+    if (!patchId) return;
+    setPrLoading(true);
+    try {
+      const pr = await sentinelApi.generatePr(patchId);
+      setPrData(pr);
+      setPrOpen(true);
+      toast({ title: "PR artifacts generated", description: pr.message });
+    } catch (err) {
+      toast({ variant: "destructive", title: "PR generation failed", description: err instanceof Error ? err.message : "unknown" });
+    } finally {
+      setPrLoading(false);
+    }
+  }, [patchId, toast]);
+
+  const handleRollback = useCallback(async () => {
+    if (!patchId) return;
+    setRollbackLoading(true);
+    try {
+      const r = await sentinelApi.rollbackPatch(patchId, "Manual rollback from review dialog");
+      toast({ title: "Patch rolled back", description: r.message });
+      onResolved(patchId, "rejected");
+      onOpenChange(false);
+    } catch (err) {
+      toast({ variant: "destructive", title: "Rollback failed", description: err instanceof Error ? err.message : "unknown" });
+    } finally {
+      setRollbackLoading(false);
+    }
+  }, [patchId, toast, onResolved, onOpenChange]);
 
   const severity = detail?.severity ?? patch?.severity ?? "high";
   const style = severityStyles[severity];
@@ -360,7 +413,44 @@ export function PatchReviewDialog({
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 border-t border-zinc-800 bg-zinc-950/80 px-5 py-4 sm:px-6">
-          <p className="hidden text-xs text-zinc-500 sm:block">
+          <div className="flex items-center gap-2">
+            {/* History button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { void loadHistory(); }}
+              disabled={loading}
+              className="text-zinc-400 hover:text-cyan-400"
+            >
+              <History className="size-3.5" />
+              <span className="hidden sm:inline">History</span>
+            </Button>
+            {/* Generate PR button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { void generatePrArtifact(); }}
+              disabled={loading || prLoading}
+              className="text-zinc-400 hover:text-violet-400"
+            >
+              {prLoading ? <Loader2 className="size-3.5 animate-spin" /> : <GitBranch className="size-3.5" />}
+              <span className="hidden sm:inline">PR</span>
+            </Button>
+            {/* Rollback button (only for approved patches) */}
+            {detail?.status === "approved" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { void handleRollback(); }}
+                disabled={loading || rollbackLoading}
+                className="text-amber-400 hover:text-amber-300"
+              >
+                {rollbackLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Undo2 className="size-3.5" />}
+                <span className="hidden sm:inline">Rollback</span>
+              </Button>
+            )}
+          </div>
+          <p className="hidden text-xs text-zinc-500 lg:block">
             Approving applies the patch to the codebase source.
           </p>
           <div className="flex w-full gap-3 sm:w-auto">
@@ -370,11 +460,7 @@ export function PatchReviewDialog({
               disabled={loading || action !== null}
               className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white"
             >
-              {action === "reject" ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <XCircle className="size-4" />
-              )}
+              {action === "reject" ? <Loader2 className="size-4 animate-spin" /> : <XCircle className="size-4" />}
               Reject
             </Button>
             <Button
@@ -382,16 +468,94 @@ export function PatchReviewDialog({
               disabled={loading || action !== null}
               className="bg-emerald-600 text-white hover:bg-emerald-500"
             >
-              {action === "approve" ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="size-4" />
-              )}
+              {action === "approve" ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
               {action === "approve" ? "Applying..." : "Approve & Apply Fix"}
             </Button>
           </div>
         </div>
       </DialogContent>
+
+      {/* History dialog */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-h-[90vh] gap-0 overflow-hidden border-zinc-800 bg-zinc-950 p-0 text-zinc-100 sm:max-w-2xl">
+          <DialogHeader className="gap-2 border-b border-zinc-800 px-5 py-4">
+            <DialogTitle className="flex items-center gap-2 text-base text-cyan-400">
+              <History className="size-4" /> Patch Version History
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400">
+              {historyData ? `${historyData.title} — ${historyData.total_versions} versions across ${historyData.adversarial_rounds} adversarial round(s)` : "Loading…"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="custom-scrollbar max-h-[calc(90vh-8rem)] overflow-y-auto p-5">
+            {historyData?.versions.map((v, i) => (
+              <div key={i} className={`relative mb-4 border-l-2 pl-4 ${i === historyData.versions.length - 1 ? "border-emerald-500" : "border-zinc-700"}`}>
+                <div className={`absolute -left-1.5 top-1 size-3 rounded-full ${i === 0 ? "bg-red-500" : i === historyData.versions.length - 1 ? "bg-emerald-500 pulse-dot" : "bg-cyan-500"}`} />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-zinc-100">{v.label}</span>
+                  <span className="font-mono text-[9px] text-zinc-600">{v.code_hash}</span>
+                </div>
+                {v.technique && <div className="mt-0.5 text-[10px] text-cyan-400">→ {v.technique}</div>}
+                {v.reasoning && <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">{v.reasoning.slice(0, 200)}</p>}
+                <pre className="custom-scrollbar mt-1 max-h-24 overflow-auto rounded border border-zinc-800 bg-zinc-950 p-2 font-mono text-[8px] text-zinc-500">{v.code_preview}</pre>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* PR dialog */}
+      <Dialog open={prOpen} onOpenChange={setPrOpen}>
+        <DialogContent className="max-h-[90vh] gap-0 overflow-hidden border-zinc-800 bg-zinc-950 p-0 text-zinc-100 sm:max-w-2xl">
+          <DialogHeader className="gap-2 border-b border-zinc-800 px-5 py-4">
+            <DialogTitle className="flex items-center gap-2 text-base text-violet-400">
+              <GitBranch className="size-4" /> Pull Request Artifacts
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400">
+              {prData?.message}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="custom-scrollbar max-h-[calc(90vh-8rem)] space-y-4 overflow-y-auto p-5">
+            {prData && (
+              <>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-2">
+                    <div className="font-mono text-lg font-bold text-emerald-400">+{prData.additions}</div>
+                    <div className="text-[9px] uppercase text-zinc-500">Additions</div>
+                  </div>
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-2">
+                    <div className="font-mono text-lg font-bold text-red-400">-{prData.deletions}</div>
+                    <div className="text-[9px] uppercase text-zinc-500">Deletions</div>
+                  </div>
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-2">
+                    <div className="font-mono text-lg font-bold text-zinc-300">{prData.files_changed}</div>
+                    <div className="text-[9px] uppercase text-zinc-500">Files</div>
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1 font-mono text-[9px] uppercase text-zinc-500">Branch</div>
+                  <code className="block rounded border border-violet-500/20 bg-violet-500/5 p-2 font-mono text-xs text-violet-300">{prData.branch_name}</code>
+                </div>
+                <div>
+                  <div className="mb-1 font-mono text-[9px] uppercase text-zinc-500">Commit Message</div>
+                  <pre className="custom-scrollbar max-h-32 overflow-auto rounded border border-zinc-800 bg-zinc-950 p-3 font-mono text-[10px] text-zinc-300">{prData.commit_message}</pre>
+                </div>
+                <div>
+                  <div className="mb-1 font-mono text-[9px] uppercase text-zinc-500">Instructions</div>
+                  <pre className="custom-scrollbar max-h-40 overflow-auto rounded border border-emerald-500/20 bg-emerald-500/5 p-3 font-mono text-[10px] text-emerald-300">{prData.instructions}</pre>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { navigator.clipboard.writeText(prData.patched_code); toast({ title: "Patched code copied" }); }}
+                  className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+                >
+                  <Copy className="size-3.5" /> Copy Patched Code
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

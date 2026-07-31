@@ -33,6 +33,7 @@ import {
   Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { ScaPanel } from "./sca-panel";
 
 export function SocPanel() {
   return (
@@ -56,9 +57,14 @@ export function SocPanel() {
       {/* KPI Dashboard */}
       <KpiDashboard />
 
-      {/* Dark Web + Attack Surface grid */}
+      {/* SCA Scanner + Dark Web grid */}
       <div className="grid gap-4 lg:grid-cols-2">
+        <ScaPanel />
         <DarkWebMonitor />
+      </div>
+
+      {/* Attack Surface */}
+      <div className="grid gap-4 lg:grid-cols-1">
         <AttackSurfaceManager />
       </div>
     </div>
