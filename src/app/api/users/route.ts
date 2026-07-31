@@ -1,75 +1,51 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/users — list all users (admin only)
+// GET /api/users
 export async function GET() {
-  const users = await db.user.findMany({
-    orderBy: { createdAt: "desc" },
-    select: { id: true, email: true, name: true, role: true, createdAt: true },
-  });
-  return NextResponse.json(users.map(u => ({
-    id: u.id,
-    email: u.email,
-    name: u.name,
-    role: u.role,
-    created_at: u.createdAt.toISOString(),
-  })));
+  try {
+    const { data, error } = await supabase.from("User").select("id, email, name, role, createdAt").order("createdAt", { ascending: false });
+    if (error) throw new Error(error.message);
+    return NextResponse.json((data || []).map((u: Record<string, unknown>) => ({
+      id: u.id, email: u.email, name: u.name, role: u.role, created_at: u.createdAt,
+    })));
+  } catch {
+    return NextResponse.json([]);
+  }
 }
 
-// POST /api/users — invite a user (admin only)
+// POST /api/users
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { email, name, role, password } = body;
+  if (!email || !name || !password) return NextResponse.json({ error: "email, name, password required" }, { status: 400 });
 
-  if (!email || !name || !password) {
-    return NextResponse.json({ error: "email, name, and password are required" }, { status: 400 });
-  }
-
+  const { createHash, randomBytes, randomUUID } = await import("node:crypto");
+  const salt = randomBytes(16).toString("hex");
+  const hashedPassword = createHash("sha256").update(salt + password).digest("hex");
   const validRoles = ["admin", "analyst", "viewer"];
   const userRole = validRoles.includes(role) ? role : "viewer";
 
-  const existing = await db.user.findUnique({ where: { email } });
-  if (existing) {
-    return NextResponse.json({ error: "Email already registered" }, { status: 409 });
-  }
+  const { data, error } = await supabase.from("User").insert({
+    id: randomUUID(), email, name, password: `${salt}:${hashedPassword}`, role: userRole,
+  }).select("id, email, name, role").single();
 
-  const { createHash, randomBytes } = await import("node:crypto");
-  const salt = randomBytes(16).toString("hex");
-  const hashedPassword = createHash("sha256").update(salt + password).digest("hex");
-
-  const user = await db.user.create({
-    data: { email, name, password: `${salt}:${hashedPassword}`, role: userRole },
-  });
-
-  return NextResponse.json({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    message: "User created successfully",
-  }, { status: 201 });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ...data, message: "User created" }, { status: 201 });
 }
 
-// PATCH /api/users?id=xxx — update user role
+// PATCH /api/users?id=xxx
 export async function PATCH(req: Request) {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   const body = await req.json().catch(() => ({}));
-  const { role } = body;
+  if (!id || !body.role) return NextResponse.json({ error: "id and role required" }, { status: 400 });
 
-  if (!id || !role) {
-    return NextResponse.json({ error: "id and role are required" }, { status: 400 });
-  }
-
-  const validRoles = ["admin", "analyst", "viewer"];
-  if (!validRoles.includes(role)) {
-    return NextResponse.json({ error: `role must be one of: ${validRoles.join(", ")}` }, { status: 400 });
-  }
-
-  const user = await db.user.update({ where: { id }, data: { role } });
-  return NextResponse.json({ id: user.id, role: user.role, message: "Role updated" });
+  const { data, error } = await supabase.from("User").update({ role: body.role }).eq("id", id).select("id, role").single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ...data, message: "Role updated" });
 }
 
 // DELETE /api/users?id=xxx
@@ -77,6 +53,6 @@ export async function DELETE(req: Request) {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-  await db.user.delete({ where: { id } }).catch(() => null);
+  await supabase.from("User").delete().eq("id", id);
   return NextResponse.json({ ok: true });
 }

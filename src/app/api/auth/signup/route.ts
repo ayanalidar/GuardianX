@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/db";
+import { createHash, randomBytes } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/auth/signup — register a new user
+// POST /api/auth/signup
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { email, name, password } = body;
@@ -16,23 +18,31 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Check if any users exist — if not, this is the first signup (admin)
-    const userCount = await db.user.count().catch(() => 0);
-    const role = userCount === 0 ? "admin" : "viewer";
+    // Check if any users exist (first user = admin)
+    const { count } = await supabase.from("User").select("*", { count: "exact", head: true });
+    const role = (count || 0) === 0 ? "admin" : "viewer";
 
-    const existing = await db.user.findUnique({ where: { email } }).catch(() => null);
+    // Check if email exists
+    const { data: existing } = await supabase.from("User").select("*").eq("email", email).maybeSingle();
     if (existing) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
 
     // Hash password
-    const { createHash, randomBytes } = await import("node:crypto");
     const salt = randomBytes(16).toString("hex");
     const hashedPassword = createHash("sha256").update(salt + password).digest("hex");
+    const id = randomUUID();
 
-    const user = await db.user.create({
-      data: { email, name, password: `${salt}:${hashedPassword}`, role },
-    });
+    // Insert user
+    const { data: user, error } = await supabase.from("User").insert({
+      id,
+      email,
+      name,
+      password: `${salt}:${hashedPassword}`,
+      role,
+    }).select().single();
+
+    if (error) throw new Error(error.message);
 
     const token = randomBytes(32).toString("hex");
 
@@ -42,7 +52,6 @@ export async function POST(req: Request) {
       message: "Account created successfully",
     }, { status: 201 });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Database error — tables may not be initialized. Run: npx prisma db push";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Database error" }, { status: 500 });
   }
 }

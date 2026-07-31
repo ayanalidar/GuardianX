@@ -1,26 +1,33 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/stats — dashboard summary counts.
+// GET /api/stats
 export async function GET() {
-  const [pending, approved, rejected, critical, codebases, scans] = await Promise.all([
-    db.patch.count({ where: { status: "pending" } }),
-    db.patch.count({ where: { status: "approved" } }),
-    db.patch.count({ where: { status: "rejected" } }),
-    db.patch.count({ where: { status: "pending", severity: "critical" } }),
-    db.codebase.count(),
-    db.scan.count(),
-  ]);
+  try {
+    const [pending, approved, rejected, critical, codebases, scans] = await Promise.all([
+      supabase.from("Patch").select("*", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("Patch").select("*", { count: "exact", head: true }).eq("status", "approved"),
+      supabase.from("Patch").select("*", { count: "exact", head: true }).eq("status", "rejected"),
+      supabase.from("Patch").select("*", { count: "exact", head: true }).eq("status", "pending").eq("severity", "critical"),
+      supabase.from("Codebase").select("*", { count: "exact", head: true }),
+      supabase.from("Scan").select("*", { count: "exact", head: true }),
+    ]);
 
-  return NextResponse.json({
-    pending,
-    approved,
-    rejected,
-    critical_pending: critical,
-    total: pending + approved + rejected,
-    codebases,
-    scans,
-  });
+    return NextResponse.json({
+      pending: pending.count || 0,
+      approved: approved.count || 0,
+      rejected: rejected.count || 0,
+      critical_pending: critical.count || 0,
+      total: (pending.count || 0) + (approved.count || 0) + (rejected.count || 0),
+      codebases: codebases.count || 0,
+      scans: scans.count || 0,
+    });
+  } catch (err) {
+    return NextResponse.json({
+      pending: 0, approved: 0, rejected: 0, critical_pending: 0, total: 0, codebases: 0, scans: 0,
+      error: err instanceof Error ? err.message : "stats error",
+    });
+  }
 }

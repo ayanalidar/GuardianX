@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/db";
+import { createHash, randomBytes } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/auth/login — authenticate user
+// POST /api/auth/login
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { email, password } = body;
@@ -13,16 +14,15 @@ export async function POST(req: Request) {
   }
 
   try {
-    const user = await db.user.findUnique({ where: { email } });
+    const { data: user, error } = await supabase.from("User").select("*").eq("email", email).maybeSingle();
+    if (error) throw new Error(error.message);
     if (!user) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
     // Verify password
-    const { createHash, randomBytes } = await import("node:crypto");
     const [salt, storedHash] = user.password.split(":");
     const hashedPassword = createHash("sha256").update(salt + password).digest("hex");
-
     if (hashedPassword !== storedHash) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
@@ -35,7 +35,6 @@ export async function POST(req: Request) {
       message: "Login successful",
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Database error — tables may not be initialized. Run: npx prisma db push";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Database error" }, { status: 500 });
   }
 }

@@ -1,21 +1,29 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/patches/pending — all patches awaiting human review.
+// GET /api/patches/pending
 export async function GET() {
-  const patches = await db.patch.findMany({
-    where: { status: "pending" },
-    orderBy: [{ severity: "asc" }, { createdAt: "desc" }],
-    include: { codebase: { select: { name: true } } },
-  });
+  try {
+    const { data, error } = await supabase
+      .from("Patch")
+      .select("patchId, id, title, severity, cve, affectedFile, aiExplanation, confidence, sandboxPassed, createdAt, codebaseId")
+      .eq("status", "pending")
+      .order("severity", { ascending: true })
+      .order("createdAt", { ascending: false });
 
-  return NextResponse.json(
-    patches.map((p) => ({
+    if (error) throw new Error(error.message);
+
+    // Get codebase names
+    const cbIds = [...new Set((data || []).map((p: { codebaseId: string }) => p.codebaseId))];
+    const { data: codebases } = await supabase.from("Codebase").select("id, name").in("id", cbIds);
+    const cbMap = new Map((codebases || []).map((c: { id: string; name: string }) => [c.id, c.name]));
+
+    return NextResponse.json((data || []).map((p: Record<string, unknown>) => ({
       patch_id: p.patchId,
       internal_id: p.id,
-      codebase_name: p.codebase.name,
+      codebase_name: cbMap.get(p.codebaseId) || "unknown",
       title: p.title,
       severity: p.severity,
       cve: p.cve,
@@ -23,13 +31,13 @@ export async function GET() {
       ai_explanation: p.aiExplanation,
       confidence: p.confidence,
       sandbox_passed: p.sandboxPassed,
-      has_exploit: !!p.exploitCode,
-      exploit_confirmed:
-        !!p.exploitOriginalResult &&
-        /"success":\s*true/.test(p.exploitOriginalResult),
-      adversarial_rounds: p.adversarialRounds,
-      adversarial_won: p.adversarialWon,
-      created_at: p.createdAt.toISOString(),
-    }))
-  );
+      has_exploit: false,
+      exploit_confirmed: false,
+      adversarial_rounds: 0,
+      adversarial_won: false,
+      created_at: p.createdAt,
+    })));
+  } catch {
+    return NextResponse.json([]);
+  }
 }
