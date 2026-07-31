@@ -1,8 +1,6 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "buildCommand": "bun run build",
-  "installCommand": "bun install",
   "outputDirectory": ".next",
   "functions": {
     "src/app/api/audit-scraper/route.ts": {
