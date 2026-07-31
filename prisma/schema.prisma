@@ -22,6 +22,18 @@ model Codebase {
   patches     Patch[]
 }
 
+// ── Authentication & User Management ────────────────────────────────────────
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("viewer") // admin | analyst | viewer
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Scan {
   id          String   @id @default(cuid())
   codebaseId  String

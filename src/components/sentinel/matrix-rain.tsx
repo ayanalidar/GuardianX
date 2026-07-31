@@ -79,8 +79,9 @@ export function MatrixRain() {
   return (
     <canvas
       ref={canvasRef}
-      className="pointer-events-none fixed inset-0 z-0 opacity-50"
+      className="pointer-events-none fixed inset-0 z-0 opacity-40 max-w-full"
       aria-hidden
+      style={{ width: "100vw", height: "100vh" }}
     />
   );
 }

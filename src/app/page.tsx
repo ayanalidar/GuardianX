@@ -24,6 +24,8 @@ import { SocPanel } from "@/components/sentinel/soc-panel";
 import { DataExfilPanel } from "@/components/sentinel/data-exfil-panel";
 import { AuditScraperPanel } from "@/components/sentinel/audit-scraper-panel";
 import { AdvancedPanel } from "@/components/sentinel/advanced-panel";
+import { AuthPage } from "@/components/sentinel/auth-page";
+import { UserManagementPanel } from "@/components/sentinel/user-management-panel";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
@@ -45,6 +47,7 @@ import {
   Inbox,
   KeyRound,
   Loader2,
+  LogOut,
   Menu,
   Plus,
   Radar,
@@ -56,18 +59,28 @@ import {
   ShieldCheck,
   ShieldHalf,
   Sparkles,
+  Users,
   Zap,
 } from "lucide-react";
 
-type Tab = "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced";
+type Tab = "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
-  const [view, setView] = useState<"landing" | "console">("landing");
+  const [view, setView] = useState<"landing" | "console" | "auth">("landing");
+  const [currentUser, setCurrentUser] = useState<{ id: string; email: string; name: string; role: string } | null>(null);
+
   useEffect(() => {
-    const saved = typeof window !== "undefined" ? localStorage.getItem("guardianx-view") : null;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (saved === "console") setView("console");
+    // Check for existing session
+    const savedUser = typeof window !== "undefined" ? localStorage.getItem("guardianx-user") : null;
+    const savedView = typeof window !== "undefined" ? localStorage.getItem("guardianx-view") : null;
+    if (savedUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      try { setCurrentUser(JSON.parse(savedUser)); } catch { /* ignore */ }
+    }
+    if (savedView === "console" && savedUser) {
+      setView("console");
+    }
   }, []);
   const enterConsole = () => {
     setView("console");
@@ -77,14 +90,33 @@ export default function Home() {
     setView("landing");
     localStorage.setItem("guardianx-view", "landing");
   };
+  const goAuth = () => setView("auth");
+  const handleAuth = (user: { id: string; email: string; name: string; role: string }, _token: string) => {
+    setCurrentUser(user);
+    setView("console");
+  };
+  const handleLogout = () => {
+    localStorage.removeItem("guardianx-user");
+    localStorage.removeItem("guardianx-token");
+    localStorage.setItem("guardianx-view", "landing");
+    setCurrentUser(null);
+    setView("landing");
+  };
 
-  if (view === "landing") {
-    return <LandingPage onEnter={enterConsole} />;
+  if (view === "auth") {
+    return <AuthPage onAuth={handleAuth} />;
   }
-  return <ConsoleView onBackToLanding={backToLanding} />;
+  if (view === "landing") {
+    return <LandingPage onEnter={goAuth} />;
+  }
+  return <ConsoleView onBackToLanding={backToLanding} currentUser={currentUser} onLogout={handleLogout} />;
 }
 
-function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
+function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
+  onBackToLanding: () => void;
+  currentUser: { id: string; email: string; name: string; role: string } | null;
+  onLogout: () => void;
+}) {
   // live clock for the HUD
   const [clock, setClock] = useState("--:--:--");
   useEffect(() => {
@@ -332,6 +364,11 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
             <NavGroup label="Advanced">
               <NavItem active={tab === "advanced"} onClick={() => { setTab("advanced"); setSidebarOpen(false); }} icon={Sparkles} label="Advanced Platform" iconColor="text-amber-400" />
             </NavGroup>
+            {currentUser?.role === "admin" && (
+              <NavGroup label="Administration">
+                <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" />
+              </NavGroup>
+            )}
           </nav>
           <div className="border-t border-emerald-500/15 p-3">
             <div className="mb-2 flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs">
@@ -349,6 +386,20 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
                 <span className="ml-1 hidden sm:inline">Creds</span>
               </Button>
             </div>
+            {currentUser && (
+              <div className="mt-2 flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 p-2">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-xs font-bold text-emerald-400">
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[10px] font-medium text-zinc-300">{currentUser.name}</div>
+                  <div className="truncate text-[8px] text-zinc-500">{currentUser.role.toUpperCase()}</div>
+                </div>
+                <Button size="icon" variant="ghost" onClick={onLogout} className="size-7 shrink-0 text-zinc-500 hover:bg-red-500/10 hover:text-red-400" title="Logout">
+                  <LogOut className="size-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
         </aside>
         {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={() => setSidebarOpen(false)} />}
@@ -361,7 +412,7 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
                   <Menu className="size-5" />
                 </button>
                 <h1 className="text-sm font-bold text-zinc-50 sm:text-base">
-                  {tab === "patches" ? "Patch Review Queue" : tab === "codebases" ? "Codebase Library" : tab === "redagent" ? "RedAgent VAPT Engine" : tab === "compliance" ? "GRC & Compliance Center" : tab === "soc" ? "SOC & DevSecOps Center" : tab === "exfil" ? "Data Exfiltration Defense" : tab === "scraper" ? "Web Scraping Audit Engine" : "Advanced Security Platform"}
+                  {tab === "patches" ? "Patch Review Queue" : tab === "codebases" ? "Codebase Library" : tab === "redagent" ? "RedAgent VAPT Engine" : tab === "compliance" ? "GRC & Compliance Center" : tab === "soc" ? "SOC & DevSecOps Center" : tab === "exfil" ? "Data Exfiltration Defense" : tab === "scraper" ? "Web Scraping Audit Engine" : tab === "users" ? "User Management" : "Advanced Security Platform"}
                 </h1>
               </div>
               <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-mono text-xs">
@@ -391,6 +442,8 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
               <AuditScraperPanel />
             ) : tab === "advanced" ? (
               <AdvancedPanel />
+            ) : tab === "users" ? (
+              <UserManagementPanel />
             ) : (
               <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
                 <section>
