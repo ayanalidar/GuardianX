@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ShieldHalf, Loader2, Mail, Lock, User, ArrowRight, Sparkles } from "lucide-react";
+import { ShieldHalf, Loader2, Mail, Lock, User, ArrowRight, Sparkles, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface AuthPageProps {
@@ -20,10 +20,43 @@ export function AuthPage({ onAuth }: AuthPageProps) {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [dbError, setDbError] = useState<string[] | null>(null);
+  const [initLoading, setInitLoading] = useState(false);
+
+  const initializeDb = async () => {
+    setInitLoading(true);
+    try {
+      const res = await fetch("/api/db-init", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        toast({
+          title: "Database initialized!",
+          description: "You can now sign up. First account becomes Admin.",
+        });
+        setDbError(null);
+      } else {
+        setDbError(data.steps || [data.message]);
+        toast({
+          variant: "destructive",
+          title: "Manual setup required",
+          description: "Run the SQL migration in your Supabase Dashboard.",
+        });
+      }
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Init failed",
+        description: "See the instructions below.",
+      });
+    } finally {
+      setInitLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!email || !password || (mode === "signup" && !name)) return;
     setLoading(true);
+    setDbError(null);
     try {
       const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
       const body = mode === "login" ? { email, password } : { email, name, password };
@@ -35,7 +68,18 @@ export function AuthPage({ onAuth }: AuthPageProps) {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Authentication failed");
+        // Detect DB-not-initialized and surface actionable instructions
+        if (data.code === "DB_NOT_INITIALIZED" || res.status === 503) {
+          setDbError(data.steps || [data.error || "Database not initialized"]);
+          toast({
+            variant: "destructive",
+            title: "Database not initialized",
+            description: "Follow the steps below to set up Supabase.",
+          });
+        } else {
+          throw new Error(data.error || "Authentication failed");
+        }
+        return;
       }
 
       // Store session
@@ -165,6 +209,49 @@ export function AuthPage({ onAuth }: AuthPageProps) {
               </>
             )}
           </Button>
+
+          {dbError && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="mt-2 overflow-hidden rounded-lg border border-amber-500/40 bg-amber-500/10 p-4"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-amber-200">
+                    Database not initialized
+                  </p>
+                  <p className="mt-1 text-[11px] text-amber-100/70">
+                    The Supabase tables don&apos;t exist yet. Either:
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={initializeDb}
+                    disabled={initLoading}
+                    className="mt-2 h-7 border-amber-500/40 bg-amber-500/10 text-[11px] text-amber-200 hover:bg-amber-500/20"
+                  >
+                    {initLoading ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : (
+                      "Try auto-init"
+                    )}
+                  </Button>
+                  <p className="mt-2 text-[11px] text-amber-100/70">
+                    Or run the SQL migration manually:
+                  </p>
+                  <ol className="mt-1 space-y-0.5 text-[10px] text-amber-100/60">
+                    {dbError.map((step, i) => (
+                      <li key={i} className="font-mono leading-relaxed">
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Role info */}
