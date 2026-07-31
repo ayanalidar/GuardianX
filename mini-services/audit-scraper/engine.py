@@ -36,6 +36,7 @@ from lxml import etree
 from config import ScraperConfig, ExecutionMode, SelectorType, TargetSelector
 from sanitizer import SanitizerPipeline
 from logger import AuditTrailLogger
+from credential_scanner import scan_for_credentials
 
 logger = logging.getLogger("guardianx.audit.engine")
 
@@ -174,6 +175,9 @@ class AuditScraperEngine:
         # ── Step 4: Sanitize extracted data ──────────────────────────────
         sanitized_data = self.sanitizer.sanitize(extracted_data)
 
+        # ── Step 4b: Scan for exposed credentials / vulnerable data ──────
+        vulnerable_data = scan_for_credentials(html, self.config.target_url)
+
         # ── Step 5: Determine overall status ─────────────────────────────
         total_selectors = len(self.config.target_selectors)
         successful = sum(1 for e in self.trail.entries if e.get("success"))
@@ -184,7 +188,7 @@ class AuditScraperEngine:
         else:
             status = "success"
 
-        return self._build_result(sanitized_data, errors, status)
+        return self._build_result(sanitized_data, errors, status, vulnerable_data=vulnerable_data)
 
     def _extract_selector(
         self, selector: TargetSelector
@@ -410,6 +414,7 @@ class AuditScraperEngine:
         errors: list[str],
         status: str,
         error_detail: Optional[str] = None,
+        vulnerable_data: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
         """
         Build the final structured output payload.
@@ -419,9 +424,10 @@ class AuditScraperEngine:
             errors: List of non-fatal error messages encountered.
             status: Overall execution status.
             error_detail: Optional fatal error detail.
+            vulnerable_data: Exposed credentials / sensitive data found.
 
         Returns:
-            Complete output payload with data, audit trail, and metadata.
+            Complete output payload with data, vulnerable_data, audit trail, and metadata.
         """
         trail = self.trail.build_trail()
 
@@ -432,6 +438,7 @@ class AuditScraperEngine:
             "execution_mode": self.config.execution_mode.value,
             "extracted_fields": len(data),
             "data": data,
+            "vulnerable_data": vulnerable_data or {"total_findings": 0, "severity": "none", "credentials": [], "summary": "No exposed credentials found."},
             "audit_trail": trail,
             "errors": errors,
         }
