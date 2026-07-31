@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { supabase } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -72,9 +73,9 @@ export async function POST() {
   const { data: codebases } = await supabase.from("Codebase").select("*").limit(1);
   if (!codebases || codebases.length === 0) {
     await supabase.from("Codebase").insert([
-      { id: require("node:crypto").randomUUID(), name: "auth-service.js", language: "javascript", description: "Login module with SQL injection and weak hashing.", sourceCode: "const db = require('./db');\nasync function login(email, password) {\n  const query = \"SELECT * FROM users WHERE email = '\" + email + \"' AND password = '\" + password + \"'\";\n  const rows = await db.rawQuery(query);\n  return rows.length > 0 ? { ok: true } : { ok: false };\n}\nmodule.exports = { login };" },
-      { id: require("node:crypto").randomUUID(), name: "file-server.js", language: "javascript", description: "Path traversal + eval vulnerability.", sourceCode: "const fs = require('fs');\nconst path = require('path');\nfunction downloadFile(filename, res) {\n  const filePath = path.join('/var/app/uploads', filename);\n  res.end(fs.readFileSync(filePath));\n}\nmodule.exports = { downloadFile };" },
-      { id: require("node:crypto").randomUUID(), name: "user-api.js", language: "javascript", description: "NoSQL injection + plaintext passwords.", sourceCode: "const express = require('express');\nconst app = express();\napp.post('/login', (req, res) => {\n  const query = req.body;\n  const found = users.filter(u => Object.keys(query).every(k => u[k] === query[k]));\n  res.json(found);\n});" },
+      { id: randomUUID(), name: "auth-service.js", language: "javascript", description: "Login module with SQL injection and weak hashing.", sourceCode: "const db = require('./db');\nasync function login(email, password) {\n  const query = \"SELECT * FROM users WHERE email = '\" + email + \"' AND password = '\" + password + \"'\";\n  const rows = await db.rawQuery(query);\n  return rows.length > 0 ? { ok: true } : { ok: false };\n}\nmodule.exports = { login };" },
+      { id: randomUUID(), name: "file-server.js", language: "javascript", description: "Path traversal + eval vulnerability.", sourceCode: "const fs = require('fs');\nconst path = require('path');\nfunction downloadFile(filename, res) {\n  const filePath = path.join('/var/app/uploads', filename);\n  res.end(fs.readFileSync(filePath));\n}\nmodule.exports = { downloadFile };" },
+      { id: randomUUID(), name: "user-api.js", language: "javascript", description: "NoSQL injection + plaintext passwords.", sourceCode: "const express = require('express');\nconst app = express();\napp.post('/login', (req, res) => {\n  const query = req.body;\n  const found = users.filter(u => Object.keys(query).every(k => u[k] === query[k]));\n  res.json(found);\n});" },
     ]);
     results.push("Seeded 3 demo codebases");
   }
