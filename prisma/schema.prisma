@@ -228,9 +228,108 @@ model ApiAccessLog {
 model HoneypotHit {
   id          String   @id @default(cuid())
   targetId    String?
-  endpoint    String   // the honeypot path that was hit
+  endpoint    String
   ipAddress   String
   userAgent   String
   method      String
   timestamp   DateTime @default(now())
+}
+
+// ── T1: CI/CD, Alerting, Scheduled Scans ────────────────────────────────────
+
+model WebhookConfig {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  events      String   // JSON array: ["vuln_found","breach_detected","canary_hit","honeypot_hit","posture_drop"]
+  isActive    Boolean  @default(true)
+  secret      String?
+  createdAt   DateTime @default(now())
+}
+
+model ScheduledScan {
+  id          String   @id @default(cuid())
+  name        String
+  scanType    String   // sast | dast | sca | full
+  targetId    String?  // for DAST
+  codebaseId  String?  // for SAST
+  cronExpr    String   // e.g. "0 2 * * *" = daily at 2am
+  isActive    Boolean  @default(true)
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model AlertRule {
+  id          String   @id @default(cuid())
+  name        String
+  condition   String   // e.g. "severity==critical", "posture_score<50"
+  channel     String   // webhook | email | slack
+  channelConfig String // JSON: {url, email, slack_webhook}
+  isActive    Boolean  @default(true)
+  lastTriggered DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // scan_started | vuln_found | patch_approved | breach_detected | alert_triggered
+  entity      String?  // patch_id, engagement_id, etc.
+  actor       String   @default("system")
+  details     String?  // JSON
+  createdAt   DateTime @default(now())
+}
+
+// ── T2: Multi-Tenant RBAC ───────────────────────────────────────────────────
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  members     TeamMember[]
+}
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email       String
+  role        String   @default("viewer") // admin | analyst | viewer
+  invitedAt   DateTime @default(now())
+  joinedAt    DateTime?
+}
+
+// ── T2: Attack Chains ───────────────────────────────────────────────────────
+
+model AttackChain {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  severity    String
+  steps       String   // JSON array of chain steps
+  findingIds  String?  // JSON array of finding/patch IDs
+  createdAt   DateTime @default(now())
+}
+
+// ── T3: Integrations ────────────────────────────────────────────────────────
+
+model Integration {
+  id          String   @id @default(cuid())
+  type        String   // jira | splunk | elk | slack | github
+  config      String   // JSON: {api_url, api_key, project_key, etc.}
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model FuzzResult {
+  id          String   @id @default(cuid())
+  targetUrl   String
+  endpoint    String
+  method      String
+  totalRequests Int
+  crashes     Int
+  errors      Int
+  anomalies   String?  // JSON array of anomalous responses
+  createdAt   DateTime @default(now())
 }

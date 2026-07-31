@@ -767,4 +767,45 @@ export const sentinelApi = {
   canaries: () => http<CanaryStatus>("/api/canaries"),
   checkCanaries: () => http<{ checked: number; detected: number; message: string }>("/api/canaries/check", { method: "POST" }),
   dataFlowMonitor: () => http<DataFlowStatus>("/api/data-flow/monitor"),
+
+  // T1: CI/CD, Alerting, Schedules, Attack Chains, Heatmap, Exec Dashboard
+  cicdScan: (codebaseId: string, meta?: Record<string, string>) =>
+    http<{ scanId: string; status: string }>("/api/ci-cd/scan", { method: "POST", body: JSON.stringify({ codebaseId, ...meta }) }),
+  cicdStatus: (scanId: string) => http<{ scanId: string; status: string; blockMerge: boolean; reason: string }>(`/api/ci-cd/scan?scanId=${scanId}`),
+  webhooks: () => http<unknown[]>("/api/webhooks"),
+  addWebhook: (data: { name: string; url: string; events: string[]; secret?: string }) =>
+    http<{ id: string }>("/api/webhooks", { method: "POST", body: JSON.stringify(data) }),
+  alerts: () => http<unknown[]>("/api/alerts"),
+  addAlert: (data: { name: string; condition: string; channel: string; channelConfig: Record<string, unknown> }) =>
+    http<{ id: string }>("/api/alerts", { method: "POST", body: JSON.stringify(data) }),
+  scheduledScans: () => http<unknown[]>("/api/scheduled-scans"),
+  addScheduledScan: (data: { name: string; scanType: string; codebaseId?: string; targetId?: string; cronExpr: string }) =>
+    http<{ id: string }>("/api/scheduled-scans", { method: "POST", body: JSON.stringify(data) }),
+  attackChains: () => http<unknown[]>("/api/attack-chains"),
+  synthesizeChains: () => http<{ chains: unknown[]; total: number }>("/api/attack-chains", { method: "POST" }),
+  heatmap: () => http<unknown>("/api/heatmap"),
+  execDashboard: () => http<unknown>("/api/executive-dashboard"),
+
+  // T2: Fuzzing, Business Logic, Correlation, RBAC
+  fuzz: (targetUrl: string, endpoint: string, method: string) =>
+    http<unknown>("/api/fuzz", { method: "POST", body: JSON.stringify({ targetUrl, endpoint, method }) }),
+  businessLogicTest: (targetUrl: string) =>
+    http<unknown>("/api/business-logic-test", { method: "POST", body: JSON.stringify({ targetUrl }) }),
+  correlation: () => http<unknown>("/api/correlation"),
+  orgs: () => http<unknown[]>("/api/orgs"),
+
+  // T3: Integrations, GraphQL, WebSocket, K8s, Audit Log
+  integrations: () => http<unknown[]>("/api/integrations"),
+  addIntegration: (type: string, config: Record<string, unknown>) =>
+    http<{ id: string }>("/api/integrations", { method: "POST", body: JSON.stringify({ type, config }) }),
+  exportSIEM: (format: string) =>
+    http<unknown>(`/api/integrations`, { method: "PATCH", body: JSON.stringify({ format }) }),
+  graphqlTest: (targetUrl: string) =>
+    http<unknown>("/api/graphql-test", { method: "POST", body: JSON.stringify({ targetUrl }) }),
+  wsTest: (targetUrl: string) =>
+    http<unknown>("/api/ws-test", { method: "POST", body: JSON.stringify({ targetUrl }) }),
+  k8sScan: (manifest: string) =>
+    http<unknown>("/api/k8s-scan", { method: "POST", body: JSON.stringify({ manifest }) }),
+  auditLog: (limit?: number) =>
+    http<unknown[]>(`/api/audit-log${limit ? `?limit=${limit}` : ""}`),
 };

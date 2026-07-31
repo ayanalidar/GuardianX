@@ -23,6 +23,7 @@ import { ComplianceDashboard } from "@/components/sentinel/compliance-dashboard"
 import { SocPanel } from "@/components/sentinel/soc-panel";
 import { DataExfilPanel } from "@/components/sentinel/data-exfil-panel";
 import { AuditScraperPanel } from "@/components/sentinel/audit-scraper-panel";
+import { AdvancedPanel } from "@/components/sentinel/advanced-panel";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
@@ -58,7 +59,7 @@ import {
   Zap,
 } from "lucide-react";
 
-type Tab = "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper";
+type Tab = "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -328,6 +329,9 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
               <NavItem active={tab === "exfil"} onClick={() => { setTab("exfil"); setSidebarOpen(false); }} icon={Shield} label="Exfil Defense" iconColor="text-rose-400" />
               <NavItem active={tab === "scraper"} onClick={() => { setTab("scraper"); setSidebarOpen(false); }} icon={ScanSearch} label="Audit Scraper" iconColor="text-violet-400" />
             </NavGroup>
+            <NavGroup label="Advanced">
+              <NavItem active={tab === "advanced"} onClick={() => { setTab("advanced"); setSidebarOpen(false); }} icon={Sparkles} label="Advanced Platform" iconColor="text-amber-400" />
+            </NavGroup>
           </nav>
           <div className="border-t border-emerald-500/15 p-3">
             <div className="mb-2 flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs">
@@ -357,7 +361,7 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
                   <Menu className="size-5" />
                 </button>
                 <h1 className="text-sm font-bold text-zinc-50 sm:text-base">
-                  {tab === "patches" ? "Patch Review Queue" : tab === "codebases" ? "Codebase Library" : tab === "redagent" ? "RedAgent VAPT Engine" : tab === "compliance" ? "GRC & Compliance Center" : tab === "soc" ? "SOC & DevSecOps Center" : tab === "exfil" ? "Data Exfiltration Defense" : "Web Scraping Audit Engine"}
+                  {tab === "patches" ? "Patch Review Queue" : tab === "codebases" ? "Codebase Library" : tab === "redagent" ? "RedAgent VAPT Engine" : tab === "compliance" ? "GRC & Compliance Center" : tab === "soc" ? "SOC & DevSecOps Center" : tab === "exfil" ? "Data Exfiltration Defense" : tab === "scraper" ? "Web Scraping Audit Engine" : "Advanced Security Platform"}
                 </h1>
               </div>
               <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-mono text-xs">
@@ -385,6 +389,8 @@ function ConsoleView({ onBackToLanding }: { onBackToLanding: () => void }) {
               <DataExfilPanel />
             ) : tab === "scraper" ? (
               <AuditScraperPanel />
+            ) : tab === "advanced" ? (
+              <AdvancedPanel />
             ) : (
               <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
                 <section>
