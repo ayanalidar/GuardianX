@@ -1,82 +1,350 @@
-// GuardianX Engine — pure socket.io relay (port 3003).
+// GuardianX Engine — HTTP API server + socket.io relay on a single port.
 //
-// Receives pipeline events from the Next.js producer (server-side socket.io
-// client) and broadcasts them to subscribed browser clients.
+// This service runs on Railway and handles all heavy compute that Vercel
+// serverless can't (due to 10-60s timeouts + no Python/bun runtime):
+//   POST /api/run-sast      — SAST vulnerability scan pipeline (~95s)
+//   POST /api/run-dast      — DAST VAPT engagement (~95s)
+//   POST /api/run-exploit   — Run exploit PoC vs original/patched code (~10s)
+//   POST /api/generate-pdf  — Generate VAPT report PDF (~30s)
+//   POST /api/run-scraper   — Run Python audit scraper (~60s)
+//   GET  /healthz           — Health check
 //
-// Protocol:
-//   Client -> Server:
-//     "subscribe:scan"   { scanId }   join a scan's event room
-//     "unsubscribe:scan" { scanId }
-//     "subscribe:global"               join the global room
-//   Producer -> Server:
-//     "pipeline:event"   PipelineEventPayload        (relayed to global + scan room)
-//   Server -> Client:
-//     "pipeline:event"   PipelineEventPayload
+// socket.io relay runs on the SAME httpServer (path: /socket.io) so browsers
+// get real-time pipeline events. The in-process broadcaster emits directly
+// to the io instance (no socket.io-client network hop).
 
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { Server } from "socket.io";
+import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
+import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { runScan } from "./src/lib/sentinel/engine/pipeline";
+import { runEngagement } from "./src/lib/sentinel/engine/redagent-pipeline";
+import { runExploit } from "./src/lib/sentinel/engine/sandbox";
+import { db } from "./src/lib/db";
 
 const PORT = parseInt(process.env.PORT || "3003", 10);
+const ENGINE_INTERNAL_KEY = process.env.ENGINE_INTERNAL_KEY || "";
 
-const httpServer = createServer((_req, res) => {
-  // Any non-socket.io request: respond simply (socket.io handles its own paths).
-  res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(
-    JSON.stringify({
-      service: "sentinel-engine",
-      role: "socket.io relay",
-      port: PORT,
-      note: "Use socket.io to connect.",
-    })
-  );
+// ── HTTP server ─────────────────────────────────────────────────────────────
+const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  const url = new URL(req.url || "/", `http://localhost:${PORT}`);
+  const path = url.pathname;
+  const method = req.method || "GET";
+
+  // CORS headers (browsers connect directly for socket.io; HTTP is called server-to-server)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Engine-Key");
+  if (method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  // ── Health check (no auth) ────────────────────────────────────────────────
+  if (path === "/healthz" && method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      ok: true,
+      service: "guardianx-engine",
+      uptime: process.uptime(),
+      sockets: io.engine.clientsCount,
+    }));
+    return;
+  }
+
+  // ── Auth check for /api/* endpoints ───────────────────────────────────────
+  if (path.startsWith("/api/")) {
+    if (ENGINE_INTERNAL_KEY && req.headers["x-engine-key"] !== ENGINE_INTERNAL_KEY) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Unauthorized — invalid X-Engine-Key" }));
+      return;
+    }
+  }
+
+  // ── Read request body ─────────────────────────────────────────────────────
+  const body = await new Promise<string>((resolve) => {
+    let data = "";
+    req.on("data", (chunk) => (data += chunk));
+    req.on("end", () => resolve(data));
+  });
+  const json = body ? JSON.parse(body) : {};
+
+  try {
+    // ── POST /api/run-sast ────────────────────────────────────────────────
+    if (path === "/api/run-sast" && method === "POST") {
+      const { codebaseId, scanId } = json;
+      if (!codebaseId || !scanId) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "codebaseId and scanId required" }));
+        return;
+      }
+      // Fire-and-forget: return 202 immediately, run pipeline in background
+      res.writeHead(202, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true, scanId, status: "started" }));
+
+      // Run the pipeline — events are emitted via the in-process broadcaster
+      setImmediate(() => {
+        runScan(codebaseId, scanId, (e) => {
+          // Emit to the scan's room + global room
+          io.to(`scan:${e.scanId}`).emit("pipeline:event", e);
+          io.to("global").emit("pipeline:event", e);
+          return Promise.resolve();
+        }).catch((err) => {
+          console.error("[run-sast] pipeline crashed:", err);
+          io.to(`scan:${scanId}`).emit("pipeline:event", {
+            scanId,
+            stage: "failed",
+            message: `Pipeline crashed: ${err?.message ?? err}`,
+            level: "error",
+            ts: new Date().toISOString(),
+          });
+        });
+      });
+      return;
+    }
+
+    // ── POST /api/run-dast ────────────────────────────────────────────────
+    if (path === "/api/run-dast" && method === "POST") {
+      const { targetId, engagementId } = json;
+      if (!targetId || !engagementId) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "targetId and engagementId required" }));
+        return;
+      }
+      res.writeHead(202, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true, engagementId, status: "started" }));
+
+      setImmediate(() => {
+        runEngagement(targetId, engagementId, (e) => {
+          io.to(`engagement:${e.engagementId}`).emit("redagent:event", e);
+          io.to("global").emit("redagent:event", e);
+          return Promise.resolve();
+        }).catch((err) => {
+          console.error("[run-dast] pipeline crashed:", err);
+          io.to(`engagement:${engagementId}`).emit("redagent:event", {
+            engagementId,
+            stage: "failed",
+            message: `Pipeline crashed: ${err?.message ?? err}`,
+            level: "error",
+            ts: new Date().toISOString(),
+          });
+        });
+      });
+      return;
+    }
+
+    // ── POST /api/run-exploit ─────────────────────────────────────────────
+    if (path === "/api/run-exploit" && method === "POST") {
+      const { patchId, target } = json;
+      if (!patchId || !target) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "patchId and target required" }));
+        return;
+      }
+
+      // Look up the patch
+      const patch = await db.patch.findFirst({
+        where: { OR: [{ patchId }, { id: patchId }] },
+      });
+      if (!patch) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Patch not found" }));
+        return;
+      }
+
+      const isPatched = target === "patched";
+      const targetCode = isPatched ? (patch.patchedCode as string) : (patch.originalCode as string);
+      const exploitCode = (patch.exploitCode as string) || "";
+      const filename = (patch.affectedFile as string) || "target.js";
+
+      const result = await runExploit(exploitCode, targetCode, filename, {
+        label: isPatched ? "patched" : "original",
+      });
+
+      // Persist the result
+      if (isPatched) {
+        await db.patch.update({
+          where: { id: patch.id as string },
+          data: { exploitPatchedResult: JSON.stringify(result) },
+        });
+      } else {
+        await db.patch.update({
+          where: { id: patch.id as string },
+          data: { exploitOriginalResult: JSON.stringify(result) },
+        });
+      }
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    // ── POST /api/generate-pdf ───────────────────────────────────────────
+    if (path === "/api/generate-pdf" && method === "POST") {
+      const { engagementId } = json;
+      if (!engagementId) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "engagementId required" }));
+        return;
+      }
+
+      // Fetch engagement + target + findings from Supabase
+      const engagement = await db.engagement.findUnique({
+        where: { id: engagementId },
+        include: { target: true, findings: true },
+      });
+      if (!engagement) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Engagement not found" }));
+        return;
+      }
+
+      const dir = await mkdtemp(join(tmpdir(), "guardianx-pdf-"));
+      try {
+        const jsonPath = join(dir, "engagement.json");
+        const pdfPath = join(dir, "engagement.pdf");
+        const scriptPath = join(process.cwd(), "scripts", "generate-vapt-report.py");
+
+        // Serialize engagement data for the Python script
+        const payload = {
+          id: engagement.id,
+          status: engagement.status,
+          startedAt: engagement.startedAt,
+          completedAt: engagement.completedAt,
+          crawlSummary: engagement.crawlSummary,
+          target: engagement.target,
+          findings: engagement.findings,
+        };
+        await writeFile(jsonPath, JSON.stringify(payload, null, 2), "utf8");
+
+        // Spawn python3 to generate the PDF
+        const exitCode = await new Promise<number>((resolve) => {
+          const child = spawn("python3", [scriptPath, jsonPath, pdfPath], {
+            cwd: dir,
+            env: { ...process.env, PYTHONUNBUFFERED: "1" },
+          });
+          let stderr = "";
+          child.stderr.on("data", (d) => (stderr += d.toString()));
+          child.on("close", (code) => {
+            if (code !== 0) console.error("[generate-pdf] python stderr:", stderr);
+            resolve(code ?? 1);
+          });
+        });
+
+        if (exitCode !== 0) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "PDF generation failed" }));
+          return;
+        }
+
+        const pdfBuffer = await readFile(pdfPath);
+        res.writeHead(200, {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="guardianx-vapt-${engagementId}.pdf"`,
+          "Content-Length": pdfBuffer.length.toString(),
+          "Cache-Control": "no-store",
+        });
+        res.end(pdfBuffer);
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+      return;
+    }
+
+    // ── POST /api/run-scraper ────────────────────────────────────────────
+    if (path === "/api/run-scraper" && method === "POST") {
+      const config = json;
+      const dir = await mkdtemp(join(tmpdir(), "guardianx-scraper-"));
+      try {
+        const configPath = join(dir, "config.json");
+        const outputPath = join(dir, "result.json");
+        const scriptPath = join(process.cwd(), "audit-scraper", "run.py");
+
+        await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
+
+        const exitCode = await new Promise<number>((resolve) => {
+          const child = spawn("python3", [scriptPath, configPath, outputPath], {
+            cwd: dir,
+            env: { ...process.env, PYTHONUNBUFFERED: "1" },
+          });
+          let stderr = "";
+          child.stderr.on("data", (d) => (stderr += d.toString()));
+          child.on("close", (code) => {
+            if (code !== 0) console.error("[run-scraper] python stderr:", stderr);
+            resolve(code ?? 1);
+          });
+        });
+
+        if (exitCode !== 0) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Scraper failed", exitCode }));
+          return;
+        }
+
+        const resultBuffer = await readFile(outputPath);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(resultBuffer);
+      } catch (err) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          error: err instanceof Error ? err.message : "Scraper error",
+        }));
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+      return;
+    }
+
+    // ── 404 ─────────────────────────────────────────────────────────────────
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Not found", path }));
+  } catch (err) {
+    console.error("[engine] unhandled error:", err);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      error: err instanceof Error ? err.message : "Internal error",
+    }));
+  }
 });
 
+// ── socket.io relay (same httpServer) ────────────────────────────────────────
 const io = new Server(httpServer, {
-  path: "/",
+  path: "/socket.io",
   cors: { origin: "*", methods: ["GET", "POST"] },
   pingTimeout: 60000,
   pingInterval: 25000,
 });
 
 io.on("connection", (socket) => {
-  // Browser client subscriptions
-  socket.on("subscribe:scan", (scanId: string) => {
-    socket.join(`scan:${scanId}`);
-  });
-  socket.on("unsubscribe:scan", (scanId: string) => {
-    socket.leave(`scan:${scanId}`);
-  });
-  socket.on("subscribe:engagement", (engagementId: string) => {
-    socket.join(`engagement:${engagementId}`);
-  });
-  socket.on("unsubscribe:engagement", (engagementId: string) => {
-    socket.leave(`engagement:${engagementId}`);
-  });
-  socket.on("subscribe:global", () => {
-    socket.join("global");
-  });
+  socket.on("subscribe:scan", (scanId: string) => socket.join(`scan:${scanId}`));
+  socket.on("unsubscribe:scan", (scanId: string) => socket.leave(`scan:${scanId}`));
+  socket.on("subscribe:engagement", (engagementId: string) => socket.join(`engagement:${engagementId}`));
+  socket.on("unsubscribe:engagement", (engagementId: string) => socket.leave(`engagement:${engagementId}`));
+  socket.on("subscribe:global", () => socket.join("global"));
 
-  // Producer (Next.js pipeline) emits events -> relay to subscribers.
+  // Producer (Vercel) can still emit events via socket.io-client if needed
   socket.on("pipeline:event", (event: { scanId?: string }) => {
-    if (!event || !event.scanId) return;
+    if (!event?.scanId) return;
     io.to(`scan:${event.scanId}`).emit("pipeline:event", event);
     io.to("global").emit("pipeline:event", event);
   });
-
-  // RedAgent engagement events
   socket.on("redagent:event", (event: { engagementId?: string }) => {
-    if (!event || !event.engagementId) return;
+    if (!event?.engagementId) return;
     io.to(`engagement:${event.engagementId}`).emit("redagent:event", event);
-  });
-
-  socket.on("disconnect", () => {
-    // socket.io handles room cleanup automatically
+    io.to("global").emit("redagent:event", event);
   });
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`[sentinel-engine] socket.io relay listening on :${PORT}`);
-  console.log(`[sentinel-engine] connect with io("/?XTransformPort=${PORT}")`);
+  console.log(`[guardianx-engine] HTTP + socket.io listening on :${PORT}`);
+  console.log(`[guardianx-engine] Health: http://localhost:${PORT}/healthz`);
+  console.log(`[guardianx-engine] socket.io path: /socket.io`);
+  console.log(`[guardianx-engine] Auth: ${ENGINE_INTERNAL_KEY ? "enabled" : "DISABLED (set ENGINE_INTERNAL_KEY)"}`);
 });
 
 process.on("SIGTERM", () => httpServer.close(() => process.exit(0)));

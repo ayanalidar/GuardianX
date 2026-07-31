@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { runScan } from "@/lib/sentinel/engine/pipeline";
-import { broadcast } from "@/lib/sentinel/broadcaster";
+import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 
 export const dynamic = "force-dynamic";
-// Allow the pipeline to run long in the background; the route itself returns
-// immediately after creating the scan record.
-export const maxDuration = 300;
+// Short timeout — we just create a DB record and fire-and-forget to the engine.
+export const maxDuration = 30;
 
 // POST /api/scans — kick off an AI security scan for a codebase.
 // Body: { codebaseId: string }
-// Returns 202 with { scanId } immediately; the pipeline runs in the background
-// and streams events via socket.io.
+// Returns 202 with { scanId } immediately; the Railway engine runs the
+// pipeline in the background and streams events via socket.io.
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const codebaseId = typeof body.codebaseId === "string" ? body.codebaseId : "";
@@ -23,8 +21,7 @@ export async function POST(req: Request) {
   if (!codebase)
     return NextResponse.json({ error: "codebase not found" }, { status: 404 });
 
-  // Prevent concurrent scans on the same codebase (avoids accidental double
-  // triggers and patchId races).
+  // Prevent concurrent scans on the same codebase.
   const running = await db.scan.findFirst({
     where: {
       codebaseId,
@@ -53,20 +50,9 @@ export async function POST(req: Request) {
     },
   });
 
-  // Fire-and-forget the pipeline. runScan updates this same scan record.
-  // We pass `broadcast` as the emit function so events flow to the relay.
-  runScan(codebaseId, scan.id, (e) => {
-    void broadcast(e);
-  }).catch((err) => {
-    console.error("[api/scans] pipeline crashed:", err);
-    broadcast({
-      scanId: scan.id,
-      stage: "failed",
-      message: `Pipeline crashed: ${err?.message ?? err}`,
-      level: "error",
-      ts: new Date().toISOString(),
-    }).catch(() => null);
-  });
+  // Fire-and-forget to the Railway engine — it runs the pipeline and
+  // writes patches/events to Supabase + broadcasts via socket.io.
+  engineFireAndForget("/api/run-sast", { codebaseId, scanId: scan.id });
 
   return NextResponse.json(
     { scanId: scan.id, status: "queued" },

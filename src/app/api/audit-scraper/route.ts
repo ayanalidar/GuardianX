@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
-import { spawn } from "node:child_process";
-import { writeFile, mkdtemp, rm, readFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { engineCall } from "@/lib/sentinel/engine-proxy";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // POST /api/audit-scraper — run the Python audit scraper engine.
 // Body: JSON matching the ScraperConfig schema.
+// Proxies to the Railway engine, which spawns python3 + httpx/BeautifulSoup.
 // Returns: the structured audit result payload.
 export async function POST(req: Request) {
   const config = await req.json().catch(() => ({}));
@@ -17,57 +15,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "target_url required" }, { status: 400 });
   }
 
-  let dir: string | null = null;
-  try {
-    dir = await mkdtemp(join(tmpdir(), "guardianx-scraper-"));
-    const inputPath = join(dir, "config.json");
-    const outputPath = join(dir, "result.json");
-    await writeFile(inputPath, JSON.stringify(config), "utf8");
+  const result = await engineCall("/api/run-scraper", config);
 
-    const scriptPath = join(process.cwd(), "mini-services", "audit-scraper", "run.py");
-
-    const exitCode = await new Promise<number>((resolve) => {
-      const child = spawn("python3", [scriptPath, inputPath], {
-        env: { ...process.env, PYTHONUNBUFFERED: "1" },
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-
-      let stdout = "";
-      let stderr = "";
-      child.stdout.on("data", (d) => (stdout += d.toString()));
-      child.stderr.on("data", (d) => (stderr += d.toString()));
-      child.on("close", (code) => {
-        if (code !== 0) console.error("[audit-scraper] stderr:", stderr);
-        // Write stdout to output file
-        writeFile(outputPath, stdout, "utf8").catch(() => null);
-        resolve(code ?? -1);
-      });
-      child.on("error", () => resolve(-1));
-    });
-
-    if (exitCode !== 0) {
-      // Try to read whatever output we got
-      try {
-        const output = await readFile(outputPath, "utf8");
-        if (output.trim()) {
-          return NextResponse.json(JSON.parse(output));
-        }
-      } catch { /* no output */ }
-      return NextResponse.json(
-        { error: `scraper failed (exit ${exitCode})` },
-        { status: 500 }
-      );
-    }
-
-    const output = await readFile(outputPath, "utf8");
-    const result = JSON.parse(output);
-    return NextResponse.json(result);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
-  } finally {
-    if (dir) await rm(dir, { recursive: true, force: true }).catch(() => null);
+  if (!result.ok) {
+    return NextResponse.json(
+      { error: result.error || "Scraper failed" },
+      { status: result.status || 500 }
+    );
   }
+
+  return NextResponse.json(result.data);
 }
 
 // GET /api/audit-scraper — return the schema example

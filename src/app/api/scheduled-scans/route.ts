@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { runScan } from "@/lib/sentinel/engine/pipeline";
-import { broadcast } from "@/lib/sentinel/broadcaster";
+import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +31,7 @@ export async function PATCH() {
   for (const scan of due) {
     if (scan.scanType === "sast" && scan.codebaseId) {
       const s = await db.scan.create({ data: { codebaseId: scan.codebaseId, status: "queued", stageLabel: "Scheduled SAST scan" } });
-      runScan(scan.codebaseId, s.id, (e) => void broadcast(e)).catch(() => null);
+      engineFireAndForget("/api/run-sast", { codebaseId: scan.codebaseId, scanId: s.id });
       executed++;
     }
     // DAST scheduled scans would trigger engagements here

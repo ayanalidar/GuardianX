@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { runScan } from "@/lib/sentinel/engine/pipeline";
-import { broadcast } from "@/lib/sentinel/broadcaster";
+import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+export const maxDuration = 30;
 
 // POST /api/ci-cd/scan — triggered by CI/CD webhook (GitHub Actions, GitLab CI).
 // Body: { codebaseId, commitSha, branch, prId }
@@ -26,10 +25,8 @@ export async function POST(req: Request) {
 
   const scan = await db.scan.create({ data: { codebaseId, status: "queued", stageLabel: "CI/CD triggered scan" } });
 
-  // Fire-and-forget
-  runScan(codebaseId, scan.id, (e) => void broadcast(e)).catch(async (err) => {
-    console.error("[ci-cd] scan failed:", err);
-  });
+  // Fire-and-forget to the Railway engine
+  engineFireAndForget("/api/run-sast", { codebaseId, scanId: scan.id });
 
   // Log to audit trail
   await db.auditLog.create({

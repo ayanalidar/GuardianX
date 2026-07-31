@@ -1,5 +1,5 @@
 {
-  "name": "sentinel-engine",
+  "name": "guardianx-engine",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -8,6 +8,8 @@
     "start": "bun index.ts"
   },
   "dependencies": {
-    "socket.io": "^4.8.1"
+    "@supabase/supabase-js": "^2.45.0",
+    "socket.io": "^4.8.1",
+    "z-ai-web-dev-sdk": "latest"
   }
 }

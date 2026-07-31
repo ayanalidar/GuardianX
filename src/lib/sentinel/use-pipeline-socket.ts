@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, type Socket } from "socket.io-client";
 import type { PipelineEvent } from "./api";
+import { ENGINE_SOCKET_URL, engineSocketOptions } from "./engine-socket";
 
 interface UsePipelineSocketOptions {
   scanId: string | null;
@@ -40,14 +41,7 @@ export function usePipelineSocket({ scanId, onEvent }: UsePipelineSocketOptions)
   // Subscribe to live events.
   useEffect(() => {
     if (!scanId) return;
-    const sock = io("/", {
-      path: "/socket.io/",
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      timeout: 10000,
-    });
+    const sock = io(ENGINE_SOCKET_URL, engineSocketOptions());
     socketRef.current = sock;
 
     sock.on("connect", () => {

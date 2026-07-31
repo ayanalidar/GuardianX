@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { runEngagement } from "@/lib/sentinel/engine/redagent-pipeline";
-import { broadcastRedAgent } from "@/lib/sentinel/broadcaster";
+import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+export const maxDuration = 30;
 
 // POST /api/engagements — start a RedAgent VAPT engagement against a target.
 // Body: { targetId: string }
-// Returns 202 with { engagementId } immediately; the pipeline runs in the
-// background and streams events via socket.io.
+// Returns 202 with { engagementId } immediately; the Railway engine runs
+// the DAST pipeline and streams events via socket.io.
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const targetId = typeof body.targetId === "string" ? body.targetId : "";
@@ -24,8 +23,7 @@ export async function POST(req: Request) {
   if (!target.authorized) {
     return NextResponse.json(
       {
-        error:
-          "Target is not authorized. You must confirm authorization before testing.",
+        error: "Target is not authorized. You must confirm authorization before testing.",
       },
       { status: 403 }
     );
@@ -52,19 +50,8 @@ export async function POST(req: Request) {
     data: { targetId: target.id, status: "queued", stageLabel: "Queued" },
   });
 
-  // Fire-and-forget the pipeline.
-  runEngagement(targetId, engagement.id, (e) => {
-    void broadcastRedAgent(e);
-  }).catch((err) => {
-    console.error("[api/engagements] pipeline crashed:", err);
-    broadcastRedAgent({
-      engagementId: engagement.id,
-      stage: "failed",
-      message: `Engagement crashed: ${err?.message ?? err}`,
-      level: "error",
-      ts: new Date().toISOString(),
-    }).catch(() => null);
-  });
+  // Fire-and-forget to the Railway engine.
+  engineFireAndForget("/api/run-dast", { targetId, engagementId: engagement.id });
 
   return NextResponse.json(
     { engagementId: engagement.id, status: "queued" },

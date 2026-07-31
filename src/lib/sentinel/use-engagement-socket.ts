@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, type Socket } from "socket.io-client";
 import type { RedAgentEvent } from "./api";
+import { ENGINE_SOCKET_URL, engineSocketOptions } from "./engine-socket";
 
 interface UseEngagementSocketOptions {
   engagementId: string | null;
@@ -34,14 +35,7 @@ export function useEngagementSocket({ engagementId }: UseEngagementSocketOptions
   // Subscribe to live events.
   useEffect(() => {
     if (!engagementId) return;
-    const sock = io("/", {
-      path: "/socket.io/",
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      timeout: 10000,
-    });
+    const sock = io(ENGINE_SOCKET_URL, engineSocketOptions());
     socketRef.current = sock;
 
     sock.on("connect", () => {
