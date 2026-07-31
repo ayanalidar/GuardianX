@@ -1,13 +1,13 @@
-// GuardianX — Autonomous Security Operations Platform
-// Supports both SQLite (local dev) and PostgreSQL (production/Supabase)
+// GuardianX — Production schema (PostgreSQL via Supabase pooler)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Codebase {
@@ -22,7 +22,6 @@ model Codebase {
   patches     Patch[]
 }
 
-// ── Authentication & User Management ────────────────────────────────────────
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
