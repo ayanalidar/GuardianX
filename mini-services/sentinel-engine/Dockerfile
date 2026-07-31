@@ -1,11 +1,13 @@
 # GuardianX Engine — multi-runtime Docker image
 # Bun (for the HTTP server + sandbox test execution) + Python3 (for PDF + scraper)
+#
+# Uses Debian-based image (not slim) so bash + curl are available for HEALTHCHECK.
 
 FROM oven/bun:1.3-debian
 
 WORKDIR /app
 
-# ── Install Python3 + system deps ────────────────────────────────────────────
+# ── Install Python3 + system deps (curl already in debian image) ────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
@@ -17,9 +19,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
-
-# ── Install Node (for any Node-only deps that may be needed by engine) ──────
-# Bun already provides a Node-compatible runtime, so we skip installing Node.
 
 # ── Copy package.json + install Bun deps ─────────────────────────────────────
 COPY package.json ./
@@ -36,14 +35,17 @@ COPY index.ts ./
 COPY src ./src
 COPY scripts ./scripts
 COPY audit-scraper ./audit-scraper
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
 
 # ── Runtime config ───────────────────────────────────────────────────────────
 ENV NODE_ENV=production
-ENV PORT=3003
+# Railway sets PORT automatically — don't hardcode it
 EXPOSE 3003
 
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD curl -f http://localhost:${PORT}/healthz || exit 1
+# Health check (curl is installed above)
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=15s \
+  CMD curl -f http://localhost:${PORT:-3003}/healthz || exit 1
 
 # Start the engine (startup script generates .z-ai-config from env vars)
-CMD ["./start.sh"]
+CMD ["sh", "./start.sh"]
