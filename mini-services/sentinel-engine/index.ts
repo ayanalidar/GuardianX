@@ -16,7 +16,7 @@
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 
-const PORT = 3003;
+const PORT = parseInt(process.env.PORT || "3003", 10);
 
 const httpServer = createServer((_req, res) => {
   // Any non-socket.io request: respond simply (socket.io handles its own paths).

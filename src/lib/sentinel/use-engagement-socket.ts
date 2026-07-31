@@ -34,7 +34,8 @@ export function useEngagementSocket({ engagementId }: UseEngagementSocketOptions
   // Subscribe to live events.
   useEffect(() => {
     if (!engagementId) return;
-    const sock = io("/?XTransformPort=3003", {
+    const sock = io("/", {
+      path: "/socket.io/",
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: Infinity,

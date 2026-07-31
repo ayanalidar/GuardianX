@@ -6,8 +6,7 @@
 
 import { io, type Socket } from "socket.io-client";
 
-const ENGINE_PORT = 3003;
-const ENGINE_URL = `http://localhost:${ENGINE_PORT}`;
+const ENGINE_URL = process.env.ENGINE_URL || "http://localhost:3003";
 
 export interface PipelineEventPayload {
   scanId: string;

@@ -40,7 +40,8 @@ export function usePipelineSocket({ scanId, onEvent }: UsePipelineSocketOptions)
   // Subscribe to live events.
   useEffect(() => {
     if (!scanId) return;
-    const sock = io("/?XTransformPort=3003", {
+    const sock = io("/", {
+      path: "/socket.io/",
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: Infinity,
