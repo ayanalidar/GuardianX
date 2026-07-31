@@ -31,7 +31,10 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.local
+.env.production
+.env.development
 
 # vercel
 .vercel
@@ -52,3 +55,15 @@ prompt
 server.log
 # Skills directory
 /skills/
+# GuardianX deployment
+upload/
+db/*.db
+db/*.db-journal
+worklog.md
+engine.log
+vuln-target.log
+
+# Database files
+db/custom.db
+db/*.db
+db/*.db-journal
