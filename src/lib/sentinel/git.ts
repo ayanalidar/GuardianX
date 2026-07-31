@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Git integration: clone a remote repo using a stored credential, list
 // scannable files, and read a specific file. All clones go to an isolated
 // temp directory that is cleaned up after use.

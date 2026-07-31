@@ -44,7 +44,7 @@ export async function GET(req: Request) {
   if (!codebaseId) {
     // Scan all codebases
     const codebases = await db.codebase.findMany({ select: { id: true, name: true, sourceCode: true } });
-    const allResults = [];
+    const allResults: Array<{ codebase_id: string; codebase_name: string; dependencies: string[] }> = [];
     for (const cb of codebases) {
       const deps = extractDependencies(cb.sourceCode);
       if (deps.length > 0) {

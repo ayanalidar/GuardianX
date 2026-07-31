@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 // GET /api/executive-dashboard — C-level single-page summary.
 export async function GET() {
   const [patches, findings, scans, engagements, codebases, attestations, canaries] = await Promise.all([
-    db.patch.findMany({ select: { severity: true, status: true, sandboxPassed: true, adversarialWon: true, createdAt: true, approvedAt: true } }),
+    db.patch.findMany({ select: { title: true, severity: true, status: true, sandboxPassed: true, adversarialWon: true, createdAt: true, approvedAt: true } }),
     db.finding.findMany({ select: { severity: true, createdAt: true } }),
     db.scan.findMany({ select: { status: true, startedAt: true, completedAt: true } }),
     db.engagement.findMany({ select: { status: true, startedAt: true } }),

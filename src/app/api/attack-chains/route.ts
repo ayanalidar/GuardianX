@@ -49,7 +49,7 @@ export async function POST() {
     parsed = JSON.parse(s);
   } catch { parsed = { chains: [] }; }
 
-  const created = [];
+  const created: Array<{ id: string; title: string; severity: string }> = [];
   for (const chain of (parsed.chains || []).slice(0, 5)) {
     const c = await db.attackChain.create({
       data: { title: chain.title, description: chain.description, severity: chain.severity, steps: JSON.stringify(chain.steps || []), findingIds: JSON.stringify(allFindings.map(f => f.id)) },

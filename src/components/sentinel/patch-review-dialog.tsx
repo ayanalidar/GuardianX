@@ -130,7 +130,7 @@ export function PatchReviewDialog({
             description: `${patch?.title} will not be applied.`,
           });
         }
-        onResolved(patchId, kind);
+        onResolved(patchId, kind as "approved" | "rejected");
         onOpenChange(false);
       } catch (err) {
         toast({
