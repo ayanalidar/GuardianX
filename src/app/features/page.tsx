@@ -98,7 +98,7 @@ export default function FeaturesPage() {
   return (
     <>
       <SiteHeader />
-      <div ref={containerRef} className="scanlines cyber-vignette premium-bg relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+      <div ref={containerRef} className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
       <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-20" />
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
         <motion.div animate={{ x: [0, 200, 0], y: [0, -100, 0], scale: [1, 1.3, 1] }} transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }} className="absolute top-0 left-0 h-[500px] w-[500px] rounded-full bg-emerald-500/8 blur-[150px]" />
@@ -146,7 +146,7 @@ export default function FeaturesPage() {
               {category.features.map((feature, i) => (
                 <motion.div key={i} initial={{ opacity: 0, y: 30, rotateX: 10 }} whileInView={{ opacity: 1, y: 0, rotateX: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08, duration: 0.5 }} whileHover={{ y: -6, scale: 1.03 }} className="group relative">
                   <div className={`absolute -inset-0.5 rounded-xl bg-gradient-to-br from-${feature.color}-500/10 to-transparent opacity-0 blur-lg transition-opacity duration-500 group-hover:opacity-100`} />
-                  <div className="neon-card relative h-full overflow-hidden border border-zinc-700 p-5 transition-all duration-300 group-hover:border-zinc-600">
+                  <div className="holo-card-sharp hud-corners relative h-full overflow-hidden rounded-xl border border-zinc-700 p-5 transition-all duration-300 group-hover:border-zinc-600">
                     <div className={`absolute right-0 top-0 h-16 w-16 rounded-bl-full bg-${feature.color}-500/5 transition-all duration-500 group-hover:bg-${feature.color}-500/10`} />
                     <div className="relative">
                       <div className={`mb-3 flex size-10 items-center justify-center rounded-lg border border-${feature.color}-500/30 bg-${feature.color}-500/5`}>
@@ -162,7 +162,7 @@ export default function FeaturesPage() {
           </motion.div>
         ))}
         <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="text-center">
-          <div className="neon-card relative overflow-hidden p-12">
+          <div className="holo-card-sharp hud-corners relative overflow-hidden p-12">
             <div aria-hidden className="cyber-grid pointer-events-none absolute inset-0 opacity-20" />
             <div className="relative">
               <ShieldHalf className="mx-auto size-12 text-emerald-400 neon-emerald" />
