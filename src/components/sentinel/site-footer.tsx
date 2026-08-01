@@ -14,20 +14,36 @@ const FOOTER_SECTIONS = [
   {
     title: "Platform",
     links: [
-      { label: "Why GuardianX", href: "/why-guardianx" },
+      { label: "Platform Overview", href: "/" },
       { label: "Features", href: "/features" },
+      { label: "Architecture", href: "/architecture" },
       { label: "Pricing", href: "/pricing" },
-      { label: "Whitepaper", href: "/whitepaper" },
-      { label: "Contact", href: "/contact" },
+    ],
+  },
+  {
+    title: "Solutions",
+    links: [
+      { label: "By Use Case", href: "/solutions#use-case" },
+      { label: "By Compliance", href: "/solutions#compliance" },
+      { label: "By Role", href: "/solutions#role" },
     ],
   },
   {
     title: "Resources",
     links: [
+      { label: "Whitepapers", href: "/resources#whitepapers" },
+      { label: "Case Studies", href: "/resources#case-studies" },
+      { label: "Documentation", href: "/resources#docs" },
+      { label: "Whitepaper", href: "/whitepaper" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "About GuardianX", href: "/company" },
+      { label: "Contact", href: "/contact" },
+      { label: "Request Demo", href: "/contact" },
       { label: "Privacy Policy", href: "/privacy" },
-      { label: "Security", href: "/.well-known/security.txt" },
-      { label: "Documentation", href: "/whitepaper" },
-      { label: "Status", href: "/" },
     ],
   },
 ];
