@@ -30,6 +30,7 @@ import { ClientsDashboard } from "@/components/sentinel/clients-dashboard";
 import { ClientDetail } from "@/components/sentinel/client-detail";
 import { CommandCenter } from "@/components/sentinel/command-center";
 import { ActivePipelines } from "@/components/sentinel/active-pipelines";
+import { RnDLab } from "@/components/sentinel/rnd-lab";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
@@ -48,6 +49,7 @@ import {
   Boxes,
   Building2,
   Crosshair,
+  FlaskConical,
   Gavel,
   Inbox,
   KeyRound,
@@ -69,7 +71,7 @@ import {
   Zap,
 } from "lucide-react";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -368,6 +370,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <NavItem active={tab === "scraper"} onClick={() => { setTab("scraper"); setSidebarOpen(false); }} icon={ScanSearch} label="Audit Scraper" iconColor="text-violet-400" accentColor="violet" />
             </NavGroup>
             <NavGroup label="Advanced" color="amber">
+              <NavItem active={tab === "rnd"} onClick={() => { setTab("rnd"); setSidebarOpen(false); }} icon={FlaskConical} label="R&D Lab" iconColor="text-violet-400" accentColor="violet" />
               <NavItem active={tab === "advanced"} onClick={() => { setTab("advanced"); setSidebarOpen(false); }} icon={Sparkles} label="Advanced Platform" iconColor="text-amber-400" accentColor="amber" />
             </NavGroup>
             {currentUser?.role === "admin" && (
@@ -427,12 +430,14 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "soc" ? "neon-cyan text-cyan-300" :
                   tab === "exfil" ? "neon-rose text-rose-300" :
                   tab === "scraper" ? "neon-violet text-violet-300" :
+                  tab === "rnd" ? "neon-violet text-violet-300" :
                   tab === "users" ? "neon-emerald text-emerald-300" :
                   "neon-amber text-amber-300"
                 }`}>
                   {tab === "dashboard" ? "Command Overview" :
                    tab === "clients" ? (selectedClientId ? "Client Pipeline" : "Client Engagements") :
                    tab === "pipelines" ? "Active Pipelines" :
+                   tab === "rnd" ? "R&D Lab" :
                    tab === "patches" ? "Patch Review Queue" :
                    tab === "codebases" ? "Codebase Library" :
                    tab === "redagent" ? "RedAgent VAPT Engine" :
@@ -462,6 +467,8 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <ClientsDashboard onSelectClient={(id) => setSelectedClientId(id)} />
             ) : tab === "pipelines" ? (
               <ActivePipelines onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }} onAddClient={() => setTab("clients")} />
+            ) : tab === "rnd" ? (
+              <RnDLab />
             ) : (
               <>
                 <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>
