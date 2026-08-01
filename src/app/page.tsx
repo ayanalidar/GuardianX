@@ -26,6 +26,8 @@ import { AuditScraperPanel } from "@/components/sentinel/audit-scraper-panel";
 import { AdvancedPanel } from "@/components/sentinel/advanced-panel";
 import { AuthPage } from "@/components/sentinel/auth-page";
 import { UserManagementPanel } from "@/components/sentinel/user-management-panel";
+import { ClientsDashboard } from "@/components/sentinel/clients-dashboard";
+import { ClientDetail } from "@/components/sentinel/client-detail";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
@@ -42,10 +44,12 @@ import { severityRank } from "@/lib/sentinel/utils";
 import {
   Activity,
   Boxes,
+  Building2,
   Crosshair,
   Gavel,
   Inbox,
   KeyRound,
+  LayoutDashboard,
   Loader2,
   LogOut,
   Menu,
@@ -63,7 +67,7 @@ import {
   Zap,
 } from "lucide-react";
 
-type Tab = "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users";
+type Tab = "dashboard" | "clients" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -128,7 +132,8 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
 
   const backToLanding = onBackToLanding;
   const { toast } = useToast();
-  const [tab, setTab] = useState<Tab>("patches");
+  const [tab, setTab] = useState<Tab>("dashboard");
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [patches, setPatches] = useState<PatchSummary[]>([]);
   const [codebases, setCodebases] = useState<Codebase[]>([]);
   const [stats, setStats] = useState<PatchStats | null>(null);
@@ -346,17 +351,15 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             </div>
           </button>
           <nav className="custom-scrollbar flex-1 overflow-y-auto p-2">
-            <NavGroup label="Operations" color="emerald">
-              <NavItem active={tab === "patches"} onClick={() => { setTab("patches"); setSidebarOpen(false); }} icon={ShieldAlert} label="Patches" badge={patches.length || undefined} badgeColor="emerald" accentColor="emerald" />
+            <NavGroup label="Dashboard" color="emerald">
+              <NavItem active={tab === "dashboard"} onClick={() => { setTab("dashboard"); setSelectedClientId(null); setSidebarOpen(false); }} icon={LayoutDashboard} label="Overview" accentColor="emerald" iconColor="text-emerald-400" />
+              <NavItem active={tab === "clients"} onClick={() => { setTab("clients"); setSelectedClientId(null); setSidebarOpen(false); }} icon={Building2} label="All Clients" accentColor="emerald" iconColor="text-emerald-400" />
+            </NavGroup>
+            <NavGroup label="Tools" color="cyan">
+              <NavItem active={tab === "patches"} onClick={() => { setTab("patches"); setSidebarOpen(false); }} icon={ShieldAlert} label="Patch Queue" badge={patches.length || undefined} badgeColor="emerald" accentColor="emerald" />
               <NavItem active={tab === "codebases"} onClick={() => { setTab("codebases"); setSidebarOpen(false); }} icon={Boxes} label="Codebases" badge={codebases.length || undefined} badgeColor="sky" accentColor="sky" iconColor="text-sky-400" />
-            </NavGroup>
-            <NavGroup label="Offensive Security" color="red">
               <NavItem active={tab === "redagent"} onClick={() => { setTab("redagent"); setSidebarOpen(false); }} icon={Crosshair} label="RedAgent VAPT" iconColor="text-red-400" accentColor="red" />
-            </NavGroup>
-            <NavGroup label="Governance" color="purple">
               <NavItem active={tab === "compliance"} onClick={() => { setTab("compliance"); setSidebarOpen(false); }} icon={Gavel} label="Compliance" iconColor="text-purple-400" accentColor="purple" />
-            </NavGroup>
-            <NavGroup label="Monitoring" color="cyan">
               <NavItem active={tab === "soc"} onClick={() => { setTab("soc"); setSidebarOpen(false); }} icon={Radar} label="SOC & DevSecOps" iconColor="text-cyan-400" accentColor="cyan" />
               <NavItem active={tab === "exfil"} onClick={() => { setTab("exfil"); setSidebarOpen(false); }} icon={Shield} label="Exfil Defense" iconColor="text-rose-400" accentColor="rose" />
               <NavItem active={tab === "scraper"} onClick={() => { setTab("scraper"); setSidebarOpen(false); }} icon={ScanSearch} label="Audit Scraper" iconColor="text-violet-400" accentColor="violet" />
@@ -412,6 +415,8 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   <Menu className="size-5" />
                 </button>
                 <h1 className={`text-sm font-bold sm:text-base ${
+                  tab === "dashboard" ? "neon-emerald text-emerald-300" :
+                  tab === "clients" ? "neon-emerald text-emerald-300" :
                   tab === "patches" ? "neon-emerald text-emerald-300" :
                   tab === "codebases" ? "neon-sky text-sky-300" :
                   tab === "redagent" ? "neon-red text-red-300" :
@@ -422,7 +427,17 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "users" ? "neon-emerald text-emerald-300" :
                   "neon-amber text-amber-300"
                 }`}>
-                  {tab === "patches" ? "Patch Review Queue" : tab === "codebases" ? "Codebase Library" : tab === "redagent" ? "RedAgent VAPT Engine" : tab === "compliance" ? "GRC & Compliance Center" : tab === "soc" ? "SOC & DevSecOps Center" : tab === "exfil" ? "Data Exfiltration Defense" : tab === "scraper" ? "Web Scraping Audit Engine" : tab === "users" ? "User Management" : "Advanced Security Platform"}
+                  {tab === "dashboard" ? "Command Overview" :
+                   tab === "clients" ? (selectedClientId ? "Client Pipeline" : "Client Engagements") :
+                   tab === "patches" ? "Patch Review Queue" :
+                   tab === "codebases" ? "Codebase Library" :
+                   tab === "redagent" ? "RedAgent VAPT Engine" :
+                   tab === "compliance" ? "GRC & Compliance Center" :
+                   tab === "soc" ? "SOC & DevSecOps Center" :
+                   tab === "exfil" ? "Data Exfiltration Defense" :
+                   tab === "scraper" ? "Web Scraping Audit Engine" :
+                   tab === "users" ? "User Management" :
+                   "Advanced Security Platform"}
                 </h1>
               </div>
               <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-mono text-xs">
@@ -432,29 +447,37 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             </div>
           </header>
           <main className="flex-1 p-4 sm:p-6">
-            <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>
-              <StatsBar stats={stats} loading={statsLoading} />
-            </section>
-            <section className="mb-5 grid gap-4 fade-in-up lg:grid-cols-3" style={{ animationDelay: "0.15s" }}>
-              <PostureScoreCard />
-              <ThreatIntelPanel />
-              <RuntimeMonitor />
-            </section>
-            {tab === "redagent" ? (
-              <RedAgentPanel />
-            ) : tab === "compliance" ? (
-              <ComplianceDashboard />
-            ) : tab === "soc" ? (
-              <SocPanel />
-            ) : tab === "exfil" ? (
-              <DataExfilPanel />
-            ) : tab === "scraper" ? (
-              <AuditScraperPanel />
-            ) : tab === "advanced" ? (
-              <AdvancedPanel />
-            ) : tab === "users" ? (
-              <UserManagementPanel />
+            {tab === "dashboard" ? (
+              <ClientsDashboard onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }} />
+            ) : tab === "clients" && selectedClientId ? (
+              <ClientDetail clientId={selectedClientId} onBack={() => setSelectedClientId(null)} onNavigate={(t) => setTab(t as Tab)} />
+            ) : tab === "clients" ? (
+              <ClientsDashboard onSelectClient={(id) => setSelectedClientId(id)} />
             ) : (
+              <>
+                <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>
+                  <StatsBar stats={stats} loading={statsLoading} />
+                </section>
+                <section className="mb-5 grid gap-4 fade-in-up lg:grid-cols-3" style={{ animationDelay: "0.15s" }}>
+                  <PostureScoreCard />
+                  <ThreatIntelPanel />
+                  <RuntimeMonitor />
+                </section>
+                {tab === "redagent" ? (
+                  <RedAgentPanel />
+                ) : tab === "compliance" ? (
+                  <ComplianceDashboard />
+                ) : tab === "soc" ? (
+                  <SocPanel />
+                ) : tab === "exfil" ? (
+                  <DataExfilPanel />
+                ) : tab === "scraper" ? (
+                  <AuditScraperPanel />
+                ) : tab === "advanced" ? (
+                  <AdvancedPanel />
+                ) : tab === "users" ? (
+                  <UserManagementPanel />
+                ) : (
               <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
                 <section>
                   <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -517,6 +540,8 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   <PipelineView events={events} connected={connected} active={scanning} scanStatus={activeScan?.status} stageLabel={activeScan?.stage_label} />
                 </aside>
               </div>
+                )}
+              </>
             )}
           </main>
           <footer className="mt-auto border-t border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">

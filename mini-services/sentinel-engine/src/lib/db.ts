@@ -34,6 +34,7 @@ export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey, {
 // (because we created them with quoted identifiers in 0001_init.sql).
 const MODEL_TO_TABLE: Record<string, string> = {
   user: "User",
+  client: "Client",
   codebase: "Codebase",
   scan: "Scan",
   patch: "Patch",
@@ -65,9 +66,14 @@ const MODEL_TO_TABLE: Record<string, string> = {
 // For belongsTo: localFk = the FK column on THIS model that points to the parent's id
 // Used by include/_count to do follow-up queries. Derived from schema.prisma.
 const RELATIONS: Record<string, Record<string, { table: string; fk: string; isList: boolean; localFk?: string }>> = {
+  Client: {
+    codebases: { table: "Codebase", fk: "clientId", isList: true },
+    targets: { table: "Target", fk: "clientId", isList: true },
+  },
   Codebase: {
     scans: { table: "Scan", fk: "codebaseId", isList: true },
     patches: { table: "Patch", fk: "codebaseId", isList: true },
+    client: { table: "Client", fk: "id", isList: false, localFk: "clientId" },
   },
   Scan: {
     patches: { table: "Patch", fk: "scanId", isList: true },
@@ -90,6 +96,7 @@ const RELATIONS: Record<string, Record<string, { table: string; fk: string; isLi
   },
   Target: {
     engagements: { table: "Engagement", fk: "targetId", isList: true },
+    client: { table: "Client", fk: "id", isList: false, localFk: "clientId" },
   },
   Organization: {
     members: { table: "TeamMember", fk: "orgId", isList: true },

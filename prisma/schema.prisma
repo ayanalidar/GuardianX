@@ -10,12 +10,34 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ── Client (top-level entity — groups all assets + pipeline stages) ──────
+model Client {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  targetUrl    String?
+  repoUrl      String?
+  scope        String?
+  authorized   Boolean  @default(false)
+  frameworks   String?  // comma-separated: "DPDPA,GDPR,PCI-DSS"
+  status       String   @default("onboarding") // onboarding|scanning|testing|patching|verifying|defending|compliant
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  codebases    Codebase[]
+  targets      Target[]
+}
+
 model Codebase {
   id          String   @id @default(cuid())
   name        String
   language    String   @default("javascript")
   description String?
   sourceCode  String
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   scans       Scan[]
@@ -129,6 +151,8 @@ model Target {
   authHeader  String?
   notes       String?
   authorized  Boolean  @default(false)
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   engagements Engagement[]
 }
