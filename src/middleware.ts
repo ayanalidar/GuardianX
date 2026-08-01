@@ -12,6 +12,7 @@ const PUBLIC_ROUTES = [
   "/api/auth/login",
   "/api/auth/signup",
   "/api/auth/session",
+  "/api/client-portal-auth", // client portal login (issues its own token)
   "/api/db-init",
   "/api/health",
   "/api/cron/", // cron routes use ?secret= param, not JWT
@@ -24,7 +25,7 @@ const rateStore = new Map<string, { count: number; resetAt: number }>();
  * Lightweight JWT verification using Web Crypto API (Edge-compatible).
  * Verifies the signature without importing the jsonwebtoken library.
  */
-async function verifyJWTEdge(token: string): Promise<{ userId: string; email: string; role: string; name: string } | null> {
+async function verifyJWTEdge(token: string): Promise<{ userId: string; email: string; role: string; name: string; approved: boolean } | null> {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
@@ -40,6 +41,7 @@ async function verifyJWTEdge(token: string): Promise<{ userId: string; email: st
       email: payload.email,
       role: payload.role,
       name: payload.name,
+      approved: payload.approved === true, // fail-safe: undefined/null/false → false
     };
   } catch {
     return null;
@@ -109,6 +111,22 @@ export async function middleware(req: NextRequest) {
     return NextResponse.json(
       { error: "Invalid or expired token. Please log in again." },
       { status: 401 }
+    );
+  }
+
+  // ── Approval enforcement (defense in depth) ───────────────────────────
+  // Even if the JWT signature is valid, the user must be admin-approved.
+  // Because `approved` is embedded in the token at login time, ANY token
+  // issued before this check existed (which lacks the `approved` flag) is
+  // automatically rejected here. This forcibly logs out unapproved users
+  // who grabbed a token before the approval workflow was enforced.
+  if (!user.approved) {
+    return NextResponse.json(
+      {
+        error: "Your account is pending admin approval. Please contact hello@guardianx.in.",
+        code: "PENDING_APPROVAL",
+      },
+      { status: 403 }
     );
   }
 

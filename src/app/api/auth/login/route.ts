@@ -52,8 +52,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    // Check if user is approved (skip for first/admin user or if column doesn't exist)
-    if (user.approved === false) {
+    // FAIL-SAFE approval check: only explicitly-approved users may log in.
+    // Using `!== true` (not `=== false`) so that NULL / undefined / missing
+    // column all resolve to "not approved" instead of silently letting the
+    // user through.
+    if (user.approved !== true) {
       return NextResponse.json(
         {
           error: "Your account is pending admin approval. Please contact hello@guardianx.in to expedite access.",
@@ -63,12 +66,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create JWT token
+    // Create JWT token — embed `approved` so the Edge middleware can re-check
+    // it on every request (defense in depth). This also means any token issued
+    // BEFORE this flag existed is automatically rejected by the middleware,
+    // forcibly logging out unapproved users who grabbed a token earlier.
     const token = createToken({
       userId: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
+      approved: true,
     });
 
     const response = NextResponse.json({

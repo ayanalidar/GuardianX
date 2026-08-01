@@ -12,6 +12,11 @@ export interface JWTPayload {
   email: string;
   role: string;
   name: string;
+  /** Whether the user is admin-approved. Embedded in the JWT so the Edge
+   *  middleware can re-check it on every request. Old tokens issued before
+   *  this field existed will have `undefined` here, which is treated as
+   *  "not approved" (fail-safe). */
+  approved?: boolean;
 }
 
 /**
@@ -108,6 +113,22 @@ export function requireAuth(req: Request):
       response: new Response(
         JSON.stringify({ error: "Authentication required. Provide a valid Bearer token." }),
         { status: 401, headers: { "Content-Type": "application/json" } }
+      ),
+    };
+  }
+  // Defense in depth: even if a valid JWT is present, the user must be
+  // explicitly approved. Fail-safe: `undefined`/`null`/`false` all reject.
+  // (The Edge middleware already enforces this, but this protects routes in
+  // case middleware is ever bypassed or a stale pre-approval token appears.)
+  if (user.approved !== true) {
+    return {
+      ok: false,
+      response: new Response(
+        JSON.stringify({
+          error: "Your account is pending admin approval.",
+          code: "PENDING_APPROVAL",
+        }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
       ),
     };
   }

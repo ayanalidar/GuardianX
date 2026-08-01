@@ -97,12 +97,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // First user (admin) — issue token immediately
+    // First user (admin) — issue token immediately (with approved flag)
     const token = createToken({
       userId: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
+      approved: true,
     });
 
     const response = NextResponse.json(

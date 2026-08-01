@@ -34,12 +34,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid portal access code" }, { status: 401 });
     }
 
-    // Create a limited-scope JWT (role: "client", clientId embedded)
+    // Create a limited-scope JWT (role: "client", clientId embedded).
+    // Clients are pre-approved by virtue of holding a valid portal code.
     const token = createToken({
       userId: (client as Record<string, unknown>).id as string,
       email,
       name: (client as Record<string, unknown>).name as string,
       role: "client",
+      approved: true,
     });
 
     return NextResponse.json({
