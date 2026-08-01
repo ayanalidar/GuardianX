@@ -411,7 +411,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             </div>
             <div className="hidden items-center gap-6 text-sm text-zinc-400 md:flex">
               <a href="/why-guardianx" className="transition-colors hover:text-emerald-400">Why GuardianX</a>
-              <a href="#features" className="transition-colors hover:text-emerald-400">Features</a>
+              <a href="/features" className="transition-colors hover:text-emerald-400">Features</a>
               <a href="/pricing" className="transition-colors hover:text-emerald-400">Pricing</a>
               <a href="/whitepaper" className="transition-colors hover:text-emerald-400">Whitepaper</a>
               <a href="#contact" className="transition-colors hover:text-emerald-400">Contact</a>

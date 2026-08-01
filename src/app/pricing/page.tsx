@@ -4,168 +4,238 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  CheckCircle2, Zap, Building2, Crown, ArrowRight, IndianRupee,
-  Globe, Sparkles,
+  CheckCircle2, Zap, Building2, Crown, ArrowRight, Globe,
+  Sparkles, Shield, TrendingUp, Cpu,
 } from "lucide-react";
 
 const TIERS = [
   {
-    name: "Starter",
+    name: "MSME",
     icon: Zap,
-    priceINR: "₹15,000",
-    priceUSD: "$99",
+    price: "₹6,999",
     period: "/month",
-    desc: "For startups & small teams getting started with security",
+    desc: "For small businesses & startups taking their first step into security",
     color: "emerald",
-    border: "border-emerald-500/40",
-    bg: "bg-emerald-500/5",
+    gradient: "from-emerald-500/20 via-emerald-600/5 to-transparent",
+    border: "border-emerald-500/30",
+    glow: "hover:shadow-[0_0_40px_rgba(16,185,129,0.15)]",
     features: [
       "Up to 3 clients",
-      "Unlimited SAST scans",
-      "Unlimited DAST scans",
+      "Unlimited SAST + DAST scans",
       "AI patch generation",
-      "VAPT PDF reports (5/month)",
+      "5 VAPT PDF reports / month",
       "Audit scraper",
       "Passive reconnaissance",
       "Email support",
-      "Community access",
-    ],
-    notIncluded: [
-      "Multi-tenant RBAC",
-      "Slack/Teams integration",
-      "War Room mode",
-      "R&D Lab access",
     ],
   },
   {
     name: "Professional",
     icon: Building2,
-    priceINR: "₹50,000",
-    priceUSD: "$499",
+    price: "₹39,999",
     period: "/month",
-    desc: "For growing companies that need continuous security",
+    desc: "For growing companies that need continuous, autonomous protection",
     color: "cyan",
+    gradient: "from-cyan-500/20 via-cyan-600/5 to-transparent",
     border: "border-cyan-500/40",
-    bg: "bg-cyan-500/5",
+    glow: "hover:shadow-[0_0_50px_rgba(6,182,212,0.2)]",
     popular: true,
     features: [
       "Up to 25 clients",
-      "Everything in Starter, plus:",
+      "Everything in MSME, plus:",
       "24/7 autonomous threat hunter",
       "Adversarial patching arena",
       "Guardian AI assistant",
       "War Room mode",
       "Behavioral anomaly detection",
       "Virtual patching (WAF rules)",
-      "IaC remediation (Terraform/Ansible)",
       "Slack/Teams integration",
-      "Multi-tenant RBAC (admin/analyst/viewer)",
+      "Multi-tenant RBAC",
+      "Risk trend charts",
+      "Custom report branding",
       "Priority support (4h response)",
-    ],
-    notIncluded: [
-      "R&D Lab access",
-      "Custom AI model training",
     ],
   },
   {
     name: "Enterprise",
     icon: Crown,
-    priceINR: "₹2,00,000",
-    priceUSD: "$2,000",
+    price: "₹9,99,999",
     period: "/month",
-    desc: "For large enterprises, banks & MSSPs",
+    desc: "For large enterprises, banks, MSSPs & government organizations",
     color: "violet",
+    gradient: "from-violet-500/20 via-violet-600/5 to-transparent",
     border: "border-violet-500/40",
-    bg: "bg-violet-500/5",
+    glow: "hover:shadow-[0_0_60px_rgba(139,92,246,0.2)]",
     features: [
       "Unlimited clients",
       "Everything in Professional, plus:",
       "R&D Lab (self-improving AI)",
       "Attack graph DAG modeling",
       "Protocol fuzzing engine",
-      "Custom compliance frameworks",
+      "2FA authentication",
+      "Client portal (white-label)",
       "Dedicated infrastructure",
-      "API access (full REST API)",
-      "White-label reports (your branding)",
+      "Full REST API access",
+      "On-premise deployment",
       "Dedicated account manager",
       "24/7 phone support",
       "Custom AI model training",
-      "On-premise deployment option",
     ],
-    notIncluded: [],
   },
 ];
 
 export default function PricingPage() {
   return (
     <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
-      <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-30" />
+      {/* Animated background */}
+      <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-20" />
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute -top-40 left-1/3 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
+        <motion.div
+          animate={{ x: [0, 100, 0], y: [0, -50, 0], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-20 left-1/4 h-96 w-96 rounded-full bg-emerald-500/10 blur-[120px]"
+        />
+        <motion.div
+          animate={{ x: [0, -80, 0], y: [0, 60, 0], opacity: [0.2, 0.5, 0.2] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-20 right-1/4 h-96 w-96 rounded-full bg-violet-500/10 blur-[120px]"
+        />
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-20 sm:px-6">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-16 text-center">
-          <Badge className="mb-6 border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
+        {/* Hero */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-20 text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring" }}
+            className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl border border-emerald-500/40 bg-emerald-500/10"
+            style={{ boxShadow: "0 0 30px rgba(16,185,129,0.3)" }}
+          >
+            <Shield className="size-8 text-emerald-400" />
+          </motion.div>
+          <Badge className="mb-4 border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
             <Sparkles className="size-3" /> Pricing
           </Badge>
-          <h1 className="text-4xl font-bold tracking-tight text-zinc-50 sm:text-5xl">
-            Security that pays for itself
+          <h1 className="text-5xl font-bold tracking-tight text-zinc-50 sm:text-6xl">
+            Security that <span className="gradient-text">pays for itself</span>
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">
-            Replace ₹5-15 lakh per assessment with a single subscription. One platform, unlimited scans, autonomous 24/7 protection.
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400">
+            Replace a ₹15 lakh security assessment with a single subscription.
+            <br />One platform. Unlimited scans. Autonomous 24/7 protection.
           </p>
         </motion.div>
 
-        {/* Pricing Cards */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        {/* Pricing Cards — Cinematic */}
+        <div className="grid gap-8 lg:grid-cols-3">
           {TIERS.map((tier, i) => (
             <motion.div
               key={tier.name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 40, rotateX: 15 }}
+              whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className={`holo-card-sharp hud-corners relative overflow-hidden p-6 ${tier.border} ${tier.bg} ${tier.popular ? "lg:scale-105" : ""}`}
+              transition={{ delay: i * 0.15, duration: 0.6 }}
+              whileHover={{ y: -8, scale: 1.02 }}
+              className={`relative ${tier.popular ? "lg:-mt-4 lg:mb-4" : ""}`}
             >
-              {tier.popular && (
-                <div className="absolute right-0 top-0 rounded-bl-lg bg-cyan-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-300">
-                  ★ Most Popular
+              {/* Glow effect */}
+              <div className={`absolute -inset-0.5 rounded-2xl bg-gradient-to-b ${tier.gradient} opacity-50 blur-xl`} />
+
+              {/* Card */}
+              <div className={`holo-card-sharp hud-corners relative overflow-hidden rounded-2xl border ${tier.border} ${tier.glow} transition-all duration-500`}>
+                {/* Animated gradient header */}
+                <div className={`bg-gradient-to-b ${tier.gradient} p-6`}>
+                  {tier.popular && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute right-4 top-4"
+                    >
+                      <div className="flex items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/20 px-3 py-1">
+                        <Sparkles className="size-2.5 text-cyan-300" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Popular</span>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    whileInView={{ scale: 1, rotate: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.15 + 0.3, type: "spring" }}
+                    className={`mb-3 flex size-12 items-center justify-center rounded-xl border border-${tier.color}-500/40 bg-${tier.color}-500/10`}
+                  >
+                    <tier.icon className={`size-6 text-${tier.color}-400`} />
+                  </motion.div>
+
+                  <h3 className={`text-2xl font-bold text-${tier.color}-400`}>{tier.name}</h3>
+                  <p className="mt-1 text-xs text-zinc-500">{tier.desc}</p>
                 </div>
-              )}
-              <div className="mb-4">
-                <tier.icon className={`size-8 text-${tier.color}-400`} />
-                <h3 className={`mt-2 text-xl font-bold text-${tier.color}-400`}>{tier.name}</h3>
-                <p className="mt-1 text-xs text-zinc-500">{tier.desc}</p>
-              </div>
-              <div className="mb-6 flex items-baseline gap-2">
-                <span className={`text-4xl font-bold text-zinc-50`}>{tier.priceINR}</span>
-                <span className="text-sm text-zinc-500">{tier.period}</span>
-              </div>
-              <div className="mb-4 flex items-center gap-2 text-xs text-zinc-600">
-                <Globe className="size-3" />
-                <span>Global: {tier.priceUSD}{tier.period}</span>
-              </div>
-              <Button className={`w-full ${tier.popular ? "bg-cyan-600 text-white hover:bg-cyan-500" : "border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"} mb-6`} variant={tier.popular ? "default" : "outline"}>
-                Get Started <ArrowRight className="size-4" />
-              </Button>
-              <div className="space-y-2">
-                {tier.features.map((f, j) => (
-                  <div key={j} className="flex items-start gap-2 text-xs">
-                    <CheckCircle2 className={`mt-0.5 size-3.5 shrink-0 text-${tier.color}-400`} />
-                    <span className={f.includes("Everything") ? "font-bold text-zinc-200" : "text-zinc-400"}>{f}</span>
+
+                {/* Price */}
+                <div className="border-b border-zinc-800 p-6">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-5xl font-bold text-zinc-50">{tier.price}</span>
+                    <span className="text-sm text-zinc-500">{tier.period}</span>
                   </div>
-                ))}
+                  <div className="mt-2 flex items-center gap-2 text-xs text-zinc-600">
+                    <Globe className="size-3" />
+                    <span>Billed monthly · Cancel anytime</span>
+                  </div>
+                </div>
+
+                {/* Features */}
+                <div className="p-6">
+                  <div className="space-y-3">
+                    {tier.features.map((f, j) => (
+                      <motion.div
+                        key={j}
+                        initial={{ opacity: 0, x: -10 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: i * 0.1 + j * 0.05 }}
+                        className="flex items-start gap-2 text-xs"
+                      >
+                        <CheckCircle2 className={`mt-0.5 size-4 shrink-0 text-${tier.color}-400`} />
+                        <span className={f.includes("Everything") ? "font-bold text-zinc-200" : "text-zinc-400"}>{f}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`mt-6 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all ${
+                      tier.popular
+                        ? `bg-cyan-600 text-white hover:bg-cyan-500`
+                        : `border border-${tier.color}-500/40 bg-${tier.color}-500/10 text-${tier.color}-300 hover:bg-${tier.color}-500/20`
+                    }`}
+                  >
+                    Get Started <ArrowRight className="size-4" />
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           ))}
         </div>
 
         {/* Comparison Table */}
-        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mt-16">
-          <div className="holo-card-sharp hud-corners p-6">
-            <h3 className="mb-4 text-sm font-bold text-zinc-200">Cost Comparison: GuardianX vs Traditional VAPT</h3>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-20"
+        >
+          <div className="holo-card-sharp hud-corners overflow-hidden p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <TrendingUp className="size-4 text-emerald-400" />
+              <h3 className="text-sm font-bold text-zinc-200">Cost Comparison: GuardianX vs Traditional VAPT</h3>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -182,15 +252,20 @@ export default function PricingPage() {
                     { metric: "Assessments per year", guardian: "Unlimited", traditional: "1-2 (budget limited)" },
                     { metric: "24/7 monitoring", guardian: "✅ Included", traditional: "❌ ₹2L+/month extra" },
                     { metric: "AI-generated patches", guardian: "✅ Included", traditional: "❌ Manual" },
-                    { metric: "Compliance mapping", guardian: "✅ All frameworks", traditional: "❌ Separate consultant" },
-                    { metric: "VAPT report", guardian: "✅ 15-page PDF, auto-generated", traditional: "❌ Manual, 3-5 days" },
-                    { metric: "Annual cost", guardian: "₹1.8L-₹24L", traditional: "₹10L-₹50L+" },
+                    { metric: "VAPT report", guardian: "✅ Auto-generated (15-page PDF)", traditional: "❌ Manual (3-5 days)" },
+                    { metric: "Annual cost", guardian: "₹84K - ₹12L", traditional: "₹10L - ₹50L+" },
                   ].map((row, i) => (
-                    <tr key={i}>
-                      <td className="py-2 pr-4 text-zinc-400">{row.metric}</td>
-                      <td className="py-2 pr-4 font-medium text-emerald-300">{row.guardian}</td>
-                      <td className="py-2 text-zinc-500">{row.traditional}</td>
-                    </tr>
+                    <motion.tr
+                      key={i}
+                      initial={{ opacity: 0 }}
+                      whileInView={{ opacity: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.05 }}
+                    >
+                      <td className="py-2.5 pr-4 text-zinc-400">{row.metric}</td>
+                      <td className="py-2.5 pr-4 font-medium text-emerald-300">{row.guardian}</td>
+                      <td className="py-2.5 text-zinc-500">{row.traditional}</td>
+                    </motion.tr>
                   ))}
                 </tbody>
               </table>
@@ -199,34 +274,52 @@ export default function PricingPage() {
         </motion.div>
 
         {/* FAQ */}
-        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mt-16">
-          <h3 className="mb-6 text-center text-2xl font-bold text-zinc-50">Frequently Asked Questions</h3>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="mt-20"
+        >
+          <h3 className="mb-8 text-center text-3xl font-bold text-zinc-50">Frequently Asked Questions</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {[
               { q: "Is there a free trial?", a: "Yes — the first 7 days are free. No credit card required. Scan unlimited codebases and targets." },
               { q: "Can I cancel anytime?", a: "Yes. No long-term contracts. Cancel from the dashboard and you won't be billed again." },
               { q: "Do you offer custom pricing?", a: "For MSSPs and enterprises with 50+ clients, we offer custom pricing. Contact hello@guardianx.in." },
-              { q: "Is my data secure?", a: "Yes. All data is encrypted at rest (AES-256-GCM) and in transit (TLS 1.3). Credentials are never stored in plaintext." },
+              { q: "Is my data secure?", a: "Yes. AES-256-GCM encryption at rest, TLS 1.3 in transit, bcrypt password hashing, JWT auth, 2FA support." },
               { q: "Do you support on-premise?", a: "Enterprise tier supports on-premise deployment. Your data never leaves your infrastructure." },
               { q: "What compliance frameworks?", a: "DPDPA, GDPR, HIPAA, PCI-DSS, ISO 27001, SOC 2, NIST, OWASP Top 10 — all automatically mapped." },
             ].map((faq, i) => (
-              <div key={i} className="holo-card-sharp hud-corners p-4">
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                whileHover={{ scale: 1.02 }}
+                className="holo-card-sharp hud-corners p-5"
+              >
                 <h4 className="text-sm font-bold text-zinc-200">{faq.q}</h4>
-                <p className="mt-1 text-xs text-zinc-500">{faq.a}</p>
-              </div>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-500">{faq.a}</p>
+              </motion.div>
             ))}
           </div>
         </motion.div>
 
         {/* CTA */}
-        <div className="mt-16 text-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          className="mt-20 text-center"
+        >
           <a href="/">
             <Button size="lg" className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border">
               Start Free Trial <ArrowRight className="size-4" />
             </Button>
           </a>
           <p className="mt-3 text-xs text-zinc-600">No credit card required · Cancel anytime · 7-day full access</p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
