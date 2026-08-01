@@ -35,6 +35,26 @@ CREATE TABLE IF NOT EXISTS "TeamMember" (id TEXT PRIMARY KEY, "orgId" TEXT NOT N
 CREATE TABLE IF NOT EXISTS "AttackChain" (id TEXT PRIMARY KEY, title TEXT, description TEXT, severity TEXT, steps TEXT, "findingIds" TEXT, "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS "Integration" (id TEXT PRIMARY KEY, type TEXT, config TEXT, "isActive" BOOLEAN NOT NULL DEFAULT TRUE, "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS "FuzzResult" (id TEXT PRIMARY KEY, "targetUrl" TEXT, endpoint TEXT, method TEXT, "totalRequests" INTEGER, crashes INTEGER, errors INTEGER, anomalies TEXT, "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS "Incident" (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT, severity TEXT NOT NULL DEFAULT 'medium', status TEXT NOT NULL DEFAULT 'open', category TEXT NOT NULL DEFAULT 'other', source TEXT NOT NULL DEFAULT 'manual', "sourceId" TEXT, "clientId" TEXT, "targetId" TEXT, assignee TEXT, "detectedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(), "containedAt" TIMESTAMPTZ, "eradicatedAt" TIMESTAMPTZ, "closedAt" TIMESTAMPTZ, "rootCause" TEXT, "lessonsLearned" TEXT, "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(), "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS "IncidentEvent" (id TEXT PRIMARY KEY, "incidentId" TEXT NOT NULL, "eventType" TEXT NOT NULL, source TEXT NOT NULL, "sourceId" TEXT, title TEXT NOT NULL, description TEXT, severity TEXT NOT NULL DEFAULT 'info', metadata TEXT, actor TEXT, "occurredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(), "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS "IOC" (id TEXT PRIMARY KEY, "iocType" TEXT NOT NULL, value TEXT UNIQUE NOT NULL, confidence TEXT NOT NULL DEFAULT 'medium', source TEXT NOT NULL DEFAULT 'internal', tags TEXT, "firstSeen" TIMESTAMPTZ NOT NULL DEFAULT NOW(), "lastSeen" TIMESTAMPTZ NOT NULL DEFAULT NOW(), "hitCount" INTEGER NOT NULL DEFAULT 1, "isActive" BOOLEAN NOT NULL DEFAULT TRUE, notes TEXT, "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS "Evidence" (id TEXT PRIMARY KEY, "incidentId" TEXT NOT NULL, "evidenceType" TEXT NOT NULL, filename TEXT NOT NULL, sha256 TEXT NOT NULL, "collectedBy" TEXT NOT NULL, "collectedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(), description TEXT, "storagePath" TEXT, "fileSize" INTEGER NOT NULL DEFAULT 0, "chainOfCustody" TEXT NOT NULL DEFAULT '[]', "isImmutable" BOOLEAN NOT NULL DEFAULT TRUE, "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS "Playbook" (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, category TEXT NOT NULL DEFAULT 'incident_response', trigger TEXT NOT NULL DEFAULT 'manual', steps TEXT NOT NULL, severity TEXT NOT NULL DEFAULT 'high', "isActive" BOOLEAN NOT NULL DEFAULT TRUE, "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE INDEX IF NOT EXISTS idx_inc_status ON "Incident"(status);
+CREATE INDEX IF NOT EXISTS idx_inc_severity ON "Incident"(severity);
+CREATE INDEX IF NOT EXISTS idx_ie_incident ON "IncidentEvent"("incidentId");
+CREATE INDEX IF NOT EXISTS idx_ioc_value ON "IOC"(value);
+CREATE INDEX IF NOT EXISTS idx_ev_incident ON "Evidence"("incidentId");
+GRANT ALL ON "Incident" TO service_role; GRANT SELECT, INSERT, UPDATE, DELETE ON "Incident" TO anon, authenticated;
+GRANT ALL ON "IncidentEvent" TO service_role; GRANT SELECT, INSERT, UPDATE, DELETE ON "IncidentEvent" TO anon, authenticated;
+GRANT ALL ON "IOC" TO service_role; GRANT SELECT, INSERT, UPDATE, DELETE ON "IOC" TO anon, authenticated;
+GRANT ALL ON "Evidence" TO service_role; GRANT SELECT, INSERT, UPDATE, DELETE ON "Evidence" TO anon, authenticated;
+GRANT ALL ON "Playbook" TO service_role; GRANT SELECT, INSERT, UPDATE, DELETE ON "Playbook" TO anon, authenticated;
+ALTER TABLE IF EXISTS "Incident" DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "IncidentEvent" DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "IOC" DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "Evidence" DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "Playbook" DISABLE ROW LEVEL SECURITY;
 `;
 
 const DEMO_CODEBASES = [

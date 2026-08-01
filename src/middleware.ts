@@ -14,6 +14,7 @@ const PUBLIC_ROUTES = [
   "/api/auth/session",
   "/api/client-portal-auth", // client portal login (issues its own token)
   "/api/db-init",
+  "/api/migrate-dfir", // one-time DFIR table migration (safe, uses IF NOT EXISTS)
   "/api/health",
   "/api/cron/", // cron routes use ?secret= param, not JWT
 ];

@@ -26,6 +26,7 @@ import { AuditScraperPanel } from "@/components/sentinel/audit-scraper-panel";
 import { AdvancedPanel } from "@/components/sentinel/advanced-panel";
 import { AuthPage } from "@/components/sentinel/auth-page";
 import { UserManagementPanel } from "@/components/sentinel/user-management-panel";
+import { DfirPanel } from "@/components/sentinel/dfir-panel";
 import { ClientsDashboard } from "@/components/sentinel/clients-dashboard";
 import { ClientDetail } from "@/components/sentinel/client-detail";
 import { CommandCenter } from "@/components/sentinel/command-center";
@@ -72,7 +73,7 @@ import {
   Zap,
 } from "lucide-react";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -369,6 +370,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <NavItem active={tab === "soc"} onClick={() => { setTab("soc"); setSidebarOpen(false); }} icon={Radar} label="SOC & DevSecOps" iconColor="text-cyan-400" accentColor="cyan" />
               <NavItem active={tab === "exfil"} onClick={() => { setTab("exfil"); setSidebarOpen(false); }} icon={Shield} label="Exfil Defense" iconColor="text-rose-400" accentColor="rose" />
               <NavItem active={tab === "scraper"} onClick={() => { setTab("scraper"); setSidebarOpen(false); }} icon={ScanSearch} label="Audit Scraper" iconColor="text-violet-400" accentColor="violet" />
+              <NavItem active={tab === "dfir"} onClick={() => { setTab("dfir"); setSidebarOpen(false); }} icon={ShieldAlert} label="DFIR Command" iconColor="text-red-400" accentColor="red" />
             </NavGroup>
             <NavGroup label="Advanced" color="amber">
               <NavItem active={tab === "rnd"} onClick={() => { setTab("rnd"); setSidebarOpen(false); }} icon={FlaskConical} label="R&D Lab" iconColor="text-violet-400" accentColor="violet" />
@@ -431,6 +433,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "soc" ? "neon-cyan text-cyan-300" :
                   tab === "exfil" ? "neon-rose text-rose-300" :
                   tab === "scraper" ? "neon-violet text-violet-300" :
+                  tab === "dfir" ? "neon-red text-red-300" :
                   tab === "rnd" ? "neon-violet text-violet-300" :
                   tab === "users" ? "neon-emerald text-emerald-300" :
                   "neon-amber text-amber-300"
@@ -446,6 +449,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "soc" ? "SOC & DevSecOps Center" :
                    tab === "exfil" ? "Data Exfiltration Defense" :
                    tab === "scraper" ? "Web Scraping Audit Engine" :
+                   tab === "dfir" ? "DFIR Command Center" :
                    tab === "users" ? "User Management" :
                    "Advanced Security Platform"}
                 </h1>
@@ -490,6 +494,8 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   <DataExfilPanel />
                 ) : tab === "scraper" ? (
                   <AuditScraperPanel />
+                ) : tab === "dfir" ? (
+                  <DfirPanel />
                 ) : tab === "advanced" ? (
                   <AdvancedPanel />
                 ) : tab === "users" ? (

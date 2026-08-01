@@ -54,6 +54,11 @@ const MODEL_TO_TABLE: Record<string, string> = {
   attackChain: "AttackChain",
   integration: "Integration",
   fuzzResult: "FuzzResult",
+  incident: "Incident",
+  incidentEvent: "IncidentEvent",
+  ioc: "IOC",
+  evidence: "Evidence",
+  playbook: "Playbook",
 };
 
 // ── Relation metadata: model → { relationName: { table, fk, isList, localFk? } } ─
@@ -99,13 +104,23 @@ const RELATIONS: Record<string, Record<string, { table: string; fk: string; isLi
   Organization: {
     members: { table: "TeamMember", fk: "orgId", isList: true },
   },
+  Incident: {
+    events: { table: "IncidentEvent", fk: "incidentId", isList: true },
+    evidence: { table: "Evidence", fk: "incidentId", isList: true },
+  },
+  IncidentEvent: {
+    incident: { table: "Incident", fk: "id", isList: false, localFk: "incidentId" },
+  },
+  Evidence: {
+    incident: { table: "Incident", fk: "id", isList: false, localFk: "incidentId" },
+  },
 };
 
 // ── Date field hydration ───────────────────────────────────────────────────
 // Supabase REST returns date/timestamp columns as ISO strings, but Prisma
 // returns Date objects. All 50 existing routes call `.toISOString()` on
 // date fields, so we convert strings → Date objects on read.
-const DATE_FIELD_SUFFIXES = ["At", "Date", "Timestamp", "Time", "timestamp", "Run"];
+const DATE_FIELD_SUFFIXES = ["At", "Date", "Timestamp", "Time", "timestamp", "Run", "Seen"];
 
 function hydrateDates(record: unknown): unknown {
   if (!record || typeof record !== "object") return record;

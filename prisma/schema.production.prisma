@@ -335,3 +335,87 @@ model FuzzResult {
   anomalies   String?
   createdAt   DateTime @default(now())
 }
+
+model Incident {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  severity        String   @default("medium")
+  status          String   @default("open")
+  category        String   @default("other")
+  source          String   @default("manual")
+  sourceId        String?
+  clientId        String?
+  targetId        String?
+  assignee        String?
+  detectedAt      DateTime @default(now())
+  containedAt     DateTime?
+  eradicatedAt    DateTime?
+  closedAt        DateTime?
+  rootCause       String?
+  lessonsLearned  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  events          IncidentEvent[]
+  evidence        Evidence[]
+}
+
+model IncidentEvent {
+  id          String   @id @default(cuid())
+  incidentId  String
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  eventType   String
+  source      String
+  sourceId    String?
+  title       String
+  description String?
+  severity    String   @default("info")
+  metadata    String?
+  actor       String?
+  occurredAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model IOC {
+  id          String   @id @default(cuid())
+  iocType     String
+  value       String   @unique
+  confidence  String   @default("medium")
+  source      String   @default("internal")
+  tags        String?
+  firstSeen   DateTime @default(now())
+  lastSeen    DateTime @default(now())
+  hitCount    Int      @default(1)
+  isActive    Boolean  @default(true)
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model Evidence {
+  id              String   @id @default(cuid())
+  incidentId      String
+  incident        Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  evidenceType    String
+  filename        String
+  sha256          String
+  collectedBy     String
+  collectedAt     DateTime @default(now())
+  description     String?
+  storagePath     String?
+  fileSize        Int      @default(0)
+  chainOfCustody  String   @default("[]")
+  isImmutable     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model Playbook {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String   @default("incident_response")
+  trigger     String   @default("manual")
+  steps       String
+  severity    String   @default("high")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
