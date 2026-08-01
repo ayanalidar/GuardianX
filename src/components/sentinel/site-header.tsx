@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Terminal, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { GuardianXLogo } from "./guardianx-logo";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -30,9 +31,7 @@ export function SiteHeader({ onEnter }: { onEnter?: () => void }) {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <a href="/" className="flex items-center gap-2.5">
-          <div className="neon-border rounded-lg">
-            <img src="/guardianx-logo.png" alt="GuardianX" className="size-9 rounded-lg object-contain" />
-          </div>
+          <GuardianXLogo size={36} />
           <span className="text-lg font-bold tracking-tight text-zinc-50">
             Guardian<span className="text-emerald-400 neon-emerald">X</span>
           </span>

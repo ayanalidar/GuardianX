@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ShieldHalf, Loader2, Mail, Lock, User, ArrowRight, Sparkles, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
+import { GuardianXLogo } from "./guardianx-logo";
 
 interface AuthPageProps {
   onAuth: (user: { id: string; email: string; name: string; role: string }, token: string) => void;
@@ -139,7 +140,9 @@ export function AuthPage({ onAuth }: AuthPageProps) {
       >
         {/* Logo */}
         <div className="mb-6 text-center">
-          <img src="/guardianx-logo.png" alt="GuardianX" className="mx-auto size-16 rounded-xl object-contain neon-border" />
+          <div className="mx-auto flex justify-center">
+            <GuardianXLogo size={72} />
+          </div>
           <h1 className="mt-3 text-2xl font-bold text-zinc-50 neon-emerald">
             Guardian<span className="text-emerald-400">X</span>
           </h1>

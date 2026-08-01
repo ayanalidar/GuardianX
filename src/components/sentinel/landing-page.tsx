@@ -44,6 +44,7 @@ import {
   Rocket,
   FlaskConical,
 } from "lucide-react";
+import { GuardianXLogo } from "./guardianx-logo";
 
 interface LandingPageProps {
   onEnter: () => void;
@@ -401,6 +402,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
       <div className="relative z-10">
         <SiteHeader onEnter={onEnter} />
 
+
         {/* Hero */}
         <section className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pt-24 py-20 text-center sm:px-6 sm:py-28">
           <motion.div
@@ -675,6 +677,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
 
         {/* Footer */}
         <SiteFooter />
+
       </div>
     </div>
   );

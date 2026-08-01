@@ -6,6 +6,7 @@ import {
   ArrowRight, Shield, Cpu, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GuardianXLogo } from "./guardianx-logo";
 
 const TRUST_BADGES = ["DPDPA Ready", "GDPR Aligned", "OWASP Top 10", "ISO 27001", "SOC 2", "NIST"];
 
@@ -71,9 +72,7 @@ export function SiteFooter() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <a href="/" className="flex items-center gap-2.5">
-              <div className="neon-border rounded-lg">
-                <img src="/guardianx-logo.png" alt="GuardianX" className="size-9 rounded-lg object-contain" />
-              </div>
+              <GuardianXLogo size={36} />
               <span className="text-lg font-bold tracking-tight text-zinc-50">
                 Guardian<span className="text-emerald-400 neon-emerald">X</span>
               </span>

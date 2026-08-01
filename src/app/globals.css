@@ -507,3 +507,119 @@
   box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.15);
   border-color: rgba(16, 185, 129, 0.4);
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   GuardianX Spinning Neon Logo
+   - Continuously rotating (8s linear infinite)
+   - Neon emerald glow pulsing around it (no frame/border added)
+   - Shine sweep: a diagonal light streak crosses the logo every 3s
+   - Sparkle: 4 tiny twinkling dots orbit the logo
+   Usage: <GuardianXLogo size={48} /> or apply .gx-spin-logo to an <img>
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Continuous spin */
+@keyframes gx-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Pulsing neon glow (emerald + cyan) — no border, just light */
+@keyframes gx-neon-pulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 4px rgba(16, 185, 129, 0.9))
+      drop-shadow(0 0 12px rgba(16, 185, 129, 0.6))
+      drop-shadow(0 0 24px rgba(6, 182, 212, 0.4));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 8px rgba(16, 185, 129, 1))
+      drop-shadow(0 0 20px rgba(16, 185, 129, 0.8))
+      drop-shadow(0 0 36px rgba(6, 182, 212, 0.6));
+  }
+}
+
+/* Shine sweep — a moving light highlight across the logo */
+@keyframes gx-shine {
+  0%   { transform: translateX(-150%) rotate(25deg); opacity: 0; }
+  20%  { opacity: 0.8; }
+  50%  { transform: translateX(150%) rotate(25deg); opacity: 0; }
+  100% { transform: translateX(150%) rotate(25deg); opacity: 0; }
+}
+
+/* Sparkle twinkle */
+@keyframes gx-sparkle {
+  0%, 100% { opacity: 0; transform: scale(0.3); }
+  50%      { opacity: 1; transform: scale(1); }
+}
+
+/* The logo wrapper */
+.gx-logo-wrap {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  line-height: 0;
+}
+/* The spinning + glowing image itself */
+.gx-spin-logo {
+  animation:
+    gx-spin 8s linear infinite,
+    gx-neon-pulse 3s ease-in-out infinite;
+  display: block;
+  /* No border, no border-radius — keep it as a pure cutout */
+  border-radius: 0;
+  border: none;
+  /* Respect reduced-motion users */
+  will-change: transform, filter;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gx-spin-logo {
+    animation: gx-neon-pulse 4s ease-in-out infinite; /* keep glow, stop spin */
+  }
+}
+
+/* Shine overlay (the diagonal streak) */
+.gx-shine-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 0;
+}
+.gx-shine-overlay::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: 0;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(167, 243, 208, 0.7) 50%,
+    rgba(255, 255, 255, 0) 60%,
+    transparent 100%
+  );
+  animation: gx-shine 3s ease-in-out infinite;
+}
+
+/* Sparkles — 4 orbiting twinkles positioned around the logo */
+.gx-sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #a7f3d0 0%, rgba(16, 185, 129, 0.8) 40%, transparent 70%);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.9), 0 0 12px rgba(6, 182, 212, 0.6);
+  pointer-events: none;
+  animation: gx-sparkle 2s ease-in-out infinite;
+}
+.gx-sparkle-1 { top: 5%;   left: 15%;  animation-delay: 0s; }
+.gx-sparkle-2 { top: 20%;  right: 5%;  animation-delay: 0.5s; }
+.gx-sparkle-3 { bottom: 10%; right: 15%; animation-delay: 1s; }
+.gx-sparkle-4 { bottom: 20%; left: 5%;  animation-delay: 1.5s; }
+
+/* Small variants scale sparkles down */
+.gx-logo-wrap[data-size="sm"] .gx-sparkle { width: 3px; height: 3px; }
+.gx-logo-wrap[data-size="lg"] .gx-sparkle { width: 8px; height: 8px; }
