@@ -410,9 +410,10 @@ export function LandingPage({ onEnter }: LandingPageProps) {
               <Badge className="ml-1 border-emerald-500/30 bg-emerald-500/10 text-[9px] text-emerald-300">SOC</Badge>
             </div>
             <div className="hidden items-center gap-6 text-sm text-zinc-400 md:flex">
+              <a href="/why-guardianx" className="transition-colors hover:text-emerald-400">Why GuardianX</a>
               <a href="#features" className="transition-colors hover:text-emerald-400">Features</a>
-              <a href="#pipeline" className="transition-colors hover:text-emerald-400">Pipeline</a>
-              <a href="#architecture" className="transition-colors hover:text-emerald-400">Architecture</a>
+              <a href="/pricing" className="transition-colors hover:text-emerald-400">Pricing</a>
+              <a href="/whitepaper" className="transition-colors hover:text-emerald-400">Whitepaper</a>
               <a href="#contact" className="transition-colors hover:text-emerald-400">Contact</a>
             </div>
             <Button onClick={onEnter} className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border">
@@ -509,41 +510,6 @@ export function LandingPage({ onEnter }: LandingPageProps) {
                 {i < PIPELINE_STEPS.length - 1 && (
                   <ArrowRight className="mx-auto mt-2 size-3 text-zinc-600" />
                 )}
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        {/* Architecture section — NEW */}
-        <section id="architecture" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <div className="mb-10 text-center">
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-cyan-500/60">
-              {"// Production Architecture"}
-            </div>
-            <h2 className="text-3xl font-bold text-zinc-50">Built for scale. Deployed on free tiers.</h2>
-            <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-400">
-              Vercel serves the UI + thin API proxies. Railway runs the heavy compute engine (SAST, DAST, sandbox, PDF, scraper). Supabase stores everything. All on free tiers.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { icon: Server, name: "Vercel", role: "Next.js 16 UI + Thin API Proxies", color: "text-zinc-300", border: "border-zinc-500/40", bg: "bg-zinc-500/5", neon: "neon-cyan" },
-              { icon: Cpu, name: "Railway Engine", role: "Bun + Python3 Heavy Compute", color: "text-emerald-400", border: "border-emerald-500/40", bg: "bg-emerald-500/5", neon: "neon-emerald" },
-              { icon: Database, name: "Supabase", role: "PostgreSQL via HTTPS REST", color: "text-emerald-400", border: "border-emerald-500/40", bg: "bg-emerald-500/5", neon: "neon-teal" },
-            ].map((s, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className={`holo-card-sharp hud-corners p-6 text-center border ${s.border}`}
-              >
-                <div className={`mx-auto mb-3 flex size-12 items-center justify-center rounded-lg border ${s.border} ${s.bg}`}>
-                  <s.icon className={`size-6 ${s.color}`} />
-                </div>
-                <div className={`text-lg font-bold ${s.color} ${s.neon}`}>{s.name}</div>
-                <div className="mt-1 text-xs text-zinc-500">{s.role}</div>
               </motion.div>
             ))}
           </div>
