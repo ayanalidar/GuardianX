@@ -28,6 +28,7 @@ import { AuthPage } from "@/components/sentinel/auth-page";
 import { UserManagementPanel } from "@/components/sentinel/user-management-panel";
 import { ClientsDashboard } from "@/components/sentinel/clients-dashboard";
 import { ClientDetail } from "@/components/sentinel/client-detail";
+import { CommandCenter } from "@/components/sentinel/command-center";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
@@ -448,7 +449,10 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
           </header>
           <main className="flex-1 p-4 sm:p-6">
             {tab === "dashboard" ? (
-              <ClientsDashboard onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }} />
+              <CommandCenter
+                onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }}
+                onAddClient={() => setTab("clients")}
+              />
             ) : tab === "clients" && selectedClientId ? (
               <ClientDetail clientId={selectedClientId} onBack={() => setSelectedClientId(null)} onNavigate={(t) => setTab(t as Tab)} />
             ) : tab === "clients" ? (

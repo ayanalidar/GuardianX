@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -41,6 +40,8 @@ import {
   Target as TargetIcon,
   Trash2,
   Zap,
+  Globe,
+  Activity,
 } from "lucide-react";
 
 export function RedAgentPanel() {
@@ -203,11 +204,11 @@ export function RedAgentPanel() {
 
   return (
     <div className="space-y-5">
-      {/* header */}
+      {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-bold text-zinc-50">
-            <Crosshair className="size-5 text-red-400" />
+            <Crosshair className="size-5 text-red-400 neon-red" />
             RedAgent VAPT
           </h2>
           <p className="mt-1 text-sm text-zinc-400">
@@ -217,42 +218,53 @@ export function RedAgentPanel() {
         </div>
         <Button
           onClick={() => setAddOpen(true)}
-          className="bg-red-600 text-white hover:bg-red-500"
+          className="bg-red-600 text-white hover:bg-red-500 neon-border-red"
         >
           <Plus className="size-4" />
           Add Target
         </Button>
       </div>
 
-      {/* demo target hint */}
-      <div className="flex items-start gap-2 rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-zinc-300">
+      {/* Status bar */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatusCard label="Targets" value={targets.length} icon={TargetIcon} color="red" />
+        <StatusCard label="Engagements" value={engagements.length} icon={Activity} color="cyan" />
+        <StatusCard label="Findings" value={findings.length} icon={Skull} color="amber" />
+        <StatusCard label="Live" value={running ? "ACTIVE" : "IDLE"} icon={Zap} color={running ? "emerald" : "zinc"} pulse={running} />
+      </div>
+
+      {/* Demo target hint */}
+      <div className="holo-card-sharp hud-corners flex items-start gap-2 border-sky-500/30 p-3 text-xs text-zinc-300">
         <Zap className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
         <div>
-          A built-in vulnerable target runs at{" "}
+          Built-in vulnerable target at{" "}
           <code className="rounded bg-zinc-800 px-1 font-mono text-sky-300">
             http://localhost:3004
           </code>{" "}
           (VulnShop — SQLi, XSS, IDOR, path traversal, open redirect, .env leak).
-          Add it as a target to try RedAgent safely.
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
-        {/* left: targets + findings */}
-        <section className="space-y-4">
-          {/* targets */}
-          <div>
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Targets ({targets.length})
+      {/* Main grid: responsive — no overflow */}
+      <div className="grid gap-4 xl:grid-cols-[1fr_20rem]">
+        {/* LEFT: targets + findings + past engagements */}
+        <section className="space-y-4 min-w-0">
+          {/* Targets */}
+          <div className="holo-card-sharp hud-corners p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="section-header text-sm font-bold text-red-300">
+                <TargetIcon className="inline size-4 mr-1" />
+                Targets ({targets.length})
+              </h3>
             </div>
             {loading ? (
               <div className="space-y-2">
                 {Array.from({ length: 2 }).map((_, i) => (
-                  <Skeleton key={i} className="h-24 w-full bg-zinc-800" />
+                  <Skeleton key={i} className="h-20 w-full bg-zinc-800/60" />
                 ))}
               </div>
             ) : targets.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/30 p-8 text-center text-sm text-zinc-500">
+              <div className="rounded-lg border border-dashed border-zinc-700 bg-zinc-900/50 p-8 text-center text-sm text-zinc-500">
                 No targets yet. Add one to start a VAPT engagement.
               </div>
             ) : (
@@ -271,14 +283,14 @@ export function RedAgentPanel() {
             )}
           </div>
 
-          {/* findings */}
+          {/* Findings */}
           {findings.length > 0 && (
-            <div>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  <Skull className="size-3 text-red-400" />
+            <div className="holo-card-sharp hud-corners p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="section-header text-sm font-bold text-amber-300">
+                  <Skull className="inline size-4 mr-1" />
                   Findings ({findings.length})
-                </div>
+                </h3>
                 {activeEngagement && findings.length > 0 && (
                   <a
                     href={sentinelApi.reportUrl(activeEngagement.id)}
@@ -304,7 +316,7 @@ export function RedAgentPanel() {
                         setSelectedFinding(f);
                         setFindingOpen(true);
                       }}
-                      className="group w-full text-left rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 transition-colors hover:border-red-500/40 hover:bg-zinc-900"
+                      className="group w-full overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900/80 p-3 text-left transition-colors hover:border-red-500/50 hover:bg-zinc-800/80"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
@@ -314,7 +326,7 @@ export function RedAgentPanel() {
                               {f.category}
                             </span>
                           </div>
-                          <h4 className="mt-1 truncate text-sm font-medium text-zinc-100">
+                          <h4 className="mt-1 text-sm font-medium text-zinc-100">
                             {f.title}
                           </h4>
                           <p className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
@@ -342,29 +354,29 @@ export function RedAgentPanel() {
             </div>
           )}
 
-          {/* past engagements */}
+          {/* Past engagements */}
           {!running && engagements.length > 0 && (
-            <div>
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            <div className="holo-card-sharp hud-corners p-4">
+              <h3 className="mb-2 section-header text-sm font-bold text-zinc-300">
                 Past Engagements
-              </div>
+              </h3>
               <div className="space-y-1.5">
                 {engagements.slice(0, 5).map((e) => (
                   <button
                     key={e.id}
                     onClick={() => handleViewFindings(e)}
-                    className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/30 px-3 py-2 text-left text-xs transition-colors hover:bg-zinc-900"
+                    className="flex w-full items-center justify-between overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-left text-xs transition-colors hover:bg-zinc-800/80"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
                       <EngagementDot status={e.status} />
-                      <span className="text-zinc-300">{e.target.name}</span>
+                      <span className="truncate text-zinc-300">{e.target.name}</span>
                       <span className="text-zinc-600">·</span>
-                      <span className="text-zinc-500">
+                      <span className="text-zinc-500 shrink-0">
                         {e.finding_count} finding{e.finding_count === 1 ? "" : "s"}
                       </span>
                     </div>
-                    <span className="text-[10px] text-zinc-600">
-                      {new Date(e.started_at).toLocaleString()}
+                    <span className="shrink-0 text-[10px] text-zinc-600">
+                      {new Date(e.started_at).toLocaleDateString()}
                     </span>
                   </button>
                 ))}
@@ -373,15 +385,15 @@ export function RedAgentPanel() {
           )}
         </section>
 
-        {/* right: threat radar + live attack stream */}
-        <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+        {/* RIGHT: threat radar + live attack stream */}
+        <aside className="space-y-4 xl:sticky xl:top-20 xl:self-start min-w-0">
           {findings.length > 0 && (
-            <div className="holo-card hud-corners rounded-xl p-4">
+            <div className="holo-card-sharp hud-corners p-4">
               <div className="mb-2 flex items-center justify-between">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-400/70">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-red-400/70">
                   Threat Scope
                 </span>
-                <span className="font-mono text-[9px] text-emerald-500/50">
+                <span className="font-mono text-[9px] text-red-500/50">
                   {findings.length} blips
                 </span>
               </div>
@@ -404,6 +416,35 @@ export function RedAgentPanel() {
   );
 }
 
+// ── Status Card ────────────────────────────────────────────────────────────
+function StatusCard({ label, value, icon: Icon, color, pulse }: {
+  label: string;
+  value: number | string;
+  icon: typeof Activity;
+  color: "red" | "cyan" | "amber" | "emerald" | "zinc";
+  pulse?: boolean;
+}) {
+  const colorMap = {
+    red: { text: "text-red-400", border: "border-red-500/40", bg: "bg-red-500/10" },
+    cyan: { text: "text-cyan-400", border: "border-cyan-500/40", bg: "bg-cyan-500/10" },
+    amber: { text: "text-amber-400", border: "border-amber-500/40", bg: "bg-amber-500/10" },
+    emerald: { text: "text-emerald-400", border: "border-emerald-500/40", bg: "bg-emerald-500/10" },
+    zinc: { text: "text-zinc-400", border: "border-zinc-600/40", bg: "bg-zinc-700/10" },
+  };
+  const c = colorMap[color];
+  return (
+    <div className={`holo-card-sharp hud-corners flex items-center gap-3 border ${c.border} p-3`}>
+      <div className={`flex size-8 items-center justify-center rounded-lg border ${c.border} ${c.bg} ${pulse ? "animate-pulse" : ""}`}>
+        <Icon className={`size-4 ${c.text}`} />
+      </div>
+      <div className="min-w-0">
+        <div className={`text-lg font-bold ${c.text}`}>{value}</div>
+        <div className="text-[9px] uppercase tracking-wider text-zinc-500">{label}</div>
+      </div>
+    </div>
+  );
+}
+
 function TargetCard({
   target,
   onAttack,
@@ -418,10 +459,10 @@ function TargetCard({
   busy: boolean;
 }) {
   return (
-    <Card className="gap-0 border-zinc-800 bg-zinc-900/60 py-0 backdrop-blur-sm">
-      <div className="flex items-start gap-3 p-4">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-400">
-          <TargetIcon className="size-5" />
+    <div className="overflow-hidden rounded-lg border border-red-500/30 bg-zinc-900/80 backdrop-blur-sm">
+      <div className="flex items-start gap-3 p-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-red-500/40 bg-red-500/10 text-red-400">
+          <Globe className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -440,7 +481,7 @@ function TargetCard({
               </Badge>
             )}
             {target.auth_header_set && (
-              <Badge className="border border-zinc-700 bg-zinc-800/50 text-[10px] text-zinc-400">
+              <Badge className="border border-zinc-600 bg-zinc-700/40 text-[10px] text-zinc-400">
                 auth header
               </Badge>
             )}
@@ -448,30 +489,30 @@ function TargetCard({
           <p className="mt-1 truncate font-mono text-xs text-zinc-400">
             {target.base_url}
           </p>
-          <div className="mt-1 text-[11px] text-zinc-500">
+          <div className="mt-0.5 text-[11px] text-zinc-500">
             {target.engagement_count} engagement{target.engagement_count === 1 ? "" : "s"}
           </div>
         </div>
       </div>
-      <div className="flex gap-2 border-t border-zinc-800 px-4 py-2.5">
+      <div className="flex gap-2 border-t border-zinc-700/60 px-3 py-2">
         {target.authorized ? (
           <Button
             size="sm"
             onClick={onAttack}
             disabled={busy}
-            className="h-8 flex-1 bg-red-600 text-white hover:bg-red-500"
+            className="h-7 flex-1 bg-red-600 text-white hover:bg-red-500"
           >
-            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Crosshair className="size-3.5" />}
+            {busy ? <Loader2 className="size-3 animate-spin" /> : <Crosshair className="size-3" />}
             {busy ? "Running…" : "Start VAPT"}
           </Button>
         ) : (
           <Button
             size="sm"
             onClick={onAuthorize}
-            className="h-8 flex-1 border-emerald-600 bg-emerald-600/10 text-emerald-300 hover:bg-emerald-600/20"
+            className="h-7 flex-1 border-emerald-600 bg-emerald-600/10 text-emerald-300 hover:bg-emerald-600/20"
             variant="outline"
           >
-            <ShieldCheck className="size-3.5" />
+            <ShieldCheck className="size-3" />
             Authorize
           </Button>
         )}
@@ -479,12 +520,12 @@ function TargetCard({
           size="icon"
           variant="ghost"
           onClick={onDelete}
-          className="size-8 text-zinc-500 hover:bg-red-500/10 hover:text-red-400"
+          className="size-7 text-zinc-500 hover:bg-red-500/10 hover:text-red-400"
         >
-          <Trash2 className="size-3.5" />
+          <Trash2 className="size-3" />
         </Button>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -541,7 +582,7 @@ function AddTargetDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden border-zinc-800 bg-zinc-950 p-0 text-zinc-100 sm:max-w-lg">
+      <DialogContent className="gap-0 overflow-hidden border-zinc-700 bg-zinc-950/95 p-0 text-zinc-100 backdrop-blur-xl sm:max-w-lg">
         <DialogHeader className="gap-2 border-b border-zinc-800 px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-base text-zinc-50">
             <TargetIcon className="size-4 text-red-400" />
@@ -560,7 +601,7 @@ function AddTargetDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="VulnShop (local)"
-              className="border-zinc-800 bg-zinc-900/60 text-sm text-zinc-200 placeholder:text-zinc-600"
+              className="border-zinc-700 bg-zinc-900/80 text-sm text-zinc-200 placeholder:text-zinc-600"
             />
           </div>
           <div className="grid gap-2">
@@ -569,7 +610,7 @@ function AddTargetDialog({
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="http://localhost:3004"
-              className="border-zinc-800 bg-zinc-900/60 font-mono text-sm text-zinc-200 placeholder:text-zinc-600"
+              className="border-zinc-700 bg-zinc-900/80 font-mono text-sm text-zinc-200 placeholder:text-zinc-600"
             />
           </div>
           <div className="grid gap-2">
@@ -580,7 +621,7 @@ function AddTargetDialog({
               value={authHeader}
               onChange={(e) => setAuthHeader(e.target.value)}
               placeholder="Bearer eyJhbGci…"
-              className="border-zinc-800 bg-zinc-900/60 font-mono text-xs text-zinc-200 placeholder:text-zinc-600"
+              className="border-zinc-700 bg-zinc-900/80 font-mono text-xs text-zinc-200 placeholder:text-zinc-600"
             />
             <p className="text-[11px] text-zinc-500">
               For authenticated scanning. Sent as the Authorization header.
@@ -592,7 +633,7 @@ function AddTargetDialog({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Staging environment, owned by Acme Corp…"
-              className="min-h-[3rem] resize-none border-zinc-800 bg-zinc-900/60 text-sm text-zinc-200 placeholder:text-zinc-600"
+              className="min-h-[3rem] resize-none border-zinc-700 bg-zinc-900/80 text-sm text-zinc-200 placeholder:text-zinc-600"
             />
           </div>
           <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
@@ -634,10 +675,10 @@ function AddTargetDialog({
 
 function FindingSeverityBadge({ severity }: { severity: string }) {
   const map: Record<string, string> = {
-    critical: "border-red-500/40 bg-red-500/10 text-red-300",
-    high: "border-orange-500/40 bg-orange-500/10 text-orange-300",
-    medium: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-    low: "border-sky-500/40 bg-sky-500/10 text-sky-300",
+    critical: "border-red-500/40 bg-red-500/15 text-red-300",
+    high: "border-orange-500/40 bg-orange-500/15 text-orange-300",
+    medium: "border-amber-500/40 bg-amber-500/15 text-amber-300",
+    low: "border-sky-500/40 bg-sky-500/15 text-sky-300",
     info: "border-zinc-600 bg-zinc-700/40 text-zinc-300",
   };
   return (
@@ -658,5 +699,5 @@ function EngagementDot({ status }: { status: string }) {
       : status === "failed"
         ? "bg-red-400"
         : "bg-amber-400 animate-pulse";
-  return <span className={`size-1.5 rounded-full ${color}`} />;
+  return <span className={`size-1.5 shrink-0 rounded-full ${color}`} />;
 }
