@@ -29,8 +29,15 @@ export const metadata: Metadata = {
     "SAST",
   ],
   authors: [{ name: "GuardianX" }],
+  manifest: "/manifest.json",
   icons: {
     icon: "/guardianx-logo.png",
+    apple: "/guardianx-logo.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "GuardianX",
+    statusBarStyle: "black-translucent",
   },
   openGraph: {
     title: "GuardianX — Autonomous Security Operations Platform",

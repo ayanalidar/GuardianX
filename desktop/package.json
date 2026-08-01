@@ -1,0 +1,60 @@
+{
+  "name": "guardianx-desktop",
+  "version": "1.0.0",
+  "description": "GuardianX — Autonomous Security Operations Platform (Desktop App)",
+  "main": "main.js",
+  "author": "GuardianX",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:portable": "electron-builder --win portable",
+    "build:msi": "electron-builder --win nsis",
+    "build:all": "electron-builder --win nsis portable"
+  },
+  "build": {
+    "appId": "in.guardianx.app",
+    "productName": "GuardianX",
+    "copyright": "© 2026 GuardianX",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "build/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "GuardianX-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "GuardianX",
+      "installerIcon": "build/icon.png",
+      "uninstallerIcon": "build/icon.png",
+      "installerHeaderIcon": "build/icon.png"
+    },
+    "portable": {
+      "artifactName": "GuardianX-Portable-${version}.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}
