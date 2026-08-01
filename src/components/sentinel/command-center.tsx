@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 import {
-  Building2, Globe, GitBranch, Shield, Loader2, CheckCircle2,
-  Circle, AlertCircle, Activity, Bug, Crosshair, ShieldCheck,
-  Swords, Heart, Gavel, Zap, TrendingUp, Radar, Eye, Clock,
-  ArrowRight, Plus, Skull, FileText, Cpu,
+  Building2, Globe, Shield, Loader2, CheckCircle2,
+  AlertCircle, Activity, Bug, Crosshair, ShieldCheck,
+  Swords, Gavel, Zap, Radar, Eye, Clock,
+  Plus, Skull, Cpu, Lock, Terminal, Server, Database,
+  Wifi, Gauge, AlertTriangle, ChevronRight,
 } from "lucide-react";
 
 interface ClientSummary {
@@ -34,45 +34,59 @@ interface ClientSummary {
   };
 }
 
-interface LiveEvent {
+interface FeedEvent {
   id: string;
-  type: "scan" | "engagement" | "patch" | "finding" | "system";
+  type: "scan" | "engagement" | "patch" | "finding" | "canary" | "attestation" | "system";
+  action: string;
   client: string;
-  message: string;
-  level: "info" | "success" | "warning" | "error";
+  detail: string;
+  severity: "info" | "success" | "warning" | "error";
   ts: string;
 }
 
-interface DashboardStats {
-  total_clients: number;
-  active_pipelines: number;
-  total_scans: number;
-  total_patches: number;
-  total_findings: number;
-  critical_findings: number;
-  pending_patches: number;
-  approved_patches: number;
-  compliant_clients: number;
+interface ActivityFeed {
+  events: FeedEvent[];
+  active_processes: {
+    sast_scans: number;
+    dast_engagements: number;
+    pending_patches: number;
+    total_active: number;
+  };
+  active_details: {
+    scans: { id: string; status: string; stage: string; codebase: string }[];
+    engagements: { id: string; status: string; stage: string; target: string }[];
+  };
+  stats: { total_events: number; critical: number; warnings: number; successes: number };
 }
 
 const PIPELINE_STAGES = [
-  { key: "onboarding", label: "Onboard", icon: Building2, color: "emerald" },
-  { key: "scanning", label: "Scan", icon: Bug, color: "cyan" },
-  { key: "testing", label: "Test", icon: Crosshair, color: "amber" },
-  { key: "patching", label: "Patch", icon: ShieldCheck, color: "violet" },
-  { key: "verifying", label: "Verify", icon: Swords, color: "sky" },
-  { key: "defending", label: "Defend", icon: Shield, color: "rose" },
-  { key: "compliant", label: "Comply", icon: Gavel, color: "emerald" },
+  { key: "onboarding", label: "ONBOARD", icon: Building2, color: "emerald" },
+  { key: "scanning", label: "SCAN", icon: Bug, color: "cyan" },
+  { key: "testing", label: "TEST", icon: Crosshair, color: "amber" },
+  { key: "patching", label: "PATCH", icon: ShieldCheck, color: "violet" },
+  { key: "verifying", label: "VERIFY", icon: Swords, color: "sky" },
+  { key: "defending", label: "DEFEND", icon: Shield, color: "rose" },
+  { key: "compliant", label: "COMPLY", icon: Gavel, color: "emerald" },
 ];
 
-const COLOR_MAP: Record<string, { text: string; bg: string; border: string; dot: string }> = {
-  emerald: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40", dot: "bg-emerald-500" },
-  cyan: { text: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/40", dot: "bg-cyan-500" },
-  amber: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/40", dot: "bg-amber-500" },
-  violet: { text: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/40", dot: "bg-violet-500" },
-  sky: { text: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/40", dot: "bg-sky-500" },
-  rose: { text: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/40", dot: "bg-rose-500" },
-  red: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/40", dot: "bg-red-500" },
+const COLOR_MAP: Record<string, { text: string; bg: string; border: string; dot: string; hex: string }> = {
+  emerald: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40", dot: "bg-emerald-500", hex: "#10b981" },
+  cyan: { text: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/40", dot: "bg-cyan-500", hex: "#06b6d4" },
+  amber: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/40", dot: "bg-amber-500", hex: "#f59e0b" },
+  violet: { text: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/40", dot: "bg-violet-500", hex: "#8b5cf6" },
+  sky: { text: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/40", dot: "bg-sky-500", hex: "#0ea5e9" },
+  rose: { text: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/40", dot: "bg-rose-500", hex: "#f43f5e" },
+  red: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/40", dot: "bg-red-500", hex: "#ef4444" },
+};
+
+const EVENT_ICONS: Record<string, typeof Bug> = {
+  scan: Bug,
+  engagement: Crosshair,
+  patch: ShieldCheck,
+  finding: Skull,
+  canary: Shield,
+  attestation: Lock,
+  system: Server,
 };
 
 interface CommandCenterProps {
@@ -81,13 +95,12 @@ interface CommandCenterProps {
 }
 
 export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProps) {
-  const { toast } = useToast();
   const [clients, setClients] = useState<ClientSummary[]>([]);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
+  const [feed, setFeed] = useState<ActivityFeed | null>(null);
   const [loading, setLoading] = useState(true);
   const [clock, setClock] = useState(new Date());
-  const eventCounter = useRef(0);
+  const [threatLevel, setThreatLevel] = useState(0);
+  const logRef = useRef<HTMLDivElement>(null);
 
   // Live clock
   useEffect(() => {
@@ -97,24 +110,21 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/clients");
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setClients(data);
+      const [cRes, fRes] = await Promise.all([
+        fetch("/api/clients"),
+        fetch("/api/activity-feed"),
+      ]);
+      const c = await cRes.json();
+      const f = await fRes.json();
+      if (Array.isArray(c)) setClients(c);
+      if (f && !f.error) setFeed(f);
 
-        // Compute aggregate stats
-        const totalScans = data.reduce((sum: number, c: ClientSummary) => sum + (c.stats.patches > 0 ? 1 : 0), 0);
-        setStats({
-          total_clients: data.length,
-          active_pipelines: data.filter((c: ClientSummary) => c.status !== "onboarding" && c.status !== "compliant").length,
-          total_scans: totalScans,
-          total_patches: data.reduce((sum: number, c: ClientSummary) => sum + c.stats.patches, 0),
-          total_findings: data.reduce((sum: number, c: ClientSummary) => sum + c.stats.findings, 0),
-          critical_findings: data.reduce((sum: number, c: ClientSummary) => sum + c.stats.critical_findings, 0),
-          pending_patches: data.reduce((sum: number, c: ClientSummary) => sum + c.stats.pending_patches, 0),
-          approved_patches: data.reduce((sum: number, c: ClientSummary) => sum + c.stats.approved_patches, 0),
-          compliant_clients: data.filter((c: ClientSummary) => c.status === "compliant").length,
-        });
+      // Compute threat level from critical findings + active processes
+      if (f && !f.error) {
+        const criticalCount = f.stats.critical;
+        const activeCount = f.active_processes.total_active;
+        // Threat level: 0-100, scaled from critical findings + active processes
+        setThreatLevel(Math.min(100, criticalCount * 8 + activeCount * 5));
       }
     } catch {
       // ignore
@@ -125,211 +135,223 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
 
   useEffect(() => {
     load();
-    // Refresh every 10 seconds for live updates
-    const id = setInterval(load, 10000);
+    const id = setInterval(load, 5000); // refresh every 5s for real-time feel
     return () => clearInterval(id);
   }, [load]);
 
-  // Simulate live events from pipeline activity (in production these come from socket.io)
-  useEffect(() => {
-    if (clients.length === 0) return;
-    const id = setInterval(() => {
-      // Generate synthetic live events based on client states
-      const activeClient = clients.find((c) => c.status !== "compliant" && c.status !== "onboarding");
-      if (!activeClient) return;
+  // Compute aggregate stats
+  const stats = {
+    total_clients: clients.length,
+    active_pipelines: clients.filter((c) => c.status !== "onboarding" && c.status !== "compliant").length,
+    total_scans: feed?.active_processes.sast_scans || 0,
+    total_patches: clients.reduce((s, c) => s + c.stats.patches, 0),
+    pending_patches: clients.reduce((s, c) => s + c.stats.pending_patches, 0),
+    total_findings: clients.reduce((s, c) => s + c.stats.findings, 0),
+    critical_findings: clients.reduce((s, c) => s + c.stats.critical_findings, 0),
+    compliant_clients: clients.filter((c) => c.status === "compliant").length,
+  };
 
-      const eventTypes = [
-        { type: "scan" as const, msg: `Scanning ${activeClient.name} codebase…`, level: "info" as const },
-        { type: "patch" as const, msg: `Patch generated for ${activeClient.name}`, level: "success" as const },
-        { type: "finding" as const, msg: `Finding detected on ${activeClient.name}`, level: "warning" as const },
-        { type: "engagement" as const, msg: `DAST attack on ${activeClient.target_url}`, level: "info" as const },
-      ];
-      const evt = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-      const newEvent: LiveEvent = {
-        id: `evt-${++eventCounter.current}`,
-        type: evt.type,
-        client: activeClient.name,
-        message: evt.msg,
-        level: evt.level,
-        ts: new Date().toISOString(),
-      };
-      setLiveEvents((prev) => [newEvent, ...prev].slice(0, 30));
-    }, 5000);
-    return () => clearInterval(id);
-  }, [clients]);
+  const threatColor = threatLevel >= 60 ? "red" : threatLevel >= 30 ? "amber" : "emerald";
+  const threatCfg = COLOR_MAP[threatColor];
 
   return (
-    <div className="space-y-5">
-      {/* ═══ COMMAND CENTER HEADER ═══ */}
+    <div className="space-y-4">
+      {/* ═══ FUTURISTIC HEADER ═══ */}
       <div className="holo-card-sharp hud-corners relative overflow-hidden p-5">
-        <div aria-hidden className="cyber-grid pointer-events-none absolute inset-0 opacity-20" />
+        <div aria-hidden className="cyber-grid pointer-events-none absolute inset-0 opacity-30" />
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-20 left-1/3 h-40 w-96 -translate-x-1/2 rounded-full bg-emerald-500/15 blur-3xl" />
+          <div className="absolute -bottom-10 right-0 h-32 w-64 rounded-full bg-red-500/10 blur-3xl" />
+        </div>
         <div className="relative flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="flex size-10 items-center justify-center rounded-lg border border-emerald-500/40 bg-emerald-500/10">
-                <Radar className="size-5 text-emerald-400" />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="flex size-12 items-center justify-center rounded-lg border border-emerald-500/50 bg-emerald-500/10 neon-border">
+                <Radar className="size-6 text-emerald-400" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-zinc-50 neon-emerald">Command Center</h2>
-                <p className="text-xs text-zinc-400">Real-time security operations across all clients</p>
-              </div>
+              <span className="absolute -right-1 -top-1 size-3 rounded-full bg-emerald-500 pulse-dot" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-zinc-50">
+                <span className="neon-emerald">COMMAND</span>{" "}
+                <span className="neon-cyan">CENTER</span>
+              </h2>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+                {"// real-time security operations // all clients // all services"}
+              </p>
             </div>
           </div>
+
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5 font-mono text-xs">
-              <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
-              <span className="text-emerald-300">LIVE</span>
+            {/* Threat level gauge */}
+            <div className={`flex items-center gap-2 rounded-lg border ${threatCfg.border} ${threatCfg.bg} px-3 py-2`}>
+              <Gauge className={`size-4 ${threatCfg.text} ${threatLevel >= 30 ? "animate-pulse" : ""}`} />
+              <div>
+                <div className="font-mono text-[8px] uppercase tracking-wider text-zinc-500">Threat Level</div>
+                <div className={`font-mono text-sm font-bold ${threatCfg.text}`}>
+                  {threatLevel >= 60 ? "CRITICAL" : threatLevel >= 30 ? "ELEVATED" : "GUARDED"}
+                </div>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {[...Array(10)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1 w-3 rounded-sm ${
+                      i < Math.floor(threatLevel / 10) ? threatCfg.dot : "bg-zinc-800"
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="rounded-lg border border-zinc-700 bg-zinc-900/80 px-3 py-1.5 font-mono text-xs text-zinc-400">
-              <Clock className="inline size-3 mr-1" />
-              {clock.toLocaleTimeString("en-US", { hour12: false })}
+
+            {/* Live clock */}
+            <div className="rounded-lg border border-emerald-500/30 bg-zinc-950/80 px-3 py-2 font-mono">
+              <div className="text-[8px] uppercase tracking-wider text-emerald-500/60">SYS TIME</div>
+              <div className="text-sm font-bold text-emerald-300 neon-emerald">
+                {clock.toLocaleTimeString("en-US", { hour12: false })}
+              </div>
             </div>
+
             <Button onClick={onAddClient} className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border">
-              <Plus className="size-4" /> Add Client
+              <Plus className="size-4" /> <span className="hidden sm:inline">Add Client</span>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* ═══ KPI STRIP ═══ */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
-        <KpiCard label="Clients" value={stats?.total_clients ?? 0} icon={Building2} color="emerald" />
-        <KpiCard label="Active" value={stats?.active_pipelines ?? 0} icon={Activity} color="cyan" pulse />
-        <KpiCard label="Scans" value={stats?.total_scans ?? 0} icon={Bug} color="cyan" />
-        <KpiCard label="Patches" value={stats?.total_patches ?? 0} icon={ShieldCheck} color="violet" />
-        <KpiCard label="Pending" value={stats?.pending_patches ?? 0} icon={AlertCircle} color="amber" />
-        <KpiCard label="Findings" value={stats?.total_findings ?? 0} icon={Skull} color="red" />
-        <KpiCard label="Critical" value={stats?.critical_findings ?? 0} icon={AlertCircle} color="red" pulse />
-        <KpiCard label="Compliant" value={stats?.compliant_clients ?? 0} icon={CheckCircle2} color="emerald" />
+      {/* ═══ KPI STRIP — terminal-style ═══ */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+        <KpiCard label="CLIENTS" value={stats.total_clients} icon={Building2} color="emerald" />
+        <KpiCard label="ACTIVE" value={stats.active_pipelines} icon={Activity} color="cyan" pulse={stats.active_pipelines > 0} />
+        <KpiCard label="SCANS" value={feed?.active_processes.sast_scans ?? 0} icon={Bug} color="cyan" pulse={(feed?.active_processes.sast_scans ?? 0) > 0} />
+        <KpiCard label="PATCHES" value={stats.total_patches} icon={ShieldCheck} color="violet" />
+        <KpiCard label="PENDING" value={stats.pending_patches} icon={AlertCircle} color="amber" pulse={stats.pending_patches > 0} />
+        <KpiCard label="FINDINGS" value={stats.total_findings} icon={Skull} color="red" />
+        <KpiCard label="CRITICAL" value={stats.critical_findings} icon={AlertTriangle} color="red" pulse={stats.critical_findings > 0} />
+        <KpiCard label="COMPLIANT" value={stats.compliant_clients} icon={CheckCircle2} color="emerald" />
       </div>
 
-      {/* ═══ MAIN GRID: Client Pipelines + Live Feed ═══ */}
+      {/* ═══ MAIN GRID ═══ */}
       <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
-        {/* LEFT: Active Client Pipelines */}
+        {/* LEFT: Active pipelines + process tree */}
         <section className="space-y-4 min-w-0">
+          {/* Active Client Pipelines */}
           <div className="holo-card-sharp hud-corners p-4">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between">
               <h3 className="section-header text-sm font-bold text-emerald-300">
                 <Activity className="inline size-4 mr-1" />
-                Active Client Pipelines
+                ACTIVE PIPELINES
               </h3>
-              <Badge className="border-emerald-500/30 bg-emerald-500/10 text-[10px] text-emerald-300">
-                {clients.length} TOTAL
-              </Badge>
+              <div className="flex items-center gap-2">
+                <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
+                <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400">
+                  {stats.active_pipelines} ACTIVE / {stats.total_clients} TOTAL
+                </span>
+              </div>
             </div>
 
             {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-24 animate-pulse rounded-lg bg-zinc-800/60" />
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-20 animate-pulse rounded-lg bg-zinc-800/60" />
                 ))}
               </div>
             ) : clients.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-700 bg-zinc-900/50 px-6 py-12 text-center">
-                <div className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/30">
-                  <Building2 className="size-7 text-emerald-400" />
-                </div>
-                <h4 className="mt-3 text-sm font-semibold text-zinc-200">No clients yet</h4>
-                <p className="mt-1 text-xs text-zinc-500">Onboard your first client to start the pipeline</p>
+                <Building2 className="size-10 text-zinc-600" />
+                <p className="mt-2 text-sm text-zinc-400">No clients yet</p>
                 <Button onClick={onAddClient} size="sm" className="mt-3 bg-emerald-600 text-white hover:bg-emerald-500">
                   <Plus className="size-3" /> Add First Client
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <AnimatePresence mode="popLayout">
                   {clients.map((c, i) => (
                     <motion.div
                       key={c.id}
                       layout
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.98 }}
-                      transition={{ delay: i * 0.05 }}
+                      transition={{ delay: i * 0.03 }}
                       onClick={() => onSelectClient(c.id)}
-                      className="group cursor-pointer overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900/80 p-4 transition-all hover:border-emerald-500/50 hover:bg-zinc-800/80"
+                      className="group cursor-pointer overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900/80 p-3 transition-all hover:border-emerald-500/50 hover:bg-zinc-800/80"
                     >
-                      {/* Client header */}
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
-                            <Building2 className="size-4 text-emerald-400" />
-                          </div>
-                          <div className="min-w-0">
+                      <div className="flex items-center gap-3">
+                        {/* Client icon */}
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded border border-emerald-500/30 bg-emerald-500/10">
+                          <Building2 className="size-4 text-emerald-400" />
+                        </div>
+
+                        {/* Name + status */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
                             <h4 className="truncate text-sm font-bold text-zinc-100 group-hover:text-emerald-300">{c.name}</h4>
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-[10px] font-medium ${
-                                c.status === "compliant" ? "text-emerald-400" :
-                                c.status === "onboarding" ? "text-zinc-400" :
-                                "text-cyan-400"
-                              }`}>{c.status.toUpperCase()}</span>
-                              {c.authorized && (
-                                <Badge className="border-emerald-500/30 bg-emerald-500/10 text-[8px] text-emerald-300">AUTH</Badge>
-                              )}
-                            </div>
+                            <span className={`text-[9px] font-mono font-medium ${
+                              c.status === "compliant" ? "text-emerald-400" :
+                              c.status === "onboarding" ? "text-zinc-500" :
+                              c.status === "defending" ? "text-rose-400" :
+                              "text-cyan-400"
+                            }`}>
+                              [{c.status.toUpperCase()}]
+                            </span>
+                            {c.stats.critical_findings > 0 && (
+                              <span className="flex items-center gap-0.5 text-[9px] font-bold text-red-400">
+                                <AlertTriangle className="size-2.5" />
+                                {c.stats.critical_findings}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Pipeline stepper — compact horizontal */}
+                          <div className="mt-1.5 flex items-center gap-0.5">
+                            {PIPELINE_STAGES.map((stage, idx) => {
+                              const stageStatus = getStageStatus(c, stage.key);
+                              const cfg = COLOR_MAP[stage.color];
+                              const Icon = stage.icon;
+                              return (
+                                <div key={stage.key} className="flex flex-1 items-center">
+                                  <div
+                                    className={`flex h-6 items-center justify-center rounded border ${
+                                      stageStatus === "completed"
+                                        ? `${cfg.border} ${cfg.bg}`
+                                        : stageStatus === "in-progress"
+                                          ? `${cfg.border} ${cfg.bg} animate-pulse`
+                                          : "border-zinc-800 bg-zinc-900/40"
+                                    }`}
+                                    style={{ minWidth: "24px" }}
+                                    title={`${stage.label}: ${stageStatus}`}
+                                  >
+                                    <Icon className={`size-3 ${
+                                      stageStatus !== "pending" ? cfg.text : "text-zinc-700"
+                                    }`} />
+                                  </div>
+                                  {idx < PIPELINE_STAGES.length - 1 && (
+                                    <div className={`mx-0.5 h-0.5 w-1 ${stageStatus === "completed" ? cfg.dot : "bg-zinc-800"}`} />
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                        {c.stats.critical_findings > 0 && (
-                          <div className="flex shrink-0 items-center gap-1 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] text-red-300">
-                            <AlertCircle className="size-3" />
-                            {c.stats.critical_findings} CRITICAL
-                          </div>
-                        )}
-                      </div>
 
-                      {/* Pipeline stepper — horizontal, compact */}
-                      <div className="flex items-center gap-0.5">
-                        {PIPELINE_STAGES.map((stage, idx) => {
-                          const stageStatus = getStageStatus(c, stage.key);
-                          const cfg = COLOR_MAP[stage.color] || COLOR_MAP.emerald;
-                          const Icon = stage.icon;
-                          return (
-                            <div key={stage.key} className="flex flex-1 items-center">
-                              <div
-                                className={`flex h-7 flex-1 items-center justify-center gap-1 rounded border ${
-                                  stageStatus === "completed"
-                                    ? `${cfg.border} ${cfg.bg}`
-                                    : stageStatus === "in-progress"
-                                      ? `${cfg.border} ${cfg.bg} animate-pulse`
-                                      : "border-zinc-800 bg-zinc-900/40"
-                                }`}
-                                title={`${stage.label}: ${stageStatus}`}
-                              >
-                                <Icon className={`size-3 ${
-                                  stageStatus === "completed" || stageStatus === "in-progress" ? cfg.text : "text-zinc-600"
-                                }`} />
-                                <span className={`hidden text-[9px] font-medium sm:inline ${
-                                  stageStatus === "completed" || stageStatus === "in-progress" ? cfg.text : "text-zinc-600"
-                                }`}>
-                                  {stage.label}
-                                </span>
-                              </div>
-                              {idx < PIPELINE_STAGES.length - 1 && (
-                                <div className={`mx-0.5 h-0.5 w-1 ${stageStatus === "completed" ? cfg.dot : "bg-zinc-800"}`} />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Mini stats */}
-                      <div className="mt-2 flex items-center gap-4 border-t border-zinc-800/60 pt-2 text-[10px] text-zinc-500">
-                        <span className="flex items-center gap-1">
-                          <GitBranch className="size-3 text-sky-400" />
-                          {c.stats.codebases} repos
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Globe className="size-3 text-red-400" />
-                          {c.stats.targets} targets
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <ShieldCheck className="size-3 text-emerald-400" />
-                          {c.stats.patches} patches
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Skull className="size-3 text-amber-400" />
-                          {c.stats.findings} findings
-                        </span>
+                        {/* Mini stats */}
+                        <div className="hidden shrink-0 items-center gap-3 text-[10px] text-zinc-500 sm:flex">
+                          <span className="flex items-center gap-0.5" title="Codebases">
+                            <Globe className="size-3 text-sky-400" />
+                            {c.stats.codebases}
+                          </span>
+                          <span className="flex items-center gap-0.5" title="Patches">
+                            <ShieldCheck className="size-3 text-emerald-400" />
+                            {c.stats.patches}
+                          </span>
+                          <span className="flex items-center gap-0.5" title="Findings">
+                            <Skull className="size-3 text-amber-400" />
+                            {c.stats.findings}
+                          </span>
+                          <ChevronRight className="size-3 text-zinc-600 group-hover:text-emerald-400" />
+                        </div>
                       </div>
                     </motion.div>
                   ))}
@@ -337,15 +359,72 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
               </div>
             )}
           </div>
+
+          {/* ═══ PROCESS TREE — active scans + engagements ═══ */}
+          <div className="holo-card-sharp hud-corners p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="section-header text-sm font-bold text-cyan-300">
+                <Cpu className="inline size-4 mr-1" />
+                ACTIVE PROCESSES
+              </h3>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-cyan-400">
+                {feed?.active_processes.total_active ?? 0} RUNNING
+              </span>
+            </div>
+
+            {(feed?.active_processes.total_active ?? 0) === 0 ? (
+              <div className="py-4 text-center font-mono text-xs text-zinc-600">
+                <Terminal className="mx-auto size-5 text-zinc-700" />
+                <p className="mt-1">No active processes — all systems idle</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5 font-mono text-xs">
+                {/* Active SAST scans */}
+                {feed?.active_details.scans.map((s) => (
+                  <div key={s.id} className="flex items-center gap-2 rounded border border-cyan-500/30 bg-cyan-500/5 p-2">
+                    <Bug className="size-3 shrink-0 text-cyan-400 animate-pulse" />
+                    <span className="text-cyan-300">SAST</span>
+                    <span className="text-zinc-500">→</span>
+                    <span className="truncate text-zinc-300">{s.codebase}</span>
+                    <span className="ml-auto shrink-0 text-[10px] text-cyan-400">
+                      [{s.stage || s.status}]
+                    </span>
+                  </div>
+                ))}
+                {/* Active DAST engagements */}
+                {feed?.active_details.engagements.map((e) => (
+                  <div key={e.id} className="flex items-center gap-2 rounded border border-red-500/30 bg-red-500/5 p-2">
+                    <Crosshair className="size-3 shrink-0 text-red-400 animate-pulse" />
+                    <span className="text-red-300">DAST</span>
+                    <span className="text-zinc-500">→</span>
+                    <span className="truncate text-zinc-300">{e.target}</span>
+                    <span className="ml-auto shrink-0 text-[10px] text-red-400">
+                      [{e.stage || e.status}]
+                    </span>
+                  </div>
+                ))}
+                {/* Pending patches (review needed) */}
+                {(feed?.active_processes.pending_patches ?? 0) > 0 && (
+                  <div className="flex items-center gap-2 rounded border border-amber-500/30 bg-amber-500/5 p-2">
+                    <ShieldCheck className="size-3 shrink-0 text-amber-400" />
+                    <span className="text-amber-300">REVIEW</span>
+                    <span className="text-zinc-500">→</span>
+                    <span className="text-zinc-300">{feed?.active_processes.pending_patches} patches awaiting approval</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </section>
 
-        {/* RIGHT: Live Event Feed */}
+        {/* RIGHT: Live terminal feed + system status */}
         <aside className="space-y-4 min-w-0">
+          {/* ═══ LIVE TERMINAL FEED ═══ */}
           <div className="holo-card-sharp hud-corners flex flex-col p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="section-header text-sm font-bold text-cyan-300">
-                <Zap className="inline size-4 mr-1" />
-                Live Activity
+                <Terminal className="inline size-4 mr-1" />
+                LIVE FEED
               </h3>
               <div className="flex items-center gap-1.5">
                 <span className="size-1.5 rounded-full bg-cyan-500 animate-pulse" />
@@ -353,60 +432,103 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
               </div>
             </div>
 
-            {/* Live event feed — scrollable */}
-            <div className="custom-scrollbar max-h-[400px] space-y-1.5 overflow-y-auto pr-1">
+            {/* Terminal-style event log */}
+            <div
+              ref={logRef}
+              className="custom-scrollbar max-h-[420px] space-y-1 overflow-y-auto pr-1 font-mono text-[11px]"
+            >
               <AnimatePresence mode="popLayout">
-                {liveEvents.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-zinc-500">
-                    <Eye className="mx-auto size-6 text-zinc-600" />
-                    <p className="mt-2">Waiting for pipeline activity…</p>
+                {(!feed || feed.events.length === 0) ? (
+                  <div className="py-8 text-center text-zinc-600">
+                    <Eye className="mx-auto size-5" />
+                    <p className="mt-1">Waiting for events…</p>
                   </div>
                 ) : (
-                  liveEvents.map((evt) => {
-                    const cfg = COLOR_MAP[
-                      evt.level === "success" ? "emerald" :
-                      evt.level === "warning" ? "amber" :
-                      evt.level === "error" ? "red" : "cyan"
-                    ] || COLOR_MAP.cyan;
-                    const Icon = evt.type === "scan" ? Bug :
-                                 evt.type === "patch" ? ShieldCheck :
-                                 evt.type === "finding" ? Skull :
-                                 evt.type === "engagement" ? Crosshair : Activity;
+                  feed.events.map((evt) => {
+                    const sevColor = evt.severity === "error" ? "red" : evt.severity === "warning" ? "amber" : evt.severity === "success" ? "emerald" : "cyan";
+                    const cfg = COLOR_MAP[sevColor];
+                    const Icon = EVENT_ICONS[evt.type] || Activity;
+                    const time = new Date(evt.ts).toLocaleTimeString("en-US", { hour12: false });
                     return (
                       <motion.div
                         key={evt.id}
                         layout
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        className={`flex items-start gap-2 rounded border ${cfg.border} ${cfg.bg} p-2`}
+                        initial={{ opacity: 0, x: -15, backgroundColor: "rgba(6, 182, 212, 0.2)" }}
+                        animate={{ opacity: 1, x: 0, backgroundColor: "rgba(0, 0, 0, 0)" }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className="flex items-start gap-1.5 rounded p-1"
                       >
+                        <span className="shrink-0 text-zinc-600">{time}</span>
                         <Icon className={`mt-0.5 size-3 shrink-0 ${cfg.text}`} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[11px] text-zinc-300">{evt.message}</p>
-                          <p className="font-mono text-[9px] text-zinc-600">
-                            {new Date(evt.ts).toLocaleTimeString("en-US", { hour12: false })}
-                          </p>
-                        </div>
+                        <span className={`shrink-0 font-bold ${cfg.text}`}>
+                          {evt.severity === "error" ? "ERR" : evt.severity === "warning" ? "WRN" : evt.severity === "success" ? "OK " : "INF"}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="text-zinc-500">[{evt.client}]</span>{" "}
+                          <span className="text-zinc-300">{evt.detail}</span>
+                        </span>
                       </motion.div>
                     );
                   })
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Feed stats bar */}
+            {feed && (
+              <div className="mt-3 flex items-center justify-between border-t border-zinc-800 pt-2 font-mono text-[10px]">
+                <span className="text-zinc-500">
+                  <span className="text-red-400">{feed.stats.critical}</span> ERR ·
+                  <span className="text-amber-400"> {feed.stats.warnings}</span> WRN ·
+                  <span className="text-emerald-400"> {feed.stats.successes}</span> OK
+                </span>
+                <span className="text-zinc-600">{feed.stats.total_events} events</span>
+              </div>
+            )}
           </div>
 
-          {/* System status */}
+          {/* ═══ SYSTEM STATUS ═══ */}
           <div className="holo-card-sharp hud-corners p-4">
             <h3 className="mb-3 section-header text-sm font-bold text-emerald-300">
-              <Cpu className="inline size-4 mr-1" />
-              System Status
+              <Server className="inline size-4 mr-1" />
+              SYSTEM STATUS
             </h3>
             <div className="space-y-2 text-xs">
-              <SystemRow label="Vercel API" status="online" />
-              <SystemRow label="Railway Engine" status="online" />
-              <SystemRow label="Supabase DB" status="online" />
-              <SystemRow label="Socket.io Relay" status={stats?.active_pipelines ? "active" : "online"} />
+              <SystemRow icon={Server} label="Vercel API" status="online" detail="100ms" />
+              <SystemRow icon={Cpu} label="Railway Engine" status="online" detail="bun + python3" />
+              <SystemRow icon={Database} label="Supabase DB" status="online" detail="HTTPS/443" />
+              <SystemRow icon={Wifi} label="Socket.io Relay" status={(feed?.active_processes.total_active ?? 0) > 0 ? "active" : "online"} detail="real-time" />
+            </div>
+          </div>
+
+          {/* ═══ THREAT INDICATOR ═══ */}
+          <div className={`holo-card-sharp hud-corners border ${threatCfg.border} p-4`}>
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className={`section-header text-sm font-bold ${threatCfg.text}`}>
+                <AlertTriangle className="inline size-4 mr-1" />
+                THREAT LEVEL
+              </h3>
+              <span className={`font-mono text-xs font-bold ${threatCfg.text} ${threatLevel >= 30 ? "animate-pulse" : ""}`}>
+                {threatLevel}/100
+              </span>
+            </div>
+            {/* Vertical bar gauge */}
+            <div className="flex h-20 items-end gap-0.5">
+              {[...Array(20)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`flex-1 rounded-t ${
+                    i < Math.floor(threatLevel / 5) ? threatCfg.dot : "bg-zinc-800"
+                  }`}
+                  style={{ height: `${20 + i * 4}%`, opacity: i < Math.floor(threatLevel / 5) ? 1 : 0.3 }}
+                />
+              ))}
+            </div>
+            <div className="mt-2 flex justify-between font-mono text-[9px] text-zinc-600">
+              <span>SAFE</span>
+              <span>ELEVATED</span>
+              <span>CRITICAL</span>
             </div>
           </div>
         </aside>
@@ -438,7 +560,7 @@ function getStageStatus(client: ClientSummary, stageKey: string): "pending" | "i
   }
 }
 
-// ── KPI Card ───────────────────────────────────────────────────────────────
+// ── KPI Card — terminal style ──────────────────────────────────────────────
 function KpiCard({ label, value, icon: Icon, color, pulse }: {
   label: string;
   value: number;
@@ -448,23 +570,32 @@ function KpiCard({ label, value, icon: Icon, color, pulse }: {
 }) {
   const cfg = COLOR_MAP[color] || COLOR_MAP.emerald;
   return (
-    <div className={`holo-card-sharp hud-corners flex flex-col items-center justify-center border ${cfg.border} p-2.5`}>
-      <Icon className={`size-3.5 ${cfg.text} ${pulse ? "animate-pulse" : ""}`} />
-      <div className={`mt-1 text-lg font-bold ${cfg.text}`}>{value}</div>
-      <div className="text-[8px] uppercase tracking-wider text-zinc-500">{label}</div>
+    <div className={`holo-card-sharp hud-corners flex flex-col items-center justify-center border ${cfg.border} p-2`}>
+      <Icon className={`size-3 ${cfg.text} ${pulse ? "animate-pulse" : ""}`} />
+      <div className={`mt-0.5 text-lg font-bold font-mono ${cfg.text}`}>{value}</div>
+      <div className="text-[8px] font-mono uppercase tracking-wider text-zinc-500">{label}</div>
     </div>
   );
 }
 
 // ── System Status Row ──────────────────────────────────────────────────────
-function SystemRow({ label, status }: { label: string; status: "online" | "active" | "offline" }) {
+function SystemRow({ icon: Icon, label, status, detail }: {
+  icon: typeof Server;
+  label: string;
+  status: "online" | "active" | "offline";
+  detail?: string;
+}) {
   const cfg = status === "online" ? COLOR_MAP.emerald : status === "active" ? COLOR_MAP.cyan : COLOR_MAP.red;
   return (
     <div className="flex items-center justify-between">
-      <span className="text-zinc-400">{label}</span>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
+        <Icon className="size-3 text-zinc-500" />
+        <span className="text-zinc-400">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        {detail && <span className="font-mono text-[9px] text-zinc-600">{detail}</span>}
         <span className={`size-1.5 rounded-full ${cfg.dot} ${status !== "offline" ? "pulse-dot" : ""}`} />
-        <span className={`text-[10px] font-medium ${cfg.text}`}>{status.toUpperCase()}</span>
+        <span className={`font-mono text-[10px] font-bold ${cfg.text}`}>{status.toUpperCase()}</span>
       </div>
     </div>
   );
