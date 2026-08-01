@@ -29,6 +29,7 @@ import { UserManagementPanel } from "@/components/sentinel/user-management-panel
 import { ClientsDashboard } from "@/components/sentinel/clients-dashboard";
 import { ClientDetail } from "@/components/sentinel/client-detail";
 import { CommandCenter } from "@/components/sentinel/command-center";
+import { ActivePipelines } from "@/components/sentinel/active-pipelines";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
@@ -68,7 +69,7 @@ import {
   Zap,
 } from "lucide-react";
 
-type Tab = "dashboard" | "clients" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users";
+type Tab = "dashboard" | "clients" | "pipelines" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -355,6 +356,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             <NavGroup label="Dashboard" color="emerald">
               <NavItem active={tab === "dashboard"} onClick={() => { setTab("dashboard"); setSelectedClientId(null); setSidebarOpen(false); }} icon={LayoutDashboard} label="Overview" accentColor="emerald" iconColor="text-emerald-400" />
               <NavItem active={tab === "clients"} onClick={() => { setTab("clients"); setSelectedClientId(null); setSidebarOpen(false); }} icon={Building2} label="All Clients" accentColor="emerald" iconColor="text-emerald-400" />
+              <NavItem active={tab === "pipelines"} onClick={() => { setTab("pipelines"); setSelectedClientId(null); setSidebarOpen(false); }} icon={Activity} label="Pipelines" accentColor="emerald" iconColor="text-emerald-400" />
             </NavGroup>
             <NavGroup label="Tools" color="cyan">
               <NavItem active={tab === "patches"} onClick={() => { setTab("patches"); setSidebarOpen(false); }} icon={ShieldAlert} label="Patch Queue" badge={patches.length || undefined} badgeColor="emerald" accentColor="emerald" />
@@ -430,6 +432,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                 }`}>
                   {tab === "dashboard" ? "Command Overview" :
                    tab === "clients" ? (selectedClientId ? "Client Pipeline" : "Client Engagements") :
+                   tab === "pipelines" ? "Active Pipelines" :
                    tab === "patches" ? "Patch Review Queue" :
                    tab === "codebases" ? "Codebase Library" :
                    tab === "redagent" ? "RedAgent VAPT Engine" :
@@ -457,6 +460,8 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <ClientDetail clientId={selectedClientId} onBack={() => setSelectedClientId(null)} onNavigate={(t) => setTab(t as Tab)} />
             ) : tab === "clients" ? (
               <ClientsDashboard onSelectClient={(id) => setSelectedClientId(id)} />
+            ) : tab === "pipelines" ? (
+              <ActivePipelines onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }} onAddClient={() => setTab("clients")} />
             ) : (
               <>
                 <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>

@@ -86,6 +86,9 @@ const RELATIONS: Record<string, Record<string, { table: string; fk: string; isLi
     codebase: { table: "Codebase", fk: "id", isList: false, localFk: "codebaseId" },
     scan: { table: "Scan", fk: "id", isList: false, localFk: "scanId" },
   },
+  Attestation: {
+    patch: { table: "Patch", fk: "id", isList: false, localFk: "patchId" },
+  },
   Engagement: {
     findings: { table: "Finding", fk: "engagementId", isList: true },
     events: { table: "RedAgentEvent", fk: "engagementId", isList: true },

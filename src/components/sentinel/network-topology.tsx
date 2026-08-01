@@ -63,7 +63,7 @@ export function NetworkTopology({ onSelectClient }: { onSelectClient: (id: strin
         </div>
       </div>
 
-      <svg viewBox="0 0 400 300" className="w-full" style={{ maxHeight: "240px" }}>
+      <svg viewBox="0 0 400 300" className="w-full" style={{ maxHeight: "200px" }}>
         {/* Animated grid background */}
         <defs>
           <pattern id="topo-grid" width="20" height="20" patternUnits="userSpaceOnUse">

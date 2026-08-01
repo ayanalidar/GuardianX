@@ -110,6 +110,8 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
   const [warRoom, setWarRoom] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [opsLoading, setOpsLoading] = useState<string | null>(null);
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]); // multi-select for parallel ops
+  const [showClientSelector, setShowClientSelector] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   // Live clock
@@ -255,233 +257,163 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
         <KpiCard label="COMPLIANT" value={stats.compliant_clients} icon={CheckCircle2} color="emerald" />
       </div>
 
-      {/* ═══ OPERATIONS TOOLBAR ═══ */}
-      <div className="holo-card-sharp hud-corners flex flex-wrap items-center gap-2 p-3">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-500/60 mr-2">{"// Operations:"}</span>
-        <OpsButton
-          label="Attack All"
-          icon={SwordIcon}
-          color="red"
-          loading={opsLoading === "attack-all"}
-          disabled={!!opsLoading}
-          onClick={async () => {
-            setOpsLoading("attack-all");
-            try {
-              const res = await fetch("/api/attack-all", { method: "POST" });
-              const data = await res.json();
-              alert(data.message || "Attack All launched");
-            } catch { alert("Failed to launch"); }
-            setOpsLoading(null);
-          }}
-        />
-        <OpsButton
-          label="Auto-Remediate"
-          icon={ShieldIcon}
-          color="emerald"
-          loading={opsLoading === "auto-remediate"}
-          disabled={!!opsLoading}
-          onClick={async () => {
-            setOpsLoading("auto-remediate");
-            try {
-              const res = await fetch("/api/auto-remediation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ severity: "critical" }) });
-              const data = await res.json();
-              alert(data.message || "Auto-remediation complete");
-            } catch { alert("Failed"); }
-            setOpsLoading(null);
-          }}
-        />
-        <OpsButton
-          label="Threat Hunter"
-          icon={Radar}
-          color="cyan"
-          loading={opsLoading === "threat-hunter"}
-          disabled={!!opsLoading}
-          onClick={async () => {
-            setOpsLoading("threat-hunter");
-            try {
-              const res = await fetch("/api/threat-hunter", { method: "POST" });
-              const data = await res.json();
-              alert(data.message || "Threat Hunter dispatched");
-            } catch { alert("Failed"); }
-            setOpsLoading(null);
-          }}
-        />
-        <OpsButton
-          label="Auto-Approve Low"
-          icon={CheckCircle2}
-          color="amber"
-          loading={opsLoading === "auto-approve"}
-          disabled={!!opsLoading}
-          onClick={async () => {
-            setOpsLoading("auto-approve");
-            try {
-              const res = await fetch("/api/auto-approve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ maxSeverity: "medium" }) });
-              const data = await res.json();
-              alert(data.message || "Auto-approve complete");
-            } catch { alert("Failed"); }
-            setOpsLoading(null);
-          }}
-        />
-        <div className="ml-auto flex gap-2">
-          <a href="/api/email-digest" target="_blank" rel="noopener noreferrer">
-            <OpsButton label="Email Digest" icon={Mail} color="sky" onClick={() => {}} />
-          </a>
-          <a href="/api/audit-export" target="_blank" rel="noopener noreferrer">
-            <OpsButton label="Audit Export" icon={FileDown} color="violet" onClick={() => {}} />
-          </a>
-          <a href="/api/sla-tracking" target="_blank" rel="noopener noreferrer">
-            <OpsButton label="SLA Report" icon={Gauge} color="rose" onClick={() => {}} />
-          </a>
-          <a href="/api/analytics" target="_blank" rel="noopener noreferrer">
-            <OpsButton label="Analytics" icon={Activity} color="emerald" onClick={() => {}} />
-          </a>
+      {/* ═══ CLIENT CONTEXT SELECTOR + OPERATIONS TOOLBAR ═══ */}
+      <div className="holo-card-sharp hud-corners p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">{"// Scope:"}</span>
+          {/* Client selector dropdown */}
+          <button
+            onClick={() => setShowClientSelector(!showClientSelector)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 transition-all hover:bg-emerald-500/20"
+          >
+            <Building2 className="size-3" />
+            {selectedClientIds.length === 0 ? "ALL CLIENTS" : `${selectedClientIds.length} SELECTED`}
+          </button>
+          {selectedClientIds.length > 0 && (
+            <button
+              onClick={() => setSelectedClientIds([])}
+              className="text-[10px] text-zinc-500 hover:text-red-400"
+            >
+              ✕ clear
+            </button>
+          )}
+
+          <span className="mx-1 text-zinc-700">│</span>
+          <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">{"// Ops:"}</span>
+          <OpsButton
+            label="Attack Selected"
+            icon={SwordIcon}
+            color="red"
+            loading={opsLoading === "attack-all"}
+            disabled={!!opsLoading}
+            onClick={async () => {
+              setOpsLoading("attack-all");
+              try {
+                const body = selectedClientIds.length > 0 ? JSON.stringify({ clientIds: selectedClientIds }) : "{}";
+                const res = await fetch("/api/attack-all", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+                const data = await res.json();
+                alert(data.message || "Attack launched");
+              } catch { alert("Failed to launch"); }
+              setOpsLoading(null);
+            }}
+          />
+          <OpsButton
+            label="Auto-Remediate"
+            icon={ShieldIcon}
+            color="emerald"
+            loading={opsLoading === "auto-remediate"}
+            disabled={!!opsLoading}
+            onClick={async () => {
+              setOpsLoading("auto-remediate");
+              try {
+                const body = selectedClientIds.length > 0
+                  ? JSON.stringify({ clientId: selectedClientIds[0], severity: "critical" })
+                  : JSON.stringify({ severity: "critical" });
+                const res = await fetch("/api/auto-remediation", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+                const data = await res.json();
+                alert(data.message || "Auto-remediation complete");
+              } catch { alert("Failed"); }
+              setOpsLoading(null);
+            }}
+          />
+          <OpsButton
+            label="Threat Hunter"
+            icon={Radar}
+            color="cyan"
+            loading={opsLoading === "threat-hunter"}
+            disabled={!!opsLoading}
+            onClick={async () => {
+              setOpsLoading("threat-hunter");
+              try {
+                const res = await fetch("/api/threat-hunter", { method: "POST" });
+                const data = await res.json();
+                alert(data.message || "Threat Hunter dispatched");
+              } catch { alert("Failed"); }
+              setOpsLoading(null);
+            }}
+          />
+          <OpsButton
+            label="Auto-Approve"
+            icon={CheckCircle2}
+            color="amber"
+            loading={opsLoading === "auto-approve"}
+            disabled={!!opsLoading}
+            onClick={async () => {
+              setOpsLoading("auto-approve");
+              try {
+                const res = await fetch("/api/auto-approve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ maxSeverity: "medium" }) });
+                const data = await res.json();
+                alert(data.message || "Auto-approve complete");
+              } catch { alert("Failed"); }
+              setOpsLoading(null);
+            }}
+          />
+          <div className="ml-auto flex gap-1.5">
+            <a href="/api/email-digest" target="_blank" rel="noopener noreferrer">
+              <OpsButton label="Digest" icon={Mail} color="sky" onClick={() => {}} />
+            </a>
+            <a href="/api/audit-export" target="_blank" rel="noopener noreferrer">
+              <OpsButton label="Audit" icon={FileDown} color="violet" onClick={() => {}} />
+            </a>
+            <a href="/api/sla-tracking" target="_blank" rel="noopener noreferrer">
+              <OpsButton label="SLA" icon={Gauge} color="rose" onClick={() => {}} />
+            </a>
+            <a href="/api/analytics" target="_blank" rel="noopener noreferrer">
+              <OpsButton label="Analytics" icon={Activity} color="emerald" onClick={() => {}} />
+            </a>
+          </div>
         </div>
+
+        {/* Client selector dropdown */}
+        {showClientSelector && (
+          <div className="mt-2 grid gap-1.5 border-t border-zinc-800 pt-2 sm:grid-cols-2 lg:grid-cols-3">
+            {clients.map((c) => (
+              <label
+                key={c.id}
+                className={`flex cursor-pointer items-center gap-2 rounded border p-2 text-xs transition-all ${
+                  selectedClientIds.includes(c.id)
+                    ? "border-emerald-500/50 bg-emerald-500/10"
+                    : "border-zinc-700 bg-zinc-900/50 hover:border-zinc-600"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedClientIds.includes(c.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedClientIds([...selectedClientIds, c.id]);
+                    } else {
+                      setSelectedClientIds(selectedClientIds.filter((id) => id !== c.id));
+                    }
+                  }}
+                  className="accent-emerald-500"
+                />
+                <span className="truncate text-zinc-300">{c.name}</span>
+                <span className={`ml-auto text-[9px] ${c.stats.critical_findings > 0 ? "text-red-400" : "text-zinc-600"}`}>
+                  {c.stats.critical_findings > 0 ? `⚠${c.stats.critical_findings}` : c.status.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ═══ 1. LIVE EXPLOIT TERMINAL (full width) ═══ */}
-      <LiveExploitTerminal />
-
-      {/* ═══ 2. NETWORK TOPOLOGY + ATTACK HEATMAP (full width) ═══ */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+      {/* ═══ LIVE EXPLOIT TERMINAL + NETWORK TOPOLOGY (side-by-side, compact) ═══ */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        <LiveExploitTerminal />
         <NetworkTopology onSelectClient={onSelectClient} />
+      </div>
+
+      {/* ═══ PROCESS TREE + ATTACK HEATMAP ═══ */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        <ProcessTree />
         <AttackHeatmap />
       </div>
 
-      {/* ═══ MAIN GRID: 3. Active Pipelines + 4. Process Tree | Right sidebar ═══ */}
-      <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
-        {/* LEFT: Active Pipelines + Process Tree */}
-        <section className="space-y-4 min-w-0">
-          {/* 3. Active Client Pipelines */}
-          <div className="holo-card-sharp hud-corners p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="section-header text-sm font-bold text-emerald-300">
-                <Activity className="inline size-4 mr-1" />
-                ACTIVE PIPELINES
-              </h3>
-              <div className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
-                <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400">
-                  {stats.active_pipelines} ACTIVE / {stats.total_clients} TOTAL
-                </span>
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-20 animate-pulse rounded-lg bg-zinc-800/60" />
-                ))}
-              </div>
-            ) : clients.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-700 bg-zinc-900/50 px-6 py-12 text-center">
-                <Building2 className="size-10 text-zinc-600" />
-                <p className="mt-2 text-sm text-zinc-400">No clients yet</p>
-                <Button onClick={onAddClient} size="sm" className="mt-3 bg-emerald-600 text-white hover:bg-emerald-500">
-                  <Plus className="size-3" /> Add First Client
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <AnimatePresence mode="popLayout">
-                  {clients.map((c, i) => (
-                    <motion.div
-                      key={c.id}
-                      layout
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.98 }}
-                      transition={{ delay: i * 0.03 }}
-                      onClick={() => onSelectClient(c.id)}
-                      className="group cursor-pointer overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900/80 p-3 transition-all hover:border-emerald-500/50 hover:bg-zinc-800/80"
-                    >
-                      <div className="flex items-center gap-3">
-                        {/* Client icon */}
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded border border-emerald-500/30 bg-emerald-500/10">
-                          <Building2 className="size-4 text-emerald-400" />
-                        </div>
-
-                        {/* Name + status */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="truncate text-sm font-bold text-zinc-100 group-hover:text-emerald-300">{c.name}</h4>
-                            <span className={`text-[9px] font-mono font-medium ${
-                              c.status === "compliant" ? "text-emerald-400" :
-                              c.status === "onboarding" ? "text-zinc-500" :
-                              c.status === "defending" ? "text-rose-400" :
-                              "text-cyan-400"
-                            }`}>
-                              [{c.status.toUpperCase()}]
-                            </span>
-                            {c.stats.critical_findings > 0 && (
-                              <span className="flex items-center gap-0.5 text-[9px] font-bold text-red-400">
-                                <AlertTriangle className="size-2.5" />
-                                {c.stats.critical_findings}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Pipeline stepper — compact horizontal */}
-                          <div className="mt-1.5 flex items-center gap-0.5">
-                            {PIPELINE_STAGES.map((stage, idx) => {
-                              const stageStatus = getStageStatus(c, stage.key);
-                              const cfg = COLOR_MAP[stage.color];
-                              const Icon = stage.icon;
-                              return (
-                                <div key={stage.key} className="flex flex-1 items-center">
-                                  <div
-                                    className={`flex h-6 items-center justify-center rounded border ${
-                                      stageStatus === "completed"
-                                        ? `${cfg.border} ${cfg.bg}`
-                                        : stageStatus === "in-progress"
-                                          ? `${cfg.border} ${cfg.bg} animate-pulse`
-                                          : "border-zinc-800 bg-zinc-900/40"
-                                    }`}
-                                    style={{ minWidth: "24px" }}
-                                    title={`${stage.label}: ${stageStatus}`}
-                                  >
-                                    <Icon className={`size-3 ${
-                                      stageStatus !== "pending" ? cfg.text : "text-zinc-700"
-                                    }`} />
-                                  </div>
-                                  {idx < PIPELINE_STAGES.length - 1 && (
-                                    <div className={`mx-0.5 h-0.5 w-1 ${stageStatus === "completed" ? cfg.dot : "bg-zinc-800"}`} />
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Mini stats */}
-                        <div className="hidden shrink-0 items-center gap-3 text-[10px] text-zinc-500 sm:flex">
-                          <span className="flex items-center gap-0.5" title="Codebases">
-                            <Globe className="size-3 text-sky-400" />
-                            {c.stats.codebases}
-                          </span>
-                          <span className="flex items-center gap-0.5" title="Patches">
-                            <ShieldCheck className="size-3 text-emerald-400" />
-                            {c.stats.patches}
-                          </span>
-                          <span className="flex items-center gap-0.5" title="Findings">
-                            <Skull className="size-3 text-amber-400" />
-                            {c.stats.findings}
-                          </span>
-                          <ChevronRight className="size-3 text-zinc-600 group-hover:text-emerald-400" />
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
-
-          {/* 4. PROCESS TREE — htop-style */}
-          <ProcessTree />
-        </section>
-
-        {/* RIGHT: Live terminal feed + system status */}
-        <aside className="space-y-4 min-w-0">
+      {/* ═══ RIGHT SIDEBAR: Live Feed + AI Panels ═══ */}
+      <div className="grid gap-3 lg:grid-cols-[1fr_20rem]">
+        {/* LEFT: Live Feed (wider) */}
+        <aside className="space-y-3 min-w-0">
           {/* ═══ LIVE TERMINAL FEED ═══ */}
           <div className="holo-card-sharp hud-corners flex flex-col p-4">
             <div className="mb-3 flex items-center justify-between">
@@ -551,6 +483,12 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
             )}
           </div>
 
+          {/* ═══ AI THREAT BRIEFING ═══ */}
+          <ThreatBriefing />
+        </aside>
+
+        {/* RIGHT: System Status + Threat Level + Anomaly + Risk Score */}
+        <aside className="space-y-3 min-w-0">
           {/* ═══ SYSTEM STATUS ═══ */}
           <div className="holo-card-sharp hud-corners p-4">
             <h3 className="mb-3 section-header text-sm font-bold text-emerald-300">
@@ -576,7 +514,6 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
                 {threatLevel}/100
               </span>
             </div>
-            {/* Vertical bar gauge */}
             <div className="flex h-20 items-end gap-0.5">
               {[...Array(20)].map((_, i) => (
                 <div
@@ -594,9 +531,6 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
               <span>CRITICAL</span>
             </div>
           </div>
-
-          {/* ═══ AI THREAT BRIEFING ═══ */}
-          <ThreatBriefing />
 
           {/* ═══ ANOMALY DETECTION ═══ */}
           <AnomalyDetection />
