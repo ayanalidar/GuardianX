@@ -1,5 +1,6 @@
 "use client";
 import { SiteHeader } from "@/components/sentinel/site-header";
+import { SiteFooter } from "@/components/sentinel/site-footer";
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
@@ -105,7 +106,7 @@ export default function FeaturesPage() {
         <motion.div animate={{ x: [0, 100, 0], y: [0, -80, 0], scale: [1, 1.2, 1] }} transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }} className="absolute top-1/2 left-1/2 h-[400px] w-[400px] rounded-full bg-red-500/5 blur-[150px]" />
       </div>
 
-      <motion.div style={{ y: heroY, opacity: heroOpacity }} className="relative z-10 flex min-h-[80vh] flex-col items-center justify-center px-4">
+      <motion.div style={{ y: heroY, opacity: heroOpacity }} className="relative z-10 flex min-h-[80vh] flex-col items-center justify-center px-4 pt-20">
         <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ duration: 1, type: "spring" }} className="mb-8">
           <div className="relative">
             <div className="absolute inset-0 animate-ping rounded-2xl bg-emerald-500/20" />
@@ -173,6 +174,7 @@ export default function FeaturesPage() {
         </motion.div>
       </div>
     </div>
+      <SiteFooter />
     </>
   );
 }

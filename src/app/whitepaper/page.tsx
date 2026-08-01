@@ -1,5 +1,6 @@
 "use client";
 import { SiteHeader } from "@/components/sentinel/site-header";
+import { SiteFooter } from "@/components/sentinel/site-footer";
 
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -290,6 +291,7 @@ The compliance dashboard shows per-framework compliance score, section-level sta
         </div>
       </div>
     </div>
+      <SiteFooter />
     </>
   );
 }

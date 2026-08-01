@@ -1,5 +1,6 @@
 "use client";
 import { SiteHeader } from "@/components/sentinel/site-header";
+import { SiteFooter } from "@/components/sentinel/site-footer";
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -325,6 +326,7 @@ export default function PricingPage() {
         </motion.div>
       </div>
     </div>
+      <SiteFooter />
     </>
   );
 }
