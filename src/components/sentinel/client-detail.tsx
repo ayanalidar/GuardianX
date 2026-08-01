@@ -11,6 +11,7 @@ import {
   Swords, Heart, Gavel, Plus, Boxes, Target, ExternalLink, X, Trash2, Rocket,
 } from "lucide-react";
 import { sentinelApi } from "@/lib/sentinel/api";
+import { pushTerminalLine } from "./live-exploit-terminal";
 
 interface Stage {
   id: number;
@@ -163,6 +164,8 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const handleFullVapt = async () => {
     setVaptRunning(true);
     setVaptResult(null);
+    pushTerminalLine({ text: `$ guardianx full-vapt --client "${detail?.name}" --clientId ${clientId}`, type: "cmd" });
+    pushTerminalLine({ text: "[*] Initiating 7-stage pipeline: discover → recon → scan → test → patch → verify → defend", type: "out" });
     try {
       const res = await fetch("/api/full-vapt", {
         method: "POST",
@@ -171,9 +174,16 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       });
       const data = await res.json();
       setVaptResult(data);
-      toast({ title: "Full VAPT Launched!", description: data.message });
+      if (res.ok) {
+        pushTerminalLine({ text: `[+] Full VAPT launched — ${data.message || "pipeline running"}`, type: "success" });
+        toast({ title: "Full VAPT Launched!", description: data.message });
+      } else {
+        pushTerminalLine({ text: `[!] VAPT failed: ${data.error || "unknown error"}`, type: "err" });
+        toast({ variant: "destructive", title: "VAPT failed to start" });
+      }
       load();
-    } catch {
+    } catch (err) {
+      pushTerminalLine({ text: `[!] VAPT exception: ${err instanceof Error ? err.message : "unknown"}`, type: "err" });
       toast({ variant: "destructive", title: "VAPT failed to start" });
     }
     setVaptRunning(false);
@@ -381,6 +391,7 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                     onClick={async () => {
                       if (!canLaunch) return;
                       const service = serviceMap[stage.key];
+                      pushTerminalLine({ text: `$ guardianx launch --service ${service} --client "${detail?.name}"`, type: "cmd" });
                       try {
                         const res = await fetch("/api/launch-service", {
                           method: "POST",
@@ -388,9 +399,16 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                           body: JSON.stringify({ service, clientIds: [clientId] }),
                         });
                         const data = await res.json();
-                        toast({ title: `${stage.label} launched`, description: data.message });
+                        if (res.ok) {
+                          pushTerminalLine({ text: `[+] ${stage.label} launched — ${data.message || "ok"}`, type: "success" });
+                          toast({ title: `${stage.label} launched`, description: data.message });
+                        } else {
+                          pushTerminalLine({ text: `[!] ${stage.label} failed: ${data.error || "error"}`, type: "err" });
+                          toast({ variant: "destructive", title: "Launch failed" });
+                        }
                         load();
-                      } catch {
+                      } catch (err) {
+                        pushTerminalLine({ text: `[!] ${stage.label} exception: ${err instanceof Error ? err.message : "unknown"}`, type: "err" });
                         toast({ variant: "destructive", title: "Launch failed" });
                       }
                     }}
@@ -507,14 +525,22 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <h3 className="mb-3 text-sm font-bold text-zinc-100 section-header">Pipeline Actions</h3>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <ActionButton label="Run SAST Scan" desc="Scan all codebases" icon={Bug} color="cyan" onClick={async () => {
+            pushTerminalLine({ text: `$ guardianx sast --client "${detail?.name}" --codebases ${detail.codebases.length}`, type: "cmd" });
+            pushTerminalLine({ text: "[*] AI analyzing source code for vulnerabilities...", type: "out" });
             const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "scan", clientIds: [clientId] }) });
             const data = await res.json();
+            if (res.ok) pushTerminalLine({ text: `[+] SAST complete — ${data.message || "patches generated"}`, type: "success" });
+            else pushTerminalLine({ text: `[!] SAST failed: ${data.error || "error"}`, type: "err" });
             toast({ title: "SAST launched", description: data.message });
             load();
           }} disabled={!detail.authorized || detail.codebases.length === 0} />
           <ActionButton label="Run DAST VAPT" desc="Attack all targets" icon={Crosshair} color="red" onClick={async () => {
+            pushTerminalLine({ text: `$ redagent --target ${detail.targets[0]?.base_url || detail.target_url || "(no target)"} --mode aggressive`, type: "cmd" });
+            pushTerminalLine({ text: "[*] Crawling endpoints + testing injection vectors...", type: "out" });
             const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "scan", clientIds: [clientId] }) });
             const data = await res.json();
+            if (res.ok) pushTerminalLine({ text: `[+] DAST engagement complete — ${data.message || "findings saved"}`, type: "success" });
+            else pushTerminalLine({ text: `[!] DAST failed: ${data.error || "error"}`, type: "err" });
             toast({ title: "DAST launched", description: data.message });
             load();
           }} disabled={!detail.authorized || detail.targets.length === 0} />
@@ -527,8 +553,12 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             window.open(`/api/engagements/${detail.targets[0]?.id || ""}/report`, "_blank");
           }} disabled={pipeline?.summary.findings === 0} />
           <ActionButton label="Deploy Canaries" desc="Exfil defense" icon={Shield} color="rose" onClick={async () => {
+            pushTerminalLine({ text: `$ guardianx canary --deploy --client "${detail?.name}"`, type: "cmd" });
+            pushTerminalLine({ text: "[*] Injecting canary tokens into endpoints...", type: "out" });
             const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "defend", clientIds: [clientId] }) });
             const data = await res.json();
+            if (res.ok) pushTerminalLine({ text: `[+] Canaries deployed — ${data.message || "active"}`, type: "success" });
+            else pushTerminalLine({ text: `[!] Deploy failed: ${data.error || "error"}`, type: "err" });
             toast({ title: "Canaries deployed", description: data.message });
             load();
           }} disabled={!detail.authorized || detail.targets.length === 0} />

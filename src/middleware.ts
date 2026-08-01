@@ -61,8 +61,13 @@ export async function middleware(req: NextRequest) {
              req.headers.get("x-real-ip") || "unknown";
 
   const isAuthRoute = path.startsWith("/api/auth/");
+  // Auth routes: strict (10 / 15min) to block brute force.
+  // Regular API routes: generous (300 / min) — the dashboard fires many
+  // concurrent fetches on mount (clients, stats, patches, feed, compliance,
+  // attestations, posture, sparklines, topology, process-tree, etc.) plus
+  // auto-refresh polls every 10s, so 60/min was too low and caused 429s.
   const windowMs = isAuthRoute ? 15 * 60 * 1000 : 60 * 1000;
-  const maxReqs = isAuthRoute ? 10 : 60;
+  const maxReqs = isAuthRoute ? 10 : 300;
 
   const now = Date.now();
   const entry = rateStore.get(ip);

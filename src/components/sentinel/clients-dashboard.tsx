@@ -41,6 +41,7 @@ interface ClientSummary {
 interface ClientsDashboardProps {
   onSelectClient: (id: string) => void;
   refreshKey?: number;
+  onClientDeleted?: () => void;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; neon: string; icon: typeof Circle }> = {
@@ -56,12 +57,34 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; neon: string
 const PIPELINE_STAGES = ["Onboard", "Scan", "Test", "Patch", "Verify", "Defend", "Comply"];
 const STAGE_COLORS = ["emerald", "cyan", "amber", "violet", "sky", "rose", "emerald"];
 
-export function ClientsDashboard({ onSelectClient, refreshKey }: ClientsDashboardProps) {
+export function ClientsDashboard({ onSelectClient, refreshKey, onClientDeleted }: ClientsDashboardProps) {
   const { toast } = useToast();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (e: React.MouseEvent, client: ClientSummary) => {
+    e.stopPropagation();
+    if (!confirm(`Delete "${client.name}"? This removes the client and all its codebases, targets, scans, and findings. This cannot be undone.`)) return;
+    setDeletingId(client.id);
+    try {
+      const res = await fetch(`/api/clients/${client.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast({ title: "Client deleted", description: client.name });
+        load();
+        onClientDeleted?.();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({ variant: "destructive", title: "Delete failed", description: data.error || "Unknown error" });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Delete failed" });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -197,11 +220,25 @@ export function ClientsDashboard({ onSelectClient, refreshKey }: ClientsDashboar
                       </div>
                     </div>
                   </div>
-                  {c.authorized ? (
-                    <Badge className="border-emerald-500/30 bg-emerald-500/10 text-[9px] text-emerald-300">AUTHORIZED</Badge>
-                  ) : (
-                    <Badge className="border-amber-500/30 bg-amber-500/10 text-[9px] text-amber-300">PENDING AUTH</Badge>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {c.authorized ? (
+                      <Badge className="border-emerald-500/30 bg-emerald-500/10 text-[9px] text-emerald-300">AUTHORIZED</Badge>
+                    ) : (
+                      <Badge className="border-amber-500/30 bg-amber-500/10 text-[9px] text-amber-300">PENDING AUTH</Badge>
+                    )}
+                    <button
+                      onClick={(e) => handleDelete(e, c)}
+                      disabled={deletingId === c.id}
+                      title={`Delete ${c.name}`}
+                      className="flex size-6 items-center justify-center rounded-md border border-zinc-700/60 bg-zinc-900/60 text-zinc-500 transition-all hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                    >
+                      {deletingId === c.id ? (
+                        <Loader2 className="size-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-3" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Description */}

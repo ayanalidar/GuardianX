@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Building2, Globe, ShieldCheck, Skull, AlertTriangle, ChevronRight, Activity, Plus, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Building2, Globe, ShieldCheck, Skull, AlertTriangle, ChevronRight, Activity, Plus, Loader2, Trash2 } from "lucide-react";
 
 interface ClientSummary {
   id: string;
@@ -45,11 +46,35 @@ const COLOR_MAP: Record<string, { text: string; bg: string; border: string; dot:
 interface ActivePipelinesProps {
   onSelectClient: (id: string) => void;
   onAddClient: () => void;
+  onClientDeleted?: () => void;
 }
 
-export function ActivePipelines({ onSelectClient, onAddClient }: ActivePipelinesProps) {
+export function ActivePipelines({ onSelectClient, onAddClient, onClientDeleted }: ActivePipelinesProps) {
+  const { toast } = useToast();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (e: React.MouseEvent, client: ClientSummary) => {
+    e.stopPropagation();
+    if (!confirm(`Delete "${client.name}"? This removes the client and all its codebases, targets, scans, and findings. This cannot be undone.`)) return;
+    setDeletingId(client.id);
+    try {
+      const res = await fetch(`/api/clients/${client.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast({ title: "Client deleted", description: client.name });
+        load();
+        onClientDeleted?.();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({ variant: "destructive", title: "Delete failed", description: data.error || "Unknown error" });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Delete failed" });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -204,7 +229,21 @@ export function ActivePipelines({ onSelectClient, onAddClient }: ActivePipelines
 
                     {/* Progress + stats */}
                     <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
-                      <div className="text-lg font-bold font-mono text-emerald-400">{progress}%</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-lg font-bold font-mono text-emerald-400">{progress}%</div>
+                        <button
+                          onClick={(e) => handleDelete(e, c)}
+                          disabled={deletingId === c.id}
+                          title={`Delete ${c.name}`}
+                          className="flex size-6 items-center justify-center rounded-md border border-zinc-700/60 bg-zinc-900/60 text-zinc-500 transition-all hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                        >
+                          {deletingId === c.id ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-3" />
+                          )}
+                        </button>
+                      </div>
                       <div className="flex items-center gap-3 text-[10px] text-zinc-500">
                         <span className="flex items-center gap-0.5" title="Codebases">
                           <Globe className="size-3 text-sky-400" />
@@ -221,6 +260,20 @@ export function ActivePipelines({ onSelectClient, onAddClient }: ActivePipelines
                       </div>
                       <ChevronRight className="size-3 text-zinc-600 group-hover:text-emerald-400" />
                     </div>
+
+                    {/* Mobile delete button (visible on small screens) */}
+                    <button
+                      onClick={(e) => handleDelete(e, c)}
+                      disabled={deletingId === c.id}
+                      title={`Delete ${c.name}`}
+                      className="flex size-7 shrink-0 items-center justify-center rounded-md border border-zinc-700/60 bg-zinc-900/60 text-zinc-500 transition-all hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50 sm:hidden"
+                    >
+                      {deletingId === c.id ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-3.5" />
+                      )}
+                    </button>
                   </div>
                 </motion.div>
               );

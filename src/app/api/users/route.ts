@@ -127,12 +127,18 @@ export async function DELETE(req: Request) {
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-  // Prevent admin from deleting themselves (avoid lockout)
-  const self = JSON.parse(req.headers.get("x-user-id") || '""');
+  // Prevent admin from deleting themselves (avoid lockout).
+  // NOTE: the middleware sets `x-user-id` as a RAW UUID string (not JSON),
+  // so we read it directly — do NOT JSON.parse it (that throws SyntaxError
+  // on UUID strings and was causing a 500 on user deletion).
+  const self = req.headers.get("x-user-id") || "";
   if (id === self) {
     return NextResponse.json({ error: "You cannot delete your own account." }, { status: 400 });
   }
 
-  await supabase.from("User").delete().eq("id", id);
-  return NextResponse.json({ ok: true });
+  const { error } = await supabase.from("User").delete().eq("id", id);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true, message: "User deleted" });
 }
