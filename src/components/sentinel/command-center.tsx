@@ -9,13 +9,15 @@ import {
   AlertCircle, Activity, Bug, Crosshair, ShieldCheck,
   Swords, Gavel, Zap, Radar, Eye, Clock,
   Plus, Skull, Cpu, Lock, Terminal, Server, Database,
-  Wifi, Gauge, AlertTriangle, ChevronRight, Maximize2,
+  Wifi, Gauge, AlertTriangle, ChevronRight, Maximize2, Bot, Swords as SwordIcon,
+  RotateCcw, Shield as ShieldIcon, FlaskConical, FileDown, Mail, Webhook,
 } from "lucide-react";
 import { Sparkline, AttackHeatmap } from "./sparkline";
 import { NetworkTopology } from "./network-topology";
 import { ProcessTree } from "./process-tree";
 import { ThreatBriefing, AnomalyDetection, PredictiveRiskScore } from "./ai-panels";
 import { LiveExploitTerminal } from "./live-exploit-terminal";
+import { GuardianChat } from "./guardian-chat";
 
 interface ClientSummary {
   id: string;
@@ -106,6 +108,8 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
   const [clock, setClock] = useState(new Date());
   const [threatLevel, setThreatLevel] = useState(0);
   const [warRoom, setWarRoom] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [opsLoading, setOpsLoading] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   // Live clock
@@ -219,6 +223,13 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
             </div>
 
             <Button
+              onClick={() => setChatOpen(true)}
+              variant="outline"
+              className="border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 neon-border-violet"
+            >
+              <Bot className="size-4" /> <span className="hidden sm:inline">Guardian AI</span>
+            </Button>
+            <Button
               onClick={() => setWarRoom(true)}
               variant="outline"
               className="border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 neon-border-cyan"
@@ -242,6 +253,89 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
         <KpiCard label="FINDINGS" value={stats.total_findings} icon={Skull} color="red" sparkMetric="findings" />
         <KpiCard label="CRITICAL" value={stats.critical_findings} icon={AlertTriangle} color="red" pulse={stats.critical_findings > 0} sparkMetric="critical" />
         <KpiCard label="COMPLIANT" value={stats.compliant_clients} icon={CheckCircle2} color="emerald" />
+      </div>
+
+      {/* ═══ OPERATIONS TOOLBAR ═══ */}
+      <div className="holo-card-sharp hud-corners flex flex-wrap items-center gap-2 p-3">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-500/60 mr-2">{"// Operations:"}</span>
+        <OpsButton
+          label="Attack All"
+          icon={SwordIcon}
+          color="red"
+          loading={opsLoading === "attack-all"}
+          disabled={!!opsLoading}
+          onClick={async () => {
+            setOpsLoading("attack-all");
+            try {
+              const res = await fetch("/api/attack-all", { method: "POST" });
+              const data = await res.json();
+              alert(data.message || "Attack All launched");
+            } catch { alert("Failed to launch"); }
+            setOpsLoading(null);
+          }}
+        />
+        <OpsButton
+          label="Auto-Remediate"
+          icon={ShieldIcon}
+          color="emerald"
+          loading={opsLoading === "auto-remediate"}
+          disabled={!!opsLoading}
+          onClick={async () => {
+            setOpsLoading("auto-remediate");
+            try {
+              const res = await fetch("/api/auto-remediation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ severity: "critical" }) });
+              const data = await res.json();
+              alert(data.message || "Auto-remediation complete");
+            } catch { alert("Failed"); }
+            setOpsLoading(null);
+          }}
+        />
+        <OpsButton
+          label="Threat Hunter"
+          icon={Radar}
+          color="cyan"
+          loading={opsLoading === "threat-hunter"}
+          disabled={!!opsLoading}
+          onClick={async () => {
+            setOpsLoading("threat-hunter");
+            try {
+              const res = await fetch("/api/threat-hunter", { method: "POST" });
+              const data = await res.json();
+              alert(data.message || "Threat Hunter dispatched");
+            } catch { alert("Failed"); }
+            setOpsLoading(null);
+          }}
+        />
+        <OpsButton
+          label="Auto-Approve Low"
+          icon={CheckCircle2}
+          color="amber"
+          loading={opsLoading === "auto-approve"}
+          disabled={!!opsLoading}
+          onClick={async () => {
+            setOpsLoading("auto-approve");
+            try {
+              const res = await fetch("/api/auto-approve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ maxSeverity: "medium" }) });
+              const data = await res.json();
+              alert(data.message || "Auto-approve complete");
+            } catch { alert("Failed"); }
+            setOpsLoading(null);
+          }}
+        />
+        <div className="ml-auto flex gap-2">
+          <a href="/api/email-digest" target="_blank" rel="noopener noreferrer">
+            <OpsButton label="Email Digest" icon={Mail} color="sky" onClick={() => {}} />
+          </a>
+          <a href="/api/audit-export" target="_blank" rel="noopener noreferrer">
+            <OpsButton label="Audit Export" icon={FileDown} color="violet" onClick={() => {}} />
+          </a>
+          <a href="/api/sla-tracking" target="_blank" rel="noopener noreferrer">
+            <OpsButton label="SLA Report" icon={Gauge} color="rose" onClick={() => {}} />
+          </a>
+          <a href="/api/analytics" target="_blank" rel="noopener noreferrer">
+            <OpsButton label="Analytics" icon={Activity} color="emerald" onClick={() => {}} />
+          </a>
+        </div>
       </div>
 
       {/* ═══ 1. LIVE EXPLOIT TERMINAL (full width) ═══ */}
@@ -523,7 +617,41 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
           onSelectClient={(id) => { setWarRoom(false); onSelectClient(id); }}
         />
       )}
+
+      {/* ═══ GUARDIAN AI CHAT SIDEBAR ═══ */}
+      {chatOpen && <GuardianChat open={chatOpen} onClose={() => setChatOpen(false)} />}
     </div>
+  );
+}
+
+// ── Ops Button ──────────────────────────────────────────────────────────────
+function OpsButton({ label, icon: Icon, color, loading, disabled, onClick }: {
+  label: string;
+  icon: typeof Activity;
+  color: string;
+  loading?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  const colorMap: Record<string, { text: string; border: string; bg: string; hover: string }> = {
+    red: { text: "text-red-400", border: "border-red-500/40", bg: "bg-red-500/10", hover: "hover:bg-red-500/20" },
+    emerald: { text: "text-emerald-400", border: "border-emerald-500/40", bg: "bg-emerald-500/10", hover: "hover:bg-emerald-500/20" },
+    cyan: { text: "text-cyan-400", border: "border-cyan-500/40", bg: "bg-cyan-500/10", hover: "hover:bg-cyan-500/20" },
+    amber: { text: "text-amber-400", border: "border-amber-500/40", bg: "bg-amber-500/10", hover: "hover:bg-amber-500/20" },
+    sky: { text: "text-sky-400", border: "border-sky-500/40", bg: "bg-sky-500/10", hover: "hover:bg-sky-500/20" },
+    violet: { text: "text-violet-400", border: "border-violet-500/40", bg: "bg-violet-500/10", hover: "hover:bg-violet-500/20" },
+    rose: { text: "text-rose-400", border: "border-rose-500/40", bg: "bg-rose-500/10", hover: "hover:bg-rose-500/20" },
+  };
+  const c = colorMap[color] || colorMap.emerald;
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`inline-flex items-center gap-1.5 rounded-md border ${c.border} ${c.bg} ${c.hover} px-3 py-1.5 text-xs font-medium ${c.text} transition-all disabled:opacity-40 disabled:cursor-not-allowed`}
+    >
+      {loading ? <Loader2 className="size-3 animate-spin" /> : <Icon className="size-3" />}
+      <span className="hidden sm:inline">{label}</span>
+    </button>
   );
 }
 

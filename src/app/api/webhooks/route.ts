@@ -1,21 +1,48 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { randomUUID } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/webhooks — list all webhook configs
 export async function GET() {
-  const webhooks = await db.webhookConfig.findMany({ orderBy: { createdAt: "desc" } });
-  return NextResponse.json(webhooks.map(w => ({ ...w, events: JSON.parse(w.events || "[]"), secret: w.secret ? "***" : null })));
+  try {
+    const webhooks = await db.webhookConfig.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json((webhooks || []).map((w) => ({
+      id: w.id,
+      name: w.name,
+      url: w.url,
+      events: w.events ? (w.events as string).split(",") : [],
+      is_active: w.isActive,
+      created_at: (w.createdAt as Date).toISOString(),
+    })));
+  } catch {
+    return NextResponse.json([]);
+  }
 }
 
-// POST /api/webhooks — create a webhook
+// POST /api/webhooks — create a webhook config
+// Body: { name, url, events: string[] }
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const { name, url, events, secret } = body;
+  const { name, url, events } = await req.json().catch(() => ({}));
   if (!name || !url) return NextResponse.json({ error: "name and url required" }, { status: 400 });
-  const w = await db.webhookConfig.create({ data: { name, url, events: JSON.stringify(events || []), secret: secret || null } });
-  return NextResponse.json({ id: w.id, message: "Webhook configured" }, { status: 201 });
+
+  try {
+    const webhook = await db.webhookConfig.create({
+      data: {
+        id: randomUUID(),
+        name,
+        url,
+        events: Array.isArray(events) ? events.join(",") : events || "*",
+        isActive: true,
+      },
+    });
+    return NextResponse.json({ id: webhook.id, message: "Webhook configured" }, { status: 201 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });
+  }
 }
 
 // DELETE /api/webhooks?id=xxx
@@ -23,6 +50,10 @@ export async function DELETE(req: Request) {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-  await db.webhookConfig.delete({ where: { id } }).catch(() => null);
-  return NextResponse.json({ ok: true });
+  try {
+    await db.webhookConfig.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });
+  }
 }
