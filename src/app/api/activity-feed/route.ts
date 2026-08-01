@@ -18,110 +18,162 @@ export async function GET() {
       ts: string;
     }> = [];
 
-    // ── 1. Recent scans (SAST) ──────────────────────────────────────────────
+    // ── 0. Batch-fetch all client names (1 query instead of N) ─────────────
+    const allClients = await db.client.findMany({ select: { id: true, name: true } });
+    const clientNameMap: Record<string, string> = {};
+    for (const c of allClients) {
+      clientNameMap[c.id as string] = c.name as string;
+    }
+    const getClientNameFast = (clientId: string | null | undefined) =>
+      (clientId && clientNameMap[clientId]) || "Unassigned";
+
+    // ── 1. Recent scans (SAST) — batch-resolve codebase → client ────────────
     const scans = await db.scan.findMany({
       orderBy: { startedAt: "desc" },
       take: 10,
-      include: { codebase: { select: { name: true, clientId: true } } },
     });
 
+    // Batch-fetch codebases for these scans
+    const scanCbIds = [...new Set(scans.map((s: Record<string, unknown>) => s.codebaseId as string).filter(Boolean))];
+    const scanCodebases = scanCbIds.length > 0
+      ? await db.codebase.findMany({ where: { id: { in: scanCbIds } }, select: { id: true, name: true, clientId: true } })
+      : [];
+    const cbMap: Record<string, Record<string, unknown>> = {};
+    for (const cb of scanCodebases) { cbMap[cb.id as string] = cb as Record<string, unknown>; }
+
     for (const s of scans) {
-      const cb = s.codebase as Record<string, unknown> | null;
-      const clientName = cb?.clientId ? await getClientName(cb.clientId as string) : "Unassigned";
+      const sr = s as Record<string, unknown>;
+      const cb = cbMap[sr.codebaseId as string];
+      const clientName = getClientNameFast(cb?.clientId as string);
       events.push({
-        id: `scan-${s.id}`,
+        id: `scan-${sr.id}`,
         type: "scan",
-        action: s.status === "completed" ? "scan_completed" : s.status === "failed" ? "scan_failed" : "scan_started",
+        action: sr.status === "completed" ? "scan_completed" : sr.status === "failed" ? "scan_failed" : "scan_started",
         client: clientName,
-        detail: `SAST scan on ${cb?.name || "unknown"} — ${s.stageLabel || s.status}`,
-        severity: s.status === "completed" ? "success" : s.status === "failed" ? "error" : "info",
-        ts: (s.startedAt as Date).toISOString(),
+        detail: `SAST scan on ${cb?.name || "unknown"} — ${sr.stageLabel || sr.status}`,
+        severity: sr.status === "completed" ? "success" : sr.status === "failed" ? "error" : "info",
+        ts: (sr.startedAt as Date).toISOString(),
       });
-      if (s.completedAt) {
+      if (sr.completedAt) {
         events.push({
-          id: `scan-${s.id}-done`,
+          id: `scan-${sr.id}-done`,
           type: "scan",
           action: "scan_finished",
           client: clientName,
-          detail: `Scan finished — ${s.status}`,
-          severity: s.status === "completed" ? "success" : "error",
-          ts: (s.completedAt as Date).toISOString(),
+          detail: `Scan finished — ${sr.status}`,
+          severity: sr.status === "completed" ? "success" : "error",
+          ts: (sr.completedAt as Date).toISOString(),
         });
       }
     }
 
-    // ── 2. Recent patches ───────────────────────────────────────────────────
+    // ── 2. Recent patches — batch-resolve codebase → client ─────────────────
     const patches = await db.patch.findMany({
       orderBy: { createdAt: "desc" },
       take: 15,
-      include: { codebase: { select: { name: true, clientId: true } } },
     });
 
+    // Reuse cbMap from scans + fetch any additional codebases
+    const patchCbIds = [...new Set(patches.map((p: Record<string, unknown>) => p.codebaseId as string).filter(Boolean))];
+    const missingCbIds = patchCbIds.filter((id) => !cbMap[id]);
+    if (missingCbIds.length > 0) {
+      const extraCbs = await db.codebase.findMany({ where: { id: { in: missingCbIds } }, select: { id: true, name: true, clientId: true } });
+      for (const cb of extraCbs) { cbMap[cb.id as string] = cb as Record<string, unknown>; }
+    }
+
     for (const p of patches) {
-      const cb = p.codebase as Record<string, unknown> | null;
-      const clientName = cb?.clientId ? await getClientName(cb.clientId as string) : "Unassigned";
+      const pr = p as Record<string, unknown>;
+      const cb = cbMap[pr.codebaseId as string];
+      const clientName = getClientNameFast(cb?.clientId as string);
       events.push({
-        id: `patch-${p.id}`,
+        id: `patch-${pr.id}`,
         type: "patch",
-        action: p.status === "approved" ? "patch_approved" : p.status === "rejected" ? "patch_rejected" : "patch_created",
+        action: pr.status === "approved" ? "patch_approved" : pr.status === "rejected" ? "patch_rejected" : "patch_created",
         client: clientName,
-        detail: `${p.severity?.toUpperCase() || "UNKNOWN"} patch: ${p.title} (${p.patchId})`,
-        severity: p.status === "approved" ? "success" : p.status === "rejected" ? "warning" : p.severity === "critical" ? "error" : "info",
-        ts: (p.createdAt as Date).toISOString(),
+        detail: `${(pr.severity as string)?.toUpperCase() || "UNKNOWN"} patch: ${pr.title} (${pr.patchId})`,
+        severity: pr.status === "approved" ? "success" : pr.status === "rejected" ? "warning" : pr.severity === "critical" ? "error" : "info",
+        ts: (pr.createdAt as Date).toISOString(),
       });
-      if (p.approvedAt) {
+      if (pr.approvedAt) {
         events.push({
-          id: `patch-${p.id}-approved`,
+          id: `patch-${pr.id}-approved`,
           type: "patch",
           action: "patch_deployed",
           client: clientName,
-          detail: `Patch deployed to runtime: ${p.title}`,
+          detail: `Patch deployed to runtime: ${pr.title}`,
           severity: "success",
-          ts: (p.approvedAt as Date).toISOString(),
+          ts: (pr.approvedAt as Date).toISOString(),
         });
       }
     }
 
-    // ── 3. Recent engagements (DAST) ─────────────────────────────────────────
+    // ── 3. Recent engagements (DAST) — batch-resolve target → client ────────
     const engagements = await db.engagement.findMany({
       orderBy: { startedAt: "desc" },
       take: 10,
-      include: { target: { select: { name: true, clientId: true } } },
     });
 
+    const engTargetIds = [...new Set(engagements.map((e: Record<string, unknown>) => e.targetId as string).filter(Boolean))];
+    const engTargets = engTargetIds.length > 0
+      ? await db.target.findMany({ where: { id: { in: engTargetIds } }, select: { id: true, name: true, clientId: true } })
+      : [];
+    const targetMap: Record<string, Record<string, unknown>> = {};
+    for (const t of engTargets) { targetMap[t.id as string] = t as Record<string, unknown>; }
+
     for (const e of engagements) {
-      const tgt = e.target as Record<string, unknown> | null;
-      const clientName = tgt?.clientId ? await getClientName(tgt.clientId as string) : "Unassigned";
+      const er = e as Record<string, unknown>;
+      const tgt = targetMap[er.targetId as string];
+      const clientName = getClientNameFast(tgt?.clientId as string);
       events.push({
-        id: `eng-${e.id}`,
+        id: `eng-${er.id}`,
         type: "engagement",
-        action: e.status === "completed" ? "engagement_completed" : e.status === "failed" ? "engagement_failed" : "engagement_started",
+        action: er.status === "completed" ? "engagement_completed" : er.status === "failed" ? "engagement_failed" : "engagement_started",
         client: clientName,
-        detail: `DAST VAPT on ${tgt?.name || "unknown"} — ${e.stageLabel || e.status}`,
-        severity: e.status === "completed" ? "success" : e.status === "failed" ? "error" : "info",
-        ts: (e.startedAt as Date).toISOString(),
+        detail: `DAST VAPT on ${tgt?.name || "unknown"} — ${er.stageLabel || er.status}`,
+        severity: er.status === "completed" ? "success" : er.status === "failed" ? "error" : "info",
+        ts: (er.startedAt as Date).toISOString(),
       });
     }
 
-    // ── 4. Recent findings ──────────────────────────────────────────────────
+    // ── 4. Recent findings (batch-resolve engagement → target → client) ─────
     const findings = await db.finding.findMany({
       orderBy: { createdAt: "desc" },
       take: 15,
-      include: { engagement: { include: { target: { select: { name: true, clientId: true } } } } },
     });
 
+    // Batch-fetch engagements for these findings
+    const findingEngIds = [...new Set(findings.map((f: Record<string, unknown>) => f.engagementId as string).filter(Boolean))];
+    const findingEngagements = findingEngIds.length > 0
+      ? await db.engagement.findMany({ where: { id: { in: findingEngIds } }, select: { id: true, targetId: true } })
+      : [];
+    const engToTarget: Record<string, string> = {};
+    for (const e of findingEngagements) {
+      engToTarget[e.id as string] = e.targetId as string;
+    }
+
+    // Batch-fetch targets for these engagements
+    const findingTargetIds = [...new Set(Object.values(engToTarget).filter(Boolean))];
+    const findingTargets = findingTargetIds.length > 0
+      ? await db.target.findMany({ where: { id: { in: findingTargetIds } }, select: { id: true, clientId: true } })
+      : [];
+    const targetToClientForFindings: Record<string, string> = {};
+    for (const t of findingTargets) {
+      targetToClientForFindings[t.id as string] = getClientNameFast(t.clientId as string);
+    }
+
     for (const f of findings) {
-      const eng = f.engagement as Record<string, unknown> | null;
-      const tgt = eng?.target as Record<string, unknown> | null;
-      const clientName = tgt?.clientId ? await getClientName(tgt.clientId as string) : "Unassigned";
+      const fr = f as Record<string, unknown>;
+      const engId = fr.engagementId as string;
+      const targetId = engToTarget[engId];
+      const clientName = targetId ? (targetToClientForFindings[targetId] || "Unassigned") : "Unassigned";
       events.push({
-        id: `finding-${f.id}`,
+        id: `finding-${fr.id}`,
         type: "finding",
         action: "finding_detected",
         client: clientName,
-        detail: `${f.severity?.toUpperCase() || "UNKNOWN"} finding: ${f.title} on ${f.endpoint}`,
-        severity: f.severity === "critical" ? "error" : f.severity === "high" ? "warning" : "info",
-        ts: (f.createdAt as Date).toISOString(),
+        detail: `${(fr.severity as string)?.toUpperCase() || "UNKNOWN"} finding: ${fr.title} on ${fr.endpoint}`,
+        severity: fr.severity === "critical" ? "error" : fr.severity === "high" ? "warning" : "info",
+        ts: (fr.createdAt as Date).toISOString(),
       });
     }
 
@@ -131,8 +183,18 @@ export async function GET() {
       take: 5,
     });
 
+    // ── 5b. Batch-fetch target→client mapping for canaries ──────────────────
+    const canaryTargetIds = canaries.map((c: Record<string, unknown>) => c.targetId as string).filter(Boolean);
+    const canaryTargets = canaryTargetIds.length > 0
+      ? await db.target.findMany({ where: { id: { in: canaryTargetIds } }, select: { id: true, clientId: true } })
+      : [];
+    const targetToClient: Record<string, string> = {};
+    for (const t of canaryTargets) {
+      targetToClient[t.id as string] = getClientNameFast(t.clientId as string);
+    }
+
     for (const c of canaries) {
-      const clientName = c.targetId ? await getClientNameByTarget(c.targetId as string) : "Unassigned";
+      const clientName = c.targetId ? (targetToClient[c.targetId as string] || "Unassigned") : "Unassigned";
       events.push({
         id: `canary-${c.id}`,
         type: "canary",

@@ -151,7 +151,7 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 5000); // refresh every 5s for real-time feel
+    const id = setInterval(load, 15000); // refresh every 15s (was 5s — too aggressive)
     return () => clearInterval(id);
   }, [load]);
 

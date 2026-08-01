@@ -9,13 +9,6 @@ import {
   Loader2, X, CheckCircle2, ChevronRight, Building2,
 } from "lucide-react";
 
-interface Client {
-  id: string;
-  name: string;
-  authorized: boolean;
-  stats: { codebases: number; targets: number; patches: number; findings: number };
-}
-
 interface ServiceLauncherProps {
   open: boolean;
   onClose: () => void;
@@ -32,6 +25,13 @@ const SERVICES = [
   { key: "comply", label: "Comply", desc: "Verify compliance + generate report", icon: Gavel, color: "emerald", stage: 7 },
 ];
 
+// Simple client type for the launcher (lightweight — no nested stats)
+interface SimpleClient {
+  id: string;
+  name: string;
+  authorized: boolean;
+}
+
 const COLOR_MAP: Record<string, { text: string; border: string; bg: string; ring: string }> = {
   cyan: { text: "text-cyan-400", border: "border-cyan-500/40", bg: "bg-cyan-500/10", ring: "ring-cyan-500/30" },
   amber: { text: "text-amber-400", border: "border-amber-500/40", bg: "bg-amber-500/10", ring: "ring-amber-500/30" },
@@ -41,20 +41,29 @@ const COLOR_MAP: Record<string, { text: string; border: string; bg: string; ring
   emerald: { text: "text-emerald-400", border: "border-emerald-500/40", bg: "bg-emerald-500/10", ring: "ring-emerald-500/30" },
 };
 
-export function ServiceLauncher({ open, preselectedClientIds = [], onLaunched }: ServiceLauncherProps) {
+export function ServiceLauncher({ open, onClose, preselectedClientIds = [], onLaunched }: ServiceLauncherProps) {
   const { toast } = useToast();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<SimpleClient[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>(preselectedClientIds);
   const [selectedService, setSelectedService] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [step, setStep] = useState(1);
 
+  // Lock body scroll when modal is open + load clients
   useEffect(() => {
     if (open) {
+      // Lock background scroll
+      document.body.style.overflow = "hidden";
+      // Fetch lightweight client list (id + name + authorized only — fast)
       fetch("/api/clients")
         .then((r) => r.json())
-        .then((d) => { if (Array.isArray(d)) setClients(d); })
+        .then((d) => {
+          if (Array.isArray(d)) {
+            // Map to simple format — don't keep heavy stats in state
+            setClients(d.map((c: any) => ({ id: c.id, name: c.name, authorized: c.authorized })));
+          }
+        })
         .catch(() => null);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedIds(preselectedClientIds);
@@ -64,8 +73,23 @@ export function ServiceLauncher({ open, preselectedClientIds = [], onLaunched }:
       setResult(null);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedService("");
+    } else {
+      // Unlock background scroll when closed
+      document.body.style.overflow = "";
     }
+    // Cleanup on unmount
+    return () => { document.body.style.overflow = ""; };
   }, [open, preselectedClientIds]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -99,12 +123,16 @@ export function ServiceLauncher({ open, preselectedClientIds = [], onLaunched }:
   const selectedClients = clients.filter((c) => selectedIds.includes(c.id));
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4" onClick={() => {}}>
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
         onClick={(e) => e.stopPropagation()}
-        className="holo-card-sharp hud-corners max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg p-6"
+        className="holo-card-sharp hud-corners custom-scrollbar max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg p-6"
       >
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
@@ -114,12 +142,15 @@ export function ServiceLauncher({ open, preselectedClientIds = [], onLaunched }:
             </div>
             <div>
               <h2 className="text-lg font-bold text-zinc-50">Launch Service</h2>
-              <p className="text-[10px] font-mono uppercase tracking-wider text-emerald-500/60">STEP {step} OF 3</p>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-emerald-500/60">STEP {step} OF 3 · PRESS ESC TO CLOSE</p>
             </div>
           </div>
-          {/* Close button */}
-          <button onClick={() => {}} className="text-zinc-500 hover:text-zinc-200">
-            <X className="size-5" />
+          {/* Close button — FIXED: now calls onClose */}
+          <button
+            onClick={onClose}
+            className="flex size-8 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-400 transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400"
+          >
+            <X className="size-4" />
           </button>
         </div>
 
@@ -231,7 +262,7 @@ export function ServiceLauncher({ open, preselectedClientIds = [], onLaunched }:
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
-          <Button variant="outline" className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+          <Button variant="outline" onClick={onClose} className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
             Cancel
           </Button>
           <Button
