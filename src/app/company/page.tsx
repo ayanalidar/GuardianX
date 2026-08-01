@@ -30,11 +30,11 @@ export default function CompanyPage() {
             <Building2 className="size-3" /> Company
           </Badge>
           <h1 className="text-4xl font-bold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
-            Security that <span className="neon-emerald">thinks</span>,<br />
-            <span className="neon-red">attacks</span>, and <span className="neon-violet">heals itself</span>
+            Your code's <span className="neon-emerald">autonomous</span><br />
+            <span className="neon-red">immune</span> <span className="neon-violet">system</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400">
-            GuardianX is on a mission to democratize enterprise-grade security. We build the autonomous AI platform that closes the loop from code to live target to patch to report, all in one, all AI-driven.
+            GuardianX detects threats like antibodies, attacks them like white blood cells, and heals vulnerabilities like skin regrows. One autonomous platform. Three closed-loop engines. Zero human delay.
           </p>
         </motion.div>
 
