@@ -244,11 +244,20 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
         <KpiCard label="COMPLIANT" value={stats.compliant_clients} icon={CheckCircle2} color="emerald" />
       </div>
 
-      {/* ═══ MAIN GRID ═══ */}
+      {/* ═══ 1. LIVE EXPLOIT TERMINAL (full width) ═══ */}
+      <LiveExploitTerminal />
+
+      {/* ═══ 2. NETWORK TOPOLOGY + ATTACK HEATMAP (full width) ═══ */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+        <NetworkTopology onSelectClient={onSelectClient} />
+        <AttackHeatmap />
+      </div>
+
+      {/* ═══ MAIN GRID: 3. Active Pipelines + 4. Process Tree | Right sidebar ═══ */}
       <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
-        {/* LEFT: Active pipelines + process tree */}
+        {/* LEFT: Active Pipelines + Process Tree */}
         <section className="space-y-4 min-w-0">
-          {/* Active Client Pipelines */}
+          {/* 3. Active Client Pipelines */}
           <div className="holo-card-sharp hud-corners p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="section-header text-sm font-bold text-emerald-300">
@@ -373,11 +382,8 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
             )}
           </div>
 
-          {/* ═══ PROCESS TREE — htop-style ═══ */}
+          {/* 4. PROCESS TREE — htop-style */}
           <ProcessTree />
-
-          {/* ═══ LIVE EXPLOIT TERMINAL ═══ */}
-          <LiveExploitTerminal />
         </section>
 
         {/* RIGHT: Live terminal feed + system status */}
@@ -504,12 +510,6 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
           {/* ═══ PREDICTIVE RISK SCORE ═══ */}
           <PredictiveRiskScore />
         </aside>
-      </div>
-
-      {/* ═══ FULL-WIDTH: Network Topology + Attack Heatmap ═══ */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
-        <NetworkTopology onSelectClient={onSelectClient} />
-        <AttackHeatmap />
       </div>
 
       {/* ═══ WAR ROOM MODE (fullscreen overlay) ═══ */}
