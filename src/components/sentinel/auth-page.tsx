@@ -141,7 +141,7 @@ export function AuthPage({ onAuth }: AuthPageProps) {
         {/* Logo */}
         <div className="mb-6 text-center">
           <div className="mx-auto flex justify-center">
-            <GuardianXLogo size={72} />
+            <GuardianXLogo size={96} />
           </div>
           <h1 className="mt-3 text-2xl font-bold text-zinc-50 neon-emerald">
             Guardian<span className="text-emerald-400">X</span>

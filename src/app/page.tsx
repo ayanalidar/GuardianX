@@ -349,7 +349,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
         {/* SIDEBAR */}
         <aside className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-emerald-500/15 bg-zinc-950/95 backdrop-blur-md transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}>
           <button type="button" onClick={backToLanding} className="flex items-center gap-2.5 border-b border-emerald-500/15 px-4 py-4 transition-opacity hover:opacity-80" title="Back to landing page">
-            <GuardianXLogo size={32} />
+            <GuardianXLogo size={44} />
             <div className="leading-tight text-left">
               <span className="text-sm font-bold tracking-tight text-zinc-50 neon-emerald">Guardian<span className="text-emerald-400">X</span></span>
               <div className="font-mono text-[9px] uppercase tracking-widest text-emerald-500/50">SOC Lab</div>
@@ -564,7 +564,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
           <footer className="mt-auto border-t border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
             <div className="flex flex-col items-center justify-between gap-3 px-4 py-4 text-xs text-zinc-400 sm:flex-row sm:px-6">
               <div className="flex items-center gap-2">
-                <GuardianXLogo size={16} />
+                <GuardianXLogo size={24} />
                 <span>GuardianX · Autonomous Security Operations Platform</span>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">

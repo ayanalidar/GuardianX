@@ -31,7 +31,7 @@ export function SiteHeader({ onEnter }: { onEnter?: () => void }) {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <a href="/" className="flex items-center gap-2.5">
-          <GuardianXLogo size={36} />
+          <GuardianXLogo size={48} />
           <span className="text-lg font-bold tracking-tight text-zinc-50">
             Guardian<span className="text-emerald-400 neon-emerald">X</span>
           </span>

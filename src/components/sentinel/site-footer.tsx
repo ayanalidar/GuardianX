@@ -72,7 +72,7 @@ export function SiteFooter() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <a href="/" className="flex items-center gap-2.5">
-              <GuardianXLogo size={36} />
+              <GuardianXLogo size={48} />
               <span className="text-lg font-bold tracking-tight text-zinc-50">
                 Guardian<span className="text-emerald-400 neon-emerald">X</span>
               </span>

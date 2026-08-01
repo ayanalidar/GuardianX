@@ -45,6 +45,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { GuardianXLogo } from "./guardianx-logo";
+import { AnimatedDemo } from "./animated-demo";
 
 interface LandingPageProps {
   onEnter: () => void;
@@ -461,105 +462,16 @@ export function LandingPage({ onEnter }: LandingPageProps) {
           </motion.div>
         </section>
 
-        {/* Live Command Center Demo */}
-        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <div className="mb-10 text-center">
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-cyan-500/60">
-              {"// Live Command Center"}
-            </div>
-            <h2 className="text-3xl font-bold text-zinc-50">See it in action</h2>
-            <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-400">
-              Real-time exploit terminal, network topology, threat radar, and AI threat briefing — all in one dashboard.
-            </p>
-          </div>
+        {/* Live Command Center Demo — animated, in-action */}
+        <AnimatedDemo />
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* Terminal Demo */}
-            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="holo-card-sharp hud-corners p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-400/60">Live Exploit Terminal</span>
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-              <div className="rounded-lg border border-zinc-800 bg-black/80 p-3 font-mono text-[10px] leading-relaxed">
-                <div className="text-emerald-400">$ redagent --target https://app.target.com</div>
-                <div className="text-zinc-400">[*] Crawling endpoints...</div>
-                <div className="text-emerald-300">[+] Found 42 endpoints</div>
-                <div className="text-zinc-400">[*] Testing SQL injection on /api/login...</div>
-                <div className="text-red-400">[!] VULNERABLE: SQL injection confirmed</div>
-                <div className="text-amber-400">[*] Payload: ' OR 1=1-- bypassed auth</div>
-                <div className="text-emerald-300">[+] Exploit confirmed — finding saved</div>
-                <div className="text-zinc-400">[*] Generating patch...</div>
-                <div className="text-emerald-400">[+] Patch: SP-2026-001 | Sandbox: PASSED</div>
-                <div className="text-emerald-300">[✓] Safe to deploy</div>
-                <span className="animate-pulse text-emerald-400">█</span>
-              </div>
-            </motion.div>
-
-            {/* Pipeline Demo */}
-            <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="holo-card-sharp hud-corners p-4">
-              <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-cyan-400/60">7-Stage Pipeline</div>
-              <div className="space-y-2">
-                {[
-                  { stage: "Onboard", status: "✓ Complete", color: "emerald" },
-                  { stage: "Scan", status: "✓ 26 vulns found", color: "cyan" },
-                  { stage: "Test", status: "✓ 6 exploits confirmed", color: "amber" },
-                  { stage: "Patch", status: "⚡ 13 patches generated", color: "violet" },
-                  { stage: "Verify", status: "○ Pending", color: "zinc" },
-                  { stage: "Defend", status: "○ Pending", color: "zinc" },
-                  { stage: "Comply", status: "○ Pending", color: "zinc" },
-                ].map((s, i) => (
-                  <div key={i} className={`flex items-center gap-2 rounded border border-${s.color}-500/20 bg-${s.color}-500/5 p-2`}>
-                    <span className={`flex size-5 items-center justify-center rounded-full bg-${s.color}-500/20 text-[10px] font-bold text-${s.color}-400`}>{i + 1}</span>
-                    <span className="text-xs font-medium text-zinc-200">{s.stage}</span>
-                    <span className={`ml-auto text-[10px] text-${s.color}-400`}>{s.status}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* KPI Demo */}
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="holo-card-sharp hud-corners p-4">
-              <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-emerald-400/60">Real-Time KPIs</div>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { label: "CLIENTS", value: "7", color: "text-emerald-400" },
-                  { label: "ACTIVE", value: "4", color: "text-cyan-400" },
-                  { label: "PATCHES", value: "26", color: "text-violet-400" },
-                  { label: "CRITICAL", value: "3", color: "text-red-400" },
-                ].map((k, i) => (
-                  <div key={i} className="rounded border border-zinc-800 bg-zinc-900/40 p-2 text-center">
-                    <div className={`text-xl font-bold font-mono ${k.color}`}>{k.value}</div>
-                    <div className="text-[8px] font-mono uppercase tracking-wider text-zinc-600">{k.label}</div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* AI Briefing Demo */}
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="holo-card-sharp hud-corners p-4">
-              <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-violet-400/60">AI Threat Briefing</div>
-              <div className="space-y-2">
-                <div className="rounded border border-red-500/20 bg-red-500/5 p-2 text-xs text-red-300">
-                  🔴 Initech and Stark each have 1 critical finding — prioritize remediation
-                </div>
-                <div className="rounded border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-300">
-                  🟡 Wayne Enterprises unauthorized — validate access urgently
-                </div>
-                <div className="rounded border border-emerald-500/20 bg-emerald-500/5 p-2 text-xs text-emerald-300">
-                  🟢 Globex is actively patching (8 pending) — monitor progress
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          <div className="mt-8 text-center">
-            <a href="/">
-              <Button size="lg" className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border">
-                <Terminal className="size-5" /> Try the Live Console
-              </Button>
-            </a>
-          </div>
-        </section>
+        <div className="mx-auto max-w-6xl px-4 pb-8 text-center sm:px-6">
+          <a href="/">
+            <Button size="lg" className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border">
+              <Terminal className="size-5" /> Try the Live Console
+            </Button>
+          </a>
+        </div>
 
         {/* Testimonials */}
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">

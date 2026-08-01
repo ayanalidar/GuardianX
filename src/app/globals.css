@@ -623,3 +623,101 @@
 /* Small variants scale sparkles down */
 .gx-logo-wrap[data-size="sm"] .gx-sparkle { width: 3px; height: 3px; }
 .gx-logo-wrap[data-size="lg"] .gx-sparkle { width: 8px; height: 8px; }
+
+/* ════════════════════════════════════════════════════════════════════
+   Animated Landing Demo — live, in-action cards
+   - Typewriter terminal lines appear one by one
+   - Pipeline stages light up sequentially
+   - KPI numbers count up + fluctuate
+   - AI briefing alerts slide in sequentially
+   - Neon shine sweep on each card (like the logo)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Card-level neon shine sweep (reuses gx-shine keyframe) */
+.demo-card {
+  position: relative;
+  overflow: hidden;
+}
+.demo-card .demo-shine {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+.demo-card .demo-shine::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: 0;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(167, 243, 208, 0) 35%,
+    rgba(167, 243, 208, 0.5) 50%,
+    rgba(167, 243, 208, 0) 65%,
+    transparent 100%
+  );
+  transform: translateX(-150%) rotate(20deg);
+  animation: demo-shine-sweep 4s ease-in-out infinite;
+}
+@keyframes demo-shine-sweep {
+  0%   { transform: translateX(-150%) rotate(20deg); opacity: 0; }
+  15%  { opacity: 0.8; }
+  40%  { transform: translateX(200%) rotate(20deg); opacity: 0; }
+  100% { transform: translateX(200%) rotate(20deg); opacity: 0; }
+}
+
+/* Terminal line entrance */
+@keyframes term-line-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.term-line {
+  animation: term-line-in 0.3s ease-out backwards;
+}
+
+/* Pipeline stage glow pulse (when active) */
+@keyframes stage-active {
+  0%, 100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+  50%      { box-shadow: 0 0 16px rgba(16, 185, 129, 0.7); }
+}
+.stage-active {
+  animation: stage-active 1.5s ease-in-out infinite;
+}
+
+/* KPI count-up pop */
+@keyframes kpi-pop {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.kpi-pop {
+  animation: kpi-pop 0.4s ease-out backwards;
+}
+
+/* AI alert slide-in */
+@keyframes alert-slide {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.alert-slide {
+  animation: alert-slide 0.4s ease-out backwards;
+}
+
+/* Scanning bar sweep (for terminal header) */
+@keyframes scan-bar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.scan-bar {
+  animation: scan-bar 2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-card .demo-shine::before,
+  .stage-active,
+  .scan-bar { animation: none; }
+  .term-line, .kpi-pop, .alert-slide { animation: none; opacity: 1; transform: none; }
+}
