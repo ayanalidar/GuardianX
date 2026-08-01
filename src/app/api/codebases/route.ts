@@ -35,6 +35,7 @@ export async function POST(req: Request) {
   const sourceCode = typeof body.sourceCode === "string" ? body.sourceCode : "";
   const language = typeof body.language === "string" ? body.language : "javascript";
   const description = typeof body.description === "string" ? body.description.trim() : null;
+  const clientId = typeof body.clientId === "string" && body.clientId.trim() ? body.clientId.trim() : null;
 
   if (!name) return NextResponse.json({ error: "name required" }, { status: 400 });
   if (!sourceCode.trim()) return NextResponse.json({ error: "sourceCode required" }, { status: 400 });
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
   const id = randomUUID();
 
   const { data, error } = await supabase.from("Codebase").insert({
-    id, name, language, description, sourceCode,
+    id, name, language, description, sourceCode, clientId,
   }).select("id, name, language, description, createdAt").single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

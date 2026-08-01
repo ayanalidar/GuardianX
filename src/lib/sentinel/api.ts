@@ -614,6 +614,7 @@ export const sentinelApi = {
     sourceCode: string;
     language?: string;
     description?: string;
+    clientId?: string;
   }) =>
     http<Codebase>("/api/codebases", {
       method: "POST",
@@ -706,6 +707,7 @@ export const sentinelApi = {
     authHeader?: string;
     notes?: string;
     authorized?: boolean;
+    clientId?: string;
   }) =>
     http<{ id: string; message: string }>("/api/targets", {
       method: "POST",

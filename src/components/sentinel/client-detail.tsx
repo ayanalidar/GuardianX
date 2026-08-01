@@ -8,8 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Building2, Globe, GitBranch, Shield, Loader2, CheckCircle2,
   Circle, AlertCircle, Phone, Mail, FileText, Crosshair, Bug, ShieldCheck,
-  Swords, Heart, Gavel, Plus, Boxes, Target, ExternalLink,
+  Swords, Heart, Gavel, Plus, Boxes, Target, ExternalLink, X,
 } from "lucide-react";
+import { sentinelApi } from "@/lib/sentinel/api";
 
 interface Stage {
   id: number;
@@ -77,6 +78,20 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const [pipeline, setPipeline] = useState<ClientDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [authorizing, setAuthorizing] = useState(false);
+  const [showAddCodebase, setShowAddCodebase] = useState(false);
+  const [showAddTarget, setShowAddTarget] = useState(false);
+
+  // Add codebase form state
+  const [cbName, setCbName] = useState("");
+  const [cbSource, setCbSource] = useState("");
+  const [cbDesc, setCbDesc] = useState("");
+  const [cbSaving, setCbSaving] = useState(false);
+
+  // Add target form state
+  const [tgtName, setTgtName] = useState("");
+  const [tgtUrl, setTgtUrl] = useState("");
+  const [tgtAuth, setTgtAuth] = useState(false);
+  const [tgtSaving, setTgtSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -99,6 +114,48 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleAddCodebase = async () => {
+    if (!cbName.trim() || !cbSource.trim()) return;
+    setCbSaving(true);
+    try {
+      await sentinelApi.createCodebase({
+        name: cbName.trim(),
+        sourceCode: cbSource,
+        description: cbDesc.trim() || undefined,
+        clientId: clientId,
+      });
+      toast({ title: "Codebase added!", description: cbName.trim() });
+      setCbName(""); setCbSource(""); setCbDesc("");
+      setShowAddCodebase(false);
+      load();
+    } catch (err) {
+      toast({ variant: "destructive", title: "Failed", description: err instanceof Error ? err.message : "unknown" });
+    } finally {
+      setCbSaving(false);
+    }
+  };
+
+  const handleAddTarget = async () => {
+    if (!tgtName.trim() || !tgtUrl.trim()) return;
+    setTgtSaving(true);
+    try {
+      await sentinelApi.addTarget({
+        name: tgtName.trim(),
+        baseUrl: tgtUrl.trim(),
+        authorized: tgtAuth,
+        clientId: clientId,
+      });
+      toast({ title: "Target added!", description: tgtName.trim() });
+      setTgtName(""); setTgtUrl(""); setTgtAuth(false);
+      setShowAddTarget(false);
+      load();
+    } catch (err) {
+      toast({ variant: "destructive", title: "Failed", description: err instanceof Error ? err.message : "unknown" });
+    } finally {
+      setTgtSaving(false);
+    }
+  };
 
   const handleAuthorize = async () => {
     setAuthorizing(true);
@@ -315,12 +372,12 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="holo-card-sharp hud-corners p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-bold text-zinc-100 section-header">Codebases (SAST)</h3>
-            <Button size="sm" variant="outline" className="border-sky-500/30 bg-sky-500/5 text-sky-300 hover:bg-sky-500/10">
-              <Plus className="size-3" /> Add
+            <Button size="sm" variant="outline" onClick={() => setShowAddCodebase(true)} className="border-sky-500/30 bg-sky-500/5 text-sky-300 hover:bg-sky-500/10">
+              <Plus className="size-3" /> Add Codebase
             </Button>
           </div>
           {detail.codebases.length === 0 ? (
-            <p className="py-6 text-center text-xs text-zinc-500">No codebases yet. Add source code to run SAST scans.</p>
+            <p className="py-6 text-center text-xs text-zinc-500">No codebases yet. Click "Add Codebase" to paste source code for SAST scanning.</p>
           ) : (
             <div className="space-y-2">
               {detail.codebases.map((cb) => (
@@ -341,12 +398,12 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="holo-card-sharp hud-corners p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-bold text-zinc-100 section-header">Live Targets (DAST)</h3>
-            <Button size="sm" variant="outline" className="border-red-500/30 bg-red-500/5 text-red-300 hover:bg-red-500/10">
-              <Plus className="size-3" /> Add
+            <Button size="sm" variant="outline" onClick={() => setShowAddTarget(true)} className="border-red-500/30 bg-red-500/5 text-red-300 hover:bg-red-500/10">
+              <Plus className="size-3" /> Add Target
             </Button>
           </div>
           {detail.targets.length === 0 ? (
-            <p className="py-6 text-center text-xs text-zinc-500">No targets yet. Add a live URL to run DAST VAPT.</p>
+            <p className="py-6 text-center text-xs text-zinc-500">No targets yet. Click "Add Target" to add a live URL for DAST VAPT.</p>
           ) : (
             <div className="space-y-2">
               {detail.targets.map((t) => (
@@ -384,6 +441,76 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="holo-card-sharp hud-corners p-5">
           <h3 className="mb-2 text-sm font-bold text-zinc-100 section-header">Engagement Scope</h3>
           <p className="text-xs text-zinc-400">{detail.scope}</p>
+        </div>
+      )}
+
+      {/* Add Codebase Modal */}
+      {showAddCodebase && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={() => setShowAddCodebase(false)}>
+          <div className="holo-card-sharp hud-corners custom-scrollbar max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-zinc-50">Add Codebase (SAST)</h2>
+              <button onClick={() => setShowAddCodebase(false)} className="text-zinc-500 hover:text-red-400"><X className="size-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-400">Name *</label>
+                <input value={cbName} onChange={(e) => setCbName(e.target.value)} placeholder="auth-service.js"
+                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-sky-500/50 focus:outline-none" />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400">Description</label>
+                <input value={cbDesc} onChange={(e) => setCbDesc(e.target.value)} placeholder="Login module"
+                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-sky-500/50 focus:outline-none" />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400">Source Code *</label>
+                <textarea value={cbSource} onChange={(e) => setCbSource(e.target.value)} placeholder="Paste your source code here..."
+                  rows={8}
+                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 font-mono text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-sky-500/50 focus:outline-none" />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAddCodebase(false)} className="border-zinc-700 bg-zinc-900 text-zinc-300">Cancel</Button>
+              <Button onClick={handleAddCodebase} disabled={!cbName.trim() || !cbSource.trim() || cbSaving} className="bg-sky-600 text-white hover:bg-sky-500">
+                {cbSaving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Add Codebase
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Target Modal */}
+      {showAddTarget && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={() => setShowAddTarget(false)}>
+          <div className="holo-card-sharp hud-corners w-full max-w-lg rounded-lg p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-zinc-50">Add Target (DAST)</h2>
+              <button onClick={() => setShowAddTarget(false)} className="text-zinc-500 hover:text-red-400"><X className="size-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-400">Name *</label>
+                <input value={tgtName} onChange={(e) => setTgtName(e.target.value)} placeholder="GuardianX Website"
+                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-red-500/50 focus:outline-none" />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400">Target URL *</label>
+                <input value={tgtUrl} onChange={(e) => setTgtUrl(e.target.value)} placeholder="https://www.guardianx.in"
+                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-red-500/50 focus:outline-none" />
+              </div>
+              <label className="flex items-center gap-2 text-xs text-zinc-400">
+                <input type="checkbox" checked={tgtAuth} onChange={(e) => setTgtAuth(e.target.checked)} className="accent-emerald-500" />
+                I am authorized to test this target
+              </label>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAddTarget(false)} className="border-zinc-700 bg-zinc-900 text-zinc-300">Cancel</Button>
+              <Button onClick={handleAddTarget} disabled={!tgtName.trim() || !tgtUrl.trim() || tgtSaving} className="bg-red-600 text-white hover:bg-red-500">
+                {tgtSaving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Add Target
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -35,6 +35,7 @@ export async function POST(req: Request) {
   const notes =
     typeof body.notes === "string" && body.notes.trim() ? body.notes.trim() : null;
   const authorized = Boolean(body.authorized);
+  const clientId = typeof body.clientId === "string" && body.clientId.trim() ? body.clientId.trim() : null;
 
   if (!name) return NextResponse.json({ error: "name required" }, { status: 400 });
   if (!baseUrl)
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
   }
 
   const t = await db.target.create({
-    data: { name, baseUrl, authHeader, notes, authorized },
+    data: { name, baseUrl, authHeader, notes, authorized, clientId },
   });
 
   return NextResponse.json(

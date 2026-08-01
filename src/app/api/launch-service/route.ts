@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     for (const clientId of clientIds) {
       const client = await db.client.findUnique({
         where: { id: clientId },
-        select: { id: true, name: true, authorized: true },
+        select: { id: true, name: true, authorized: true, targetUrl: true },
       });
 
       if (!client) continue;
@@ -54,18 +54,34 @@ export async function POST(req: Request) {
 
           // DAST: attack all targets (or selected ones)
           if (client.authorized) {
-            const targets = config.targetIds?.length
+            let targets = config.targetIds?.length
               ? await db.target.findMany({ where: { id: { in: config.targetIds }, clientId, authorized: true }, select: { id: true, name: true } })
               : await db.target.findMany({ where: { clientId, authorized: true }, select: { id: true, name: true } });
 
+            // If no targets exist but client has a targetUrl, auto-create one
+            if (targets.length === 0 && (client as Record<string, unknown>).targetUrl) {
+              const { randomUUID } = await import("node:crypto");
+              const newTarget = await db.target.create({
+                data: {
+                  id: randomUUID(),
+                  name: client.name + " (auto)",
+                  baseUrl: (client as Record<string, unknown>).targetUrl as string,
+                  authorized: true,
+                  clientId: clientId,
+                },
+              });
+              targets = [newTarget as Record<string, unknown>];
+              launched.push({ client: client.name, service: "Target", action: "auto_created", id: newTarget.id as string, status: `from ${(client as Record<string, unknown>).targetUrl}` });
+            }
+
             for (const t of targets) {
               const running = await db.engagement.findFirst({
-                where: { targetId: t.id, status: { in: ["queued", "crawling", "planning", "attacking", "analyzing"] } },
+                where: { targetId: t.id as string, status: { in: ["queued", "crawling", "planning", "attacking", "analyzing"] } },
               });
               if (running) continue;
 
               const eng = await db.engagement.create({
-                data: { targetId: t.id, status: "queued", stageLabel: "Service Launcher: DAST VAPT" },
+                data: { targetId: t.id as string, status: "queued", stageLabel: "Service Launcher: DAST VAPT" },
               });
               engineFireAndForget("/api/run-dast", { targetId: t.id, engagementId: eng.id });
               launched.push({ client: client.name, service: "DAST", action: "engagement_started", id: eng.id, status: "queued" });
@@ -76,15 +92,23 @@ export async function POST(req: Request) {
 
         case "test": {
           // ── Run exploit PoCs against existing patches ───────────────────
+          // If no patches with exploits exist, tell user to scan first
           const codebases = await db.codebase.findMany({ where: { clientId }, select: { id: true } });
+          let testCount = 0;
           for (const cb of codebases) {
             const patches = await db.patch.findMany({
               where: { codebaseId: cb.id, exploitCode: { not: null }, status: "pending" },
               select: { id: true, patchId: true },
             });
             for (const p of patches) {
-              launched.push({ client: client.name, service: "Exploit PoC", action: "exploit_run", id: p.patchId as string, status: "ready" });
+              // Queue exploit replay via engine
+              engineFireAndForget("/api/run-exploit", { patchId: p.id, target: "original" });
+              launched.push({ client: client.name, service: "Exploit PoC", action: "exploit_run", id: p.patchId as string, status: "queued" });
+              testCount++;
             }
+          }
+          if (testCount === 0) {
+            launched.push({ client: client.name, service: "Test", action: "no_exploits", id: "—", status: "No exploits found. Run 'Scan' first to generate patches with exploit PoCs." });
           }
           break;
         }

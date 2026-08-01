@@ -202,6 +202,7 @@ interface AddCodebaseDialogProps {
   onOpenChange: (open: boolean) => void;
   onCreated: (cb: Codebase) => void;
   onOpenCredentials?: () => void;
+  clientId?: string;
 }
 
 export function AddCodebaseDialog({
@@ -209,6 +210,7 @@ export function AddCodebaseDialog({
   onOpenChange,
   onCreated,
   onOpenCredentials,
+  clientId,
 }: AddCodebaseDialogProps) {
   const { toast } = useToast();
   const [mode, setMode] = useState<"paste" | "git">("paste");
@@ -258,6 +260,7 @@ export function AddCodebaseDialog({
         name: name.trim(),
         description: description.trim() || undefined,
         sourceCode: source,
+        clientId: clientId,
       });
       toast({ title: "Codebase added", description: cb.name });
       onCreated(cb);

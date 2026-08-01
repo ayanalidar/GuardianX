@@ -533,10 +533,12 @@ function AddTargetDialog({
   open,
   onOpenChange,
   onAdded,
+  clientId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAdded: () => void;
+  clientId?: string;
 }) {
   const { toast } = useToast();
   const [name, setName] = useState("");
@@ -564,6 +566,7 @@ function AddTargetDialog({
         authHeader: authHeader.trim() || undefined,
         notes: notes.trim() || undefined,
         authorized,
+        clientId: clientId,
       });
       toast({ title: "Target added", description: r.message });
       reset();
