@@ -72,7 +72,7 @@ export function AdversarialArena({ rounds, won, totalRounds }: AdversarialArenaP
           </div>
           <p className="mt-0.5 text-xs text-zinc-400">
             {won
-              ? "The attacker could not bypass the defender's patch — the fix held against all attempts."
+              ? "The attacker could not bypass the defender's patch, the fix held against all attempts."
               : "The arena ended without a clear defender win. Review the rounds carefully before approving."}
           </p>
         </div>
@@ -149,19 +149,19 @@ function RoundCard({
               >
                 {round.bypassResult.success ? (
                   <span className="flex items-center gap-1">
-                    <Crosshair className="size-3" /> Bypass confirmed —{" "}
+                    <Crosshair className="size-3" /> Bypass confirmed -{" "}
                     {round.bypassResult.detail}
                   </span>
                 ) : (
                   <span className="flex items-center gap-1">
-                    <Shield className="size-3" /> Bypass did not confirm —{" "}
+                    <Shield className="size-3" /> Bypass did not confirm -{" "}
                     {round.bypassResult.detail}
                   </span>
                 )}
               </div>
             ) : (
               <div className="rounded border border-zinc-700 bg-zinc-800/40 px-2 py-1.5 text-[11px] text-zinc-400">
-                Attacker conceded — no bypass found.
+                Attacker conceded, no bypass found.
               </div>
             )}
           </div>

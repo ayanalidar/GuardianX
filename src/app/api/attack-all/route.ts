@@ -5,7 +5,7 @@ import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/attack-all — launches SAST + DAST simultaneously across ALL authorized clients
+// POST /api/attack-all, launches SAST + DAST simultaneously across ALL authorized clients
 export async function POST() {
   try {
     const triggered: { client: string; type: string; target: string; id: string }[] = [];

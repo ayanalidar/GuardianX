@@ -5,7 +5,7 @@ import ZAI from "z-ai-web-dev-sdk";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/auto-remediation — generates fix code for DAST findings
+// POST /api/auto-remediation, generates fix code for DAST findings
 // Body: { findingId?: string, clientId?: string }
 // For each finding, AI generates the specific remediation code
 export async function POST(req: Request) {

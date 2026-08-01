@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// POST /api/benchmark — runs a benchmark comparing GuardianX module vs baseline
+// POST /api/benchmark, runs a benchmark comparing GuardianX module vs baseline
 // Body: { module: string, targetUrl?: string, iterations?: number }
 export async function POST(req: Request) {
   const { module, targetUrl, iterations = 3 } = await req.json().catch(() => ({}));
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     };
 
     // ── Simulate benchmark runs (in production, these would be real subprocess calls) ──
-    // GuardianX metrics — based on actual module characteristics
+    // GuardianX metrics, based on actual module characteristics
     const guardianRuns: { duration: number; findings: number; memory: number }[] = [];
     for (let i = 0; i < iterations; i++) {
       const start = Date.now();
@@ -92,8 +92,8 @@ export async function POST(req: Request) {
     results.improvement = Math.round((speedImprovement + accuracyImprovement + memoryImprovement) / 3);
 
     results.verdict = results.improvement > 0
-      ? `✅ PASS — GuardianX is ${results.improvement}% better than baseline (speed: ${speedImprovement.toFixed(1)}%, accuracy: +${accuracyImprovement.toFixed(1)}%, memory: ${memoryImprovement.toFixed(1)}%)`
-      : `❌ FAIL — GuardianX is ${Math.abs(results.improvement)}% worse than baseline. Needs optimization.`;
+      ? `✅ PASS, GuardianX is ${results.improvement}% better than baseline (speed: ${speedImprovement.toFixed(1)}%, accuracy: +${accuracyImprovement.toFixed(1)}%, memory: ${memoryImprovement.toFixed(1)}%)`
+      : `❌ FAIL, GuardianX is ${Math.abs(results.improvement)}% worse than baseline. Needs optimization.`;
 
     // Log to audit trail
     await db.auditLog.create({
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
   }
 }
 
-// GET /api/benchmark — returns benchmark history
+// GET /api/benchmark, returns benchmark history
 export async function GET() {
   try {
     const logs = await db.auditLog.findMany({

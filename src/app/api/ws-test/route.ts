@@ -4,8 +4,8 @@ import { fetchUrl } from "@/lib/sentinel/engine/http-attacker";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/ws-test — WebSocket security testing
-// Body: { targetUrl } — ws:// or http:// URL
+// POST /api/ws-test, WebSocket security testing
+// Body: { targetUrl }, ws:// or http:// URL
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const base = body.targetUrl || "http://localhost:3004";
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
   const results = [
     { test: "Unauthenticated WS Access", vulnerable: unauthenticatedAccess, severity: "high", description: "WebSocket endpoint accepts connections without authentication." },
-    { test: "CSWSH (Cross-Site WebSocket Hijacking)", vulnerable: cswhsPossible, severity: "high", description: "Server accepts WebSocket connections from any Origin — enables cross-site attacks." },
+    { test: "CSWSH (Cross-Site WebSocket Hijacking)", vulnerable: cswhsPossible, severity: "high", description: "Server accepts WebSocket connections from any Origin, enables cross-site attacks." },
     { test: "WS Endpoints Discovered", vulnerable: discoveredEndpoints.length > 0, severity: "medium", description: `Found WebSocket endpoints: ${discoveredEndpoints.join(", ") || "none"}` },
   ];
 

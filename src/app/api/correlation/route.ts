@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/correlation — cross-module vulnerability correlation.
+// GET /api/correlation, cross-module vulnerability correlation.
 // Connects findings across SAST + DAST + SCA + dark web + canary hits.
 export async function GET() {
   const [patches, findings, canaries, honeypots, scaDeps] = await Promise.all([

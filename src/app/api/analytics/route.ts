@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/analytics — MTTD/MTTR + vulnerability lifecycle + cost of risk
+// GET /api/analytics, MTTD/MTTR + vulnerability lifecycle + cost of risk
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const clientId = url.searchParams.get("clientId");

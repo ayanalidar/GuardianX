@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/data-flow/log — record an API access (called by the vuln-target)
+// POST /api/data-flow/log, record an API access (called by the vuln-target)
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const ipAddress = typeof body.ipAddress === "string" ? body.ipAddress : "unknown";

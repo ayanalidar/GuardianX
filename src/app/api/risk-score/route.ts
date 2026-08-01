@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/risk-score — AI-driven predictive risk score per client
+// GET /api/risk-score, AI-driven predictive risk score per client
 // Predicts which client is most likely to be breached next based on:
 // - Open critical/high findings (weight: 3x)
 // - Pending critical patches (weight: 2x)
@@ -64,7 +64,7 @@ export async function GET() {
         const canaries = await db.canary.findMany({ where: { targetId: t.id, detected: true } });
         if (canaries.length > 0) {
           score += 25;
-          factors.push(`${canaries.length} canary token(s) triggered — active exfiltration`);
+          factors.push(`${canaries.length} canary token(s) triggered, active exfiltration`);
         }
       }
 

@@ -16,13 +16,13 @@ export default function WhitepaperPage() {
       title: "1. Platform Architecture",
       content: `GuardianX is built on a three-tier microservices architecture:
 
-**Tier 1 — Presentation Layer (Vercel)**
+**Tier 1, Presentation Layer (Vercel)**
 Next.js 16 with App Router, TypeScript, Tailwind CSS 4, and shadcn/ui. The frontend is a single-page application with server-side rendering for SEO and client-side hydration for interactivity. The Command Center dashboard provides real-time visibility into all security operations.
 
-**Tier 2 — Compute Layer (Railway Engine)**
+**Tier 2, Compute Layer (Railway Engine)**
 A Bun + Node.js runtime that handles all heavy compute: SAST pipeline execution, DAST HTTP attacks, sandbox test execution, PDF generation (Python3 + ReportLab), and web scraping (Python3 + httpx + BeautifulSoup). The engine communicates with the frontend via HTTP API (for synchronous operations) and Socket.io (for real-time event streaming).
 
-**Tier 3 — Data Layer (Supabase PostgreSQL)**
+**Tier 3, Data Layer (Supabase PostgreSQL)**
 All persistent data is stored in PostgreSQL, accessed via Supabase's REST API (HTTPS port 443). This ensures compatibility with Vercel's serverless functions which cannot open TCP connections to port 5432. The database schema includes 25 tables covering clients, codebases, scans, patches, findings, engagements, attestations, canaries, and audit logs.
 
 **Security Boundaries**
@@ -35,7 +35,7 @@ All persistent data is stored in PostgreSQL, accessed via Supabase's REST API (H
     },
     {
       icon: Bug,
-      title: "2. SAST Engine — Static Application Security Testing",
+      title: "2. SAST Engine, Static Application Security Testing",
       content: `The SAST engine uses a multi-stage AI-driven pipeline:
 
 **Stage 1: AI Vulnerability Detection**
@@ -72,7 +72,7 @@ A second AI persona (the "attacker") attempts to bypass the AI-generated patch. 
     },
     {
       icon: Crosshair,
-      title: "3. DAST Engine — RedAgent VAPT",
+      title: "3. DAST Engine, RedAgent VAPT",
       content: `The RedAgent engine performs autonomous penetration testing against live targets:
 
 **Stage 1: Crawling & Discovery**
@@ -102,7 +102,7 @@ For each planned attack, the engine crafts HTTP requests with payloads and sends
 After AI-driven attacks, the engine systematically:
 - Scans every crawled endpoint's response for leaked secrets (AWS keys, Stripe keys, GitHub PATs, JWTs, private keys, passwords, SSNs, credit cards) using 16 regex patterns
 - Probes 22+ known exposure paths: /.env, /.git/config, /backup.sql, /wp-config.php, /phpinfo.php, /server-status, /admin, /.DS_Store, etc.
-- All secret samples are redacted to first4…last4 format — the full secret is never stored
+- All secret samples are redacted to first4…last4 format, the full secret is never stored
 
 **Stage 5: Finding Documentation**
 Each confirmed vulnerability is saved with full evidence: HTTP request, HTTP response, payload, confidence score, OWASP mapping, and AI-generated remediation advice.`,
@@ -174,7 +174,7 @@ The compliance dashboard shows per-framework compliance score, section-level sta
     },
     {
       icon: FlaskConical,
-      title: "6. R&D Lab — Self-Improving AI",
+      title: "6. R&D Lab: Self-Improving AI",
       content: `GuardianX is the only security platform with a built-in R&D Lab that continuously improves its own modules:
 
 **GitHub Tool Research**
@@ -208,7 +208,7 @@ The compliance dashboard shows per-framework compliance score, section-level sta
 
 **IaC Remediation**
 - Generates Terraform, Ansible, Kubernetes, Docker manifests
-- Patches at the deployment template level — no live server modifications`,
+- Patches at the deployment template level, no live server modifications`,
     },
   ];
 

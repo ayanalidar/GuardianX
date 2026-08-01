@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/auto-honeypot — auto-deploys honeypot endpoints + canary tokens for a target
+// POST /api/auto-honeypot, auto-deploys honeypot endpoints + canary tokens for a target
 // Body: { targetId: string }
 export async function POST(req: Request) {
   const { targetId } = await req.json().catch(() => ({}));
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       deployed.push({ type: c.type, endpoint: c.endpoint, token: canaryValue.slice(0, 20) + "..." });
     }
 
-    // Log honeypot hits (simulated — would be real /honeypot/* endpoints on target)
+    // Log honeypot hits (simulated, would be real /honeypot/* endpoints on target)
     const honeypotEndpoints = ["/admin-secret", "/api/internal-debug", "/.git/config", "/backup.sql", "/api/keys"];
     for (const ep of honeypotEndpoints) {
       await db.honeypotHit.create({

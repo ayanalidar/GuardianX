@@ -6,7 +6,7 @@ import ZAI from "z-ai-web-dev-sdk";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/attack-graph — builds a Directed Acyclic Graph (DAG) of attack paths
+// POST /api/attack-graph, builds a Directed Acyclic Graph (DAG) of attack paths
 // Models how low-severity issues on separate hosts can chain into full compromise
 // Body: { clientId?: string }
 export async function POST(req: Request) {

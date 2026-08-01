@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/data-flow/monitor — real-time API data flow monitor.
+// GET /api/data-flow/monitor, real-time API data flow monitor.
 // Shows per-endpoint, per-IP access patterns, scraping detection.
 export async function GET() {
   // Last 500 requests

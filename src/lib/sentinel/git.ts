@@ -54,7 +54,7 @@ const IGNORE_DIRS = new Set([
   ".cache",
 ]);
 
-const MAX_FILE_SIZE = 256 * 1024; // 256 KB — skip huge generated files
+const MAX_FILE_SIZE = 256 * 1024; // 256 KB, skip huge generated files
 
 async function runGit(args: string[], cwd: string): Promise<{ code: number; stderr: string }> {
   return new Promise((resolve) => {

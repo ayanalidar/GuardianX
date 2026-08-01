@@ -1,4 +1,4 @@
-// GuardianX 2FA (TOTP) Utilities — otplib v13 functional API.
+// GuardianX 2FA (TOTP) Utilities, otplib v13 functional API.
 //
 // otplib v13 was a complete rewrite: the old v12 `authenticator` pre-configured
 // instance (with `.generateSecret()`, `.keyuri()`, `.verify()`) no longer

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/codebases/[id] — full codebase incl. source + scans + patches.
+// GET /api/codebases/[id], full codebase incl. source + scans + patches.
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

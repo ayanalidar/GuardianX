@@ -111,7 +111,7 @@ export function ProcessTree() {
 
       {data.processes.length === 0 && (
         <div className="py-4 text-center font-mono text-xs text-zinc-600">
-          No processes running — all systems idle
+          No processes running, all systems idle
         </div>
       )}
     </div>

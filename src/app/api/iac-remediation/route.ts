@@ -5,7 +5,7 @@ import ZAI from "z-ai-web-dev-sdk";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/iac-remediation — generates Infrastructure-as-Code remediation
+// POST /api/iac-remediation, generates Infrastructure-as-Code remediation
 // Instead of patching live servers, generates Terraform/Ansible PRs
 // Body: { patchId?, clientId?, target?: "terraform" | "ansible" | "k8s" | "docker" }
 export async function POST(req: Request) {
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     // ── Terraform remediation ─────────────────────────────────────────────
     if (target === "all" || target === "terraform") {
-      manifests.terraform = `# GuardianX IaC Remediation — Terraform
+      manifests.terraform = `# GuardianX IaC Remediation, Terraform
 # Generated: ${new Date().toISOString()}
 # Patches: ${patches.length}
 
@@ -102,7 +102,7 @@ ${patches.map((p, i) => `  rule {
 
     // ── Ansible remediation ───────────────────────────────────────────────
     if (target === "all" || target === "ansible") {
-      manifests.ansible = `# GuardianX IaC Remediation — Ansible Playbook
+      manifests.ansible = `# GuardianX IaC Remediation, Ansible Playbook
 # Generated: ${new Date().toISOString()}
 # Patches: ${patches.length}
 ---
@@ -164,7 +164,7 @@ ${patches.map((p) => `          # Patched by GuardianX: ${p.title}
 
     // ── Kubernetes remediation ────────────────────────────────────────────
     if (target === "all" || target === "k8s") {
-      manifests.k8s = `# GuardianX IaC Remediation — Kubernetes
+      manifests.k8s = `# GuardianX IaC Remediation, Kubernetes
 # Generated: ${new Date().toISOString()}
 ---
 apiVersion: v1
@@ -206,7 +206,7 @@ spec:
 
     // ── Docker remediation ────────────────────────────────────────────────
     if (target === "all" || target === "docker") {
-      manifests.docker = `# GuardianX IaC Remediation — Dockerfile
+      manifests.docker = `# GuardianX IaC Remediation, Dockerfile
 # Generated: ${new Date().toISOString()}
 # This Dockerfile applies security patches at build time
 

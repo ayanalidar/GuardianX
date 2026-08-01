@@ -194,7 +194,7 @@ export function ActivePipelines({ onSelectClient, onAddClient, onClientDeleted }
                         )}
                       </div>
 
-                      {/* Pipeline stepper — full horizontal with labels */}
+                      {/* Pipeline stepper, full horizontal with labels */}
                       <div className="mt-2 flex items-center gap-1">
                         {PIPELINE_STAGES.map((stage, idx) => {
                           const stageStatus = getStageStatus(c, stage.key);

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/webhooks — list all webhook configs
+// GET /api/webhooks, list all webhook configs
 export async function GET() {
   try {
     const webhooks = await db.webhookConfig.findMany({
@@ -23,7 +23,7 @@ export async function GET() {
   }
 }
 
-// POST /api/webhooks — create a webhook config
+// POST /api/webhooks, create a webhook config
 // Body: { name, url, events: string[] }
 export async function POST(req: Request) {
   const { name, url, events } = await req.json().catch(() => ({}));

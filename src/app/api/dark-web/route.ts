@@ -11,7 +11,7 @@ async function sdk() {
   return zaiPromise;
 }
 
-// GET /api/dark-web — search for leaked credentials and data breaches
+// GET /api/dark-web, search for leaked credentials and data breaches
 // matching the user's codebase names + common breach databases.
 export async function GET() {
   try {

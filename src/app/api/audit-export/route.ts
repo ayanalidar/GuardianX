@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/audit-export?clientId=xxx — exports all security evidence as JSON
-// For ISO/SOC2 auditors — contains scans, patches, findings, attestations
+// GET /api/audit-export?clientId=xxx, exports all security evidence as JSON
+// For ISO/SOC2 auditors, contains scans, patches, findings, attestations
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const clientId = url.searchParams.get("clientId");

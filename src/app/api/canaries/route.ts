@@ -12,7 +12,7 @@ const CANARY_DATA = [
   { canaryType: "user", canaryValue: "canary_user_001", label: "Canary Username", injectedEndpoint: "/api/user/901" },
 ];
 
-// GET /api/canaries — list all canary records + their detection status
+// GET /api/canaries, list all canary records + their detection status
 export async function GET() {
   // Sync canary records with the known canary data
   for (const c of CANARY_DATA) {
@@ -48,7 +48,7 @@ export async function GET() {
   });
 }
 
-// POST /api/canaries — manually add a new canary
+// POST /api/canaries, manually add a new canary
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const label = typeof body.label === "string" ? body.label : "Custom Canary";

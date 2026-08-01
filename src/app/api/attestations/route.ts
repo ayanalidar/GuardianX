@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/attestations — list the full hash-chained ledger + verify integrity.
+// GET /api/attestations, list the full hash-chained ledger + verify integrity.
 export async function GET() {
   const attestations = await db.attestation.findMany({
     orderBy: { createdAt: "asc" },

@@ -4,7 +4,7 @@ import { createToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/client-portal-auth — client portal login (separate from admin login)
+// POST /api/client-portal-auth, client portal login (separate from admin login)
 // Clients use their email + a portal access code to see only their data
 // Body: { email: string, portalCode: string }
 

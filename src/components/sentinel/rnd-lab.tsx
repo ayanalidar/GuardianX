@@ -683,7 +683,7 @@ function IaCRemediation() {
           Infrastructure-as-Code Remediation
         </h3>
         <p className="mb-3 text-xs text-zinc-400">
-          Generates Terraform, Ansible, Kubernetes, and Docker manifests to patch vulnerabilities at the root deployment template — no live server modifications.
+          Generates Terraform, Ansible, Kubernetes, and Docker manifests to patch vulnerabilities at the root deployment template, no live server modifications.
         </p>
         <Button onClick={generate} disabled={loading} className="bg-sky-600 text-white hover:bg-sky-500">
           {loading ? <Loader2 className="size-4 animate-spin" /> : <FileCode className="size-4" />}

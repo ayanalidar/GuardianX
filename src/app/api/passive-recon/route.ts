@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/passive-recon — passive reconnaissance (no active attacks)
+// POST /api/passive-recon, passive reconnaissance (no active attacks)
 // Checks SSL/TLS, HTTP headers, DNS, security configuration
 // Body: { targetUrl: string }
 export async function POST(req: Request) {
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
         // Check if HSTS is present
         const hsts = res.headers.get("strict-transport-security");
         if (!hsts) {
-          results.ssl.issues.push("HSTS not enabled — site vulnerable to SSL strip attacks");
+          results.ssl.issues.push("HSTS not enabled, site vulnerable to SSL strip attacks");
           results.security.findings.push({
             severity: "medium",
             title: "HSTS Not Enabled",
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
           if (maxAgeMatch) {
             const maxAge = parseInt(maxAgeMatch[1]);
             if (maxAge < 31536000) { // less than 1 year
-              results.ssl.issues.push(`HSTS max-age is only ${maxAge}s — recommend at least 31536000 (1 year)`);
+              results.ssl.issues.push(`HSTS max-age is only ${maxAge}s, recommend at least 31536000 (1 year)`);
               results.security.findings.push({
                 severity: "low",
                 title: "HSTS Max-Age Too Short",
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
         }
       } else {
         results.ssl.grade = "F";
-        results.ssl.issues.push("Site does not use HTTPS — all traffic is unencrypted!");
+        results.ssl.issues.push("Site does not use HTTPS, all traffic is unencrypted!");
         results.security.findings.push({
           severity: "critical",
           title: "No SSL/TLS Encryption",
@@ -179,7 +179,7 @@ export async function POST(req: Request) {
         results.security.findings.push({
           severity: "medium",
           title: "SPF Record Missing",
-          detail: "No SPF record found. Email spoofing is possible — attackers can send emails as your domain.",
+          detail: "No SPF record found. Email spoofing is possible, attackers can send emails as your domain.",
         });
         results.security.score -= 5;
       }
@@ -194,7 +194,7 @@ export async function POST(req: Request) {
         results.security.findings.push({
           severity: "medium",
           title: "DMARC Record Missing",
-          detail: "No DMARC record found. Email authentication is incomplete — phishing emails can bypass filters.",
+          detail: "No DMARC record found. Email authentication is incomplete, phishing emails can bypass filters.",
         });
         results.security.score -= 5;
       }

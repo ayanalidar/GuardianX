@@ -4,7 +4,7 @@ import { encryptSecret } from "@/lib/sentinel/crypto";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/credentials — list all credentials (metadata only, NEVER secrets).
+// GET /api/credentials, list all credentials (metadata only, NEVER secrets).
 export async function GET() {
   const creds = await db.credential.findMany({
     orderBy: { createdAt: "desc" },
@@ -27,7 +27,7 @@ export async function GET() {
   );
 }
 
-// POST /api/credentials — add a credential (encrypts the token at rest).
+// POST /api/credentials, add a credential (encrypts the token at rest).
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const label = typeof body.label === "string" ? body.label.trim() : "";

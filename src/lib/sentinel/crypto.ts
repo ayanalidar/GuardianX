@@ -60,7 +60,7 @@ export function decryptSecret(enc: EncryptedSecret): string {
 
 /**
  * Build an authenticated clone URL for a repo, embedding the decrypted token.
- * The token is NEVER logged — this URL is used only for the git clone child
+ * The token is NEVER logged, this URL is used only for the git clone child
  * process and discarded immediately after.
  */
 export function buildAuthedCloneUrl(

@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/auto-discover — crawls a URL to discover assets (pages, JS files,
+// POST /api/auto-discover, crawls a URL to discover assets (pages, JS files,
 // tech stack, exposed files) and auto-creates codebases + targets for the client.
 // Body: { clientId: string }
 export async function POST(req: Request) {

@@ -91,7 +91,7 @@ export async function planAttacks(crawl: CrawlSummary): Promise<PlannedAttack[]>
     "You are RedAgent, an autonomous penetration tester. Given a crawl summary of a web app, you plan concrete HTTP attacks to attempt against each endpoint.",
     "For each endpoint, decide which attack categories are worth trying (SQL Injection, XSS, IDOR, Path Traversal, Open Redirect, Command Injection, SSRF, Auth Bypass, Info Disclosure, etc.).",
     "Only plan attacks that are technically feasible against the described endpoint. Don't waste effort on irrelevant categories.",
-    "Respond with STRICT JSON only — no prose, no markdown fences.",
+    "Respond with STRICT JSON only, no prose, no markdown fences.",
   ].join(" ");
 
   const user = [
@@ -103,7 +103,7 @@ export async function planAttacks(crawl: CrawlSummary): Promise<PlannedAttack[]>
     "Plan attacks. Respond with JSON in this exact shape:",
     '{"attacks":[{"endpoint":string,"method":"GET|POST","category":string,"owasp":string,"rationale":string,"payloadStrategy":string,"targetParam":string?}]}',
     "Keep rationale under 60 words. owasp should be the OWASP Top 10 2021 code+name (e.g. A03:2021-Injection, A01:2021-Broken Access Control, A07:2021-Identification and Authentication Failures).",
-    "Plan at most 8 attacks total — focus on the most promising.",
+    "Plan at most 8 attacks total, focus on the most promising.",
   ].join("\n");
 
   const completion = await z.chat.completions.create({
@@ -134,7 +134,7 @@ export async function craftHttpAttack(
     "You are RedAgent. Given an attack plan and the target endpoint details, craft a SINGLE concrete HTTP request that attempts the attack.",
     "Build the full URL (with query string for GET), the form body (for POST), any needed headers, the exact payload, and a list of success indicators (substrings or patterns that would appear in the response if the attack succeeded).",
     "Use realistic, well-known payloads for each category (e.g. SQLi: ' OR '1'='1, XSS: <script>alert(1)</script>, path traversal: ../../etc/passwd, etc.).",
-    "Respond with STRICT JSON only — no prose, no markdown fences.",
+    "Respond with STRICT JSON only, no prose, no markdown fences.",
   ].join(" ");
 
   const user = [
@@ -201,7 +201,7 @@ export async function analyzeResponse(
     "You are RedAgent. Given an attack plan, the crafted request, and the actual HTTP response, determine whether the vulnerability was genuinely exploited.",
     "Be rigorous: only declare vulnerable=true if the response clearly demonstrates exploitation (e.g. an error leaking SQL, a payload reflected unescaped, a redirect to an external host, a file's contents returned, a sensitive field leaked).",
     "If the response is ambiguous or doesn't prove exploitation, set vulnerable=false.",
-    "Respond with STRICT JSON only — no prose, no markdown fences.",
+    "Respond with STRICT JSON only, no prose, no markdown fences.",
   ].join(" ");
 
   const user = [
@@ -223,7 +223,7 @@ export async function analyzeResponse(
     "Analyze the response. Respond with JSON in this exact shape:",
     '{"vulnerable":boolean,"confidence":number,"severity":"critical|high|medium|low|info","title":string,"description":string,"remediation":string,"evidence":string}',
     "- evidence: the EXACT excerpt from the response body/headers/status that proves exploitation (quote it).",
-    "- confidence: 0..1 — how certain you are the vuln is real and exploitable.",
+    "- confidence: 0..1, how certain you are the vuln is real and exploitable.",
     "- description: under 80 words explaining the impact.",
     "- remediation: under 60 words on how to fix it.",
   ].join("\n");

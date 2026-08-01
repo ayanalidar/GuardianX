@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/slack — configure Slack/Teams webhook + send test alert
+// POST /api/slack, configure Slack/Teams webhook + send test alert
 // Body: { action: "test" | "configure", webhookUrl?: string, channel?: string }
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }
 
-// GET /api/slack — return current integration config
+// GET /api/slack, return current integration config
 export async function GET() {
   try {
     const integrations = await db.integration.findMany({

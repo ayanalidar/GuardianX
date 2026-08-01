@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/protocol-fuzzer — mutation-based protocol fuzzing engine
+// POST /api/protocol-fuzzer, mutation-based protocol fuzzing engine
 // Injects malformed data structures to reveal edge-case faults
 // Body: { targetUrl, protocol: "http" | "graphql" | "websocket" | "rest", maxMutations?: number }
 export async function POST(req: Request) {

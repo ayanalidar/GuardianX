@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/rollback/[patchId] — rolls back an approved patch
+// POST /api/rollback/[patchId], rolls back an approved patch
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ patchId: string }> }

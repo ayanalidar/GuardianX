@@ -85,7 +85,7 @@ export async function runEngagement(
 
     await emitAndStore({
       stage: "crawling",
-      message: `Crawl complete — found ${crawl.endpoints.length} endpoints: ${crawl.endpoints
+      message: `Crawl complete, found ${crawl.endpoints.length} endpoints: ${crawl.endpoints
         .map((e) => `${e.method} ${e.path}`)
         .slice(0, 6)
         .join(", ")}${crawl.endpoints.length > 6 ? "…" : ""}`,
@@ -231,7 +231,7 @@ export async function runEngagement(
 
         await emitAndStore({
           stage: "attacking",
-          message: `🔴 FINDING: ${analysis.severity.toUpperCase()} — ${analysis.title} on ${plan.endpoint} (confidence ${(analysis.confidence * 100).toFixed(0)}%)`,
+          message: `🔴 FINDING: ${analysis.severity.toUpperCase()}, ${analysis.title} on ${plan.endpoint} (confidence ${(analysis.confidence * 100).toFixed(0)}%)`,
           level: "success",
           meta: {
             severity: analysis.severity,
@@ -255,7 +255,7 @@ export async function runEngagement(
     // (AWS keys, Stripe keys, JWTs, private keys, passwords in source, etc.)
     // and PII (SSNs, credit cards, emails), plus probe known exposure paths
     // (.env, .git/, .DS_Store, backups, swagger, etc.).
-    // All samples are REDACTED — only first4...last4 is stored, never the
+    // All samples are REDACTED, only first4...last4 is stored, never the
     // full secret value.
     await db.engagement.update({
       where: { id: engagementId },
@@ -263,7 +263,7 @@ export async function runEngagement(
     });
     await emitAndStore({
       stage: "attacking",
-      message: `🔎 Sensitive data exposure sweep — scanning responses for leaked secrets/PII…`,
+      message: `🔎 Sensitive data exposure sweep, scanning responses for leaked secrets/PII…`,
       level: "info",
       meta: { phase: "exposure-sweep" },
     });
@@ -338,7 +338,7 @@ export async function runEngagement(
           method: "GET",
           description: `The path ${p.path} is accessible (HTTP ${p.status}) and exposes ${p.label.toLowerCase()}. ${p.bodySize} bytes returned. Redacted preview: ${p.redactedSample || "(binary/non-text)"}.`,
           proofRequest: `GET ${target.baseUrl}${p.path} HTTP/1.1\nHost: ${new URL(target.baseUrl).host}`,
-          proofResponse: `HTTP/1.1 ${p.status}\nContent-Length: ${p.bodySize}\n\nRedacted preview: ${p.redactedSample || "(binary content)"}\n\n[Full content redacted — exposure confirmed, value not stored.]`,
+          proofResponse: `HTTP/1.1 ${p.status}\nContent-Length: ${p.bodySize}\n\nRedacted preview: ${p.redactedSample || "(binary content)"}\n\n[Full content redacted, exposure confirmed, value not stored.]`,
           payload: null,
           confidence: 0.9,
           remediation: `Block access to ${p.path} at the web server / reverse proxy level. If the file shouldn't exist in production, remove it from the deployment. Add to the server's deny list.`,
@@ -357,14 +357,14 @@ export async function runEngagement(
     if (exposureCount > 0) {
       await emitAndStore({
         stage: "attacking",
-        message: `🔎 Exposure sweep complete — ${exposureCount} sensitive data exposure(s) documented (samples redacted).`,
+        message: `🔎 Exposure sweep complete, ${exposureCount} sensitive data exposure(s) documented (samples redacted).`,
         level: "warning",
         meta: { phase: "exposure-sweep-end", exposureCount },
       });
     } else {
       await emitAndStore({
         stage: "attacking",
-        message: `🔎 Exposure sweep complete — no exposed secrets or PII detected.`,
+        message: `🔎 Exposure sweep complete, no exposed secrets or PII detected.`,
         level: "success",
         meta: { phase: "exposure-sweep-end" },
       });
@@ -381,7 +381,7 @@ export async function runEngagement(
     });
     await emitAndStore({
       stage: "completed",
-      message: `Engagement complete — ${findingCount} vulnerability(ies) confirmed out of ${plans.length} attacks.`,
+      message: `Engagement complete, ${findingCount} vulnerability(ies) confirmed out of ${plans.length} attacks.`,
       level: findingCount > 0 ? "warning" : "success",
       meta: { findingCount, attackCount: plans.length },
     });

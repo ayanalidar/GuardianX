@@ -3,13 +3,13 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/alerts — list alert rules
+// GET /api/alerts, list alert rules
 export async function GET() {
   const rules = await db.alertRule.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json(rules.map(r => ({ ...r, channelConfig: r.channelConfig ? JSON.parse(r.channelConfig) : null })));
 }
 
-// POST /api/alerts — create an alert rule
+// POST /api/alerts, create an alert rule
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { name, condition, channel, channelConfig } = body;
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ id: r.id, message: "Alert rule created" }, { status: 201 });
 }
 
-// POST /api/alerts/trigger — internally triggered by other APIs
+// POST /api/alerts/trigger, internally triggered by other APIs
 export async function PATCH(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { event, data } = body;
@@ -30,7 +30,7 @@ export async function PATCH(req: Request) {
     if (match) {
       await db.alertRule.update({ where: { id: rule.id }, data: { lastTriggered: new Date() } });
       await db.auditLog.create({ data: { action: "alert_triggered", entity: rule.id, details: JSON.stringify({ event, data }) } });
-      // Fire webhook/email/slack (simplified — in production this would be async queue)
+      // Fire webhook/email/slack (simplified, in production this would be async queue)
       triggered++;
     }
   }

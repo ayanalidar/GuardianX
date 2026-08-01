@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// DELETE /api/credentials/[id] — permanently delete a credential + wipe ciphertext.
+// DELETE /api/credentials/[id], permanently delete a credential + wipe ciphertext.
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -24,7 +24,7 @@ export async function DELETE(
   return NextResponse.json({ ok: true, message: "Credential deleted. Ciphertext wiped." });
 }
 
-// GET /api/credentials/[id] — metadata + audit history (NEVER the secret).
+// GET /api/credentials/[id], metadata + audit history (NEVER the secret).
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

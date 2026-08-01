@@ -12,7 +12,7 @@ const SLA_HOURS: Record<string, number> = {
   low: 336, // 14 days
 };
 
-// GET /api/sla-tracking?clientId=xxx — tracks SLA compliance per client
+// GET /api/sla-tracking?clientId=xxx, tracks SLA compliance per client
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const clientId = url.searchParams.get("clientId");

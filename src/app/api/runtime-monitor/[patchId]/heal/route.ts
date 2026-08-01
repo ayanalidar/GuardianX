@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/runtime-monitor/[patchId]/heal — hot-swap a vulnerable function
+// POST /api/runtime-monitor/[patchId]/heal, hot-swap a vulnerable function
 // at runtime with its patched version. Simulates the self-healing action:
 // approve + deploy the patch to the live runtime without restart.
 export async function POST(

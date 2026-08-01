@@ -108,7 +108,7 @@ export function FindingDialog({ finding, open, onOpenChange }: FindingDialogProp
               <EyeOff className="mt-0.5 size-5 shrink-0 text-red-400" />
               <div className="min-w-0">
                 <div className="text-xs font-semibold uppercase tracking-wider text-red-300">
-                  Sensitive Data Exposure — Sample Redacted
+                  Sensitive Data Exposure, Sample Redacted
                 </div>
                 <p className="mt-1 text-xs leading-relaxed text-zinc-300">
                   The full secret value is intentionally NOT stored. Only a
@@ -130,15 +130,15 @@ export function FindingDialog({ finding, open, onOpenChange }: FindingDialogProp
             </section>
           )}
 
-          {/* Proof of concept — HTTP request */}
+          {/* Proof of concept, HTTP request */}
           <section className="space-y-2">
-            <SectionLabel icon={Webhook} text="Proof of Concept — HTTP Request" />
+            <SectionLabel icon={Webhook} text="Proof of Concept, HTTP Request" />
             <pre className="custom-scrollbar overflow-auto rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-emerald-300">
               {finding.proof_request}
             </pre>
           </section>
 
-          {/* Proof of concept — HTTP response */}
+          {/* Proof of concept, HTTP response */}
           <section className="space-y-2">
             <SectionLabel icon={Webhook} text="HTTP Response (Evidence)" />
             <pre className="custom-scrollbar max-h-64 overflow-auto rounded-lg border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-400">

@@ -3,16 +3,16 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/clients/[id]/pipeline — computes the 7-stage pipeline status
+// GET /api/clients/[id]/pipeline, computes the 7-stage pipeline status
 //
 // Stages:
-//   1. onboarding  — client created, needs assets + authorization
-//   2. scanning    — SAST + DAST + SCA scans running/done
-//   3. testing     — exploits generated, attack chains synthesized
-//   4. patching    — AI patches generated, pending review
-//   5. verifying   — patches approved, re-testing
-//   6. defending   — canaries/honeypots deployed, monitoring active
-//   7. compliant   — VAPT report generated, compliance mapped
+//   1. onboarding , client created, needs assets + authorization
+//   2. scanning   , SAST + DAST + SCA scans running/done
+//   3. testing    , exploits generated, attack chains synthesized
+//   4. patching   , AI patches generated, pending review
+//   5. verifying  , patches approved, re-testing
+//   6. defending  , canaries/honeypots deployed, monitoring active
+//   7. compliant  , VAPT report generated, compliance mapped
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -1,6 +1,6 @@
-// GuardianX Rate Limiter — IP-based throttle to prevent brute force + abuse.
+// GuardianX Rate Limiter, IP-based throttle to prevent brute force + abuse.
 //
-// Uses in-memory sliding window (no Redis needed — works on Vercel serverless
+// Uses in-memory sliding window (no Redis needed, works on Vercel serverless
 // with caveats: each function instance has its own counter. For true distributed
 // rate limiting, use Upstash Redis. This is sufficient for MVP.)
 
@@ -46,7 +46,7 @@ export function rateLimit(key: string, opts: RateLimitOptions = { windowMs: 60_0
     return { ok: true, remaining: opts.maxRequests - 1, resetAt: now + opts.windowMs };
   }
 
-  // Existing window — increment count
+  // Existing window, increment count
   entry.count++;
   store.set(key, entry);
 

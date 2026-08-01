@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/security-kpis — compute real security KPIs from existing data.
+// GET /api/security-kpis, compute real security KPIs from existing data.
 // Metrics: MTTD (mean time to detect), MTTR (mean time to resolve),
 // vulnerability density, patch latency, sandbox pass rate, adversarial win rate.
 

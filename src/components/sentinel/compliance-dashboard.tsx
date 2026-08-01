@@ -110,7 +110,7 @@ export function ComplianceDashboard() {
             GRC & Compliance Center
           </h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Multi-framework compliance monitoring — DPDPA 2023, GDPR, HIPAA, PCI-DSS, ISO 27001, SOC 2.
+            Multi-framework compliance monitoring, DPDPA 2023, GDPR, HIPAA, PCI-DSS, ISO 27001, SOC 2.
             Data privacy scanning + automated breach notification.
           </p>
         </div>
@@ -141,11 +141,11 @@ export function ComplianceDashboard() {
             </div>
             <div>
               <div className="text-sm font-bold text-red-300">
-                ⚠ DPDPA §8(6) Breach Notification Required — {breach.notification_count} breach(es) detected
+                ⚠ DPDPA §8(6) Breach Notification Required, {breach.notification_count} breach(es) detected
               </div>
               <div className="text-xs text-red-300/70">
                 {breach.any_overdue
-                  ? "OVERDUE — breach exceeds 72-hour notification window. Immediate filing required."
+                  ? "OVERDUE, breach exceeds 72-hour notification window. Immediate filing required."
                   : "Personal data breach detected. DPDPA requires notification to the Data Protection Board within 72 hours."}
               </div>
             </div>

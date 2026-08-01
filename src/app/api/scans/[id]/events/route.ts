@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/scans/[id]/events — replay all persisted pipeline events for a scan.
+// GET /api/scans/[id]/events, replay all persisted pipeline events for a scan.
 // Used by clients that connect after the scan has started/finished.
 export async function GET(
   _req: Request,

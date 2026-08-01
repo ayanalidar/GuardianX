@@ -20,7 +20,7 @@ const WHITEPAPERS = [
     icon: FileText,
     title: "GuardianX Technical Whitepaper",
     meta: "24 pages · Architecture",
-    desc: "Complete architecture deep-dive — the 7-stage autonomous pipeline, AI patch generation with adversarial testing, cryptographic attestation ledger, blast radius safety controls.",
+    desc: "Complete architecture deep-dive, the 7-stage autonomous pipeline, AI patch generation with adversarial testing, cryptographic attestation ledger, blast radius safety controls.",
     href: "/whitepaper",
     cta: "Read",
     accent: "emerald",
@@ -38,7 +38,7 @@ const WHITEPAPERS = [
     icon: TrendingUp,
     title: "2026 Threat Landscape Report",
     meta: "Report · Research",
-    desc: "AI-generated attack trends — LLM-assisted SQL injection up 340%, exposed .env files found on 1-in-12 production sites, CVE-to-exploit time now under 8 hours. Based on GuardianX scan data across 500+ engagements.",
+    desc: "AI-generated attack trends, LLM-assisted SQL injection up 340%, exposed .env files found on 1-in-12 production sites, CVE-to-exploit time now under 8 hours. Based on GuardianX scan data across 500+ engagements.",
     href: "/whitepaper",
     cta: "Read",
     accent: "amber",
@@ -88,7 +88,7 @@ const CASE_STUDIES = [
     company: "SaaS Company",
     location: "Delhi",
     quote:
-      "The R&D Lab is incredible — it studies open-source tools and improves its own modules. No other security platform does this.",
+      "The R&D Lab is incredible, it studies open-source tools and improves its own modules. No other security platform does this.",
     author: "CTO",
     stats: [
       { label: "Modules", value: "50+ auto-optimized" },
@@ -141,7 +141,7 @@ const DOCS = [
   {
     icon: Code,
     title: "API Reference",
-    desc: "Full REST API documentation — 80+ endpoints for codebases, scans, patches, engagements, findings, compliance, attestations. Authentication via JWT Bearer token. Rate limiting (300/min).",
+    desc: "Full REST API documentation, 80+ endpoints for codebases, scans, patches, engagements, findings, compliance, attestations. Authentication via JWT Bearer token. Rate limiting (300/min).",
     note: "Full interactive API docs coming soon",
     href: "/whitepaper",
     accent: "emerald",
@@ -234,7 +234,7 @@ export default function ResourcesPage() {
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
               Whitepapers, threat reports, case studies, benchmarks, and full API
-              documentation — everything you need to evaluate and deploy GuardianX.
+              documentation, everything you need to evaluate and deploy GuardianX.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
@@ -314,7 +314,7 @@ export default function ResourcesPage() {
               title="Benchmark Results"
               icon={BarChart3}
               accent="cyan"
-              subtitle="Side-by-side comparison of traditional penetration testing vs GuardianX autonomous VAPT — measured across 500+ production engagements."
+              subtitle="Side-by-side comparison of traditional penetration testing vs GuardianX autonomous VAPT, measured across 500+ production engagements."
             />
 
             <div className="holo-card-sharp hud-corners overflow-hidden p-0">
@@ -407,7 +407,7 @@ export default function ResourcesPage() {
               title="Documentation & API Docs"
               icon={Code}
               accent="amber"
-              subtitle="Everything your engineers need to integrate, automate, and audit GuardianX — from CI/CD hooks to cryptographic internals."
+              subtitle="Everything your engineers need to integrate, automate, and audit GuardianX, from CI/CD hooks to cryptographic internals."
             />
             <div className="grid gap-5 sm:grid-cols-2">
               {DOCS.map((d, i) => (
@@ -686,7 +686,7 @@ function CaseStudyCard({
         <p className="mt-4 flex-1 text-sm leading-relaxed text-zinc-300">
           “{quote}”
         </p>
-        <div className="mt-3 font-mono text-[11px] text-zinc-500">— {author}</div>
+        <div className="mt-3 font-mono text-[11px] text-zinc-500">- {author}</div>
 
         <div className="mt-5 space-y-2 border-t border-zinc-800 pt-4">
           {stats.map((s, i) => (

@@ -5,7 +5,7 @@ import ZAI from "z-ai-web-dev-sdk";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// GET /api/threat-briefing — AI-generated 3-bullet threat briefing
+// GET /api/threat-briefing, AI-generated 3-bullet threat briefing
 export async function GET() {
   try {
     // Gather current state

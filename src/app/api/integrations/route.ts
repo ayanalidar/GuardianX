@@ -3,13 +3,13 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/integrations — list all configured integrations
+// GET /api/integrations, list all configured integrations
 export async function GET() {
   const integrations = await db.integration.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json(integrations.map(i => ({ ...i, config: i.config ? JSON.parse(i.config) : {} })));
 }
 
-// POST /api/integrations — add an integration (Jira, Splunk, ELK, Slack, GitHub)
+// POST /api/integrations, add an integration (Jira, Splunk, ELK, Slack, GitHub)
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { type, config } = body;
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ id: i.id, type: i.type, message: `${type} integration configured` }, { status: 201 });
 }
 
-// POST /api/integrations/export — export findings to SIEM (Splunk/ELK format)
+// POST /api/integrations/export, export findings to SIEM (Splunk/ELK format)
 export async function PATCH(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { format } = body; // "splunk" | "elk" | "jira"

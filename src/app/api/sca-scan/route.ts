@@ -36,7 +36,7 @@ function extractDependencies(source: string): string[] {
   return [...deps];
 }
 
-// GET /api/sca-scan?codebaseId=xxx — scan dependencies for known CVEs
+// GET /api/sca-scan?codebaseId=xxx, scan dependencies for known CVEs
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const codebaseId = url.searchParams.get("codebaseId");

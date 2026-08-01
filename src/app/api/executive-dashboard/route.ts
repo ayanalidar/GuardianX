@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/executive-dashboard — C-level single-page summary.
+// GET /api/executive-dashboard, C-level single-page summary.
 export async function GET() {
   const [patches, findings, scans, engagements, codebases, attestations, canaries] = await Promise.all([
     db.patch.findMany({ select: { title: true, severity: true, status: true, sandboxPassed: true, adversarialWon: true, createdAt: true, approvedAt: true } }),
@@ -50,7 +50,7 @@ export async function GET() {
     vapt_engagements: engagements.length,
     patches_attested: attestations,
     canary_breaches: canaries,
-    top_threats: patches.filter(p => p.status === "pending").sort((a, b) => (a.severity === "critical" ? 0 : 1) - (b.severity === "critical" ? 0 : 1)).slice(0, 3).map(p => p.severity + " — " + p.title),
+    top_threats: patches.filter(p => p.status === "pending").sort((a, b) => (a.severity === "critical" ? 0 : 1) - (b.severity === "critical" ? 0 : 1)).slice(0, 3).map(p => p.severity + ", " + p.title),
     severity_breakdown: {
       critical: patches.filter(p => p.severity === "critical").length + findings.filter(f => f.severity === "critical").length,
       high: patches.filter(p => p.severity === "high").length + findings.filter(f => f.severity === "high").length,

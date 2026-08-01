@@ -11,7 +11,7 @@ async function sdk() {
   return zaiPromise;
 }
 
-// POST /api/patches/[id]/copilot — AI remediation copilot.
+// POST /api/patches/[id]/copilot, AI remediation copilot.
 // Body: { action: "generate-fix" | "explain" | "hardened-fix", instruction?: string }
 // Returns: { code?, explanation, suggestions }
 export async function POST(

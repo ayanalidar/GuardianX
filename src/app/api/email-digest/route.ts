@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/email-digest — generates a daily/weekly security summary email per client
+// GET /api/email-digest, generates a daily/weekly security summary email per client
 // Query: ?clientId=xxx&period=daily|weekly
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
         approvedPatches += patches.filter((p) => p.status === "approved").length;
         for (const p of patches) {
           if (p.severity === "critical" || p.severity === "high") {
-            patchDetails.push(`  • [${p.severity.toUpperCase()}] ${p.title} — ${p.status}${p.approvedAt ? " ✅" : " ⏳"}`);
+            patchDetails.push(`  • [${p.severity.toUpperCase()}] ${p.title}, ${p.status}${p.approvedAt ? " ✅" : " ⏳"}`);
           }
         }
       }
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
         }
       }
 
-      const subject = `[GuardianX] ${period === "weekly" ? "Weekly" : "Daily"} Security Digest — ${c.name}`;
+      const subject = `[GuardianX] ${period === "weekly" ? "Weekly" : "Daily"} Security Digest, ${c.name}`;
       const body = `Hi ${c.name} team,
 
 Here's your ${period} security summary from GuardianX:
@@ -80,7 +80,7 @@ ${findingDetails.length > 0 ? `⚠️ KEY FINDINGS:\n${findingDetails.join("\n")
 ${criticalFindings === 0 && newPatches === 0 ? "✅ No critical issues detected. Your security posture is stable.\n" : ""}
 View full dashboard: https://guardian-x-git-main-guardianx.vercel.app
 
-— GuardianX Autonomous Security Operations`;
+- GuardianX Autonomous Security Operations`;
 
       digests.push({
         client: c.name,

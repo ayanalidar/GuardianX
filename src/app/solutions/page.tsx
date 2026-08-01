@@ -30,11 +30,11 @@ const USE_CASES = [
   {
     icon: Cloud,
     title: "Cloud Security Posture",
-    desc: "GuardianX scans cloud-deployed code — Lambda, Cloud Run, ECS — for misconfigurations, exposed secrets in env vars, and IAM policy drift. SCA detects vulnerable dependencies in container images. Virtual patching generates WAF rules (ModSecurity, Cloudflare, iptables) for instant remediation. K8s manifest scanning. IaC remediation for Terraform / CloudFormation.",
+    desc: "GuardianX scans cloud-deployed code, Lambda, Cloud Run, ECS, for misconfigurations, exposed secrets in env vars, and IAM policy drift. SCA detects vulnerable dependencies in container images. Virtual patching generates WAF rules (ModSecurity, Cloudflare, iptables) for instant remediation. K8s manifest scanning. IaC remediation for Terraform / CloudFormation.",
     points: [
       "Misconfig + secret scanning for Lambda, Cloud Run, ECS & env vars",
       "IAM policy drift detection with least-privilege recommendations",
-      "SCA on container images — OS packages and language dependencies",
+      "SCA on container images, OS packages and language dependencies",
       "Virtual patching: WAF rules for ModSecurity, Cloudflare, iptables, Nginx",
       "K8s manifest scanning + IaC remediation (Terraform / CloudFormation)",
     ],
@@ -47,17 +47,17 @@ const USE_CASES = [
       "Single-URL asset discovery → full VAPT in 90 seconds",
       "AI executive summaries written in C-suite business language",
       "Live command center: exploit terminal, network topology, attack heatmap",
-      "Guardian AI chatbot — natural-language prioritization from live data",
+      "Guardian AI chatbot, natural-language prioritization from live data",
       "Slack / Teams webhooks + daily email digest; 85% MTTR reduction",
     ],
   },
   {
     icon: Radar,
     title: "Exposure Management",
-    desc: "Crawls live targets for exposed /.env, /.git/config, /backup.zip and 22+ known exposure paths. Sensitive data scanner detects AWS / Stripe / GitHub keys, JWTs, private keys, and SSNs in responses. Canary token injection across endpoints — detects exfiltration before data leaves. Honeypot endpoints trap attackers. Dark web monitoring for leaked credentials.",
+    desc: "Crawls live targets for exposed /.env, /.git/config, /backup.zip and 22+ known exposure paths. Sensitive data scanner detects AWS / Stripe / GitHub keys, JWTs, private keys, and SSNs in responses. Canary token injection across endpoints, detects exfiltration before data leaves. Honeypot endpoints trap attackers. Dark web monitoring for leaked credentials.",
     points: [
       "Crawls 22+ known exposure paths (.env, .git/config, backup.zip)",
-      "Sensitive data detection — AWS / Stripe / GitHub keys, JWTs, private keys, SSNs",
+      "Sensitive data detection, AWS / Stripe / GitHub keys, JWTs, private keys, SSNs",
       "Canary token injection across every endpoint",
       "Honeypot endpoints trap attackers in real time",
       "Dark web monitoring for leaked credentials tied to your domains",
@@ -81,9 +81,9 @@ const COMPLIANCE = [
   {
     icon: FileCheck2,
     title: "SOC 2",
-    desc: "Trust Services Criteria mapping across Security, Availability, and Confidentiality. Continuous monitoring of access controls, change management, and vulnerability remediation. Audit trail protected by a SHA-256 hash chain — tamper-evident by construction. Periodic attestation exports keep your auditor in sync without the quarterly fire-drill.",
+    desc: "Trust Services Criteria mapping across Security, Availability, and Confidentiality. Continuous monitoring of access controls, change management, and vulnerability remediation. Audit trail protected by a SHA-256 hash chain, tamper-evident by construction. Periodic attestation exports keep your auditor in sync without the quarterly fire-drill.",
     points: [
-      "TSC mapping — Security, Availability, Confidentiality",
+      "TSC mapping, Security, Availability, Confidentiality",
       "Continuous monitoring of access controls & change management",
       "Tamper-evident audit trail (SHA-256 hash chain)",
       "Periodic attestation exports for auditors",
@@ -93,9 +93,9 @@ const COMPLIANCE = [
   {
     icon: Network,
     title: "NIST CSF 2.0",
-    desc: "Full NIST CSF 2.0 mapping — Identify, Protect, Detect, Respond, Recover. Risk score per asset aligned to the NIST risk model. Auto-generated incident-response playbooks. Behavioral anomaly detection powers the Detect function, while rollback attestations prove the Recover control actually works.",
+    desc: "Full NIST CSF 2.0 mapping, Identify, Protect, Detect, Respond, Recover. Risk score per asset aligned to the NIST risk model. Auto-generated incident-response playbooks. Behavioral anomaly detection powers the Detect function, while rollback attestations prove the Recover control actually works.",
     points: [
-      "NIST CSF 2.0 mapping — Identify, Protect, Detect, Respond, Recover",
+      "NIST CSF 2.0 mapping, Identify, Protect, Detect, Respond, Recover",
       "Per-asset risk score aligned to the NIST risk model",
       "Auto-generated incident-response playbooks per threat scenario",
       "Behavioral anomaly detection powers the Detect function",
@@ -109,7 +109,7 @@ const COMPLIANCE = [
     points: [
       "Continuous coverage for Req 6 (secure dev) + Req 11 (vuln scanning)",
       "SAST + DAST enforced on every commit",
-      "Patch attestation ledger — proves remediation timelines to QSA",
+      "Patch attestation ledger, proves remediation timelines to QSA",
       "Quarterly assessments replaced by continuous audit",
       "Cardholder Data Environment (CDE) scoping & segmentation",
     ],
@@ -144,9 +144,9 @@ const ROLES = [
   {
     icon: Boxes,
     title: "Cloud Architects",
-    desc: "Agentless deployment — no code changes, no sidecars. API-first architecture, fully scriptable. Blast-radius safety controls: authorized-only testing, scope enforcement, read-only by default. IaC remediation for Terraform / CloudFormation. K8s + container scanning. Virtual patching for zero-downtime remediation when a real patch can't ship immediately.",
+    desc: "Agentless deployment, no code changes, no sidecars. API-first architecture, fully scriptable. Blast-radius safety controls: authorized-only testing, scope enforcement, read-only by default. IaC remediation for Terraform / CloudFormation. K8s + container scanning. Virtual patching for zero-downtime remediation when a real patch can't ship immediately.",
     points: [
-      "Agentless deployment — no code changes, no sidecars",
+      "Agentless deployment, no code changes, no sidecars",
       "API-first architecture, fully scriptable from CI/CD",
       "Blast-radius safety: authorized-only testing, scope enforcement, read-only by default",
       "IaC remediation (Terraform / CloudFormation) + K8s & container scanning",
@@ -363,7 +363,7 @@ export default function SolutionsPage() {
               >
                 Map GuardianX capabilities to your specific use case, compliance framework, or role.
                 Whether you are hardening cloud posture, accelerating a SOC, proving compliance to an
-                auditor, or leading a red team — there is a path through the platform built for you.
+                auditor, or leading a red team, there is a path through the platform built for you.
               </motion.p>
 
               {/* Hero chips */}
@@ -409,7 +409,7 @@ export default function SolutionsPage() {
             </motion.div>
           </section>
 
-          {/* ===== SECTION 1 — BY USE CASE ===== */}
+          {/* ===== SECTION 1, BY USE CASE ===== */}
           <section className="py-12">
             <SectionHeader
               index={1}
@@ -417,7 +417,7 @@ export default function SolutionsPage() {
               title="By Use Case"
               color="emerald"
               Icon={Target}
-              blurb="Three deployment patterns where GuardianX replaces a stack of point tools — cloud posture, SOC acceleration, and external exposure management."
+              blurb="Three deployment patterns where GuardianX replaces a stack of point tools, cloud posture, SOC acceleration, and external exposure management."
             />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {USE_CASES.map((card, i) => (
@@ -426,7 +426,7 @@ export default function SolutionsPage() {
             </div>
           </section>
 
-          {/* ===== SECTION 2 — BY COMPLIANCE ===== */}
+          {/* ===== SECTION 2, BY COMPLIANCE ===== */}
           <section className="py-12">
             <SectionHeader
               index={2}
@@ -434,7 +434,7 @@ export default function SolutionsPage() {
               title="By Compliance"
               color="cyan"
               Icon={ShieldCheck}
-              blurb="Continuous control monitoring and hash-chained evidence for the frameworks your auditors actually ask about — ISO 27001, SOC 2, NIST CSF 2.0, and PCI-DSS."
+              blurb="Continuous control monitoring and hash-chained evidence for the frameworks your auditors actually ask about, ISO 27001, SOC 2, NIST CSF 2.0, and PCI-DSS."
             />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {COMPLIANCE.map((card, i) => (
@@ -443,7 +443,7 @@ export default function SolutionsPage() {
             </div>
           </section>
 
-          {/* ===== SECTION 3 — BY ROLE ===== */}
+          {/* ===== SECTION 3, BY ROLE ===== */}
           <section className="py-12">
             <SectionHeader
               index={3}
@@ -451,7 +451,7 @@ export default function SolutionsPage() {
               title="By Role"
               color="violet"
               Icon={Briefcase}
-              blurb="A dedicated surface for every stakeholder — from CISOs who need board-ready risk language, to SecOps teams running live exploits, to cloud architects who need agentless, blast-radius-safe scanning."
+              blurb="A dedicated surface for every stakeholder, from CISOs who need board-ready risk language, to SecOps teams running live exploits, to cloud architects who need agentless, blast-radius-safe scanning."
             />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {ROLES.map((card, i) => (

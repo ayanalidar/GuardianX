@@ -5,7 +5,7 @@ import { supabase } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// The full schema SQL — also stored in /supabase/migrations/0001_init.sql.
+// The full schema SQL, also stored in /supabase/migrations/0001_init.sql.
 // We embed it here so the db-init endpoint can (re)try to create tables
 // via the exec_sql RPC function (which exists only AFTER the user has
 // run the migration once in the Supabase SQL Editor).
@@ -64,7 +64,7 @@ const DEMO_CODEBASES = [
   },
 ];
 
-// POST /api/db-init — creates all database tables (via exec_sql RPC) and seeds demo data.
+// POST /api/db-init, creates all database tables (via exec_sql RPC) and seeds demo data.
 export async function POST() {
   const results: string[] = [];
   let tablesReady = false;
@@ -147,7 +147,7 @@ export async function POST() {
   });
 }
 
-// GET /api/db-init — reports whether the database is ready.
+// GET /api/db-init, reports whether the database is ready.
 export async function GET() {
   const probe = await supabase.from("User").select("id").limit(1);
   if (probe.error) {
@@ -169,6 +169,6 @@ export async function GET() {
     initialized: true,
     ready: true,
     user_count: count || 0,
-    message: count === 0 ? "Ready — no users yet (first signup becomes admin)" : "Ready",
+    message: count === 0 ? "Ready, no users yet (first signup becomes admin)" : "Ready",
   });
 }

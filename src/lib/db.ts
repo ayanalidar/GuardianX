@@ -1,4 +1,4 @@
-// GuardianX database client — Prisma-compatible dispatcher over Supabase REST API.
+// GuardianX database client, Prisma-compatible dispatcher over Supabase REST API.
 //
 // SECURITY: No hardcoded keys. All credentials come from environment variables.
 // The app will throw at startup if SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY
@@ -15,7 +15,7 @@ if (!supabaseUrl || !supabaseKey) {
   // Don't crash in dev (allow page to render with error message), but block all DB access
 }
 
-// Use empty strings as fallback to prevent crash — DB calls will fail gracefully
+// Use empty strings as fallback to prevent crash, DB calls will fail gracefully
 export const supabase: SupabaseClient = createClient(
   supabaseUrl || "https://placeholder.supabase.co",
   supabaseKey || "placeholder-key",
@@ -231,7 +231,7 @@ async function resolveIncludes(
     }
 
     const rel = rels[relName];
-    if (!rel) continue; // unknown relation — skip silently
+    if (!rel) continue; // unknown relation, skip silently
 
     const opts = relOpts as { select?: Record<string, boolean> };
     const selectStr = buildSelect(opts.select) || "*";
@@ -388,7 +388,7 @@ function createModelHandler(modelKey: string): ModelHandler {
       let { data, select, include } = args || {};
       if (!data) throw new Error(`[${table}.create] data is required`);
       // Auto-generate an ID if not provided (Prisma's @default(cuid()) doesn't
-      // exist in Supabase — we use crypto.randomUUID() instead).
+      // exist in Supabase, we use crypto.randomUUID() instead).
       if (!(data as Record<string, unknown>).id) {
         data = { ...data, id: randomUUID() };
       }

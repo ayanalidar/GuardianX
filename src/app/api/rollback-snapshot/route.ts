@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/rollback-snapshot — pre-patch state capture + auto-rollback
+// POST /api/rollback-snapshot, pre-patch state capture + auto-rollback
 // Body: { action: "snapshot" | "rollback" | "health_check", patchId?, snapshotId? }
 export async function POST(req: Request) {
   const { action, patchId, snapshotId } = await req.json().catch(() => ({}));
@@ -86,8 +86,8 @@ export async function POST(req: Request) {
         healthy: isHealthy,
         needs_rollback: needsRollback,
         recommendation: needsRollback
-          ? "⚠️ UNHEALTHY — Rollback recommended. Service may have crashed or degraded."
-          : "✅ HEALTHY — Patch applied successfully. No rollback needed.",
+          ? "⚠️ UNHEALTHY, Rollback recommended. Service may have crashed or degraded."
+          : "✅ HEALTHY, Patch applied successfully. No rollback needed.",
       });
     }
 

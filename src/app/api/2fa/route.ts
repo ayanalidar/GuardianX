@@ -5,7 +5,7 @@ import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/2fa — setup or verify 2FA
+// POST /api/2fa, setup or verify 2FA
 // Body: { action: "setup" | "verify" | "disable", token?: string, secret?: string }
 export async function POST(req: Request) {
   const user = getUserFromRequest(req);
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         ok: true,
         backupCodes,
-        message: "2FA enabled! Save your backup codes — you'll need them if you lose your authenticator.",
+        message: "2FA enabled! Save your backup codes, you'll need them if you lose your authenticator.",
       });
     }
 

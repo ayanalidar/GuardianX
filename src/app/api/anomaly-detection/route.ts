@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/anomaly-detection — detects unusual patterns in security events
+// GET /api/anomaly-detection, detects unusual patterns in security events
 export async function GET() {
   try {
     const anomalies: { severity: "critical" | "warning" | "info"; title: string; detail: string; client?: string }[] = [];
@@ -20,7 +20,7 @@ export async function GET() {
         anomalies.push({
           severity: "critical",
           title: "Critical Finding Spike",
-          detail: `${criticalRecent.length} critical findings in the last hour — possible coordinated attack or new 0-day exploit in the wild.`,
+          detail: `${criticalRecent.length} critical findings in the last hour, possible coordinated attack or new 0-day exploit in the wild.`,
         });
       }
     } catch { /* ignore */ }
@@ -37,7 +37,7 @@ export async function GET() {
           anomalies.push({
             severity: "warning",
             title: "Scan Running Too Long",
-            detail: `Scan ${s.id} has been in "${s.status}" state for ${Math.round(elapsed / 60000)} minutes — may be stuck.`,
+            detail: `Scan ${s.id} has been in "${s.status}" state for ${Math.round(elapsed / 60000)} minutes, may be stuck.`,
           });
         }
       }
@@ -53,7 +53,7 @@ export async function GET() {
         anomalies.push({
           severity: "critical",
           title: "Canary Token Triggered",
-          detail: `Canary "${c.label}" (${c.canaryType}) was triggered${c.detectedOn ? ` on ${c.detectedOn}` : ""} — active data exfiltration detected!`,
+          detail: `Canary "${c.label}" (${c.canaryType}) was triggered${c.detectedOn ? ` on ${c.detectedOn}` : ""}, active data exfiltration detected!`,
         });
       }
     } catch { /* ignore */ }
@@ -74,7 +74,7 @@ export async function GET() {
           anomalies.push({
             severity: "warning",
             title: "Patch Review Bottleneck",
-            detail: `${c.name} has ${critical} critical patches pending review — remediation is blocked.`,
+            detail: `${c.name} has ${critical} critical patches pending review, remediation is blocked.`,
             client: c.name,
           });
         }

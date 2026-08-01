@@ -8,7 +8,7 @@ export const maxDuration = 45;
 let zaiPromise: Promise<ZAI> | null = null;
 async function sdk() { if (!zaiPromise) zaiPromise = ZAI.create(); return zaiPromise; }
 
-// POST /api/business-logic-test — AI generates business logic attack scenarios.
+// POST /api/business-logic-test, AI generates business logic attack scenarios.
 // Body: { targetUrl, description? }
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));

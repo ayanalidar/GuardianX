@@ -39,7 +39,7 @@ export function verifyToken(token: string): JWTPayload | null {
 }
 
 /**
- * Hash a password using bcrypt (12 rounds — ~250ms, secure).
+ * Hash a password using bcrypt (12 rounds, ~250ms, secure).
  */
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);

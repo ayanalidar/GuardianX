@@ -593,7 +593,7 @@ function AuditLogPanel() {
               <div key={i} className="flex items-center gap-2 border-b border-zinc-800/40 py-1.5 text-xs">
                 <span className="font-mono text-[9px] text-zinc-600">{new Date(log.timestamp).toLocaleTimeString()}</span>
                 <Badge className="border border-emerald-500/20 bg-emerald-500/5 text-[8px] text-emerald-300">{log.action}</Badge>
-                <span className="text-zinc-400">{log.entity || "—"}</span>
+                <span className="text-zinc-400">{log.entity || "-"}</span>
                 <span className="ml-auto text-[9px] text-zinc-600">{log.actor}</span>
               </div>
             );

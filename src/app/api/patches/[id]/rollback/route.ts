@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/patches/[id]/rollback — revert an approved patch.
+// POST /api/patches/[id]/rollback, revert an approved patch.
 // Restores the original (vulnerable) code to the codebase, marks the patch
 // as "rolled-back", and records the rollback timestamp + reason.
 export async function POST(
@@ -20,7 +20,7 @@ export async function POST(
   if (!patch) return NextResponse.json({ error: "Patch not found" }, { status: 404 });
   if (patch.status !== "approved") {
     return NextResponse.json(
-      { error: `Cannot rollback — patch status is "${patch.status}" (only approved patches can be rolled back)` },
+      { error: `Cannot rollback, patch status is "${patch.status}" (only approved patches can be rolled back)` },
       { status: 409 }
     );
   }
@@ -36,7 +36,7 @@ export async function POST(
     where: { id: patch.id },
     data: {
       status: "rolled-back",
-      // Store rollback metadata in a comment-style field — we don't have a
+      // Store rollback metadata in a comment-style field, we don't have a
       // dedicated column, so we use the aiReasoning field appended with rollback info.
       aiReasoning: `${patch.aiReasoning}\n\n[ROLLBACK ${new Date().toISOString()}] Reason: ${reason}`,
     },
@@ -45,7 +45,7 @@ export async function POST(
   return NextResponse.json({
     patch_id: updated.patchId,
     status: updated.status,
-    message: `Patch rolled back. The codebase has been restored to its original (pre-patch) state. The vulnerability is now re-exposed — consider re-scanning.`,
+    message: `Patch rolled back. The codebase has been restored to its original (pre-patch) state. The vulnerability is now re-exposed, consider re-scanning.`,
     reason,
     rolled_back_at: new Date().toISOString(),
   });

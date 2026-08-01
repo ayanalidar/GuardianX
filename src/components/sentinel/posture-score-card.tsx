@@ -24,7 +24,7 @@ export function PostureScoreCard() {
   }, []);
 
   const overall = score?.overall ?? 0;
-  const grade = score?.overall_grade ?? "—";
+  const grade = score?.overall_grade ?? "-";
   const color = overall >= 90 ? "#10b981" : overall >= 75 ? "#84cc16" : overall >= 60 ? "#f59e0b" : overall >= 40 ? "#f97316" : "#ef4444";
   const circumference = 2 * Math.PI * 42;
   const offset = circumference - (overall / 100) * circumference;

@@ -11,7 +11,7 @@ async function sdk() {
   return zaiPromise;
 }
 
-// POST /api/canaries/check — search the web for any canary values appearing externally.
+// POST /api/canaries/check, search the web for any canary values appearing externally.
 // If a canary value is found on a site that isn't the target, it's confirmed exfiltration.
 export async function POST() {
   const canaries = await db.canary.findMany({ where: { isActive: true, detected: false } });

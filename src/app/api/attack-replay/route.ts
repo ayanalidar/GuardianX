@@ -5,7 +5,7 @@ import { engineCall } from "@/lib/sentinel/engine-proxy";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/attack-replay — replays a stored exploit against the current (patched) code
+// POST /api/attack-replay, replays a stored exploit against the current (patched) code
 // to verify the fix still holds after code changes
 // Body: { patchId: string }
 export async function POST(req: Request) {
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         ok: false,
         error: result.error,
-        message: "Replay failed — engine unreachable",
+        message: "Replay failed, engine unreachable",
       }, { status: 502 });
     }
 
@@ -48,10 +48,10 @@ export async function POST(req: Request) {
       title: patch.title,
       replay_result: exploitResult.blocked ? "BLOCKED" : exploitResult.success ? "EXPLOITED" : "INCONCLUSIVE",
       verdict: exploitResult.blocked
-        ? "✅ Fix holds — exploit was blocked against current code"
+        ? "✅ Fix holds, exploit was blocked against current code"
         : exploitResult.success
-          ? "⚠️ REGRESSION — exploit succeeded! Fix may have been reverted."
-          : "Inconclusive — needs manual review",
+          ? "⚠️ REGRESSION, exploit succeeded! Fix may have been reverted."
+          : "Inconclusive, needs manual review",
       detail: exploitResult.detail,
     });
   } catch (err) {

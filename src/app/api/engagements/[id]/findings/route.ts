@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/engagements/[id]/findings — all findings for an engagement.
+// GET /api/engagements/[id]/findings, all findings for an engagement.
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

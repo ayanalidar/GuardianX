@@ -11,7 +11,7 @@ async function sdk() {
   return zaiPromise;
 }
 
-// GET /api/threat-intel — fetch latest CVEs via web search + cross-reference codebases.
+// GET /api/threat-intel, fetch latest CVEs via web search + cross-reference codebases.
 export async function GET() {
   try {
     const z = await sdk();

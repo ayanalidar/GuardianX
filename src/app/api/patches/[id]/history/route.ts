@@ -8,7 +8,7 @@ function safeJson(s: string | null, fallback: unknown) {
   try { return JSON.parse(s); } catch { return fallback; }
 }
 
-// GET /api/patches/[id]/history — return the full version timeline of a patch.
+// GET /api/patches/[id]/history, return the full version timeline of a patch.
 // Extracts iterations from: original code → AI patch → each adversarial defender iteration → final.
 export async function GET(
   _req: Request,
@@ -69,7 +69,7 @@ export async function GET(
     if (round.defender && round.defender.patchedCode) {
       versions.push({
         version: versions.length,
-        label: `Adversarial Round ${round.round} — Defender Iteration`,
+        label: `Adversarial Round ${round.round}, Defender Iteration`,
         source: "ai-defender",
         technique: round.defender.technique,
         reasoning: round.defender.reasoning,

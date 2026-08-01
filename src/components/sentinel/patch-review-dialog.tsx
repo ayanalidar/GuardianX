@@ -483,7 +483,7 @@ export function PatchReviewDialog({
               <History className="size-4" /> Patch Version History
             </DialogTitle>
             <DialogDescription className="text-xs text-zinc-400">
-              {historyData ? `${historyData.title} — ${historyData.total_versions} versions across ${historyData.adversarial_rounds} adversarial round(s)` : "Loading…"}
+              {historyData ? `${historyData.title}, ${historyData.total_versions} versions across ${historyData.adversarial_rounds} adversarial round(s)` : "Loading…"}
             </DialogDescription>
           </DialogHeader>
           <div className="custom-scrollbar max-h-[calc(90vh-8rem)] overflow-y-auto p-5">

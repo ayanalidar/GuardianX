@@ -49,7 +49,7 @@ export function SocPanel() {
           SOC & DevSecOps Center
         </h2>
         <p className="mt-1 text-sm text-zinc-400">
-          Dark web monitoring, security KPIs, and attack surface management —
+          Dark web monitoring, security KPIs, and attack surface management -
           continuous visibility into your security posture.
         </p>
       </div>
@@ -94,8 +94,8 @@ function KpiDashboard() {
   if (!kpis) return null;
 
   const kpiCards = [
-    { label: "MTTD", value: kpis.mttd_seconds ? `${kpis.mttd_seconds}s` : "—", desc: "Mean time to detect", icon: Clock, color: "text-sky-400" },
-    { label: "MTTR", value: kpis.mttr_hours !== null ? `${kpis.mttr_hours}h` : "—", desc: "Mean time to resolve", icon: TrendingUp, color: "text-emerald-400" },
+    { label: "MTTD", value: kpis.mttd_seconds ? `${kpis.mttd_seconds}s` : "-", desc: "Mean time to detect", icon: Clock, color: "text-sky-400" },
+    { label: "MTTR", value: kpis.mttr_hours !== null ? `${kpis.mttr_hours}h` : "-", desc: "Mean time to resolve", icon: TrendingUp, color: "text-emerald-400" },
     { label: "Vuln Density", value: `${kpis.vuln_density_per_kloc}/KLOC`, desc: "Vulns per 1000 lines", icon: Activity, color: "text-amber-400" },
     { label: "Sandbox Pass", value: `${kpis.sandbox_pass_rate}%`, desc: "Test pass rate", icon: ShieldCheck, color: "text-emerald-400" },
     { label: "Adv. Win Rate", value: `${kpis.adversarial_win_rate}%`, desc: "Defender wins", icon: Shield, color: "text-cyan-400" },

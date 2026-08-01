@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/risk-trends?clientId=xxx&days=30 — returns risk score + finding count trends
+// GET /api/risk-trends?clientId=xxx&days=30, returns risk score + finding count trends
 // Generates a time series showing how risk has changed over time
 export async function GET(req: Request) {
   const url = new URL(req.url);

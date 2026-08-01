@@ -5,7 +5,7 @@ import { chatAboutPatch } from "@/lib/sentinel/engine/ai";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-// POST /api/patches/[id]/chat — talk to the AI about this patch.
+// POST /api/patches/[id]/chat, talk to the AI about this patch.
 // Body: { message: string }
 export async function POST(
   req: Request,
@@ -32,7 +32,7 @@ export async function POST(
   });
 
   const systemContext = [
-    `Patch: ${patch.patchId} — ${patch.title}`,
+    `Patch: ${patch.patchId}, ${patch.title}`,
     `Severity: ${patch.severity}${patch.cve ? ` | ${patch.cve}` : ""}`,
     `File: ${patch.affectedFile}`,
     `AI confidence: ${(patch.confidence * 100).toFixed(0)}%`,

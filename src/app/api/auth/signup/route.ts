@@ -84,7 +84,7 @@ export async function POST(req: Request) {
 
     if (error) throw new Error(error.message);
 
-    // If not approved (not first user), don't issue a token — they need admin approval
+    // If not approved (not first user), don't issue a token, they need admin approval
     if (!approved) {
       return NextResponse.json(
         {
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // First user (admin) — issue token immediately (with approved flag)
+    // First user (admin), issue token immediately (with approved flag)
     const token = createToken({
       userId: user.id,
       email: user.email,

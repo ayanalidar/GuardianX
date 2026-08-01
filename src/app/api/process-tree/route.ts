@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/process-tree — htop-style process tree of all running services
+// GET /api/process-tree, htop-style process tree of all running services
 export async function GET() {
   try {
     const processes: {
@@ -29,7 +29,7 @@ export async function GET() {
       cpu: 2.4,
       memory: 128,
       stage: "HTTP + socket.io relay",
-      client: "—",
+      client: "-",
       target: "port 3003",
       startedAt: new Date(Date.now() - 86400000).toISOString(),
       duration: "24h+",
@@ -42,7 +42,7 @@ export async function GET() {
       cpu: 0.1,
       memory: 32,
       stage: "HTTPS REST pool",
-      client: "—",
+      client: "-",
       target: "port 443",
       startedAt: new Date(Date.now() - 86400000).toISOString(),
       duration: "24h+",
@@ -117,7 +117,7 @@ export async function GET() {
         status: "idle",
         cpu: 0,
         memory: 8,
-        stage: `Awaiting approval: ${p.severity} — ${p.title}`,
+        stage: `Awaiting approval: ${p.severity}, ${p.title}`,
         client: clientName,
         target: p.patchId as string,
         startedAt: (p.createdAt as Date).toISOString(),

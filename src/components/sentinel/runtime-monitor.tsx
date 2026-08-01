@@ -49,7 +49,7 @@ export function RuntimeMonitor() {
         <div className="flex items-center gap-1.5">
           <span className="size-1.5 rounded-full pulse-dot" style={{ background: healthColor }} />
           <span className="font-mono text-[9px] uppercase" style={{ color: healthColor }}>
-            {status?.runtime_health ?? "—"}
+            {status?.runtime_health ?? "-"}
           </span>
         </div>
       </div>

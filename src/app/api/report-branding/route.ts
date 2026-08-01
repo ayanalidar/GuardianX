@@ -4,8 +4,8 @@ import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/report-branding?clientId=xxx — get branding config
-// POST /api/report-branding — save branding config
+// GET /api/report-branding?clientId=xxx, get branding config
+// POST /api/report-branding, save branding config
 // Body: { clientId, logoUrl, accentColor, companyName, reportTitle }
 
 export async function GET(req: Request) {
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       accentColor: accentColor || "#10b981",
       companyName: companyName || "GuardianX",
       reportTitle: reportTitle || "VAPT Report",
-      footerText: footerText || "Confidential — GuardianX Autonomous Security Operations Platform",
+      footerText: footerText || "Confidential, GuardianX Autonomous Security Operations Platform",
     });
 
     const integration = await db.integration.create({

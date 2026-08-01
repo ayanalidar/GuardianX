@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/breach-notification — auto-draft a DPDPA §8(6) breach notification
+// GET /api/breach-notification, auto-draft a DPDPA §8(6) breach notification
 // for any confirmed data exposure findings. DPDPA requires notification to the
 // Data Protection Board within 72 hours of becoming aware of a breach.
 
@@ -79,7 +79,7 @@ export async function GET() {
       // DPDPA §8(6) notification draft
       notification_draft: {
         to: "Data Protection Board of India",
-        subject: `NOTIFICATION OF PERSONAL DATA BREACH — ${targetName} — DPDPA §8(6)`,
+        subject: `NOTIFICATION OF PERSONAL DATA BREACH, ${targetName}, DPDPA §8(6)`,
         date: new Date().toISOString().slice(0, 10),
         body: [
           `Dear Sir/Madam,`,
@@ -96,7 +96,7 @@ export async function GET() {
           `3. TIME OF BREACH:`,
           `   First detected: ${firstDetected.toISOString()}`,
           `   Notification filed: ${new Date().toISOString()}`,
-          `   Time elapsed: ${hoursSinceDetection} hours (${isOverdue ? "OVERDUE — exceeds 72h limit" : `${hoursRemaining} hours remaining within 72h window`})`,
+          `   Time elapsed: ${hoursSinceDetection} hours (${isOverdue ? "OVERDUE, exceeds 72h limit" : `${hoursRemaining} hours remaining within 72h window`})`,
           ``,
           `4. AFFECTED DATA PRINCIPALS:`,
           `   The number of affected data principals is being assessed. Based on the exposed endpoints, the breach may affect all users whose data is stored in the affected systems.`,

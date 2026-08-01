@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/service-status — returns all currently running services
+// GET /api/service-status, returns all currently running services
 // Shows live status chips for the Command Center
 export async function GET() {
   try {

@@ -12,7 +12,7 @@ function safeJson<T>(s: string | null, fallback: T): T {
   }
 }
 
-// GET /api/patches/[id] — full patch detail incl. chat history, exploit + adversarial transcript.
+// GET /api/patches/[id], full patch detail incl. chat history, exploit + adversarial transcript.
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

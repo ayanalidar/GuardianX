@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/clients — list all clients with pipeline summary (optimized: batch queries)
+// GET /api/clients, list all clients with pipeline summary (optimized: batch queries)
 export async function GET() {
   try {
     // 1. Fetch all clients (1 query)
@@ -159,7 +159,7 @@ export async function GET() {
   }
 }
 
-// POST /api/clients — create a new client
+// POST /api/clients, create a new client
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const {

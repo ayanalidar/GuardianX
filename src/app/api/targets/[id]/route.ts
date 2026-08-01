@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// PATCH /api/targets/[id] — update (e.g. set authorized=true).
+// PATCH /api/targets/[id], update (e.g. set authorized=true).
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

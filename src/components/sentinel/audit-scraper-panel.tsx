@@ -110,7 +110,7 @@ export function AuditScraperPanel() {
       } else if (vulnCount > 0) {
         toast({
           title: `⚠ ${vulnCount} vulnerable data items found!`,
-          description: `Severity: ${data.vulnerable_data?.severity?.toUpperCase()} — these need to be fixed.`,
+          description: `Severity: ${data.vulnerable_data?.severity?.toUpperCase()}, these need to be fixed.`,
           variant: "destructive",
         });
       } else {
@@ -186,7 +186,7 @@ export function AuditScraperPanel() {
               placeholder='[{"field_name":"content","selector":"body","selector_type":"css"}]' />
           </div>
           <div>
-            <Label className="text-xs text-zinc-400">Sanitization Rules (JSON — leave empty to show raw data)</Label>
+            <Label className="text-xs text-zinc-400">Sanitization Rules (JSON, leave empty to show raw data)</Label>
             <Textarea value={sanitizationJson} onChange={(e) => setSanitizationJson(e.target.value)}
               className="custom-scrollbar mt-1 min-h-[6rem] resize-y border-zinc-800 bg-zinc-950 font-mono text-xs text-zinc-300"
               placeholder='[]' />
@@ -344,7 +344,7 @@ export function AuditScraperPanel() {
                   {[
                     { label: "Fields", value: result.extracted_fields ?? 0, color: "text-emerald-400" },
                     { label: "Duration", value: `${result.audit_trail?.total_duration_ms ?? 0}ms`, color: "text-sky-400" },
-                    { label: "HTTP", value: result.audit_trail?.request?.status_code ?? "—", color: "text-cyan-400" },
+                    { label: "HTTP", value: result.audit_trail?.request?.status_code ?? "-", color: "text-cyan-400" },
                     { label: "Exposed Data", value: vulnData?.total_findings ?? 0, color: (vulnData?.total_findings ?? 0) > 0 ? "text-red-400" : "text-emerald-400" },
                   ].map((m, i) => (
                     <div key={i} className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-2.5 text-center">

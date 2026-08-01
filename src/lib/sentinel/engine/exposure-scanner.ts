@@ -17,7 +17,7 @@ export interface ExposureHit {
   category: "secret" | "pii" | "config";
   owasp: string; // e.g. "A02:2021-Cryptographic Failures"
   severity: "critical" | "high" | "medium" | "low";
-  redactedSample: string; // first4...last4 — NEVER the full value
+  redactedSample: string; // first4...last4, NEVER the full value
   count: number; // how many matches in this response
   context: string; // surrounding text (redacted) proving where it appeared
 }

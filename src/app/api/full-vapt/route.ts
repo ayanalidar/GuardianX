@@ -6,9 +6,9 @@ import { randomUUID } from "node:crypto";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/full-vapt — one-click full VAPT: discover → scan → attack → report
+// POST /api/full-vapt, one-click full VAPT: discover → scan → attack → report
 // Body: { clientId: string }
-// Does everything automatically — just needs a client with a targetUrl
+// Does everything automatically, just needs a client with a targetUrl
 export async function POST(req: Request) {
   const { clientId } = await req.json().catch(() => ({}));
   if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       step: 4,
       action: "SAST Scan",
       status: sastStarted > 0 ? "running" : "skipped",
-      detail: sastStarted > 0 ? `${sastStarted} SAST scan(s) started` : "No codebases — SAST skipped",
+      detail: sastStarted > 0 ? `${sastStarted} SAST scan(s) started` : "No codebases, SAST skipped",
     });
 
     // ── Step 5: Launch DAST (ensure target exists) ───────────────────────
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
       step: 5,
       action: "DAST VAPT",
       status: dastStarted > 0 ? "running" : "skipped",
-      detail: dastStarted > 0 ? `${dastStarted} DAST engagement(s) started` : "No targets — DAST skipped",
+      detail: dastStarted > 0 ? `${dastStarted} DAST engagement(s) started` : "No targets, DAST skipped",
     });
 
     // ── Step 6: Audit scraper (check for exposed secrets) ────────────────

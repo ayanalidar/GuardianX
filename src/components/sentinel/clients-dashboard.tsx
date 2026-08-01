@@ -93,7 +93,7 @@ export function ClientsDashboard({ onSelectClient, refreshKey, onClientDeleted }
       const data = await res.json();
       if (Array.isArray(data)) setClients(data);
     } catch {
-      // table may not exist yet — show empty state
+      // table may not exist yet, show empty state
       setClients([]);
     } finally {
       setLoading(false);

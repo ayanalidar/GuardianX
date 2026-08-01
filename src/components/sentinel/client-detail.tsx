@@ -175,7 +175,7 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       const data = await res.json();
       setVaptResult(data);
       if (res.ok) {
-        pushTerminalLine({ text: `[+] Full VAPT launched — ${data.message || "pipeline running"}`, type: "success" });
+        pushTerminalLine({ text: `[+] Full VAPT launched, ${data.message || "pipeline running"}`, type: "success" });
         toast({ title: "Full VAPT Launched!", description: data.message });
       } else {
         pushTerminalLine({ text: `[!] VAPT failed: ${data.error || "unknown error"}`, type: "err" });
@@ -343,7 +343,7 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 <span className={`size-2 rounded-full ${s.status === "completed" ? "bg-emerald-500" : s.status === "running" ? "bg-cyan-500 animate-pulse" : "bg-zinc-600"}`} />
                 <span className="text-zinc-400 font-mono">{s.step}.</span>
                 <span className="text-zinc-200">{s.action}</span>
-                <span className="text-zinc-500">— {s.detail}</span>
+                <span className="text-zinc-500">- {s.detail}</span>
               </div>
             ))}
           </div>
@@ -372,7 +372,7 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </div>
           </div>
 
-          {/* Horizontal pipeline stepper — clickable to launch service */}
+          {/* Horizontal pipeline stepper, clickable to launch service */}
           <div className="flex items-center gap-1 overflow-x-auto pb-2">
             {pipeline.stages.map((stage, i) => {
               const cfg = STAGE_COLORS[stage.key] || STAGE_COLORS.onboarding;
@@ -400,7 +400,7 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                         });
                         const data = await res.json();
                         if (res.ok) {
-                          pushTerminalLine({ text: `[+] ${stage.label} launched — ${data.message || "ok"}`, type: "success" });
+                          pushTerminalLine({ text: `[+] ${stage.label} launched, ${data.message || "ok"}`, type: "success" });
                           toast({ title: `${stage.label} launched`, description: data.message });
                         } else {
                           pushTerminalLine({ text: `[!] ${stage.label} failed: ${data.error || "error"}`, type: "err" });
@@ -529,7 +529,7 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             pushTerminalLine({ text: "[*] AI analyzing source code for vulnerabilities...", type: "out" });
             const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "scan", clientIds: [clientId] }) });
             const data = await res.json();
-            if (res.ok) pushTerminalLine({ text: `[+] SAST complete — ${data.message || "patches generated"}`, type: "success" });
+            if (res.ok) pushTerminalLine({ text: `[+] SAST complete, ${data.message || "patches generated"}`, type: "success" });
             else pushTerminalLine({ text: `[!] SAST failed: ${data.error || "error"}`, type: "err" });
             toast({ title: "SAST launched", description: data.message });
             load();
@@ -539,7 +539,7 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             pushTerminalLine({ text: "[*] Crawling endpoints + testing injection vectors...", type: "out" });
             const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "scan", clientIds: [clientId] }) });
             const data = await res.json();
-            if (res.ok) pushTerminalLine({ text: `[+] DAST engagement complete — ${data.message || "findings saved"}`, type: "success" });
+            if (res.ok) pushTerminalLine({ text: `[+] DAST engagement complete, ${data.message || "findings saved"}`, type: "success" });
             else pushTerminalLine({ text: `[!] DAST failed: ${data.error || "error"}`, type: "err" });
             toast({ title: "DAST launched", description: data.message });
             load();
@@ -557,7 +557,7 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             pushTerminalLine({ text: "[*] Injecting canary tokens into endpoints...", type: "out" });
             const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "defend", clientIds: [clientId] }) });
             const data = await res.json();
-            if (res.ok) pushTerminalLine({ text: `[+] Canaries deployed — ${data.message || "active"}`, type: "success" });
+            if (res.ok) pushTerminalLine({ text: `[+] Canaries deployed, ${data.message || "active"}`, type: "success" });
             else pushTerminalLine({ text: `[!] Deploy failed: ${data.error || "error"}`, type: "err" });
             toast({ title: "Canaries deployed", description: data.message });
             load();

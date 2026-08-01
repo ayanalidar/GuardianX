@@ -29,7 +29,7 @@ async function runGit(args: string[], cwd: string, env?: Record<string, string>)
   });
 }
 
-// POST /api/patches/[id]/generate-pr — generate a Git PR-ready branch.
+// POST /api/patches/[id]/generate-pr, generate a Git PR-ready branch.
 // If the codebase was imported from Git (has a credential), clones the repo,
 // creates a branch, applies the patch, commits, and pushes.
 // If no Git credential is linked, generates a downloadable patch file + commit message.
@@ -79,7 +79,7 @@ export async function POST(
         tag: matchingCred.secretTag,
       } satisfies EncryptedSecret);
 
-      // We need the repo URL — try to find it from the codebase description
+      // We need the repo URL, try to find it from the codebase description
       // (imported codebases have "Imported from <url> → <file>" in description)
       const descMatch = patch.codebase.sourceCode; // fallback
       void descMatch;
@@ -91,7 +91,7 @@ export async function POST(
       if (err instanceof Error && err.message === "NO_REPO_URL") {
         // Fall through to artifact generation
       } else {
-        // Git operations failed — fall through to artifact generation
+        // Git operations failed, fall through to artifact generation
       }
     } finally {
       if (dir) await rm(dir, { recursive: true, force: true }).catch(() => null);

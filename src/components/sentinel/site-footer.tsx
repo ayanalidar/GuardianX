@@ -94,7 +94,7 @@ export function SiteFooter() {
               </span>
             </a>
             <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-              Autonomous Security Operations Platform. AI-driven SAST, DAST, exploit generation, adversarial patching, and VAPT reporting — all in one.
+              Autonomous Security Operations Platform. AI-driven SAST, DAST, exploit generation, adversarial patching, and VAPT reporting, all in one.
             </p>
             <div className="mt-4 flex flex-wrap gap-1.5">
               {TRUST_BADGES.map((badge) => (

@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/launch-service — launches a specific service for specific client(s)
+// POST /api/launch-service, launches a specific service for specific client(s)
 // Body: {
 //   service: "scan" | "test" | "patch" | "verify" | "defend" | "comply",
 //   clientIds: string[],
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
             }
           }
           if (testCount === 0) {
-            launched.push({ client: client.name, service: "Test", action: "no_exploits", id: "—", status: "No exploits found. Run 'Scan' first to generate patches with exploit PoCs." });
+            launched.push({ client: client.name, service: "Test", action: "no_exploits", id: "-", status: "No exploits found. Run 'Scan' first to generate patches with exploit PoCs." });
           }
           break;
         }
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
             }
           }
           if (patchCount === 0) {
-            launched.push({ client: client.name, service: "Patch", action: "no_pending", id: "—", status: "no patches to approve" });
+            launched.push({ client: client.name, service: "Patch", action: "no_pending", id: "-", status: "no patches to approve" });
           }
           break;
         }
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
         case "defend": {
           // ── Deploy canaries + honeypots ──────────────────────────────────
           if (!client.authorized) {
-            launched.push({ client: client.name, service: "Defend", action: "not_authorized", id: "—", status: "skipped — not authorized" });
+            launched.push({ client: client.name, service: "Defend", action: "not_authorized", id: "-", status: "skipped, not authorized" });
             continue;
           }
           const targets = await db.target.findMany({ where: { clientId, authorized: true }, select: { id: true, name: true } });
@@ -207,7 +207,7 @@ export async function POST(req: Request) {
         }
 
         default:
-          launched.push({ client: client.name, service: "unknown", action: "error", id: "—", status: `unknown service: ${service}` });
+          launched.push({ client: client.name, service: "unknown", action: "error", id: "-", status: `unknown service: ${service}` });
       }
     }
 

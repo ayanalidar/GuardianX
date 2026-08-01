@@ -45,7 +45,7 @@ export function DataExfilPanel() {
         </h2>
         <p className="mt-1 text-sm text-zinc-400">
           Canary data traps, real-time API data flow monitoring, and honeypot endpoint detection.
-          Know exactly when — and by whom — your data is being scraped.
+          Know exactly when, and by whom, your data is being scraped.
         </p>
       </div>
 
@@ -116,7 +116,7 @@ function DataFlowMonitor() {
       {data.suspicious_ips_list.length > 0 && (
         <div className="mt-4">
           <div className="mb-2 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-red-400">
-            <AlertTriangle className="size-3" /> Scraping Detection — Suspicious IPs
+            <AlertTriangle className="size-3" /> Scraping Detection, Suspicious IPs
           </div>
           <div className="custom-scrollbar max-h-32 space-y-1 overflow-y-auto">
             {data.suspicious_ips_list.map((ip, i) => (

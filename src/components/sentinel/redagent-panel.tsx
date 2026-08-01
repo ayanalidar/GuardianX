@@ -241,11 +241,11 @@ export function RedAgentPanel() {
           <code className="rounded bg-zinc-800 px-1 font-mono text-sky-300">
             http://localhost:3004
           </code>{" "}
-          (VulnShop — SQLi, XSS, IDOR, path traversal, open redirect, .env leak).
+          (VulnShop, SQLi, XSS, IDOR, path traversal, open redirect, .env leak).
         </div>
       </div>
 
-      {/* Main grid: responsive — no overflow */}
+      {/* Main grid: responsive, no overflow */}
       <div className="grid gap-4 xl:grid-cols-[1fr_20rem]">
         {/* LEFT: targets + findings + past engagements */}
         <section className="space-y-4 min-w-0">

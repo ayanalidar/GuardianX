@@ -3,10 +3,10 @@ import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 
 export const dynamic = "force-dynamic";
-// Short timeout — we just create a DB record and fire-and-forget to the engine.
+// Short timeout, we just create a DB record and fire-and-forget to the engine.
 export const maxDuration = 30;
 
-// POST /api/scans — kick off an AI security scan for a codebase.
+// POST /api/scans, kick off an AI security scan for a codebase.
 // Body: { codebaseId: string }
 // Returns 202 with { scanId } immediately; the Railway engine runs the
 // pipeline in the background and streams events via socket.io.
@@ -46,11 +46,11 @@ export async function POST(req: Request) {
     data: {
       codebaseId: codebase.id,
       status: "queued",
-      stageLabel: "Queued — waiting for engine…",
+      stageLabel: "Queued, waiting for engine…",
     },
   });
 
-  // Fire-and-forget to the Railway engine — it runs the pipeline and
+  // Fire-and-forget to the Railway engine, it runs the pipeline and
   // writes patches/events to Supabase + broadcasts via socket.io.
   engineFireAndForget("/api/run-sast", { codebaseId, scanId: scan.id });
 
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   );
 }
 
-// GET /api/scans — list recent scans.
+// GET /api/scans, list recent scans.
 export async function GET() {
   const scans = await db.scan.findMany({
     orderBy: { startedAt: "desc" },

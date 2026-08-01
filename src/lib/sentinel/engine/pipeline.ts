@@ -188,7 +188,7 @@ export async function runScan(
       await emitAndStore({
         stage: "sandboxing",
         message: exploitOriginal?.success
-          ? `${patchId}: 🔴 EXPLOIT SUCCEEDED against original — ${exploitOriginal.detail}`
+          ? `${patchId}: 🔴 EXPLOIT SUCCEEDED against original, ${exploitOriginal.detail}`
           : `${patchId}: exploit did not confirm against original (${exploitOriginal?.detail ?? "no exploit"})`,
         level: exploitOriginal?.success ? "error" : "warning",
         meta: { patchId, exploitConfirmed: exploitOriginal?.success ?? false },
@@ -210,8 +210,8 @@ export async function runScan(
       await emitAndStore({
         stage: "sandboxing",
         message: exploitPatched?.success
-          ? `${patchId}: 🔴 EXPLOIT STILL SUCCEEDS against patch — fix is incomplete!`
-          : `${patchId}: 🟢 exploit BLOCKED by patch — ${exploitPatched?.detail ?? "n/a"}`,
+          ? `${patchId}: 🔴 EXPLOIT STILL SUCCEEDS against patch, fix is incomplete!`
+          : `${patchId}: 🟢 exploit BLOCKED by patch, ${exploitPatched?.detail ?? "n/a"}`,
         level: exploitPatched?.success ? "error" : "success",
         meta: { patchId, patchBlocksExploit: !exploitPatched?.success },
       });
@@ -247,7 +247,7 @@ export async function runScan(
       });
       await emitAndStore({
         stage: "sandboxing",
-        message: `${patchId}: ⚔️  entering adversarial arena — attacker vs defender…`,
+        message: `${patchId}: ⚔️  entering adversarial arena, attacker vs defender…`,
         level: "info",
         meta: { patchId, phase: "adversarial-start" },
       });
@@ -261,7 +261,7 @@ export async function runScan(
       for (let round = 1; round <= MAX_ROUNDS; round++) {
         await emitAndStore({
           stage: "sandboxing",
-          message: `${patchId}: ⚔️ round ${round}/${MAX_ROUNDS} — attacker probing for a bypass…`,
+          message: `${patchId}: ⚔️ round ${round}/${MAX_ROUNDS}, attacker probing for a bypass…`,
           level: "info",
           meta: { patchId, phase: "adversarial-round", round },
         });
@@ -277,10 +277,10 @@ export async function runScan(
           );
         } catch (bypassErr) {
           // Z.AI API may rate-limit or block the adversarial call. Don't lose
-          // the patch — skip the adversarial round and save what we have.
+          // the patch, skip the adversarial round and save what we have.
           await emitAndStore({
             stage: "sandboxing",
-            message: `${patchId}: ⚠️ round ${round} — adversarial LLM call failed (${(bypassErr as Error)?.message?.slice(0, 80) || "unknown"}), skipping arena`,
+            message: `${patchId}: ⚠️ round ${round}, adversarial LLM call failed (${(bypassErr as Error)?.message?.slice(0, 80) || "unknown"}), skipping arena`,
             level: "warning",
             meta: { patchId, phase: "adversarial-skipped", round },
           });
@@ -290,7 +290,7 @@ export async function runScan(
         if (!attack.bypassFound || !attack.bypassCode) {
           await emitAndStore({
             stage: "sandboxing",
-            message: `${patchId}: 🟢 round ${round} — attacker concedes: "${attack.reasoning.slice(0, 120)}"`,
+            message: `${patchId}: 🟢 round ${round}, attacker concedes: "${attack.reasoning.slice(0, 120)}"`,
             level: "success",
             meta: { patchId, round, outcome: "attacker-conceded" },
           });
@@ -318,14 +318,14 @@ export async function runScan(
         await emitAndStore({
           stage: "sandboxing",
           message: bypassResult.success
-            ? `${patchId}: 🔴 round ${round} — attacker bypass SUCCEEDED: ${attack.technique} — ${bypassResult.detail}`
-            : `${patchId}: round ${round} — attacker claimed bypass but it was BLOCKED (${bypassResult.detail})`,
+            ? `${patchId}: 🔴 round ${round}, attacker bypass SUCCEEDED: ${attack.technique}, ${bypassResult.detail}`
+            : `${patchId}: round ${round}, attacker claimed bypass but it was BLOCKED (${bypassResult.detail})`,
           level: bypassResult.success ? "error" : "warning",
           meta: { patchId, round, outcome: bypassResult.success ? "bypass-confirmed" : "bypass-failed" },
         });
 
         if (!bypassResult.success) {
-          // Attacker claimed a bypass but it didn't actually work — count as concede for this round
+          // Attacker claimed a bypass but it didn't actually work, count as concede for this round
           previousAttempts.push({
             technique: attack.technique,
             outcome: "bypass did not confirm",
@@ -344,14 +344,14 @@ export async function runScan(
             defenseVerification: null,
             outcome: "bypass-unconfirmed",
           });
-          // Continue to next round — attacker may try again
+          // Continue to next round, attacker may try again
           continue;
         }
 
-        // Bypass confirmed — defender must iterate
+        // Bypass confirmed, defender must iterate
         await emitAndStore({
           stage: "sandboxing",
-          message: `${patchId}: 🛡️  round ${round} — defender iterating patch to block "${attack.technique}"…`,
+          message: `${patchId}: 🛡️  round ${round}, defender iterating patch to block "${attack.technique}"…`,
           level: "info",
           meta: { patchId, round, phase: "defender-iterate" },
         });
@@ -381,8 +381,8 @@ export async function runScan(
           stage: "sandboxing",
           message:
             originalBlocked && bypassBlocked
-              ? `${patchId}: 🟢 round ${round} — defender's new patch blocks both original + bypass`
-              : `${patchId}: ⚠️ round ${round} — defender patch incomplete (original blocked: ${originalBlocked}, bypass blocked: ${bypassBlocked})`,
+              ? `${patchId}: 🟢 round ${round}, defender's new patch blocks both original + bypass`
+              : `${patchId}: ⚠️ round ${round}, defender patch incomplete (original blocked: ${originalBlocked}, bypass blocked: ${bypassBlocked})`,
           level: originalBlocked && bypassBlocked ? "success" : "warning",
           meta: { patchId, round, originalBlocked, bypassBlocked },
         });
@@ -426,7 +426,7 @@ export async function runScan(
       await emitAndStore({
         stage: "sandboxing",
         message: adversarialWon
-          ? `${patchId}: 🏆 adversarial arena complete — defender wins after ${transcript.length} round(s)`
+          ? `${patchId}: 🏆 adversarial arena complete, defender wins after ${transcript.length} round(s)`
           : `${patchId}: ⚠️ adversarial arena ended without a clear defender win after ${transcript.length} round(s)`,
         level: adversarialWon ? "success" : "warning",
         meta: { patchId, phase: "adversarial-end", rounds: transcript.length, adversarialWon },
@@ -498,7 +498,7 @@ export async function runScan(
     });
     await emitAndStore({
       stage: "completed",
-      message: `Scan complete — ${created} patch(es) ready for review.`,
+      message: `Scan complete, ${created} patch(es) ready for review.`,
       level: "success",
       meta: { patchCount: created },
     });

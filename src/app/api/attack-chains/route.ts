@@ -8,7 +8,7 @@ export const maxDuration = 45;
 let zaiPromise: Promise<ZAI> | null = null;
 async function sdk() { if (!zaiPromise) zaiPromise = ZAI.create(); return zaiPromise; }
 
-// GET /api/attack-chains — list all synthesized attack chains
+// GET /api/attack-chains, list all synthesized attack chains
 export async function GET() {
   const chains = await db.attackChain.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json((chains || []).map((c: Record<string, unknown>) => {
@@ -44,7 +44,7 @@ export async function GET() {
   }));
 }
 
-// POST /api/attack-chains — AI-synthesize attack chains from current findings
+// POST /api/attack-chains, AI-synthesize attack chains from current findings
 export async function POST() {
   const patches = await db.patch.findMany({ where: { status: "pending" }, select: { patchId: true, title: true, severity: true, cve: true, affectedFile: true, aiExplanation: true } });
   const findings = await db.finding.findMany({ select: { id: true, title: true, severity: true, category: true, endpoint: true, description: true } });
@@ -61,7 +61,7 @@ export async function POST() {
 
   const completion = await z.chat.completions.create({
     messages: [
-      { role: "assistant", content: "You are a senior penetration tester. Given a list of security findings, identify attack chains — sequences of 2-4 vulnerabilities that when combined lead to full system compromise. Respond with STRICT JSON only." },
+      { role: "assistant", content: "You are a senior penetration tester. Given a list of security findings, identify attack chains, sequences of 2-4 vulnerabilities that when combined lead to full system compromise. Respond with STRICT JSON only." },
       { role: "user", content: `Findings:\n${JSON.stringify(allFindings, null, 2)}\n\nSynthesize attack chains. Respond with: {"chains":[{"title":string,"description":string,"severity":"critical|high|medium","steps":[{"step":number,"finding_id":string,"action":string,"result":string}]}]}` },
     ],
     thinking: { type: "disabled" },

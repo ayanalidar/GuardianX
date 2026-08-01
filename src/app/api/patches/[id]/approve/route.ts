@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/patches/[id]/approve — apply the patch + create a cryptographic attestation.
+// POST /api/patches/[id]/approve, apply the patch + create a cryptographic attestation.
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -5,7 +5,7 @@ import ZAI from "z-ai-web-dev-sdk";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/virtual-patch — generates and deploys virtual patches (WAF/iptables rules)
+// POST /api/virtual-patch, generates and deploys virtual patches (WAF/iptables rules)
 // when a live codebase can't be updated immediately
 // Body: { findingId?, clientId?, target?: "modsecurity" | "cloudflare" | "iptables" | "nginx" }
 export async function POST(req: Request) {
@@ -71,7 +71,7 @@ SecRule REQUEST_URI "${endpoint}" \\
         // Block requests to the vulnerable endpoint
         return `# Virtual patch for: ${f.title}
 iptables -A INPUT -m string --string "${f.endpoint}" --algo bm -j DROP
-# Rule ID: vp-${i + 1} — ${f.severity}`;
+# Rule ID: vp-${i + 1}, ${f.severity}`;
       }).join("\n");
     }
 

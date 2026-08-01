@@ -78,7 +78,7 @@ const FEATURES = [
     icon: Swords,
     title: "Adversarial Red-Team Arena",
     category: "Self-Attack",
-    desc: "After patching, a second AI persona attacks its own fix. If it finds a bypass, the defender iterates. Loop until the attacker concedes — the patch is battle-tested before human review.",
+    desc: "After patching, a second AI persona attacks its own fix. If it finds a bypass, the defender iterates. Loop until the attacker concedes, the patch is battle-tested before human review.",
     color: "text-amber-400",
     neon: "neon-amber",
     border: "border-amber-500/40",
@@ -100,7 +100,7 @@ const FEATURES = [
     icon: ScanLine,
     title: "Sensitive Data Exposure Scanner",
     category: "Secrets",
-    desc: "Systematically detects exposed AWS/Stripe/GitHub keys, JWTs, private keys, passwords, SSNs, and credit cards. Probes 22+ known exposure paths. All samples redacted — proves the leak without exfiltrating.",
+    desc: "Systematically detects exposed AWS/Stripe/GitHub keys, JWTs, private keys, passwords, SSNs, and credit cards. Probes 22+ known exposure paths. All samples redacted, proves the leak without exfiltrating.",
     color: "text-purple-400",
     neon: "neon-purple",
     border: "border-purple-500/40",
@@ -199,7 +199,7 @@ const FEATURES = [
     icon: Lock,
     title: "Data Privacy Scanner",
     category: "Privacy",
-    desc: "Detect PII collection without consent, plaintext password storage, cross-border data transfer risks, and data retention violations — all mapped to specific DPDPA sections.",
+    desc: "Detect PII collection without consent, plaintext password storage, cross-border data transfer risks, and data retention violations, all mapped to specific DPDPA sections.",
     color: "text-indigo-400",
     neon: "neon-violet",
     border: "border-indigo-500/40",
@@ -392,7 +392,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
       {/* Matrix rain background */}
       <MatrixRainBG />
 
-      {/* Ambient glows — multi-color */}
+      {/* Ambient glows, multi-color */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 left-1/4 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/12 blur-3xl" />
         <div className="absolute top-1/3 right-0 h-80 w-80 rounded-full bg-cyan-600/10 blur-3xl" />
@@ -422,7 +422,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
               <span className="neon-violet">heals itself</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400">
-              The first platform to close the loop from code to live target to patch to report —
+              The first platform to close the loop from code to live target to patch to report -
               all AI-driven. Autonomous SAST, DAST, exploit generation, adversarial patching,
               behavioral defense, virtual patching, IaC remediation, and a self-improving R&D lab
               that studies open-source tools to optimize its own modules.
@@ -446,7 +446,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             </div>
           </motion.div>
 
-          {/* Hero stats strip — vibrant multi-color */}
+          {/* Hero stats strip, vibrant multi-color */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -462,7 +462,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
           </motion.div>
         </section>
 
-        {/* Live Command Center Demo — animated, in-action */}
+        {/* Live Command Center Demo, animated, in-action */}
         <AnimatedDemo />
 
         <div className="mx-auto max-w-6xl px-4 pb-8 text-center sm:px-6">
@@ -485,7 +485,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             {[
               { quote: "GuardianX found 3 critical vulnerabilities our manual pentest missed. The AI-generated patches saved us 2 weeks of developer time.", author: "CISO", company: "FinTech Startup, Bangalore", color: "emerald" },
               { quote: "We replaced our entire VAPT vendor with GuardianX. Same quality report, 10% of the cost, delivered in 90 seconds instead of 2 weeks.", author: "Head of Security", company: "Healthcare Platform, Mumbai", color: "cyan" },
-              { quote: "The R&D Lab is incredible — it studies open-source tools and improves its own modules. No other security platform does this.", author: "CTO", company: "SaaS Company, Delhi", color: "violet" },
+              { quote: "The R&D Lab is incredible, it studies open-source tools and improves its own modules. No other security platform does this.", author: "CTO", company: "SaaS Company, Delhi", color: "violet" },
             ].map((t, i) => (
               <motion.div
                 key={i}
@@ -572,7 +572,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
               <ShieldHalf className="mx-auto size-12 text-emerald-400 neon-emerald" />
               <h2 className="mt-4 text-3xl font-bold text-zinc-50">Ready to enter the lab?</h2>
               <p className="mx-auto mt-2 max-w-xl text-sm text-zinc-400">
-                Launch the GuardianX console. Scan code, attack live targets, generate patches, and export professional VAPT reports — all in one autonomous platform.
+                Launch the GuardianX console. Scan code, attack live targets, generate patches, and export professional VAPT reports, all in one autonomous platform.
               </p>
               <Button
                 size="lg"

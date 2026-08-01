@@ -5,7 +5,7 @@ import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/threat-hunter — autonomous 24/7 agent that proactively scans
+// POST /api/threat-hunter, autonomous 24/7 agent that proactively scans
 // all authorized clients for new vulnerabilities.
 // In production, this would be called by a cron job every hour.
 export async function POST() {
@@ -36,7 +36,7 @@ export async function POST() {
         });
 
         if (recentScans.length === 0) {
-          // No recent scan — trigger one
+          // No recent scan, trigger one
           const scan = await db.scan.create({
             data: {
               codebaseId: cb.id,
@@ -91,7 +91,7 @@ export async function POST() {
   }
 }
 
-// GET /api/threat-hunter — returns what the hunter would do (dry run)
+// GET /api/threat-hunter, returns what the hunter would do (dry run)
 export async function GET() {
   try {
     const stale: { client: string; asset: string; type: string; lastScan: string | null }[] = [];

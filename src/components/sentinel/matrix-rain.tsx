@@ -36,7 +36,7 @@ export function MatrixRain() {
     window.addEventListener("resize", resize);
 
     let lastTime = 0;
-    const interval = 60; // ms between frames — slower = more readable
+    const interval = 60; // ms between frames, slower = more readable
 
     const draw = (time: number) => {
       raf = requestAnimationFrame(draw);

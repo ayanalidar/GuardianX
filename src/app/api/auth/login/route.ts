@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "email and password are required" }, { status: 400 });
   }
 
-  // Input validation — prevent injection
+  // Input validation, prevent injection
   if (typeof email !== "string" || email.length > 255) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create JWT token — embed `approved` so the Edge middleware can re-check
+    // Create JWT token, embed `approved` so the Edge middleware can re-check
     // it on every request (defense in depth). This also means any token issued
     // BEFORE this flag existed is automatically rejected by the middleware,
     // forcibly logging out unapproved users who grabbed a token earlier.

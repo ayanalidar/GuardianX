@@ -4,19 +4,19 @@ import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/scheduled-scans — list all scheduled scans
+// GET /api/scheduled-scans, list all scheduled scans
 export async function GET() {
   const schedules = await db.scheduledScan.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json(schedules);
 }
 
-// POST /api/scheduled-scans — create a scheduled scan
+// POST /api/scheduled-scans, create a scheduled scan
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { name, scanType, targetId, codebaseId, cronExpr } = body;
   if (!name || !scanType || !cronExpr) return NextResponse.json({ error: "name, scanType, cronExpr required" }, { status: 400 });
 
-  // Compute next run from cron (simplified — real impl would use a cron parser)
+  // Compute next run from cron (simplified, real impl would use a cron parser)
   const nextRun = computeNextRun(cronExpr);
   const s = await db.scheduledScan.create({
     data: { name, scanType, targetId: targetId || null, codebaseId: codebaseId || null, cronExpr, nextRunAt: nextRun },
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ id: s.id, nextRun: nextRun.toISOString() }, { status: 201 });
 }
 
-// POST /api/scheduled-scans/execute — check & run due scans (called by internal timer)
+// POST /api/scheduled-scans/execute, check & run due scans (called by internal timer)
 export async function PATCH() {
   const due = await db.scheduledScan.findMany({ where: { isActive: true, nextRunAt: { lte: new Date() } } });
   let executed = 0;

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/posture-score — compute a 0-100 security posture score per codebase.
+// GET /api/posture-score, compute a 0-100 security posture score per codebase.
 export async function GET() {
   const codebases = await db.codebase.findMany({
     include: {

@@ -36,7 +36,7 @@ const FEATURE_CATEGORIES = [
     features: [
       { icon: ShieldCheck, title: "AI Patch Generation", desc: "For every vulnerability, AI generates a production-ready fix with test code. Sandbox verifies the fix works before human review.", color: "emerald" },
       { icon: Heart, title: "Self-Healing Runtime", desc: "Live runtime monitoring tracks vulnerable vs healed functions. One-click hot-swap deploys patched code with zero downtime.", color: "rose" },
-      { icon: Link2, title: "Cryptographic Patch Attestation", desc: "Every approved patch is hash-chained into an immutable SHA-256 ledger. Tamper-evident — any modification breaks the chain.", color: "teal" },
+      { icon: Link2, title: "Cryptographic Patch Attestation", desc: "Every approved patch is hash-chained into an immutable SHA-256 ledger. Tamper-evident, any modification breaks the chain.", color: "teal" },
       { icon: Shield, title: "Data Exfiltration Defense", desc: "Inject canary tokens, deploy honeypot endpoints, monitor data flows in real-time. Detect exfiltration before data leaves.", color: "rose" },
       { icon: Shield, title: "Virtual Patching", desc: "Can't patch immediately? Auto-generate WAF rules (ModSecurity, Cloudflare, iptables, Nginx) as virtual patches.", color: "rose" },
       { icon: Eye, title: "Behavioral Anomaly Detection", desc: "Flags deviations from baseline: web server executing shells, unexpected high CPU, binary modifications, hidden user creation.", color: "cyan" },
@@ -48,7 +48,7 @@ const FEATURE_CATEGORIES = [
     icon: Brain,
     features: [
       { icon: Globe, title: "Continuous Threat Intel", desc: "Monitors live CVE disclosures via web search, cross-references against your codebases. New 0-day? GuardianX flags it before you've heard of it.", color: "cyan" },
-      { icon: Brain, title: "Guardian AI Assistant", desc: "Natural language interface. Ask 'what should I prioritize?' — get real answers from live data.", color: "violet" },
+      { icon: Brain, title: "Guardian AI Assistant", desc: "Natural language interface. Ask 'what should I prioritize?', get real answers from live data.", color: "violet" },
       { icon: AlertTriangle, title: "Anomaly Detection Alerts", desc: "Detects: finding spikes, stuck scans, canary triggers, patch review bottlenecks, unauthorized targets.", color: "amber" },
       { icon: Gauge, title: "Predictive Risk Score", desc: "AI predicts which client is most likely to be breached based on findings, patch velocity, and behavioral patterns.", color: "rose" },
       { icon: Activity, title: "PostureScore", desc: "0-100 security credit score per codebase. Computed from open vulns, sandbox pass rates, adversarial win rates.", color: "emerald" },
@@ -57,7 +57,7 @@ const FEATURE_CATEGORIES = [
     ],
   },
   {
-    title: "R&D Lab — Self-Improving",
+    title: "R&D Lab: Self-Improving",
     color: "violet",
     icon: FlaskConical,
     features: [

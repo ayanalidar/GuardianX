@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/sparklines — returns 7-day time series for KPI sparklines
+// GET /api/sparklines, returns 7-day time series for KPI sparklines
 // Generates daily counts for: scans, patches, findings, critical findings
 export async function GET() {
   try {

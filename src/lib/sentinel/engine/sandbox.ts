@@ -1,6 +1,6 @@
 // Real sandbox executor. Writes the AI-generated test file to a temp directory
 // and runs it with `bun` in an isolated child process with a hard timeout.
-// Returns the REAL stdout/stderr/exit code — no mock logs.
+// Returns the REAL stdout/stderr/exit code, no mock logs.
 
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
@@ -45,7 +45,7 @@ export async function runSandbox(
       const child = spawn("bun", ["run", testFile], {
         cwd: dir!,
         env: {
-          // Minimal, sanitized env — no network vars, no secrets leak.
+          // Minimal, sanitized env, no network vars, no secrets leak.
           PATH: process.env.PATH ?? "/usr/bin:/bin",
           HOME: dir!,
           NODE_ENV: "test",
@@ -161,9 +161,9 @@ function formatLogs(args: {
     lines.push(`[${ts()}] ⚠ TIMED OUT after 12000ms`);
   }
   if (args.passed) {
-    lines.push(`[${ts()}] ✓ VERDICT: SAFE TO APPLY — all tests passed`);
+    lines.push(`[${ts()}] ✓ VERDICT: SAFE TO APPLY, all tests passed`);
   } else {
-    lines.push(`[${ts()}] ✗ VERDICT: NEEDS REVIEW — tests did not pass`);
+    lines.push(`[${ts()}] ✗ VERDICT: NEEDS REVIEW, tests did not pass`);
   }
   return lines.join("\n");
 }
@@ -316,7 +316,7 @@ function formatExploitLogs(args: {
 }): string {
   const ts = () => new Date().toISOString().slice(11, 19);
   const lines: string[] = [];
-  lines.push(`[${ts()}] GuardianX exploit runner — ${args.label}`);
+  lines.push(`[${ts()}] GuardianX exploit runner, ${args.label}`);
   lines.push(`[${ts()}] Target: ${args.targetFile}`);
   lines.push(`[${ts()}] Timeout: 12000ms`);
   lines.push(`[${ts()}] --- stdout ---`);
@@ -334,11 +334,11 @@ function formatExploitLogs(args: {
   lines.push(`[${ts()}] Duration: ${args.durationMs}ms`);
   if (args.timedOut) lines.push(`[${ts()}] ⚠ TIMED OUT`);
   if (args.success) {
-    lines.push(`[${ts()}] 🔴 EXPLOIT SUCCEEDED — ${args.detail}`);
+    lines.push(`[${ts()}] 🔴 EXPLOIT SUCCEEDED, ${args.detail}`);
   } else if (args.blocked) {
-    lines.push(`[${ts()}] 🟢 EXPLOIT BLOCKED — ${args.detail}`);
+    lines.push(`[${ts()}] 🟢 EXPLOIT BLOCKED, ${args.detail}`);
   } else {
-    lines.push(`[${ts()}] ⚠ EXPLOIT INCONCLUSIVE — ${args.detail}`);
+    lines.push(`[${ts()}] ⚠ EXPLOIT INCONCLUSIVE, ${args.detail}`);
   }
   return lines.join("\n");
 }

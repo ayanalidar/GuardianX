@@ -1,4 +1,4 @@
-// GuardianX Input Validation — sanitizes + validates request bodies.
+// GuardianX Input Validation, sanitizes + validates request bodies.
 // Prevents SQL injection, XSS, path traversal, and other injection attacks.
 
 /**

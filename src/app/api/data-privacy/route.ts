@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/data-privacy — scan for data privacy risks under DPDPA.
+// GET /api/data-privacy, scan for data privacy risks under DPDPA.
 // Checks: PII collection without consent indicators, data retention issues,
 // cross-border transfer risks (DPDPA §16), sensitive data in responses.
 
@@ -48,7 +48,7 @@ export async function GET() {
         severity: "high",
         description: `Email addresses exposed at ${f.endpoint}. Under DPDPA, email is personal data and must be protected against unauthorized access.`,
         source: `VAPT finding: ${f.title}`,
-        recommendation: "Restrict email exposure to authorized endpoints only. Implement data minimization — only return emails when necessary.",
+        recommendation: "Restrict email exposure to authorized endpoints only. Implement data minimization, only return emails when necessary.",
       });
     }
     if (text.includes("password") && f.category.includes("Exposure")) {

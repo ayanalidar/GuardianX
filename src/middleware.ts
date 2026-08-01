@@ -1,4 +1,4 @@
-// GuardianX Middleware — JWT auth + rate limiting on all API routes.
+// GuardianX Middleware, JWT auth + rate limiting on all API routes.
 //
 // SECURITY: This runs in the Edge runtime. We use a lightweight JWT
 // verification (crypto.subtle) instead of the jsonwebtoken library
@@ -62,7 +62,7 @@ export async function middleware(req: NextRequest) {
 
   const isAuthRoute = path.startsWith("/api/auth/");
   // Auth routes: strict (10 / 15min) to block brute force.
-  // Regular API routes: generous (300 / min) — the dashboard fires many
+  // Regular API routes: generous (300 / min), the dashboard fires many
   // concurrent fetches on mount (clients, stats, patches, feed, compliance,
   // attestations, posture, sparklines, topology, process-tree, etc.) plus
   // auto-refresh polls every 10s, so 60/min was too low and caused 429s.

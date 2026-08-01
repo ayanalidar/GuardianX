@@ -135,7 +135,7 @@ export default function PricingPage() {
           </p>
         </motion.div>
 
-        {/* Pricing Cards — Cinematic */}
+        {/* Pricing Cards, Cinematic */}
         <div className="grid gap-8 lg:grid-cols-3">
           {TIERS.map((tier, i) => (
             <motion.div
@@ -289,12 +289,12 @@ export default function PricingPage() {
           <h3 className="mb-8 text-center text-3xl font-bold text-zinc-50">Frequently Asked Questions</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {[
-              { q: "Is there a free trial?", a: "Yes — the first 7 days are free. No credit card required. Scan unlimited codebases and targets." },
+              { q: "Is there a free trial?", a: "Yes, the first 7 days are free. No credit card required. Scan unlimited codebases and targets." },
               { q: "Can I cancel anytime?", a: "Yes. No long-term contracts. Cancel from the dashboard and you won't be billed again." },
               { q: "Do you offer custom pricing?", a: "For MSSPs and enterprises with 50+ clients, we offer custom pricing. Contact hello@guardianx.in." },
               { q: "Is my data secure?", a: "Yes. AES-256-GCM encryption at rest, TLS 1.3 in transit, bcrypt password hashing, JWT auth, 2FA support." },
               { q: "Do you support on-premise?", a: "Enterprise tier supports on-premise deployment. Your data never leaves your infrastructure." },
-              { q: "What compliance frameworks?", a: "DPDPA, GDPR, HIPAA, PCI-DSS, ISO 27001, SOC 2, NIST, OWASP Top 10 — all automatically mapped." },
+              { q: "What compliance frameworks?", a: "DPDPA, GDPR, HIPAA, PCI-DSS, ISO 27001, SOC 2, NIST, OWASP Top 10, all automatically mapped." },
             ].map((faq, i) => (
               <motion.div
                 key={i}

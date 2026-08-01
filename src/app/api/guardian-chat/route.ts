@@ -5,7 +5,7 @@ import ZAI from "z-ai-web-dev-sdk";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/guardian-chat — natural language interface to the entire platform
+// POST /api/guardian-chat, natural language interface to the entire platform
 // Body: { message: string, history?: {role, content}[] }
 export async function POST(req: Request) {
   const { message, history = [] } = await req.json().catch(() => ({}));

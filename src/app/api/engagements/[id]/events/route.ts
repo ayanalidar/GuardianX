@@ -12,7 +12,7 @@ function safeJson(s: string | null, fallback: unknown) {
   }
 }
 
-// GET /api/engagements/[id]/events — replay persisted RedAgent events.
+// GET /api/engagements/[id]/events, replay persisted RedAgent events.
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

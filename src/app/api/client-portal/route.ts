@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/client-portal?clientId=xxx — read-only security dashboard for a client
+// GET /api/client-portal?clientId=xxx, read-only security dashboard for a client
 // Returns the client's security posture (findings, patches, compliance, risk score)
 export async function GET(req: Request) {
   const url = new URL(req.url);

@@ -5,7 +5,7 @@ import ZAI from "z-ai-web-dev-sdk";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// GET /api/executive-summary?clientId=xxx — AI-generated executive summary
+// GET /api/executive-summary?clientId=xxx, AI-generated executive summary
 // Reads all findings + patches and writes a C-suite-friendly summary
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -80,7 +80,7 @@ ${patchTitles.concat(findingTitles).slice(0, 10).join("\n")}
 Write a professional executive summary with these sections:
 1. OVERALL RISK ASSESSMENT (1-2 sentences with risk level: Critical/High/Medium/Low)
 2. KEY FINDINGS (3-4 bullet points, non-technical language)
-3. BUSINESS IMPACT (what happens if not fixed — in business terms)
+3. BUSINESS IMPACT (what happens if not fixed, in business terms)
 4. RECOMMENDED ACTIONS (3-5 prioritized next steps)
 
 Keep it concise (max 300 words). Write for C-suite executives, not engineers.

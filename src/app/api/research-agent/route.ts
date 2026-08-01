@@ -5,7 +5,7 @@ import ZAI from "z-ai-web-dev-sdk";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// POST /api/research-agent — searches GitHub for security tools, analyzes them,
+// POST /api/research-agent, searches GitHub for security tools, analyzes them,
 // and generates optimization recommendations for GuardianX's own modules.
 //
 // Body: { action: "search" | "analyze" | "gap_analysis", query?, repoUrl?, module? }
@@ -118,7 +118,7 @@ Be technical and specific.`;
         });
         analysis = response.choices[0]?.message?.content || "Analysis failed.";
       } catch {
-        analysis = "AI analysis unavailable — check Z.AI config.";
+        analysis = "AI analysis unavailable, check Z.AI config.";
       }
 
       return NextResponse.json({
@@ -178,7 +178,7 @@ Be specific and technical. Format as bullet points.`;
   }
 }
 
-// GET /api/research-agent — returns suggested search queries
+// GET /api/research-agent, returns suggested search queries
 export async function GET() {
   return NextResponse.json({
     suggested_queries: [
@@ -213,7 +213,7 @@ export async function GET() {
 
 function getModuleCapabilities(module: string): string {
   const caps: Record<string, string> = {
-    "sast-scanner": "AI-powered static analysis using LLM. Detects SQL injection, XSS, path traversal, command injection, insecure deserialization. Generates patches with sandbox verification. CWE/CVE mapping. No AST parsing — relies on LLM reasoning.",
+    "sast-scanner": "AI-powered static analysis using LLM. Detects SQL injection, XSS, path traversal, command injection, insecure deserialization. Generates patches with sandbox verification. CWE/CVE mapping. No AST parsing, relies on LLM reasoning.",
     "dast-engine": "Autonomous DAST via AI. Crawls targets, plans attacks per OWASP category, fires HTTP payloads, confirms exploitation. Sensitive data exposure scanner with 16 patterns. No protocol fuzzing. No low-and-slow scanning.",
     "exploit-generator": "AI generates PoC exploits per vulnerability. Runs against original + patched code. Exploit success/blocked markers. No mutation-based fuzzing.",
     "patch-generator": "AI generates patches with test code. Sandbox runs bun subprocess. Adversarial arena with attacker vs defender. No IaC remediation. No virtual patching.",

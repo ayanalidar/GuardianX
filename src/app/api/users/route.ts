@@ -4,7 +4,7 @@ import { requireAdmin, hashPassword } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/users — list all users (ADMIN ONLY).
+// GET /api/users, list all users (ADMIN ONLY).
 // Returns emails + approval status, so this must be admin-gated.
 export async function GET(req: Request) {
   const auth = requireAdmin(req);
@@ -29,9 +29,9 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/users — admin creates a new user (ADMIN ONLY).
+// POST /api/users, admin creates a new user (ADMIN ONLY).
 // SECURITY FIX: previously this endpoint was NOT admin-gated, used weak
-// SHA-256 hashing, and auto-set approved=true — letting any authenticated
+// SHA-256 hashing, and auto-set approved=true, letting any authenticated
 // user mint pre-approved admin accounts. Now it:
 //   1. Requires admin (requireAdmin also enforces approved=true).
 //   2. Uses bcrypt (12 rounds) via hashPassword.
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   const validRoles = ["admin", "analyst", "viewer"];
   const userRole = validRoles.includes(role) ? role : "viewer";
 
-  // bcrypt hash (12 rounds) — replaces the old weak SHA-256+salt scheme
+  // bcrypt hash (12 rounds), replaces the old weak SHA-256+salt scheme
   const hashedPassword = await hashPassword(password);
 
   const { data, error } = await supabase
@@ -86,14 +86,14 @@ export async function POST(req: Request) {
     {
       ...data,
       message: approve === true
-        ? "User created and approved — they can log in now."
+        ? "User created and approved, they can log in now."
         : "User created (pending approval). Approve them from User Management.",
     },
     { status: 201 }
   );
 }
 
-// PATCH /api/users?id=xxx — update role (ADMIN ONLY)
+// PATCH /api/users?id=xxx, update role (ADMIN ONLY)
 export async function PATCH(req: Request) {
   const auth = requireAdmin(req);
   if (!auth.ok) return auth.response;
@@ -118,7 +118,7 @@ export async function PATCH(req: Request) {
   return NextResponse.json({ ...data, message: "Role updated" });
 }
 
-// DELETE /api/users?id=xxx — remove user (ADMIN ONLY)
+// DELETE /api/users?id=xxx, remove user (ADMIN ONLY)
 export async function DELETE(req: Request) {
   const auth = requireAdmin(req);
   if (!auth.ok) return auth.response;
@@ -129,7 +129,7 @@ export async function DELETE(req: Request) {
 
   // Prevent admin from deleting themselves (avoid lockout).
   // NOTE: the middleware sets `x-user-id` as a RAW UUID string (not JSON),
-  // so we read it directly — do NOT JSON.parse it (that throws SyntaxError
+  // so we read it directly, do NOT JSON.parse it (that throws SyntaxError
   // on UUID strings and was causing a 500 on user deletion).
   const self = req.headers.get("x-user-id") || "";
   if (id === self) {

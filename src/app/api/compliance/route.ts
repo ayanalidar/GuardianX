@@ -79,7 +79,7 @@ const HIPAA_RULES: Record<string, { rule: string; title: string }> = {
 
 const SEV_WEIGHT: Record<string, number> = { critical: 0, high: 20, medium: 40, low: 60, info: 80 };
 
-// GET /api/compliance — multi-framework compliance status
+// GET /api/compliance, multi-framework compliance status
 export async function GET() {
   const findings = await db.finding.findMany({
     orderBy: { createdAt: "desc" },

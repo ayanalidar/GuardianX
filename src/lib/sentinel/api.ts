@@ -589,7 +589,7 @@ async function http<T>(url: string, init?: RequestInit): Promise<T> {
     },
   });
 
-  // Handle 401 — token expired, redirect to login
+  // Handle 401, token expired, redirect to login
   if (res.status === 401 && typeof window !== "undefined") {
     localStorage.removeItem("guardianx-user");
     localStorage.removeItem("guardianx-token");
@@ -658,7 +658,7 @@ export const sentinelApi = {
       { method: "POST", body: JSON.stringify({ target }) }
     ),
 
-  // credentials (metadata only — secrets never leave the server)
+  // credentials (metadata only, secrets never leave the server)
   listCredentials: () => http<Credential[]>("/api/credentials"),
   addCredential: (data: {
     label: string;
@@ -699,7 +699,7 @@ export const sentinelApi = {
   // stats
   stats: () => http<PatchStats>("/api/stats"),
 
-  // RedAgent VAPT — targets
+  // RedAgent VAPT, targets
   listTargets: () => http<Target[]>("/api/targets"),
   addTarget: (data: {
     name: string;
@@ -721,7 +721,7 @@ export const sentinelApi = {
   deleteTarget: (id: string) =>
     http<{ ok: boolean }>(`/api/targets/${id}`, { method: "DELETE" }),
 
-  // RedAgent — engagements
+  // RedAgent, engagements
   listEngagements: () => http<Engagement[]>("/api/engagements"),
   startEngagement: (targetId: string) =>
     http<{ engagementId: string; status: string }>("/api/engagements", {

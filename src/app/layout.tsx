@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GuardianX — Autonomous Security Operations Platform",
+  title: "GuardianX, Autonomous Security Operations Platform",
   description:
     "GuardianX autonomously scans code, generates + sandbox-tests patches, attacks live targets with the RedAgent VAPT engine, and documents exposed secrets. AI-driven SAST, DAST, and human-in-the-loop patch approval in one platform.",
   keywords: [
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
   },
   openGraph: {
-    title: "GuardianX — Autonomous Security Operations Platform",
+    title: "GuardianX, Autonomous Security Operations Platform",
     description:
       "AI-driven SAST, DAST, exploit generation, adversarial patching, and VAPT reporting.",
     siteName: "GuardianX",

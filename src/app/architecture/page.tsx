@@ -22,7 +22,7 @@ export default function ArchitecturePage() {
   } as const;
 
   /* ------------------------------------------------------------------ */
-  /* SECTION 1 — Deployment Model                                        */
+  /* SECTION 1, Deployment Model                                        */
   /* ------------------------------------------------------------------ */
   const DEPLOYMENT = [
     {
@@ -34,19 +34,19 @@ export default function ArchitecturePage() {
     {
       icon: Workflow,
       title: "API-First Integration",
-      desc: "Connect via REST API. Import codebases via Git URL or paste source. Add live targets via URL. Webhooks push results to Slack, Teams, or any HTTP endpoint. Full programmatic control — every UI action has an API equivalent.",
+      desc: "Connect via REST API. Import codebases via Git URL or paste source. Add live targets via URL. Webhooks push results to Slack, Teams, or any HTTP endpoint. Full programmatic control, every UI action has an API equivalent.",
       points: ["REST + Webhooks", "Git URL or paste source", "Slack / Teams / HTTP endpoints"],
     },
     {
       icon: ShieldCheck,
       title: "Read-Only by Default",
-      desc: "SAST reads your source code (never modifies it — patches are generated for review, not auto-applied). DAST probes live endpoints with non-destructive payloads. No write operations without explicit human approval. Every action is audit-logged.",
+      desc: "SAST reads your source code (never modifies it, patches are generated for review, not auto-applied). DAST probes live endpoints with non-destructive payloads. No write operations without explicit human approval. Every action is audit-logged.",
       points: ["Source code never modified", "Non-destructive payloads", "Every action audit-logged"],
     },
   ];
 
   /* ------------------------------------------------------------------ */
-  /* SECTION 2 — 7-Stage Pipeline                                        */
+  /* SECTION 2, 7-Stage Pipeline                                        */
   /* ------------------------------------------------------------------ */
   const PIPELINE = [
     { icon: UserCheck, name: "Onboard",  desc: "Add client, codebases (Git), targets (live URLs), define scope." },
@@ -59,23 +59,23 @@ export default function ArchitecturePage() {
   ];
 
   /* ------------------------------------------------------------------ */
-  /* SECTION 3 — Blast Radius Safety Controls                            */
+  /* SECTION 3, Blast Radius Safety Controls                            */
   /* ------------------------------------------------------------------ */
   const SAFETY = [
     {
       icon: Lock,
       title: "Authorization Gate",
-      desc: "Every target must be explicitly authorized before any testing begins. The \u201CAuthorize\u201D button is a deliberate, logged action. Unauthorized targets cannot be scanned, tested, or patched — enforced at the API layer.",
+      desc: "Every target must be explicitly authorized before any testing begins. The \u201CAuthorize\u201D button is a deliberate, logged action. Unauthorized targets cannot be scanned, tested, or patched, enforced at the API layer.",
     },
     {
       icon: Eye,
       title: "Scope Enforcement",
-      desc: "Define what\u2019s in/out of bounds per engagement (e.g., \u201Capp.acme.com only, exclude /admin and payment gateway\u201D). GuardianX honors scope boundaries — crawlers stay within declared paths, DAST payloads hit only scoped endpoints.",
+      desc: "Define what\u2019s in/out of bounds per engagement (e.g., \u201Capp.acme.com only, exclude /admin and payment gateway\u201D). GuardianX honors scope boundaries, crawlers stay within declared paths, DAST payloads hit only scoped endpoints.",
     },
     {
       icon: Boxes,
       title: "Sandbox Isolation",
-      desc: "All patch testing happens in an isolated sandbox — never against production. AI-generated test code runs against a copy, not live data. A patch only reaches your codebase after human approval AND sandbox pass.",
+      desc: "All patch testing happens in an isolated sandbox, never against production. AI-generated test code runs against a copy, not live data. A patch only reaches your codebase after human approval AND sandbox pass.",
     },
     {
       icon: UserCheck,
@@ -85,7 +85,7 @@ export default function ArchitecturePage() {
   ];
 
   /* ------------------------------------------------------------------ */
-  /* SECTION 4 — Data Flow & Security                                    */
+  /* SECTION 4, Data Flow & Security                                    */
   /* ------------------------------------------------------------------ */
   const DATAFLOW = [
     {
@@ -97,25 +97,25 @@ export default function ArchitecturePage() {
     {
       icon: GitBranch,
       title: "Hash-Chained Attestation",
-      desc: "Every approved patch creates a SHA-256 ledger entry (prevHash + patchId + codeHash + timestamp). Tamper-evident — any modification breaks every subsequent hash. Proves remediation timeline to auditors.",
+      desc: "Every approved patch creates a SHA-256 ledger entry (prevHash + patchId + codeHash + timestamp). Tamper-evident, any modification breaks every subsequent hash. Proves remediation timeline to auditors.",
       spec: "SHA-256 · hash = H(prevHash + patchId + codeHash + ts)",
     },
     {
       icon: Shield,
       title: "JWT + 2FA Auth",
-      desc: "Edge middleware verifies JWT on every API request. TOTP 2FA (RFC 6238) via Google Authenticator. Admin approval workflow — new signups can\u2019t access anything until approved. Rate limiting (auth: 10/15min, API: 300/min).",
+      desc: "Edge middleware verifies JWT on every API request. TOTP 2FA (RFC 6238) via Google Authenticator. Admin approval workflow, new signups can\u2019t access anything until approved. Rate limiting (auth: 10/15min, API: 300/min).",
       spec: "HS256 JWT · RFC 6238 TOTP · sliding-window rate limits",
     },
     {
       icon: Globe,
       title: "Data Localization",
-      desc: "Runs on Supabase (you choose region). No data leaves your configured region. DPDPA §16 compliant for Indian users. Region pinning enforced at the database layer — cross-region replication is opt-in only.",
+      desc: "Runs on Supabase (you choose region). No data leaves your configured region. DPDPA §16 compliant for Indian users. Region pinning enforced at the database layer, cross-region replication is opt-in only.",
       spec: "Region-pinned PostgreSQL · DPDPA §16 compliant",
     },
   ];
 
   /* ------------------------------------------------------------------ */
-  /* SECTION 5 — Technology Stack                                        */
+  /* SECTION 5, Technology Stack                                        */
   /* ------------------------------------------------------------------ */
   const STACK = [
     { icon: MonitorSmartphone, label: "Frontend",   items: ["Next.js 16", "TypeScript", "Tailwind CSS 4", "shadcn/ui", "Framer Motion"] },
@@ -183,7 +183,7 @@ export default function ArchitecturePage() {
           </motion.section>
 
           {/* ------------------------------------------------------------ */}
-          {/* SECTION 1 — Deployment Model                                  */}
+          {/* SECTION 1, Deployment Model                                  */}
           {/* ------------------------------------------------------------ */}
           <motion.section {...fadeUp} className="mt-20">
             <div className="mb-6 flex items-center gap-3">
@@ -195,7 +195,7 @@ export default function ArchitecturePage() {
                   {"// Section 01"}
                 </div>
                 <h2 className="text-2xl font-bold text-zinc-50">
-                  Deployment Model — Agentless by Design
+                  Deployment Model, Agentless by Design
                 </h2>
               </div>
             </div>
@@ -231,7 +231,7 @@ export default function ArchitecturePage() {
           </motion.section>
 
           {/* ------------------------------------------------------------ */}
-          {/* SECTION 2 — The 7-Stage Pipeline                              */}
+          {/* SECTION 2, The 7-Stage Pipeline                              */}
           {/* ------------------------------------------------------------ */}
           <motion.section {...fadeUp} className="mt-20">
             <div className="mb-6 flex items-center gap-3">
@@ -298,7 +298,7 @@ export default function ArchitecturePage() {
           </motion.section>
 
           {/* ------------------------------------------------------------ */}
-          {/* SECTION 3 — Blast Radius Safety Controls                      */}
+          {/* SECTION 3, Blast Radius Safety Controls                      */}
           {/* ------------------------------------------------------------ */}
           <motion.section {...fadeUp} className="mt-20">
             <div className="mb-6 flex items-center gap-3">
@@ -340,7 +340,7 @@ export default function ArchitecturePage() {
           </motion.section>
 
           {/* ------------------------------------------------------------ */}
-          {/* SECTION 4 — Data Flow & Security                              */}
+          {/* SECTION 4, Data Flow & Security                              */}
           {/* ------------------------------------------------------------ */}
           <motion.section {...fadeUp} className="mt-20">
             <div className="mb-6 flex items-center gap-3">
@@ -418,7 +418,7 @@ export default function ArchitecturePage() {
           </motion.section>
 
           {/* ------------------------------------------------------------ */}
-          {/* SECTION 5 — Technology Stack                                  */}
+          {/* SECTION 5, Technology Stack                                  */}
           {/* ------------------------------------------------------------ */}
           <motion.section {...fadeUp} className="mt-20">
             <div className="mb-6 flex items-center gap-3">
@@ -481,7 +481,7 @@ export default function ArchitecturePage() {
                 </h2>
                 <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-400">
                   Walk through a live engagement with our team. We&apos;ll show you the 7-stage
-                  pipeline end-to-end against a target of your choice — with every safety
+                  pipeline end-to-end against a target of your choice, with every safety
                   control visible.
                 </p>
                 <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">

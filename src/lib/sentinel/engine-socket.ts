@@ -1,4 +1,4 @@
-// GuardianX Engine socket.io connector — browser-side.
+// GuardianX Engine socket.io connector, browser-side.
 // Connects directly to the Railway sentinel-engine (or localhost:3003 for dev).
 //
 // In production: set NEXT_PUBLIC_ENGINE_URL=https://your-engine.up.railway.app

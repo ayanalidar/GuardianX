@@ -5,9 +5,9 @@ import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/ci-cd/scan — triggered by CI/CD webhook (GitHub Actions, GitLab CI).
+// POST /api/ci-cd/scan, triggered by CI/CD webhook (GitHub Actions, GitLab CI).
 // Body: { codebaseId, commitSha, branch, prId }
-// Returns: { scanId, status, blockMerge } — blockMerge=true if critical vulns found.
+// Returns: { scanId, status, blockMerge }, blockMerge=true if critical vulns found.
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { codebaseId, commitSha, branch, prId } = body;
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   }, { status: 202 });
 }
 
-// GET /api/ci-cd/scan?scanId=xxx — check if a CI/CD scan blocks merge.
+// GET /api/ci-cd/scan?scanId=xxx, check if a CI/CD scan blocks merge.
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const scanId = url.searchParams.get("scanId");
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
     scanId: scan.id,
     status: scan.status,
     blockMerge,
-    reason: blockMerge ? `${criticalPending} critical vulnerability(ies) found — merge blocked` : "Safe to merge",
+    reason: blockMerge ? `${criticalPending} critical vulnerability(ies) found, merge blocked` : "Safe to merge",
     criticalPending,
     totalPatches: scan.patches.length,
   });

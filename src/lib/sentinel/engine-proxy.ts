@@ -1,4 +1,4 @@
-// GuardianX Engine proxy helper — used by Vercel API routes to call the
+// GuardianX Engine proxy helper, used by Vercel API routes to call the
 // Railway sentinel-engine service for heavy compute (SAST, DAST, exploit,
 // PDF generation, scraping) that can't run on Vercel serverless.
 
@@ -17,7 +17,7 @@ export function engineHeaders(): Record<string, string> {
 }
 
 /**
- * Fire-and-forget call to the engine. Returns immediately — the engine
+ * Fire-and-forget call to the engine. Returns immediately, the engine
  * runs the heavy work in the background and streams results via socket.io
  * + writes to Supabase. Use for SAST/DAST pipeline starts.
  */
@@ -47,7 +47,7 @@ export async function engineCall<T = unknown>(path: string, body: unknown): Prom
       method: "POST",
       headers: engineHeaders(),
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(55_000), // 55s — under Vercel's 60s limit
+      signal: AbortSignal.timeout(55_000), // 55s, under Vercel's 60s limit
     });
     const contentType = res.headers.get("content-type") || "";
     if (contentType.includes("application/pdf")) {

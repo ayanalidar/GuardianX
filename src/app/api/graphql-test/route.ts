@@ -5,7 +5,7 @@ import { fetchUrl } from "@/lib/sentinel/engine/http-attacker";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/graphql-test — GraphQL security testing (introspection, injection, batching)
+// POST /api/graphql-test, GraphQL security testing (introspection, injection, batching)
 // Body: { targetUrl }
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
@@ -40,9 +40,9 @@ export async function POST(req: Request) {
   } catch { /* ignore */ }
 
   const results = [
-    { test: "Introspection Enabled", vulnerable: introspectionEnabled, severity: "medium", description: "GraphQL introspection is enabled — attackers can map your entire API schema." },
-    { test: "Batch Query Attack", vulnerable: batchAttackPossible, severity: "high", description: "Server accepts batched queries — enables DoS and data exfiltration via bulk queries." },
-    { test: "SQL Injection via Variables", vulnerable: sqliVulnerable, severity: "critical", description: "GraphQL variables are not sanitized — SQL injection possible." },
+    { test: "Introspection Enabled", vulnerable: introspectionEnabled, severity: "medium", description: "GraphQL introspection is enabled, attackers can map your entire API schema." },
+    { test: "Batch Query Attack", vulnerable: batchAttackPossible, severity: "high", description: "Server accepts batched queries, enables DoS and data exfiltration via bulk queries." },
+    { test: "SQL Injection via Variables", vulnerable: sqliVulnerable, severity: "critical", description: "GraphQL variables are not sanitized, SQL injection possible." },
   ];
 
   return NextResponse.json({

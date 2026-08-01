@@ -25,7 +25,7 @@ const SERVICES = [
   { key: "comply", label: "Comply", desc: "Verify compliance + generate report", icon: Gavel, color: "emerald", stage: 7 },
 ];
 
-// Simple client type for the launcher (lightweight — no nested stats)
+// Simple client type for the launcher (lightweight, no nested stats)
 interface SimpleClient {
   id: string;
   name: string;
@@ -55,12 +55,12 @@ export function ServiceLauncher({ open, onClose, preselectedClientIds = [], onLa
     if (open) {
       // Lock background scroll
       document.body.style.overflow = "hidden";
-      // Fetch lightweight client list (id + name + authorized only — fast)
+      // Fetch lightweight client list (id + name + authorized only, fast)
       fetch("/api/clients")
         .then((r) => r.json())
         .then((d) => {
           if (Array.isArray(d)) {
-            // Map to simple format — don't keep heavy stats in state
+            // Map to simple format, don't keep heavy stats in state
             setClients(d.map((c: any) => ({ id: c.id, name: c.name, authorized: c.authorized })));
           }
         })
@@ -146,7 +146,7 @@ export function ServiceLauncher({ open, onClose, preselectedClientIds = [], onLa
               <p className="text-[10px] font-mono uppercase tracking-wider text-emerald-500/60">STEP {step} OF 3 · PRESS ESC TO CLOSE</p>
             </div>
           </div>
-          {/* Close button — FIXED: now calls onClose */}
+          {/* Close button, FIXED: now calls onClose */}
           <button
             onClick={onClose}
             className="flex size-8 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-400 transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400"
@@ -253,7 +253,7 @@ export function ServiceLauncher({ open, onClose, preselectedClientIds = [], onLa
               <div className="mt-2 space-y-1">
                 {result.launched.slice(0, 10).map((l: any, i: number) => (
                   <div key={i} className="text-[11px] text-zinc-400">
-                    • <span className="text-zinc-300">{l.client}</span> — <span className="text-emerald-400">{l.service}</span>: {l.status}
+                    • <span className="text-zinc-300">{l.client}</span>, <span className="text-emerald-400">{l.service}</span>: {l.status}
                   </div>
                 ))}
               </div>

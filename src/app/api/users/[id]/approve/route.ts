@@ -4,7 +4,7 @@ import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/users/[id]/approve — approve a pending user (admin only)
+// POST /api/users/[id]/approve, approve a pending user (admin only)
 // Body: { action: "approve" | "reject" }
 export async function POST(
   req: Request,
@@ -53,7 +53,7 @@ export async function POST(
   }
 }
 
-// GET /api/users/[id]/approve — check approval status
+// GET /api/users/[id]/approve, check approval status
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

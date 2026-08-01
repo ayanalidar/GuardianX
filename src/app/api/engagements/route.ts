@@ -5,7 +5,7 @@ import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/engagements — start a RedAgent VAPT engagement against a target.
+// POST /api/engagements, start a RedAgent VAPT engagement against a target.
 // Body: { targetId: string }
 // Returns 202 with { engagementId } immediately; the Railway engine runs
 // the DAST pipeline and streams events via socket.io.
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   );
 }
 
-// GET /api/engagements — list recent engagements.
+// GET /api/engagements, list recent engagements.
 export async function GET() {
   const engagements = await db.engagement.findMany({
     orderBy: { startedAt: "desc" },

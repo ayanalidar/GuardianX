@@ -5,8 +5,8 @@ import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// GET /api/cron/threat-hunter — called by Vercel Cron every hour
-// CRON_SECRET env var must be set — the cron job sends it as ?secret=xxx
+// GET /api/cron/threat-hunter, called by Vercel Cron every hour
+// CRON_SECRET env var must be set, the cron job sends it as ?secret=xxx
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const secret = url.searchParams.get("secret");

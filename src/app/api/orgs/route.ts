@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/orgs — list organizations + members
+// GET /api/orgs, list organizations + members
 export async function GET() {
   const orgs = await db.organization.findMany({ include: { members: true } });
   return NextResponse.json(orgs.map(o => ({
@@ -13,7 +13,7 @@ export async function GET() {
   })));
 }
 
-// POST /api/orgs — create organization
+// POST /api/orgs, create organization
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { name, slug } = body;
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ id: org.id, name: org.name, slug: org.slug }, { status: 201 });
 }
 
-// PATCH /api/orgs — invite member
+// PATCH /api/orgs, invite member
 export async function PATCH(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { orgId, email, role } = body;

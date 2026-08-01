@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/audit-log — list audit log entries (system-wide activity trail)
+// GET /api/audit-log, list audit log entries (system-wide activity trail)
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const limit = parseInt(url.searchParams.get("limit") || "50");

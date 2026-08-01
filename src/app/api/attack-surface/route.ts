@@ -39,7 +39,7 @@ const COMMON_PORTS = [
   { port: 27017, label: "MongoDB" },
 ];
 
-// GET /api/attack-surface?targetId=xxx — discover the attack surface of a target.
+// GET /api/attack-surface?targetId=xxx, discover the attack surface of a target.
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const targetId = url.searchParams.get("targetId");
@@ -80,7 +80,7 @@ export async function GET(req: Request) {
 
   const exposedServices = services.filter((s) => s.found);
 
-  // 2. Check common ports (simulated — we can't open raw TCP sockets, so we
+  // 2. Check common ports (simulated, we can't open raw TCP sockets, so we
   // check if the port responds to HTTP)
   const portScans = await Promise.all(
     COMMON_PORTS.map(async (p) => {

@@ -5,7 +5,7 @@ import ZAI from "z-ai-web-dev-sdk";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/waf-rules — generates WAF rules (ModSecurity + Cloudflare) for findings
+// POST /api/waf-rules, generates WAF rules (ModSecurity + Cloudflare) for findings
 // that can't be patched immediately (virtual patching)
 // Body: { findingId?: string, clientId?: string }
 export async function POST(req: Request) {
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       const prompt = `Generate WAF virtual patch rules for these security findings. Output BOTH ModSecurity and Cloudflare WAF rule syntax for each finding.
 
 Findings:
-${findings.map((f, i) => `${i + 1}. ${f.title} [${f.severity}] — ${f.category} on ${f.endpoint}${f.payload ? ` (payload: ${f.payload.slice(0, 80)})` : ""}`).join("\n")}
+${findings.map((f, i) => `${i + 1}. ${f.title} [${f.severity}], ${f.category} on ${f.endpoint}${f.payload ? ` (payload: ${f.payload.slice(0, 80)})` : ""}`).join("\n")}
 
 Format each rule as:
 ### Finding N: [title]

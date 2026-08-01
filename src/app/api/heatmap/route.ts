@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/heatmap — security heatmap showing vuln density per codebase file.
+// GET /api/heatmap, security heatmap showing vuln density per codebase file.
 export async function GET() {
   const patches = await db.patch.findMany({
     select: { codebaseId: true, affectedFile: true, severity: true, status: true },

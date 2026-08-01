@@ -5,7 +5,7 @@ import { fetchUrl } from "@/lib/sentinel/engine/http-attacker";
 export const dynamic = "force-dynamic";
 export const maxDuration = 45;
 
-// POST /api/fuzz — API fuzzing engine. Throws mutated inputs at endpoints.
+// POST /api/fuzz, API fuzzing engine. Throws mutated inputs at endpoints.
 // Body: { targetUrl, endpoint, method, paramCount }
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   const ep = endpoint || "/search";
   const meth = method || "GET";
 
-  // Fuzz payloads — mutated inputs designed to find crashes/edge cases
+  // Fuzz payloads, mutated inputs designed to find crashes/edge cases
   const fuzzPayloads = [
     "", "A".repeat(10000), "' OR '1'='1", "'; DROP TABLE--", "<script>alert(1)</script>",
     "../../../etc/passwd", "${7*7}", "{{7*7}}", "null", "undefined", "true", "false",

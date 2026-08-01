@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/targets — list all targets.
+// GET /api/targets, list all targets.
 export async function GET() {
   const targets = await db.target.findMany({
     orderBy: { createdAt: "desc" },
@@ -23,7 +23,7 @@ export async function GET() {
   );
 }
 
-// POST /api/targets — add a target. MUST set authorized=true explicitly.
+// POST /api/targets, add a target. MUST set authorized=true explicitly.
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const name = typeof body.name === "string" ? body.name.trim() : "";

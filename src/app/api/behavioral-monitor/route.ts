@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/behavioral-monitor — behavioral anomaly detection for host processes
+// POST /api/behavioral-monitor, behavioral anomaly detection for host processes
 // Establishes baselines and flags deviations (web server executing shells, etc.)
 // Body: { action: "baseline" | "check", targetUrl?, processes? }
 export async function POST(req: Request) {
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
           process: p.name,
           anomaly: "UNEXPECTED_HIGH_CPU",
           severity: "high",
-          detail: `Process ${p.name} using ${p.cpu}% CPU — possible crypto miner or runaway process.`,
+          detail: `Process ${p.name} using ${p.cpu}% CPU, possible crypto miner or runaway process.`,
         });
       }
 
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
   }
 }
 
-// GET /api/behavioral-monitor — returns monitoring rules
+// GET /api/behavioral-monitor, returns monitoring rules
 export async function GET() {
   return NextResponse.json({
     rules: [

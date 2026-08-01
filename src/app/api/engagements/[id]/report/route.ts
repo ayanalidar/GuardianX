@@ -4,7 +4,7 @@ import { engineCall } from "@/lib/sentinel/engine-proxy";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// GET /api/engagements/[id]/report — generate + stream a professional VAPT PDF report.
+// GET /api/engagements/[id]/report, generate + stream a professional VAPT PDF report.
 // Proxies to the Railway engine, which spawns python3 + ReportLab.
 export async function GET(
   _req: Request,

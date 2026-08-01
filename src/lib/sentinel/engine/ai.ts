@@ -104,7 +104,7 @@ export async function analyzeCodebase(
     "You are precise: only report vulnerabilities you are confident actually exist in the provided code.",
     "Do NOT report style issues, theoretical problems, or things that require external context not present.",
     "For each finding, classify severity: critical (RCE / auth bypass / data leak), high (injection / XSS / authn weakness), medium (info leak / weak crypto), low (hardening).",
-    "Respond with STRICT JSON only — no prose, no markdown fences.",
+    "Respond with STRICT JSON only, no prose, no markdown fences.",
   ].join(" ");
 
   const user = [
@@ -180,7 +180,7 @@ export async function generatePatch(
     "- Wrap async tests in an async main() and await them; catch errors and exit(1).",
     "- Tests must prove the vulnerability is no longer exploitable (e.g. an injection payload is rejected).",
     "",
-    "Respond with STRICT JSON only — no prose, no markdown fences.",
+    "Respond with STRICT JSON only, no prose, no markdown fences.",
   ].join(" ");
 
   const user = [
@@ -269,7 +269,7 @@ export async function generateExploit(
     "- Call process.exit(0) on EXPLOIT_SUCCESS, process.exit(2) on EXPLOIT_BLOCKED.",
     "- Wrap async logic in an async main() with try/catch; on error print `EXPLOIT_ERROR: <msg>` and exit(1).",
     "",
-    "Respond with STRICT JSON only — no prose, no markdown fences.",
+    "Respond with STRICT JSON only, no prose, no markdown fences.",
   ].join("\n");
 
   const user = [
@@ -341,7 +341,7 @@ export async function generateBypass(
     "- Print `EXPLOIT_SUCCESS: <detail>` if the bypass works, `EXPLOIT_BLOCKED: <detail>` if it doesn't.",
     "- exit(0) on success, exit(2) on blocked.",
     "",
-    "Respond with STRICT JSON only — no prose, no markdown fences.",
+    "Respond with STRICT JSON only, no prose, no markdown fences.",
   ].join("\n");
 
   const user = [
@@ -357,7 +357,7 @@ export async function generateBypass(
     `- Explanation: ${vuln.explanation}`,
     `- Vulnerable snippet: ${vuln.vulnerableSnippet}`,
     "",
-    "Original exploit (for reference — you must find a DIFFERENT bypass):",
+    "Original exploit (for reference, you must find a DIFFERENT bypass):",
     "```js",
     originalExploitCode,
     "```",
@@ -417,9 +417,9 @@ export async function generateImprovedPatch(
   const system = [
     "You are GuardianX's ADVERSARIAL DEFENDER. The attacker found a bypass of your patch. Iterate.",
     "Produce a NEW full patched file that blocks the original vulnerability AND the attacker's new bypass, while preserving all legitimate behavior of the original code.",
-    "Be surgical — change as little as possible while closing the bypass.",
+    "Be surgical, change as little as possible while closing the bypass.",
     "",
-    "Respond with STRICT JSON only — no prose, no markdown fences.",
+    "Respond with STRICT JSON only, no prose, no markdown fences.",
   ].join("\n");
 
   const user = [

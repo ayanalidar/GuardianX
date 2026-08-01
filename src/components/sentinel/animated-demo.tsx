@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Terminal, Activity, ShieldCheck, Brain } from "lucide-react";
 
 /* ════════════════════════════════════════════════════════════════════
-   AnimatedDemo — live, in-action marketing demo for the landing page.
+   AnimatedDemo, live, in-action marketing demo for the landing page.
    4 cards, all animating in real time:
      1. Terminal: lines appear one-by-one, cycling through exploit sequences
      2. Pipeline: 7 stages light up sequentially (active → completed)
@@ -23,10 +23,10 @@ const TERMINAL_SEQUENCES: { text: string; type: "cmd" | "out" | "err" | "success
     { text: "[*] Testing SQL injection on /api/login...", type: "out" },
     { text: "[!] VULNERABLE: SQL injection confirmed", type: "err" },
     { text: "[*] Payload: ' OR 1=1-- bypassed auth", type: "warn" },
-    { text: "[+] Exploit confirmed — finding saved as F-001", type: "success" },
+    { text: "[+] Exploit confirmed, finding saved as F-001", type: "success" },
     { text: "[*] Generating AI patch...", type: "out" },
     { text: "[+] Patch SP-2026-ACM-001 | Sandbox: PASSED", type: "success" },
-    { text: "[✓] Safe to deploy — patch attested on-chain", type: "success" },
+    { text: "[✓] Safe to deploy, patch attested on-chain", type: "success" },
   ],
   [
     { text: "$ guardianx sast --codebase payment-api.js", type: "cmd" },
@@ -35,15 +35,15 @@ const TERMINAL_SEQUENCES: { text: string; type: "cmd" | "out" | "err" | "success
     { text: "[!] CWE-79: Reflected XSS in search endpoint", type: "err" },
     { text: "[*] Generating patches with adversarial testing...", type: "out" },
     { text: "[+] 2 patches generated, sandbox-tested, ready", type: "success" },
-    { text: "[+] Exploit PoC proven — patches block both vectors", type: "success" },
+    { text: "[+] Exploit PoC proven, patches block both vectors", type: "success" },
   ],
   [
     { text: "$ redagent --sweep --target https://erp.initech.io", type: "cmd" },
     { text: "[*] Scanning for sensitive data exposure...", type: "out" },
-    { text: "[!] CRITICAL: /.env exposed — DB_PASSWORD=****", type: "err" },
-    { text: "[+] .git/config exposed — repo clone possible", type: "warn" },
+    { text: "[!] CRITICAL: /.env exposed, DB_PASSWORD=****", type: "err" },
+    { text: "[+] .git/config exposed, repo clone possible", type: "warn" },
     { text: "[*] Deploying canary tokens across 22 endpoints...", type: "out" },
-    { text: "[+] 3 canaries planted — exfil defense active", type: "success" },
+    { text: "[+] 3 canaries planted, exfil defense active", type: "success" },
     { text: "[+] Sweep complete: 3 exposures, 3 patched", type: "success" },
   ],
 ];
@@ -284,10 +284,10 @@ function KpiCell({ target, label, color, delay }: { target: number; label: strin
 
 // ── AI Briefing Card ─────────────────────────────────────────────────────
 const AI_ALERTS = [
-  { icon: "🔴", text: "Initech and Stark each have 1 critical finding — prioritize remediation", color: "red" },
-  { icon: "🟡", text: "Wayne Enterprises unauthorized — validate access urgently", color: "amber" },
-  { icon: "🟢", text: "Globex is actively patching (8 pending) — monitor progress", color: "emerald" },
-  { icon: "🔵", text: "Hooli reached COMPLIANT status — DPDPA + GDPR certified", color: "sky" },
+  { icon: "🔴", text: "Initech and Stark each have 1 critical finding, prioritize remediation", color: "red" },
+  { icon: "🟡", text: "Wayne Enterprises unauthorized, validate access urgently", color: "amber" },
+  { icon: "🟢", text: "Globex is actively patching (8 pending), monitor progress", color: "emerald" },
+  { icon: "🔵", text: "Hooli reached COMPLIANT status, DPDPA + GDPR certified", color: "sky" },
 ];
 
 function AiBriefingDemo() {
@@ -351,7 +351,7 @@ export function AnimatedDemo() {
         </div>
         <h2 className="text-3xl font-bold text-zinc-50">See it in action</h2>
         <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-400">
-          Real-time exploit terminal, network topology, threat radar, and AI threat briefing — all in one dashboard.
+          Real-time exploit terminal, network topology, threat radar, and AI threat briefing, all in one dashboard.
         </p>
       </div>
 

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/runtime-monitor — live runtime health: which functions are
+// GET /api/runtime-monitor, live runtime health: which functions are
 // vulnerable (pending patches) vs healed (approved patches deployed to runtime).
 // Simulates a runtime instrumentation layer that monitors function calls
 // and can hot-swap vulnerable functions with patched versions.

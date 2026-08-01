@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/clients/[id] — full client detail with all assets
+// GET /api/clients/[id], full client detail with all assets
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -60,7 +60,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/clients/[id] — update client (status, authorized, etc.)
+// PATCH /api/clients/[id], update client (status, authorized, etc.)
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

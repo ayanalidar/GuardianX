@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/activity-feed — aggregates real recent events from ALL services
+// GET /api/activity-feed, aggregates real recent events from ALL services
 // Returns a unified timeline of everything happening across GuardianX:
 // scans, engagements, patches, findings, canaries, engagements, attestations
 export async function GET() {
@@ -27,7 +27,7 @@ export async function GET() {
     const getClientNameFast = (clientId: string | null | undefined) =>
       (clientId && clientNameMap[clientId]) || "Unassigned";
 
-    // ── 1. Recent scans (SAST) — batch-resolve codebase → client ────────────
+    // ── 1. Recent scans (SAST), batch-resolve codebase → client ────────────
     const scans = await db.scan.findMany({
       orderBy: { startedAt: "desc" },
       take: 10,
@@ -50,7 +50,7 @@ export async function GET() {
         type: "scan",
         action: sr.status === "completed" ? "scan_completed" : sr.status === "failed" ? "scan_failed" : "scan_started",
         client: clientName,
-        detail: `SAST scan on ${cb?.name || "unknown"} — ${sr.stageLabel || sr.status}`,
+        detail: `SAST scan on ${cb?.name || "unknown"}, ${sr.stageLabel || sr.status}`,
         severity: sr.status === "completed" ? "success" : sr.status === "failed" ? "error" : "info",
         ts: (sr.startedAt as Date).toISOString(),
       });
@@ -60,14 +60,14 @@ export async function GET() {
           type: "scan",
           action: "scan_finished",
           client: clientName,
-          detail: `Scan finished — ${sr.status}`,
+          detail: `Scan finished, ${sr.status}`,
           severity: sr.status === "completed" ? "success" : "error",
           ts: (sr.completedAt as Date).toISOString(),
         });
       }
     }
 
-    // ── 2. Recent patches — batch-resolve codebase → client ─────────────────
+    // ── 2. Recent patches, batch-resolve codebase → client ─────────────────
     const patches = await db.patch.findMany({
       orderBy: { createdAt: "desc" },
       take: 15,
@@ -107,7 +107,7 @@ export async function GET() {
       }
     }
 
-    // ── 3. Recent engagements (DAST) — batch-resolve target → client ────────
+    // ── 3. Recent engagements (DAST), batch-resolve target → client ────────
     const engagements = await db.engagement.findMany({
       orderBy: { startedAt: "desc" },
       take: 10,
@@ -129,7 +129,7 @@ export async function GET() {
         type: "engagement",
         action: er.status === "completed" ? "engagement_completed" : er.status === "failed" ? "engagement_failed" : "engagement_started",
         client: clientName,
-        detail: `DAST VAPT on ${tgt?.name || "unknown"} — ${er.stageLabel || er.status}`,
+        detail: `DAST VAPT on ${tgt?.name || "unknown"}, ${er.stageLabel || er.status}`,
         severity: er.status === "completed" ? "success" : er.status === "failed" ? "error" : "info",
         ts: (er.startedAt as Date).toISOString(),
       });
@@ -200,7 +200,7 @@ export async function GET() {
         type: "canary",
         action: c.detected ? "canary_triggered" : "canary_deployed",
         client: clientName,
-        detail: `Canary "${c.label}" ${c.detected ? "TRIGGERED — data exfiltration detected!" : "deployed"} on ${c.injectedEndpoint}`,
+        detail: `Canary "${c.label}" ${c.detected ? "TRIGGERED, data exfiltration detected!" : "deployed"} on ${c.injectedEndpoint}`,
         severity: c.detected ? "error" : "info",
         ts: (c.createdAt as Date).toISOString(),
       });
@@ -218,7 +218,7 @@ export async function GET() {
         type: "attestation",
         action: "attestation_created",
         client: "System",
-        detail: `Cryptographic attestation added to hash chain — patch ${a.patchId}`,
+        detail: `Cryptographic attestation added to hash chain, patch ${a.patchId}`,
         severity: "success",
         ts: (a.createdAt as Date).toISOString(),
       });

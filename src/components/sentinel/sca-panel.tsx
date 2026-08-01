@@ -77,7 +77,7 @@ export function ScaPanel() {
               {result.sca_score ?? 100}
             </div>
             <div className="flex-1">
-              <div className="text-[10px] uppercase text-zinc-500">SCA Score — {result.codebase}</div>
+              <div className="text-[10px] uppercase text-zinc-500">SCA Score, {result.codebase}</div>
               <div className="text-[9px] text-zinc-600">{result.total_dependencies} deps · {result.scanned_dependencies} scanned</div>
             </div>
             {(result.critical || 0) > 0 && <Badge className="border border-red-500/40 bg-red-500/10 text-[8px] text-red-300">{result.critical} CRITICAL</Badge>}

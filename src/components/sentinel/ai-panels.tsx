@@ -124,7 +124,7 @@ export function AnomalyDetection() {
       {!data || data.anomalies.length === 0 ? (
         <div className="py-4 text-center font-mono text-xs text-zinc-600">
           <AlertTriangle className="mx-auto size-4 text-zinc-700" />
-          <p className="mt-1">No anomalies detected — all systems normal</p>
+          <p className="mt-1">No anomalies detected, all systems normal</p>
         </div>
       ) : (
         <div className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1">

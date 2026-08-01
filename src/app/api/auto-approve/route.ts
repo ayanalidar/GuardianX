@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/auto-approve — auto-approves patches that passed sandbox + adversarial
+// POST /api/auto-approve, auto-approves patches that passed sandbox + adversarial
 // Body: { maxSeverity?: "low" | "medium" }  (never auto-approve high/critical)
 export async function POST(req: Request) {
   const { maxSeverity = "medium" } = await req.json().catch(() => ({}));

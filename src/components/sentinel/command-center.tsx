@@ -151,7 +151,7 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 15000); // refresh every 15s (was 5s — too aggressive)
+    const id = setInterval(load, 15000); // refresh every 15s (was 5s, too aggressive)
     return () => clearInterval(id);
   }, [load]);
 
@@ -255,7 +255,7 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
         </div>
       </div>
 
-      {/* ═══ KPI STRIP — terminal-style with sparklines ═══ */}
+      {/* ═══ KPI STRIP, terminal-style with sparklines ═══ */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
         <KpiCard label="CLIENTS" value={stats.total_clients} icon={Building2} color="emerald" />
         <KpiCard label="ACTIVE" value={stats.active_pipelines} icon={Activity} color="cyan" pulse={stats.active_pipelines > 0} sparkMetric="scans" />
@@ -784,7 +784,7 @@ function getStageStatus(client: ClientSummary, stageKey: string): "pending" | "i
   }
 }
 
-// ── KPI Card — terminal style with sparkline ───────────────────────────────
+// ── KPI Card, terminal style with sparkline ───────────────────────────────
 function KpiCard({ label, value, icon: Icon, color, pulse, sparkMetric }: {
   label: string;
   value: number;

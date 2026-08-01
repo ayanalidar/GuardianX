@@ -164,7 +164,7 @@ export function PipelineView({
                   </p>
                   <p className="mt-1 max-w-[12rem] text-[10px] text-zinc-500">
                     {active
-                      ? "Pipeline is running — events will stream here in real time."
+                      ? "Pipeline is running, events will stream here in real time."
                       : "Open the Codebases tab and hit Run AI Scan to start the autonomous pipeline."}
                   </p>
                 </div>

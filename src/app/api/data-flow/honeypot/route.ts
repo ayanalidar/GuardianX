@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/data-flow/honeypot — record a honeypot endpoint hit
+// POST /api/data-flow/honeypot, record a honeypot endpoint hit
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const endpoint = typeof body.endpoint === "string" ? body.endpoint : "unknown";
