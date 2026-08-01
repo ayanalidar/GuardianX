@@ -386,7 +386,7 @@ const COMPLIANCE = ["OWASP Top 10", "PCI-DSS", "ISO 27001", "SOC 2", "NIST", "DP
 
 export function LandingPage({ onEnter }: LandingPageProps) {
   return (
-    <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+    <div className="scanlines cyber-vignette premium-bg relative min-h-screen overflow-hidden text-zinc-100">
       {/* Matrix rain background */}
       <MatrixRainBG />
 
@@ -451,7 +451,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             className="mt-16 grid w-full max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4"
           >
             {STATS.map((s, i) => (
-              <div key={i} className="holo-card-sharp hud-corners p-4 text-center">
+              <div key={i} className="neon-card p-4 text-center">
                 <div className={`text-2xl font-bold ${s.text} ${s.color}`}>{s.value}</div>
                 <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-zinc-500">{s.label}</div>
               </div>
@@ -473,7 +473,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
 
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Terminal Demo */}
-            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="holo-card-sharp hud-corners p-4">
+            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="neon-card p-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-400/60">Live Exploit Terminal</span>
                 <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -494,7 +494,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             </motion.div>
 
             {/* Pipeline Demo */}
-            <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="holo-card-sharp hud-corners p-4">
+            <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="neon-card p-4">
               <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-cyan-400/60">7-Stage Pipeline</div>
               <div className="space-y-2">
                 {[
@@ -516,7 +516,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             </motion.div>
 
             {/* KPI Demo */}
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="holo-card-sharp hud-corners p-4">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="neon-card p-4">
               <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-emerald-400/60">Real-Time KPIs</div>
               <div className="grid grid-cols-4 gap-2">
                 {[
@@ -534,7 +534,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             </motion.div>
 
             {/* AI Briefing Demo */}
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="holo-card-sharp hud-corners p-4">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="neon-card p-4">
               <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-violet-400/60">AI Threat Briefing</div>
               <div className="space-y-2">
                 <div className="rounded border border-red-500/20 bg-red-500/5 p-2 text-xs text-red-300">
@@ -580,7 +580,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
                 whileHover={{ y: -4, scale: 1.02 }}
-                className={`holo-card-sharp hud-corners p-5 border border-${t.color}-500/20`}
+                className={`neon-card p-5 border border-${t.color}-500/20`}
               >
                 <div className={`mb-3 text-3xl font-bold text-${t.color}-400/30`}>"</div>
                 <p className="text-xs leading-relaxed text-zinc-300">{t.quote}</p>
@@ -612,7 +612,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: (i % 3) * 0.1 }}
-                className={`holo-card-sharp hud-corners glow-hover group p-5 border ${f.border} ${f.glow} ${f.bg}`}
+                className={`neon-card group p-5 border ${f.border} ${f.glow} ${f.bg}`}
               >
                 <div className="mb-3 flex items-center justify-between">
                   <div className={`flex size-10 items-center justify-center rounded-lg border ${f.border} bg-zinc-950/60`}>
@@ -631,7 +631,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
 
         {/* Tech badges */}
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-          <div className="holo-card-sharp hud-corners p-8 text-center">
+          <div className="neon-card p-8 text-center">
             <div className="mb-4 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
               {"// Built On"}
             </div>

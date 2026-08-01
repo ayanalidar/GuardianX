@@ -215,7 +215,7 @@ The compliance dashboard shows per-framework compliance score, section-level sta
   return (
     <>
       <SiteHeader />
-      <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+      <div className="scanlines cyber-vignette premium-bg relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
       <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-20" />
 
       <div className="relative z-10 mx-auto pt-16 max-w-4xl px-4 py-20 sm:px-6">
@@ -240,7 +240,7 @@ The compliance dashboard shows per-framework compliance score, section-level sta
         </motion.div>
 
         {/* Table of Contents */}
-        <div className="holo-card-sharp hud-corners mb-12 p-5">
+        <div className="neon-card mb-12 p-5">
           <h3 className="mb-3 text-xs font-mono uppercase tracking-widest text-emerald-500/60">{"// Table of Contents"}</h3>
           <div className="grid gap-1.5 sm:grid-cols-2">
             {SECTIONS.map((s, i) => (
@@ -268,7 +268,7 @@ The compliance dashboard shows per-framework compliance score, section-level sta
               </div>
               <h2 className="text-2xl font-bold text-zinc-50">{section.title}</h2>
             </div>
-            <div className="holo-card-sharp hud-corners p-6">
+            <div className="neon-card p-6">
               <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
                 {section.content.split("\n").map((line, j) => {
                   if (line.startsWith("**") && line.endsWith("**")) {

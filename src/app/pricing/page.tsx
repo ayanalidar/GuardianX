@@ -90,7 +90,7 @@ export default function PricingPage() {
   return (
     <>
       <SiteHeader />
-      <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+      <div className="scanlines cyber-vignette premium-bg relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
       {/* Animated background */}
       <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-20" />
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
@@ -151,7 +151,7 @@ export default function PricingPage() {
               <div className={`absolute -inset-0.5 rounded-2xl bg-gradient-to-b ${tier.gradient} opacity-50 blur-xl`} />
 
               {/* Card */}
-              <div className={`holo-card-sharp hud-corners relative overflow-hidden rounded-2xl border ${tier.border} ${tier.glow} transition-all duration-500`}>
+              <div className={`neon-card relative overflow-hidden rounded-2xl border ${tier.border} ${tier.glow} transition-all duration-500`}>
                 {/* Animated gradient header */}
                 <div className={`bg-gradient-to-b ${tier.gradient} p-6`}>
                   {tier.popular && (
@@ -235,7 +235,7 @@ export default function PricingPage() {
           viewport={{ once: true }}
           className="mt-20"
         >
-          <div className="holo-card-sharp hud-corners overflow-hidden p-6">
+          <div className="neon-card overflow-hidden p-6">
             <div className="mb-4 flex items-center gap-2">
               <TrendingUp className="size-4 text-emerald-400" />
               <h3 className="text-sm font-bold text-zinc-200">Cost Comparison: GuardianX vs Traditional VAPT</h3>
@@ -301,7 +301,7 @@ export default function PricingPage() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
                 whileHover={{ scale: 1.02 }}
-                className="holo-card-sharp hud-corners p-5"
+                className="neon-card p-5"
               >
                 <h4 className="text-sm font-bold text-zinc-200">{faq.q}</h4>
                 <p className="mt-2 text-xs leading-relaxed text-zinc-500">{faq.a}</p>

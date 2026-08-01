@@ -15,7 +15,7 @@ export default function WhyGuardianXPage() {
   return (
     <>
       <SiteHeader />
-      <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+      <div className="scanlines cyber-vignette premium-bg relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
       <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-30" />
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 left-1/4 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
@@ -50,7 +50,7 @@ export default function WhyGuardianXPage() {
               { icon: Lock, stat: "RBI + SEBI", label: "Annual VAPT mandatory", desc: "All banks, NBFCs, fintechs, and listed companies must comply", color: "emerald" },
               { icon: Clock, stat: "6 hours", label: "CERT-In breach reporting window", desc: "Without continuous monitoring, breaches go undetected for months", color: "cyan" },
             ].map((item, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="holo-card-sharp hud-corners border border-zinc-700 p-5">
+              <motion.div key={i} initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="neon-card border border-zinc-700 p-5">
                 <div className="flex items-start gap-3">
                   <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg border border-${item.color}-500/30 bg-${item.color}-500/10`}>
                     <item.icon className={`size-5 text-${item.color}-400`} />
@@ -82,7 +82,7 @@ export default function WhyGuardianXPage() {
               { icon: Lock, title: "Compliance Engine", replaces: "GRC Consultant", color: "amber" },
               { icon: Eye, title: "24/7 Monitoring", replaces: "SOC Analyst", color: "sky" },
             ].map((item, i) => (
-              <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="holo-card-sharp hud-corners p-4 text-center">
+              <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="neon-card p-4 text-center">
                 <div className={`mx-auto mb-2 flex size-10 items-center justify-center rounded-lg border border-${item.color}-500/30 bg-${item.color}-500/10`}>
                   <item.icon className={`size-5 text-${item.color}-400`} />
                 </div>
@@ -107,7 +107,7 @@ export default function WhyGuardianXPage() {
               { icon: FlaskConical, title: "Self-Improving", stat: "R&D Lab", compare: "Studies GitHub for new techniques", desc: "The only security platform that gets smarter on its own. Our R&D Lab searches GitHub for open-source security tools, analyzes their code, and integrates optimizations into our own modules.", color: "amber" },
               { icon: Rocket, title: "One-Click VAPT", stat: "1 URL", compare: "Enter URL → get report", desc: "Just enter a website URL and click 'Full VAPT'. GuardianX automatically discovers assets, runs passive recon, launches SAST+DAST, scans for leaked secrets, generates fixes, and produces a professional PDF report.", color: "rose" },
             ].map((item, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="holo-card-sharp hud-corners p-5">
+              <motion.div key={i} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="neon-card p-5">
                 <div className="flex items-start gap-4">
                   <div className={`flex size-12 shrink-0 items-center justify-center rounded-lg border border-${item.color}-500/40 bg-${item.color}-500/10`}>
                     <item.icon className={`size-6 text-${item.color}-400`} />
@@ -133,7 +133,7 @@ export default function WhyGuardianXPage() {
             <h2 className="text-3xl font-bold text-zinc-50">A glimpse inside the Command Center</h2>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="holo-card-sharp hud-corners p-5">
+            <div className="neon-card p-5">
               <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-emerald-400/60">Live Exploit Terminal</div>
               <div className="rounded-lg border border-zinc-800 bg-black/80 p-3 font-mono text-[10px] leading-relaxed">
                 <div className="text-emerald-400">$ redagent --target https://app.target.com</div>
@@ -149,7 +149,7 @@ export default function WhyGuardianXPage() {
                 <span className="animate-pulse text-emerald-400">█</span>
               </div>
             </div>
-            <div className="holo-card-sharp hud-corners p-5">
+            <div className="neon-card p-5">
               <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-cyan-400/60">7-Stage Pipeline</div>
               <div className="space-y-2">
                 {[
@@ -174,7 +174,7 @@ export default function WhyGuardianXPage() {
 
         {/* CTA */}
         <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="text-center">
-          <div className="holo-card-sharp hud-corners relative overflow-hidden p-10">
+          <div className="neon-card relative overflow-hidden p-10">
             <div aria-hidden className="cyber-grid pointer-events-none absolute inset-0 opacity-20" />
             <div className="relative">
               <ShieldHalf className="mx-auto size-12 text-emerald-400 neon-emerald" />

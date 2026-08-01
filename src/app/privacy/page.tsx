@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <>
       <SiteHeader />
-      <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+      <div className="scanlines cyber-vignette premium-bg relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
         <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-20" />
         <div className="relative z-10 mx-auto max-w-3xl px-4 pt-24 py-20 sm:px-6">
           <div className="mb-10">

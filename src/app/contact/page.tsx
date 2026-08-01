@@ -30,7 +30,7 @@ export default function ContactPage() {
   return (
     <>
       <SiteHeader />
-      <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+      <div className="scanlines cyber-vignette premium-bg relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
         <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-20" />
         <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
           <div className="absolute -top-40 left-1/3 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
@@ -45,7 +45,7 @@ export default function ContactPage() {
 
           <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
             {/* Form */}
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="holo-card-sharp hud-corners p-6">
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="neon-card p-6">
               <div className="space-y-4">
                 <div>
                   <Label className="text-xs text-zinc-400">Name *</Label>
@@ -77,7 +77,7 @@ export default function ContactPage() {
 
             {/* Contact Info */}
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-              <div className="holo-card-sharp hud-corners p-5">
+              <div className="neon-card p-5">
                 <h3 className="mb-3 text-xs font-mono uppercase tracking-widest text-emerald-500/60">Direct Contact</h3>
                 <div className="space-y-3">
                   <a href="https://www.guardianx.in" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-zinc-300 hover:text-emerald-400">
@@ -91,7 +91,7 @@ export default function ContactPage() {
                   </a>
                 </div>
               </div>
-              <div className="holo-card-sharp hud-corners p-5">
+              <div className="neon-card p-5">
                 <h3 className="mb-2 text-xs font-mono uppercase tracking-widest text-emerald-500/60">Response Time</h3>
                 <p className="text-xs text-zinc-400">General: within 4 hours<br />Security incidents: within 1 hour<br />Enterprise SLA: 24/7 phone</p>
               </div>
