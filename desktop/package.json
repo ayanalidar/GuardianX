@@ -5,12 +5,16 @@
   "main": "main.js",
   "author": "GuardianX",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ayanalidar/GuardianX.git"
+  },
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win",
-    "build:portable": "electron-builder --win portable",
-    "build:msi": "electron-builder --win nsis",
-    "build:all": "electron-builder --win nsis portable"
+    "build": "electron-builder --win --publish never",
+    "build:portable": "electron-builder --win portable --publish never",
+    "build:msi": "electron-builder --win nsis --publish never",
+    "build:all": "electron-builder --win nsis portable --publish never"
   },
   "build": {
     "appId": "in.guardianx.app",
