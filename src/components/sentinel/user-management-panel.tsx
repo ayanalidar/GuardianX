@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Crown, Eye, Shield, UserPlus, Trash2, Loader2, Users, Mail,
+  CheckCircle2, XCircle, Clock,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -19,6 +20,7 @@ interface UserItem {
   name: string;
   role: string;
   created_at: string;
+  approved?: boolean;
 }
 
 const ROLE_STYLES: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; label: string }> = {
@@ -152,7 +154,7 @@ export function UserManagementPanel() {
             const roleStyle = ROLE_STYLES[u.role] ?? ROLE_STYLES.viewer;
             return (
               <motion.div key={u.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
-                <Card className="holo-card hud-corners glow-hover rounded-xl p-4">
+                <Card className={`holo-card hud-corners glow-hover rounded-xl p-4 ${u.approved === false ? "border-amber-500/40" : ""}`}>
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900/60">
                       <roleStyle.icon className="size-5 text-zinc-300" />
@@ -161,21 +163,73 @@ export function UserManagementPanel() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-bold text-zinc-100">{u.name}</span>
                         <Badge className={`border text-[9px] ${roleStyle.color}`}>{roleStyle.label}</Badge>
+                        {u.approved === false && (
+                          <Badge className="border border-amber-500/40 bg-amber-500/10 text-[9px] text-amber-300">
+                            <Clock className="size-2.5" /> Pending Approval
+                          </Badge>
+                        )}
+                        {u.approved === true && (
+                          <Badge className="border border-emerald-500/40 bg-emerald-500/10 text-[9px] text-emerald-300">
+                            <CheckCircle2 className="size-2.5" /> Approved
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 text-[10px] text-zinc-500">
                         <Mail className="size-3" /> {u.email}
                       </div>
                     </div>
-                    {/* Role selector */}
-                    <select
-                      value={u.role}
-                      onChange={(e) => changeRole(u.id, e.target.value)}
-                      className="h-8 rounded-md border border-zinc-700 bg-zinc-900/60 px-2 text-xs text-zinc-200"
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="analyst">Analyst</option>
-                      <option value="viewer">Viewer</option>
-                    </select>
+
+                    {/* Approve / Reject buttons for pending users */}
+                    {u.approved === false && (
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            const res = await fetch(`/api/users/${u.id}/approve`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "approve" }),
+                            });
+                            const data = await res.json();
+                            toast({ title: "User Approved", description: data.message });
+                            load();
+                          }}
+                          className="h-7 bg-emerald-600 text-white hover:bg-emerald-500"
+                        >
+                          <CheckCircle2 className="size-3" /> Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            const res = await fetch(`/api/users/${u.id}/approve`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "reject" }),
+                            });
+                            const data = await res.json();
+                            toast({ title: "User Rejected", description: data.message });
+                            load();
+                          }}
+                          className="h-7 border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+                        >
+                          <XCircle className="size-3" /> Reject
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Role selector (only for approved users) */}
+                    {u.approved !== false && (
+                      <select
+                        value={u.role}
+                        onChange={(e) => changeRole(u.id, e.target.value)}
+                        className="h-8 rounded-md border border-zinc-700 bg-zinc-900/60 px-2 text-xs text-zinc-200"
+                      >
+                        <option value="admin">Admin</option>
+                        <option value="analyst">Analyst</option>
+                        <option value="viewer">Viewer</option>
+                      </select>
+                    )}
                     <Button size="icon" variant="ghost" onClick={() => remove(u.id, u.name)} className="size-8 text-zinc-500 hover:bg-red-500/10 hover:text-red-400">
                       <Trash2 className="size-3.5" />
                     </Button>

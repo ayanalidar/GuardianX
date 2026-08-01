@@ -49,8 +49,10 @@ export async function POST(req: Request) {
       throw new Error(msg);
     }
 
-    // First user becomes admin
-    const role = (!probe || probe.length === 0) ? "admin" : "viewer";
+    // First user becomes admin (auto-approved). All others need admin approval.
+    const isFirstUser = (!probe || probe.length === 0);
+    const role = isFirstUser ? "admin" : "viewer";
+    const approved = isFirstUser; // First user (admin) is auto-approved, others need approval
 
     // Check if email exists
     const { data: existing } = await supabase
@@ -75,13 +77,27 @@ export async function POST(req: Request) {
         name,
         password: hashedPassword,
         role,
+        approved,
       })
       .select()
       .single();
 
     if (error) throw new Error(error.message);
 
-    // Create JWT token
+    // If not approved (not first user), don't issue a token — they need admin approval
+    if (!approved) {
+      return NextResponse.json(
+        {
+          user: { id: user.id, email: user.email, name: user.name, role: user.role, approved: false },
+          token: null,
+          message: "Account created! An administrator must approve your access before you can log in. Contact hello@guardianx.in for expedited approval.",
+          needsApproval: true,
+        },
+        { status: 201 }
+      );
+    }
+
+    // First user (admin) — issue token immediately
     const token = createToken({
       userId: user.id,
       email: user.email,
@@ -91,9 +107,9 @@ export async function POST(req: Request) {
 
     const response = NextResponse.json(
       {
-        user: { id: user.id, email: user.email, name: user.name, role: user.role },
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, approved: true },
         token,
-        message: "Account created successfully",
+        message: "Admin account created successfully",
       },
       { status: 201 }
     );

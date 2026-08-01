@@ -61,7 +61,7 @@ const TIERS = [
   {
     name: "Enterprise",
     icon: Crown,
-    price: "₹9,99,999",
+    price: "₹99,999",
     period: "/month",
     desc: "For large enterprises, banks, MSSPs & government organizations",
     color: "violet",
@@ -211,17 +211,19 @@ export default function PricingPage() {
                     ))}
                   </div>
 
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`mt-6 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all ${
-                      tier.popular
-                        ? `bg-cyan-600 text-white hover:bg-cyan-500`
-                        : `border border-${tier.color}-500/40 bg-${tier.color}-500/10 text-${tier.color}-300 hover:bg-${tier.color}-500/20`
-                    }`}
-                  >
-                    Get Started <ArrowRight className="size-4" />
-                  </motion.button>
+                  <a href="/contact" className="mt-6 block">
+                    <motion.div
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold transition-all ${
+                        tier.popular
+                          ? `bg-cyan-600 text-white hover:bg-cyan-500`
+                          : `border border-${tier.color}-500/40 bg-${tier.color}-500/10 text-${tier.color}-300 hover:bg-${tier.color}-500/20`
+                      }`}
+                    >
+                      Get Started <ArrowRight className="size-4" />
+                    </motion.div>
+                  </a>
                 </div>
               </div>
             </motion.div>

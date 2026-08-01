@@ -52,6 +52,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
+    // Check if user is approved (skip for first/admin user or if column doesn't exist)
+    if (user.approved === false) {
+      return NextResponse.json(
+        {
+          error: "Your account is pending admin approval. Please contact hello@guardianx.in to expedite access.",
+          code: "PENDING_APPROVAL",
+        },
+        { status: 403 }
+      );
+    }
+
     // Create JWT token
     const token = createToken({
       userId: user.id,

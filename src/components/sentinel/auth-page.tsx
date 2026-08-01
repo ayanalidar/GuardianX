@@ -76,9 +76,26 @@ export function AuthPage({ onAuth }: AuthPageProps) {
             title: "Database not initialized",
             description: "Follow the steps below to set up Supabase.",
           });
+        } else if (data.code === "PENDING_APPROVAL") {
+          // Show pending approval message
+          toast({
+            variant: "destructive",
+            title: "Approval Pending",
+            description: data.error,
+          });
         } else {
           throw new Error(data.error || "Authentication failed");
         }
+        return;
+      }
+
+      // If signup returned needsApproval (no token), show message and stay on auth page
+      if (data.needsApproval) {
+        toast({
+          title: "Account Created!",
+          description: data.message,
+        });
+        setMode("login"); // Switch to login mode so they can try after approval
         return;
       }
 
