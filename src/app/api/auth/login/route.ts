@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/db";
-import { createHash, randomBytes } from "node:crypto";
+import { verifyPassword, createToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +10,15 @@ export async function POST(req: Request) {
   const { email, password } = body;
 
   if (!email || !password) {
-    return NextResponse.json(
-      { error: "email and password are required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "email and password are required" }, { status: 400 });
+  }
+
+  // Input validation — prevent injection
+  if (typeof email !== "string" || email.length > 255) {
+    return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+  }
+  if (typeof password !== "string" || password.length > 128) {
+    return NextResponse.json({ error: "Invalid password" }, { status: 400 });
   }
 
   try {
@@ -23,26 +28,13 @@ export async function POST(req: Request) {
       .eq("email", email)
       .maybeSingle();
 
-    // Special-case: table doesn't exist yet → actionable error
     if (error) {
       const msg = error.message || "";
-      if (
-        msg.includes("Could not find the table") ||
-        msg.includes("does not exist") ||
-        msg.includes("schema cache")
-      ) {
+      if (msg.includes("Could not find the table") || msg.includes("does not exist")) {
         return NextResponse.json(
           {
-            error:
-              "Database not initialized. Please run /supabase/migrations/0001_init.sql in your Supabase SQL Editor, then POST /api/db-init.",
+            error: "Database not initialized. Run the SQL migration in Supabase.",
             code: "DB_NOT_INITIALIZED",
-            steps: [
-              "1. Supabase Dashboard → SQL Editor → New Query",
-              "2. Paste contents of supabase/migrations/0001_init.sql",
-              "3. Click Run",
-              "4. POST /api/db-init to seed demo data",
-              "5. Then sign up / log in",
-            ],
           },
           { status: 503 }
         );
@@ -51,36 +43,39 @@ export async function POST(req: Request) {
     }
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    // Verify password (salt:hash format)
-    const [salt, storedHash] = (user.password as string).split(":");
-    const hashedPassword = createHash("sha256")
-      .update(salt + password)
-      .digest("hex");
-    if (hashedPassword !== storedHash) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
+    // Verify password (supports both bcrypt and legacy SHA-256)
+    const valid = await verifyPassword(password, user.password);
+    if (!valid) {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    const token = randomBytes(32).toString("hex");
+    // Create JWT token
+    const token = createToken({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
 
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+    const response = NextResponse.json({
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
       token,
       message: "Login successful",
     });
+
+    // Set HTTP-only cookie for additional security
+    response.cookies.set("guardianx-token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: "/",
+    });
+
+    return response;
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Database error" },

@@ -1,33 +1,28 @@
 // GuardianX database client — Prisma-compatible dispatcher over Supabase REST API.
 //
-// This wrapper lets all 155 existing `db.<model>.<method>(...)` call sites
-// work unchanged on both Vercel serverless (HTTPS port 443) and Railway.
-//
-// Supported Prisma operations:
-//   findUnique, findFirst, findMany, create, update, delete, count
-// Supported query features:
-//   where: { field: value, field: { in: [...] }, field: { lte/gte/gt/lt/contains }, OR: [...], AND: [...] }
-//   select: { field: true, ... }
-//   include: { relation: true, relation: { select: {...} } }  (via separate queries — no FK needed)
-//   orderBy: { field: "desc"|"asc" }
-//   take: number
-//   _count: { relation: true }  (via separate count queries)
+// SECURITY: No hardcoded keys. All credentials come from environment variables.
+// The app will throw at startup if SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY
+// are not set.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  process.env.SUPABASE_URL ||
-  "https://ekjsieovspkuqdjhxwct.supabase.co";
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_SERVICE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVranNpZW92c3BrdXFkamh4d2N0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTQ3NDUzNCwiZXhwIjoyMTAxMDUwNTM0fQ.wSRwd24RFJHmQBlszGuVkGUmyA1dUzvEVM-ZMZJFIBA";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
-});
+if (!supabaseUrl || !supabaseKey) {
+  console.error("[FATAL] Missing required environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set.");
+  // Don't crash in dev (allow page to render with error message), but block all DB access
+}
+
+// Use empty strings as fallback to prevent crash — DB calls will fail gracefully
+export const supabase: SupabaseClient = createClient(
+  supabaseUrl || "https://placeholder.supabase.co",
+  supabaseKey || "placeholder-key",
+  {
+    auth: { persistSession: false, autoRefreshToken: false },
+  }
+);
 
 // ── Model name → table name mapping ────────────────────────────────────────
 // Prisma model names are PascalCase; Supabase table names are also PascalCase

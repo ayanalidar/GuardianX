@@ -576,10 +576,28 @@ export interface PipelineEvent {
 }
 
 async function http<T>(url: string, init?: RequestInit): Promise<T> {
+  // Get JWT token from localStorage (set on login)
+  const token = typeof window !== "undefined" ? localStorage.getItem("guardianx-token") : null;
+
   const res = await fetch(url, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    credentials: "same-origin", // send HTTP-only cookie
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {}),
+    },
   });
+
+  // Handle 401 — token expired, redirect to login
+  if (res.status === 401 && typeof window !== "undefined") {
+    localStorage.removeItem("guardianx-user");
+    localStorage.removeItem("guardianx-token");
+    localStorage.setItem("guardianx-view", "auth");
+    window.location.reload();
+    throw new Error("Session expired. Please log in again.");
+  }
+
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) {
     throw new Error(data?.error ?? `Request failed (${res.status})`);

@@ -38,8 +38,17 @@
     },
     "src/app/api/sca-scan/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/cron/threat-hunter/route.ts": {
+      "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/threat-hunter?secret=guardianx-cron-secret-2026",
+      "schedule": "0 * * * *"
+    }
+  ],
   "github": {
     "silent": true
   }

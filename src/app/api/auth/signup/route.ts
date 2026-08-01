@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/db";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { hashPassword, createToken } from "@/lib/auth";
+import { randomUUID } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -10,46 +11,37 @@ export async function POST(req: Request) {
   const { email, name, password } = body;
 
   if (!email || !name || !password) {
-    return NextResponse.json(
-      { error: "email, name, and password are required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "email, name, and password are required" }, { status: 400 });
   }
-  if (password.length < 6) {
-    return NextResponse.json(
-      { error: "Password must be at least 6 characters" },
-      { status: 400 }
-    );
+
+  // Input validation
+  if (typeof email !== "string" || email.length > 255 || !email.includes("@")) {
+    return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+  }
+  if (typeof name !== "string" || name.length > 100 || name.length < 1) {
+    return NextResponse.json({ error: "Name must be 1-100 characters" }, { status: 400 });
+  }
+  if (typeof password !== "string" || password.length < 8) {
+    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+  }
+  if (password.length > 128) {
+    return NextResponse.json({ error: "Password too long" }, { status: 400 });
   }
 
   try {
-    // Probe table existence with a regular select (head:true doesn't surface
-    // the "table missing" error from PostgREST, so we use select + limit 1).
+    // Probe table existence
     const { data: probe, error: probeErr } = await supabase
       .from("User")
       .select("id")
       .limit(1);
 
-    // Special-case: table doesn't exist yet → actionable error
     if (probeErr) {
       const msg = probeErr.message || "";
-      if (
-        msg.includes("Could not find the table") ||
-        msg.includes("does not exist") ||
-        msg.includes("schema cache")
-      ) {
+      if (msg.includes("Could not find the table") || msg.includes("does not exist")) {
         return NextResponse.json(
           {
-            error:
-              "Database not initialized. Please run /supabase/migrations/0001_init.sql in your Supabase SQL Editor, then POST /api/db-init.",
+            error: "Database not initialized. Run the SQL migration.",
             code: "DB_NOT_INITIALIZED",
-            steps: [
-              "1. Supabase Dashboard → SQL Editor → New Query",
-              "2. Paste contents of supabase/migrations/0001_init.sql",
-              "3. Click Run",
-              "4. POST /api/db-init to seed demo data",
-              "5. Then sign up / log in",
-            ],
           },
           { status: 503 }
         );
@@ -57,7 +49,7 @@ export async function POST(req: Request) {
       throw new Error(msg);
     }
 
-    // First user becomes admin; subsequent signups are viewers.
+    // First user becomes admin
     const role = (!probe || probe.length === 0) ? "admin" : "viewer";
 
     // Check if email exists
@@ -67,17 +59,11 @@ export async function POST(req: Request) {
       .eq("email", email)
       .maybeSingle();
     if (existing) {
-      return NextResponse.json(
-        { error: "Email already registered" },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
 
-    // Hash password (salt:hash)
-    const salt = randomBytes(16).toString("hex");
-    const hashedPassword = createHash("sha256")
-      .update(salt + password)
-      .digest("hex");
+    // Hash password with bcrypt (12 rounds)
+    const hashedPassword = await hashPassword(password);
     const id = randomUUID();
 
     // Insert user
@@ -87,7 +73,7 @@ export async function POST(req: Request) {
         id,
         email,
         name,
-        password: `${salt}:${hashedPassword}`,
+        password: hashedPassword,
         role,
       })
       .select()
@@ -95,21 +81,33 @@ export async function POST(req: Request) {
 
     if (error) throw new Error(error.message);
 
-    const token = randomBytes(32).toString("hex");
+    // Create JWT token
+    const token = createToken({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        },
+        user: { id: user.id, email: user.email, name: user.name, role: user.role },
         token,
         message: "Account created successfully",
       },
       { status: 201 }
     );
+
+    // Set HTTP-only cookie
+    response.cookies.set("guardianx-token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60,
+      path: "/",
+    });
+
+    return response;
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Database error" },
