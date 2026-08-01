@@ -10,7 +10,7 @@ import {
   Swords, Gavel, Zap, Radar, Eye, Clock,
   Plus, Skull, Cpu, Lock, Terminal, Server, Database,
   Wifi, Gauge, AlertTriangle, ChevronRight, Maximize2, Bot, Swords as SwordIcon,
-  RotateCcw, Shield as ShieldIcon, FlaskConical, FileDown, Mail, Webhook,
+  RotateCcw, Shield as ShieldIcon, FlaskConical, FileDown, Mail, Webhook, Rocket,
 } from "lucide-react";
 import { Sparkline, AttackHeatmap } from "./sparkline";
 import { NetworkTopology } from "./network-topology";
@@ -18,6 +18,8 @@ import { ProcessTree } from "./process-tree";
 import { ThreatBriefing, AnomalyDetection, PredictiveRiskScore } from "./ai-panels";
 import { LiveExploitTerminal } from "./live-exploit-terminal";
 import { GuardianChat } from "./guardian-chat";
+import { ServiceLauncher } from "./service-launcher";
+import { ServiceStatusChips } from "./service-status-chips";
 
 interface ClientSummary {
   id: string;
@@ -112,6 +114,8 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
   const [opsLoading, setOpsLoading] = useState<string | null>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]); // multi-select for parallel ops
   const [showClientSelector, setShowClientSelector] = useState(false);
+  const [launcherOpen, setLauncherOpen] = useState(false);
+  const [launcherClients, setLauncherClients] = useState<string[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
 
   // Live clock
@@ -238,7 +242,13 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
             >
               <Maximize2 className="size-4" /> <span className="hidden sm:inline">War Room</span>
             </Button>
-            <Button onClick={onAddClient} className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border">
+            <Button
+              onClick={() => { setLauncherClients(selectedClientIds); setLauncherOpen(true); }}
+              className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
+            >
+              <Rocket className="size-4" /> <span className="hidden sm:inline">Launch Service</span>
+            </Button>
+            <Button onClick={onAddClient} variant="outline" className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
               <Plus className="size-4" /> <span className="hidden sm:inline">Add Client</span>
             </Button>
           </div>
@@ -552,8 +562,18 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
         />
       )}
 
+      {/* ═══ SERVICE STATUS CHIPS (running services bar) ═══ */}
+      <ServiceStatusChips />
+
       {/* ═══ GUARDIAN AI CHAT SIDEBAR ═══ */}
       {chatOpen && <GuardianChat open={chatOpen} onClose={() => setChatOpen(false)} />}
+
+      {/* ═══ SERVICE LAUNCHER MODAL ═══ */}
+      <ServiceLauncher
+        open={launcherOpen}
+        onClose={() => setLauncherOpen(false)}
+        preselectedClientIds={launcherClients}
+      />
     </div>
   );
 }

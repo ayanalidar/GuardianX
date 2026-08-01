@@ -228,18 +228,41 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </div>
           </div>
 
-          {/* Horizontal pipeline stepper */}
+          {/* Horizontal pipeline stepper — clickable to launch service */}
           <div className="flex items-center gap-1 overflow-x-auto pb-2">
             {pipeline.stages.map((stage, i) => {
               const cfg = STAGE_COLORS[stage.key] || STAGE_COLORS.onboarding;
               const Icon = STAGE_ICONS[stage.key] || Circle;
+              const serviceMap: Record<string, string> = {
+                scanning: "scan", testing: "test", patching: "patch",
+                verifying: "verify", defending: "defend", compliant: "comply",
+              };
+              const canLaunch = serviceMap[stage.key] && stage.status !== "completed" && detail.authorized;
               return (
                 <div key={stage.id} className="flex items-center">
-                  <motion.div
+                  <motion.button
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.08 }}
-                    className={`flex min-w-[120px] flex-col items-center rounded-lg border ${cfg.border} ${cfg.bg} p-3 text-center`}
+                    onClick={async () => {
+                      if (!canLaunch) return;
+                      const service = serviceMap[stage.key];
+                      try {
+                        const res = await fetch("/api/launch-service", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ service, clientIds: [clientId] }),
+                        });
+                        const data = await res.json();
+                        toast({ title: `${stage.label} launched`, description: data.message });
+                        load();
+                      } catch {
+                        toast({ variant: "destructive", title: "Launch failed" });
+                      }
+                    }}
+                    disabled={!canLaunch}
+                    className={`flex min-w-[120px] flex-col items-center rounded-lg border ${cfg.border} ${cfg.bg} p-3 text-center transition-all ${canLaunch ? "cursor-pointer hover:scale-105 hover:border-emerald-500/60" : ""} disabled:cursor-not-allowed`}
+                    title={canLaunch ? `Click to launch ${stage.label}` : stage.status === "completed" ? "Completed" : "Not ready"}
                   >
                     <div className={`mb-1 flex size-8 items-center justify-center rounded-full border ${cfg.border} bg-zinc-950/60`}>
                       {stage.status === "completed" ? (
@@ -264,7 +287,7 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                         ))}
                       </div>
                     )}
-                  </motion.div>
+                  </motion.button>
                   {i < pipeline.stages.length - 1 && (
                     <div className={`mx-0.5 h-0.5 w-4 ${stage.status === "completed" ? "bg-emerald-500" : "bg-zinc-800"}`} />
                   )}
