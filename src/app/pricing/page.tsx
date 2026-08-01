@@ -1,4 +1,5 @@
 "use client";
+import { SiteHeader } from "@/components/sentinel/site-header";
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -86,7 +87,9 @@ const TIERS = [
 
 export default function PricingPage() {
   return (
-    <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+    <>
+      <SiteHeader />
+      <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
       {/* Animated background */}
       <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-20" />
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
@@ -102,7 +105,7 @@ export default function PricingPage() {
         />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-6xl px-4 py-20 sm:px-6">
+      <div className="relative z-10 mx-auto pt-16 max-w-6xl px-4 py-20 sm:px-6">
         {/* Hero */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -322,5 +325,6 @@ export default function PricingPage() {
         </motion.div>
       </div>
     </div>
+    </>
   );
 }

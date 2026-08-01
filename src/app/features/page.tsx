@@ -1,4 +1,5 @@
 "use client";
+import { SiteHeader } from "@/components/sentinel/site-header";
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
@@ -94,7 +95,9 @@ export default function FeaturesPage() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
 
   return (
-    <div ref={containerRef} className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+    <>
+      <SiteHeader />
+      <div ref={containerRef} className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
       <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-20" />
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
         <motion.div animate={{ x: [0, 200, 0], y: [0, -100, 0], scale: [1, 1.3, 1] }} transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }} className="absolute top-0 left-0 h-[500px] w-[500px] rounded-full bg-emerald-500/8 blur-[150px]" />
@@ -126,7 +129,7 @@ export default function FeaturesPage() {
         </motion.div>
       </motion.div>
 
-      <div className="relative z-10 mx-auto max-w-6xl px-4 py-20 sm:px-6">
+      <div className="relative z-10 mx-auto pt-16 max-w-6xl px-4 py-20 sm:px-6">
         {FEATURE_CATEGORIES.map((category, catIdx) => (
           <motion.div key={catIdx} initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mb-20">
             <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="mb-8 flex items-center gap-4">
@@ -170,5 +173,6 @@ export default function FeaturesPage() {
         </motion.div>
       </div>
     </div>
+    </>
   );
 }

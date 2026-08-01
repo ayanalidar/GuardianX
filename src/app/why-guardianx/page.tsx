@@ -1,4 +1,5 @@
 "use client";
+import { SiteHeader } from "@/components/sentinel/site-header";
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,16 @@ import {
 
 export default function WhyGuardianXPage() {
   return (
-    <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+    <>
+      <SiteHeader />
+      <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
       <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-30" />
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 left-1/4 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-violet-600/8 blur-3xl" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-5xl px-4 py-20 sm:px-6">
+      <div className="relative z-10 mx-auto pt-16 max-w-5xl px-4 py-20 sm:px-6">
         {/* Hero */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-20 text-center">
           <Badge className="mb-6 border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
@@ -188,5 +191,6 @@ export default function WhyGuardianXPage() {
         </motion.div>
       </div>
     </div>
+    </>
   );
 }

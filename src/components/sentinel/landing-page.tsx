@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SiteHeader } from "./site-header";
 import {
   ShieldHalf,
   Shield,
@@ -397,34 +398,10 @@ export function LandingPage({ onEnter }: LandingPageProps) {
       </div>
 
       <div className="relative z-10">
-        {/* Nav */}
-        <nav className="sticky top-0 z-30 border-b border-emerald-500/20 bg-zinc-950/85 backdrop-blur-xl">
-          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-            <div className="flex items-center gap-2.5">
-              <div className="neon-border rounded-lg">
-                <img src="/guardianx-logo.png" alt="GuardianX" className="size-9 rounded-lg object-contain" />
-              </div>
-              <span className="text-lg font-bold tracking-tight text-zinc-50">
-                Guardian<span className="text-emerald-400 neon-emerald">X</span>
-              </span>
-              <Badge className="ml-1 border-emerald-500/30 bg-emerald-500/10 text-[9px] text-emerald-300">SOC</Badge>
-            </div>
-            <div className="hidden items-center gap-6 text-sm text-zinc-400 md:flex">
-              <a href="/why-guardianx" className="transition-colors hover:text-emerald-400">Why GuardianX</a>
-              <a href="/features" className="transition-colors hover:text-emerald-400">Features</a>
-              <a href="/pricing" className="transition-colors hover:text-emerald-400">Pricing</a>
-              <a href="/whitepaper" className="transition-colors hover:text-emerald-400">Whitepaper</a>
-              <a href="#contact" className="transition-colors hover:text-emerald-400">Contact</a>
-            </div>
-            <Button onClick={onEnter} className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border">
-              <Terminal className="size-4" />
-              Enter Lab
-            </Button>
-          </div>
-        </nav>
+        <SiteHeader onEnter={onEnter} />
 
         {/* Hero */}
-        <section className="relative mx-auto flex max-w-6xl flex-col items-center px-4 py-20 text-center sm:px-6 sm:py-28">
+        <section className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pt-24 py-20 text-center sm:px-6 sm:py-28">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

@@ -1,4 +1,5 @@
 "use client";
+import { SiteHeader } from "@/components/sentinel/site-header";
 
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -211,10 +212,12 @@ The compliance dashboard shows per-framework compliance score, section-level sta
   ];
 
   return (
-    <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+    <>
+      <SiteHeader />
+      <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
       <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-20" />
 
-      <div className="relative z-10 mx-auto max-w-4xl px-4 py-20 sm:px-6">
+      <div className="relative z-10 mx-auto pt-16 max-w-4xl px-4 py-20 sm:px-6">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-16">
           <Badge className="mb-4 border-violet-500/30 bg-violet-500/10 text-violet-300">
@@ -287,5 +290,6 @@ The compliance dashboard shows per-framework compliance score, section-level sta
         </div>
       </div>
     </div>
+    </>
   );
 }
