@@ -8,27 +8,20 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const creds = await db.credential.findMany({
     orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      label: true,
-      kind: true,
-      target: true,
-      username: true,
-      createdAt: true,
-      lastUsedAt: true,
+    include: {
       _count: { select: { audits: true } },
     },
   });
   return NextResponse.json(
-    creds.map((c) => ({
+    (creds || []).map((c: Record<string, unknown>) => ({
       id: c.id,
       label: c.label,
       kind: c.kind,
       target: c.target,
       username: c.username,
-      created_at: c.createdAt.toISOString(),
-      last_used_at: c.lastUsedAt?.toISOString() ?? null,
-      audit_count: c._count.audits,
+      created_at: (c.createdAt as Date).toISOString(),
+      last_used_at: c.lastUsedAt ? (c.lastUsedAt as Date).toISOString() : null,
+      audit_count: (c._count as Record<string, number>)?.audits ?? 0,
       // explicitly NO secret fields returned
     }))
   );

@@ -11,7 +11,37 @@ async function sdk() { if (!zaiPromise) zaiPromise = ZAI.create(); return zaiPro
 // GET /api/attack-chains — list all synthesized attack chains
 export async function GET() {
   const chains = await db.attackChain.findMany({ orderBy: { createdAt: "desc" } });
-  return NextResponse.json(chains.map(c => ({ ...c, steps: JSON.parse(c.steps || "[]"), findingIds: c.findingIds ? JSON.parse(c.findingIds) : [] })));
+  return NextResponse.json((chains || []).map((c: Record<string, unknown>) => {
+    let steps: unknown = [];
+    let findingIds: unknown = [];
+    try {
+      const stepsRaw = (c.steps as string) || "[]";
+      if (stepsRaw.startsWith("[")) {
+        steps = JSON.parse(stepsRaw);
+      } else {
+        steps = [];
+      }
+    } catch { steps = []; }
+    try {
+      const idsRaw = (c.findingIds as string) || "[]";
+      if (idsRaw.startsWith("[")) {
+        findingIds = JSON.parse(idsRaw);
+      } else if (idsRaw.includes(",")) {
+        findingIds = idsRaw.split(",").map((s: string) => s.trim());
+      } else {
+        findingIds = [];
+      }
+    } catch { findingIds = []; }
+    return {
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      severity: c.severity,
+      steps,
+      findingIds,
+      created_at: (c.createdAt as Date).toISOString(),
+    };
+  }));
 }
 
 // POST /api/attack-chains — AI-synthesize attack chains from current findings

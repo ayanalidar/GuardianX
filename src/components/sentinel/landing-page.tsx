@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ShieldHalf,
+  Shield,
   Crosshair,
   Swords,
   FileCode2,
@@ -37,6 +38,9 @@ import {
   AlertTriangle,
   Workflow,
   Containers,
+  Brain,
+  Rocket,
+  FlaskConical,
 } from "lucide-react";
 
 interface LandingPageProps {
@@ -308,6 +312,50 @@ const FEATURES = [
     glow: "hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]",
     bg: "bg-emerald-500/5",
   },
+  {
+    icon: Brain,
+    title: "Guardian AI Assistant",
+    category: "AI",
+    desc: "Natural language interface to the entire platform. Ask 'what should I prioritize?' or 'which client has the most critical findings?' and get real answers from live data. Chat sidebar with context.",
+    color: "text-violet-400",
+    neon: "neon-violet",
+    border: "border-violet-500/40",
+    glow: "hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]",
+    bg: "bg-violet-500/5",
+  },
+  {
+    icon: Rocket,
+    title: "Service Launcher + War Room",
+    category: "Operations",
+    desc: "Pick clients, pick a service (Scan/Test/Patch/Verify/Defend/Comply), launch. War Room fullscreen mode for wall projection with auto-cycling views. Clickable pipeline stages per client.",
+    color: "text-emerald-400",
+    neon: "neon-emerald",
+    border: "border-emerald-500/40",
+    glow: "hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]",
+    bg: "bg-emerald-500/5",
+  },
+  {
+    icon: FlaskConical,
+    title: "Autonomous R&D Lab",
+    category: "Self-Improving",
+    desc: "Searches GitHub for open-source security tools, AI analyzes their code, performs gap analysis vs our modules, and generates optimization recommendations. Benchmark engine, protocol fuzzer, attack graph DAG, behavioral monitor, virtual patching, IaC remediation, rollback safeguards.",
+    color: "text-violet-400",
+    neon: "neon-violet",
+    border: "border-violet-500/40",
+    glow: "hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]",
+    bg: "bg-violet-500/5",
+  },
+  {
+    icon: Shield,
+    title: "Virtual Patching + IaC Remediation",
+    category: "Defense",
+    desc: "Can't patch code immediately? Auto-generate WAF rules (ModSecurity, Cloudflare, iptables, Nginx) as virtual patches. Generate Terraform, Ansible, K8s, Docker manifests to patch at the deployment template level.",
+    color: "text-rose-400",
+    neon: "neon-rose",
+    border: "border-rose-500/40",
+    glow: "hover:shadow-[0_0_24px_rgba(244,63,94,0.2)]",
+    bg: "bg-rose-500/5",
+  },
 ];
 
 const PIPELINE_STEPS = [
@@ -320,9 +368,9 @@ const PIPELINE_STEPS = [
 ];
 
 const STATS = [
-  { value: "24", label: "Security Modules", color: "neon-emerald", text: "text-emerald-400" },
+  { value: "50+", label: "Security Modules", color: "neon-emerald", text: "text-emerald-400" },
   { value: "100%", label: "AI-Driven", color: "neon-cyan", text: "text-cyan-400" },
-  { value: "Real", label: "Sandbox Execution", color: "neon-amber", text: "text-amber-400" },
+  { value: "7-Stage", label: "Client Pipeline", color: "neon-amber", text: "text-amber-400" },
   { value: "SHA-256", label: "Attestation Ledger", color: "neon-violet", text: "text-violet-400" },
 ];
 
@@ -392,10 +440,10 @@ export function LandingPage({ onEnter }: LandingPageProps) {
               <span className="neon-violet">heals itself</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400">
-              GuardianX is the first platform to close the loop from code to live
-              target to patch to report — all AI-driven with real execution at
-              every step. Autonomous SAST, DAST, exploit generation, adversarial
-              patching, and VAPT reporting in one.
+              The first platform to close the loop from code to live target to patch to report —
+              all AI-driven. Autonomous SAST, DAST, exploit generation, adversarial patching,
+              behavioral defense, virtual patching, IaC remediation, and a self-improving R&D lab
+              that studies open-source tools to optimize its own modules.
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
               <Button
@@ -411,7 +459,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
                 href="#features"
                 className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-900/60 px-6 py-3 text-sm text-zinc-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-300"
               >
-                Explore 24 Modules
+                Explore 50+ Modules
               </a>
             </div>
           </motion.div>
@@ -509,7 +557,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             </div>
             <h2 className="text-3xl font-bold text-zinc-50">Everything you need to secure your code</h2>
             <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-400">
-              <span className="neon-emerald text-emerald-400 font-bold">24 integrated modules</span> covering the full security lifecycle — from static analysis to live penetration testing to self-healing runtime.
+              <span className="neon-emerald text-emerald-400 font-bold">50+ integrated modules</span> across SAST, DAST, AI autonomy, active defense, R&D engineering, and multi-tenant operations.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

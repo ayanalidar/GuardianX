@@ -82,34 +82,57 @@ const SEV_WEIGHT: Record<string, number> = { critical: 0, high: 20, medium: 40, 
 // GET /api/compliance — multi-framework compliance status
 export async function GET() {
   const findings = await db.finding.findMany({
-    include: { engagement: { include: { target: { select: { name: true } } } } },
     orderBy: { createdAt: "desc" },
   });
+
+  // Resolve engagement → target names separately (dispatcher can't do nested includes)
+  const targetNames: Record<string, string> = {};
+  for (const f of findings) {
+    const engId = (f as Record<string, unknown>).engagementId as string;
+    if (engId && !targetNames[engId]) {
+      try {
+        const eng = await db.engagement.findUnique({
+          where: { id: engId },
+          include: { target: { select: { name: true } } },
+        });
+        const tgt = (eng as Record<string, unknown>)?.target as Record<string, unknown> | null;
+        targetNames[engId] = (tgt?.name as string) || "unknown";
+      } catch {
+        targetNames[engId] = "unknown";
+      }
+    }
+  }
 
   // Also pull patch findings (from SAST)
   const patches = await db.patch.findMany({
     where: { status: "pending" },
-    select: { patchId: true, title: true, severity: true, cve: true, affectedFile: true, aiExplanation: true },
   });
 
   // Combine all security issues
   const allIssues = [
-    ...findings.map((f) => ({
-      id: f.id,
-      title: f.title,
-      severity: f.severity,
-      category: f.category,
-      source: "VAPT",
-      target: f.engagement.target.name,
-    })),
-    ...patches.map((p) => ({
-      id: p.patchId,
-      title: p.title,
-      severity: p.severity,
-      category: p.cve ? "SQL Injection" : "Code Vulnerability",
-      source: "SAST",
-      target: p.affectedFile,
-    })),
+    ...findings.map((f) => {
+      const fr = f as Record<string, unknown>;
+      const engId = fr.engagementId as string;
+      return {
+        id: fr.id as string,
+        title: fr.title as string,
+        severity: fr.severity as string,
+        category: fr.category as string,
+        source: "VAPT",
+        target: targetNames[engId] || "unknown",
+      };
+    }),
+    ...patches.map((p) => {
+      const pr = p as Record<string, unknown>;
+      return {
+        id: pr.patchId as string,
+        title: pr.title as string,
+        severity: pr.severity as string,
+        category: pr.cve ? "SQL Injection" : "Code Vulnerability",
+        source: "SAST",
+        target: pr.affectedFile as string,
+      };
+    }),
   ];
 
   // Map each issue to frameworks
