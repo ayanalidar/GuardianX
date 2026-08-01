@@ -132,7 +132,8 @@ export function ServiceLauncher({ open, onClose, preselectedClientIds = [], onLa
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.2 }}
         onClick={(e) => e.stopPropagation()}
-        className="holo-card-sharp hud-corners custom-scrollbar max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg p-6"
+        className="holo-card-sharp hud-corners custom-scrollbar max-h-[85vh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-lg p-6"
+        style={{ scrollbarGutter: "stable" }}
       >
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
