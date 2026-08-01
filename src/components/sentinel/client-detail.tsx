@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Building2, Globe, GitBranch, Shield, Loader2, CheckCircle2,
   Circle, AlertCircle, Phone, Mail, FileText, Crosshair, Bug, ShieldCheck,
-  Swords, Heart, Gavel, Plus, Boxes, Target, ExternalLink, X,
+  Swords, Heart, Gavel, Plus, Boxes, Target, ExternalLink, X, Trash2, Rocket,
 } from "lucide-react";
 import { sentinelApi } from "@/lib/sentinel/api";
 
@@ -80,6 +80,9 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const [authorizing, setAuthorizing] = useState(false);
   const [showAddCodebase, setShowAddCodebase] = useState(false);
   const [showAddTarget, setShowAddTarget] = useState(false);
+  const [vaptRunning, setVaptRunning] = useState(false);
+  const [vaptResult, setVaptResult] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Add codebase form state
   const [cbName, setCbName] = useState("");
@@ -155,6 +158,42 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     } finally {
       setTgtSaving(false);
     }
+  };
+
+  const handleFullVapt = async () => {
+    setVaptRunning(true);
+    setVaptResult(null);
+    try {
+      const res = await fetch("/api/full-vapt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId }),
+      });
+      const data = await res.json();
+      setVaptResult(data);
+      toast({ title: "Full VAPT Launched!", description: data.message });
+      load();
+    } catch {
+      toast({ variant: "destructive", title: "VAPT failed to start" });
+    }
+    setVaptRunning(false);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Delete "${detail?.name}"? This will remove the client and all associated data (codebases, targets, scans, findings). This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/clients/${clientId}`, { method: "DELETE" });
+      if (res.ok) {
+        toast({ title: "Client deleted", description: detail?.name });
+        onBack();
+      } else {
+        toast({ variant: "destructive", title: "Delete failed" });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Delete failed" });
+    }
+    setDeleting(false);
   };
 
   const handleAuthorize = async () => {
@@ -249,20 +288,58 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </div>
           </div>
         </div>
-        <Button
-          onClick={handleAuthorize}
-          disabled={authorizing}
-          variant={detail.authorized ? "outline" : "default"}
-          className={
-            detail.authorized
-              ? "border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20"
-              : "bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
-          }
-        >
-          {authorizing ? <Loader2 className="size-4 animate-spin" /> : <Shield className="size-4" />}
-          {detail.authorized ? "Revoke Auth" : "Authorize Testing"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleFullVapt}
+            disabled={vaptRunning}
+            className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
+          >
+            {vaptRunning ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
+            <span className="hidden sm:inline">One-Click Full VAPT</span>
+          </Button>
+          <Button
+            onClick={handleAuthorize}
+            disabled={authorizing}
+            variant="outline"
+            className={
+              detail.authorized
+                ? "border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+                : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+            }
+          >
+            {authorizing ? <Loader2 className="size-4 animate-spin" /> : <Shield className="size-4" />}
+            {detail.authorized ? "Revoke Auth" : "Authorize"}
+          </Button>
+          <Button
+            onClick={handleDelete}
+            disabled={deleting}
+            variant="ghost"
+            size="icon"
+            className="text-zinc-500 hover:bg-red-500/10 hover:text-red-400"
+            title="Delete client"
+          >
+            {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+          </Button>
+        </div>
       </div>
+
+      {/* Full VAPT result */}
+      {vaptResult && (
+        <div className="holo-card-sharp hud-corners border-emerald-500/30 p-4">
+          <h3 className="mb-2 text-sm font-bold text-emerald-300">Full VAPT Status</h3>
+          <div className="space-y-1">
+            {vaptResult.steps?.map((s: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                <span className={`size-2 rounded-full ${s.status === "completed" ? "bg-emerald-500" : s.status === "running" ? "bg-cyan-500 animate-pulse" : "bg-zinc-600"}`} />
+                <span className="text-zinc-400 font-mono">{s.step}.</span>
+                <span className="text-zinc-200">{s.action}</span>
+                <span className="text-zinc-500">— {s.detail}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-emerald-300">{vaptResult.message}</p>
+        </div>
+      )}
 
       {/* Frameworks */}
       {detail.frameworks.length > 0 && (
@@ -429,10 +506,46 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       <div className="holo-card-sharp hud-corners p-5">
         <h3 className="mb-3 text-sm font-bold text-zinc-100 section-header">Pipeline Actions</h3>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <ActionButton label="Run SAST Scan" desc="Scan all codebases" icon={Bug} color="cyan" onClick={() => {}} disabled={!detail.authorized || detail.codebases.length === 0} />
-          <ActionButton label="Run DAST VAPT" desc="Attack all targets" icon={Crosshair} color="red" onClick={() => {}} disabled={!detail.authorized || detail.targets.length === 0} />
-          <ActionButton label="Generate VAPT Report" desc="15-page PDF" icon={FileText} color="emerald" onClick={() => {}} disabled={pipeline?.summary.findings === 0} />
-          <ActionButton label="Deploy Canaries" desc="Exfil defense" icon={Shield} color="rose" onClick={() => {}} disabled={!detail.authorized || detail.targets.length === 0} />
+          <ActionButton label="Run SAST Scan" desc="Scan all codebases" icon={Bug} color="cyan" onClick={async () => {
+            const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "scan", clientIds: [clientId] }) });
+            const data = await res.json();
+            toast({ title: "SAST launched", description: data.message });
+            load();
+          }} disabled={!detail.authorized || detail.codebases.length === 0} />
+          <ActionButton label="Run DAST VAPT" desc="Attack all targets" icon={Crosshair} color="red" onClick={async () => {
+            const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "scan", clientIds: [clientId] }) });
+            const data = await res.json();
+            toast({ title: "DAST launched", description: data.message });
+            load();
+          }} disabled={!detail.authorized || detail.targets.length === 0} />
+          <ActionButton label="Auto-Remediate" desc="AI generates fix code" icon={ShieldCheck} color="violet" onClick={async () => {
+            const res = await fetch("/api/auto-remediation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId }) });
+            const data = await res.json();
+            toast({ title: "Remediation generated", description: data.message });
+          }} disabled={pipeline?.summary.findings === 0} />
+          <ActionButton label="Generate Report" desc="15-page PDF" icon={FileText} color="emerald" onClick={() => {
+            window.open(`/api/engagements/${detail.targets[0]?.id || ""}/report`, "_blank");
+          }} disabled={pipeline?.summary.findings === 0} />
+          <ActionButton label="Deploy Canaries" desc="Exfil defense" icon={Shield} color="rose" onClick={async () => {
+            const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "defend", clientIds: [clientId] }) });
+            const data = await res.json();
+            toast({ title: "Canaries deployed", description: data.message });
+            load();
+          }} disabled={!detail.authorized || detail.targets.length === 0} />
+          <ActionButton label="Passive Recon" desc="SSL + headers + DNS" icon={Globe} color="cyan" onClick={async () => {
+            const res = await fetch("/api/passive-recon", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetUrl: detail.target_url }) });
+            const data = await res.json();
+            toast({ title: "Recon complete", description: data.message });
+          }} />
+          <ActionButton label="Auto-Discover" desc="Find assets from URL" icon={Boxes} color="sky" onClick={async () => {
+            const res = await fetch("/api/auto-discover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId }) });
+            const data = await res.json();
+            toast({ title: "Discovery complete", description: data.message });
+            load();
+          }} />
+          <ActionButton label="Exec Summary" desc="AI-written for C-suite" icon={FileText} color="amber" onClick={() => {
+            window.open(`/api/executive-summary?clientId=${clientId}`, "_blank");
+          }} />
         </div>
       </div>
 

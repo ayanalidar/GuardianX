@@ -1,105 +1,137 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
+import ZAI from "z-ai-web-dev-sdk";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// POST /api/auto-remediation — AI auto-remediation pipeline
-// Finds all pending critical/high patches that passed sandbox + adversarial,
-// auto-approves them, and deploys to staging.
-// Body: { clientId?: string, severity?: "critical" | "high" }
+// POST /api/auto-remediation — generates fix code for DAST findings
+// Body: { findingId?: string, clientId?: string }
+// For each finding, AI generates the specific remediation code
 export async function POST(req: Request) {
-  const { clientId, severity = "critical" } = await req.json().catch(() => ({}));
+  const { findingId, clientId } = await req.json().catch(() => ({}));
 
   try {
-    // Find all codebases (optionally filtered by client)
-    const codebaseFilter = clientId ? { clientId } : {};
-    const codebases = await db.codebase.findMany({ where: codebaseFilter, select: { id: true, name: true, clientId: true } });
+    // Gather findings to remediate
+    let findings: { id: string; title: string; severity: string; category: string; endpoint: string; method: string; payload: string | null; description: string; proofResponse: string | null }[] = [];
 
-    const remediated: { patchId: string; title: string; severity: string; codebase: string; status: string }[] = [];
-    const skipped: { patchId: string; title: string; reason: string }[] = [];
+    if (findingId) {
+      const f = await db.finding.findFirst({ where: { id: findingId }, select: { id: true, title: true, severity: true, category: true, endpoint: true, method: true, payload: true, description: true, proofResponse: true } });
+      if (f) findings = [f as typeof findings[0]];
+    } else {
+      const targets = clientId
+        ? await db.target.findMany({ where: { clientId }, select: { id: true } })
+        : await db.target.findMany({ select: { id: true } });
+      for (const t of targets) {
+        const engs = await db.engagement.findMany({ where: { targetId: t.id as string }, select: { id: true } });
+        for (const e of engs) {
+          const fs = await db.finding.findMany({ where: { engagementId: e.id as string }, select: { id: true, title: true, severity: true, category: true, endpoint: true, method: true, payload: true, description: true, proofResponse: true } });
+          findings = findings.concat(fs as typeof findings);
+        }
+      }
+    }
 
-    for (const cb of codebases) {
-      // Find pending patches of the target severity that passed sandbox
-      const patches = await db.patch.findMany({
-        where: {
-          codebaseId: cb.id,
-          status: "pending",
-          severity,
-          sandboxPassed: true,
-        },
-        select: { id: true, patchId: true, title: true, severity: true },
+    if (findings.length === 0) {
+      return NextResponse.json({ ok: true, remediations: [], message: "No findings to remediate." });
+    }
+
+    const remediations: { finding_id: string; title: string; severity: string; fix_code: string; fix_explanation: string; language: string }[] = [];
+
+    for (const f of findings.slice(0, 10)) {
+      let fixCode = "";
+      let fixExplanation = "";
+
+      try {
+        const zai = await ZAI.create();
+        const prompt = `You are a senior security engineer. Generate the specific remediation code for this vulnerability.
+
+Vulnerability:
+- Title: ${f.title}
+- Category: ${f.category}
+- Severity: ${f.severity}
+- Endpoint: ${f.endpoint}
+- Method: ${f.method}
+- Payload: ${f.payload || "N/A"}
+- Description: ${f.description}
+- Evidence: ${(f.proofResponse || "").slice(0, 200)}
+
+Generate:
+1. The specific code fix (in the most likely language for this technology)
+2. A brief explanation of what the fix does
+
+Format:
+\`\`\`language
+// code here
+\`\`\`
+
+Explanation: ...`;
+
+        const response = await zai.chat.completions.create({
+          messages: [{ role: "user", content: prompt }],
+          thinking: { type: "disabled" },
+        });
+        const content = response.choices[0]?.message?.content || "";
+
+        // Extract code block
+        const codeMatch = content.match(/```(\w+)?\s*([\s\S]*?)```/);
+        if (codeMatch) {
+          fixCode = codeMatch[2].trim();
+        } else {
+          fixCode = content;
+        }
+
+        // Extract explanation
+        const explMatch = content.match(/Explanation:\s*(.+)/i);
+        if (explMatch) {
+          fixExplanation = explMatch[1].trim();
+        } else {
+          fixExplanation = content.replace(/```[\s\S]*?```/g, "").trim().slice(0, 200);
+        }
+      } catch {
+        // Fallback: template-based remediation
+        const templates: Record<string, { code: string; explanation: string }> = {
+          "SQL Injection": {
+            code: `// Fix: Use parameterized queries\nconst query = "SELECT * FROM users WHERE email = ?";\ndb.query(query, [email]);`,
+            explanation: "Replace string concatenation with parameterized queries to prevent SQL injection.",
+          },
+          "XSS": {
+            code: `// Fix: Encode user input before rendering\nconst escapeHtml = (str) => str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));\nres.send(escapeHtml(userInput));`,
+            explanation: "HTML-encode all user input before rendering to prevent XSS.",
+          },
+          "Path Traversal": {
+            code: `// Fix: Validate and sanitize file paths\nconst path = require('path');\nconst safePath = path.resolve(baseDir, userInput);\nif (!safePath.startsWith(baseDir)) throw new Error('Invalid path');`,
+            explanation: "Validate that resolved path stays within allowed directory.",
+          },
+        };
+        const template = templates[f.category] || {
+          code: `// Apply input validation + output encoding\n// Sanitize all user inputs\n// Use security headers\n// Implement rate limiting`,
+          explanation: "Apply defense-in-depth: input validation, output encoding, security headers, and rate limiting.",
+        };
+        fixCode = template.code;
+        fixExplanation = template.explanation;
+      }
+
+      // Update the finding with remediation
+      await db.finding.update({
+        where: { id: f.id as string },
+        data: { remediation: `FIX CODE:\n${fixCode}\n\nEXPLANATION:\n${fixExplanation}` },
       });
 
-      for (const p of patches) {
-        // Check if adversarial was won (defender victory) OR no adversarial needed
-        const fullPatch = await db.patch.findFirst({
-          where: { id: p.id },
-          select: { adversarialWon: true, adversarialRounds: true },
-        });
-
-        if (fullPatch && fullPatch.adversarialRounds > 0 && !fullPatch.adversarialWon) {
-          skipped.push({ patchId: p.patchId, title: p.title, reason: "Adversarial test not won — needs human review" });
-          continue;
-        }
-
-        // Auto-approve
-        await db.patch.update({
-          where: { id: p.id },
-          data: { status: "approved", approvedAt: new Date() },
-        });
-
-        // Update codebase with patched code
-        const patchDetail = await db.patch.findFirst({
-          where: { id: p.id },
-          select: { patchedCode: true },
-        });
-        if (patchDetail?.patchedCode) {
-          await db.codebase.update({
-            where: { id: cb.id },
-            data: { sourceCode: patchDetail.patchedCode },
-          });
-        }
-
-        // Create attestation
-        const { createHash } = await import("node:crypto");
-        const latestAtt = await db.attestation.findFirst({ orderBy: { createdAt: "desc" } });
-        const prevHash = latestAtt?.hash ?? "0";
-        const patchedCodeHash = createHash("sha256").update(patchDetail?.patchedCode || "").digest("hex");
-        const approvedAt = new Date().toISOString();
-        const hash = createHash("sha256").update(prevHash + p.id + patchedCodeHash + approvedAt).digest("hex");
-        const { randomUUID } = await import("node:crypto");
-        await db.attestation.create({
-          data: {
-            id: randomUUID(),
-            patchId: p.id,
-            prevHash,
-            hash,
-            data: JSON.stringify({ patchId: p.patchId, codebase: cb.name, title: p.title, severity: p.severity, approvedAt, patchedCodeHash, autoRemediated: true }),
-          },
-        });
-
-        remediated.push({
-          patchId: p.patchId,
-          title: p.title,
-          severity: p.severity,
-          codebase: cb.name,
-          status: "deployed_to_staging",
-        });
-      }
+      remediations.push({
+        finding_id: f.id as string,
+        title: f.title as string,
+        severity: f.severity as string,
+        fix_code: fixCode,
+        fix_explanation: fixExplanation,
+        language: f.category === "SQL Injection" ? "javascript" : "javascript",
+      });
     }
 
     return NextResponse.json({
       ok: true,
-      remediated,
-      skipped,
-      summary: {
-        total_processed: remediated.length + skipped.length,
-        auto_approved: remediated.length,
-        needs_review: skipped.length,
-      },
-      message: `Auto-remediation complete: ${remediated.length} patches deployed, ${skipped.length} need human review.`,
+      remediations,
+      count: remediations.length,
+      message: `Generated remediation code for ${remediations.length} finding(s). Fixes saved to findings and included in VAPT report.`,
     });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });
