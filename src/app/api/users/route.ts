@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const userRole = validRoles.includes(role) ? role : "viewer";
 
   const { data, error } = await supabase.from("User").insert({
-    id: randomUUID(), email, name, password: `${salt}:${hashedPassword}`, role: userRole,
+    id: randomUUID(), email, name, password: `${salt}:${hashedPassword}`, role: userRole, approved: true,
   }).select("id, email, name, role").single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
