@@ -12,11 +12,13 @@ const PUBLIC_ROUTES = [
   "/api/auth/login",
   "/api/auth/signup",
   "/api/auth/session",
-  "/api/client-portal-auth", // client portal login (issues its own token)
+  "/api/client-portal-auth",
   "/api/db-init",
-  "/api/migrate-dfir", // one-time DFIR table migration (safe, uses IF NOT EXISTS)
+  "/api/migrate-dfir",
   "/api/health",
-  "/api/cron/", // cron routes use ?secret= param, not JWT
+  "/api/cron/",
+  "/api/siem/ingest",
+  "/api/siem/agent",
 ];
 
 // In-memory rate limit store (per Edge function instance)

@@ -1,62 +1,200 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import {
+  getConnectorSchemas,
+  testIntegration,
+  forwardEvent,
+  getForwardLog,
+  type SecurityEvent,
+} from "@/lib/integrations/engine";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/integrations, list all configured integrations
-export async function GET() {
-  const integrations = await db.integration.findMany({ orderBy: { createdAt: "desc" } });
-  return NextResponse.json(integrations.map(i => ({ ...i, config: i.config ? JSON.parse(i.config) : {} })));
-}
+// GET /api/integrations
+//   ?schemas=true            -> return the catalog of connector schemas (for the UI)
+//   ?log=true                -> return the in-memory forwarding log (last 100)
+//   default                  -> return all configured Integration rows
+export async function GET(req: Request) {
+  const auth = requireAuth(req);
+  if (!auth.ok) return auth.response;
 
-// POST /api/integrations, add an integration (Jira, Splunk, ELK, Slack, GitHub)
-export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const { type, config } = body;
-  const validTypes = ["jira", "splunk", "elk", "slack", "github"];
-  if (!type || !validTypes.includes(type)) return NextResponse.json({ error: `type must be one of: ${validTypes.join(", ")}` }, { status: 400 });
-  const i = await db.integration.create({ data: { type, config: JSON.stringify(config || {}) } });
-  return NextResponse.json({ id: i.id, type: i.type, message: `${type} integration configured` }, { status: 201 });
-}
+  try {
+    const url = new URL(req.url);
+    const wantSchemas = url.searchParams.get("schemas") === "true";
+    const wantLog = url.searchParams.get("log") === "true";
 
-// POST /api/integrations/export, export findings to SIEM (Splunk/ELK format)
-export async function PATCH(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const { format } = body; // "splunk" | "elk" | "jira"
+    if (wantSchemas) {
+      const schemas = await getConnectorSchemas();
+      return NextResponse.json({ schemas, count: schemas.length });
+    }
 
-  const [patches, findings] = await Promise.all([
-    db.patch.findMany({ select: { patchId: true, title: true, severity: true, status: true, createdAt: true } }),
-    db.finding.findMany({ select: { id: true, title: true, severity: true, category: true, endpoint: true, createdAt: true } }),
-  ]);
+    if (wantLog) {
+      return NextResponse.json({ log: getForwardLog() });
+    }
 
-  if (format === "splunk") {
-    // Splunk HEC format
-    const events = [
-      ...patches.map(p => ({ time: Math.floor(p.createdAt.getTime() / 1000), event: { type: "sast_finding", ...p } })),
-      ...findings.map(f => ({ time: Math.floor(f.createdAt.getTime() / 1000), event: { type: "dast_finding", ...f } })),
-    ];
-    return NextResponse.json({ format: "splunk", eventCount: events.length, events: events.slice(0, 20) });
-  } else if (format === "elk") {
-    // ELK/Elasticsearch bulk format
-    const docs = [
-      ...patches.map(p => ({ index: { _index: "guardianx-sast" }, doc: p })),
-      ...findings.map(f => ({ index: { _index: "guardianx-dast" }, doc: f })),
-    ];
-    return NextResponse.json({ format: "elk", docCount: docs.length, docs: docs.slice(0, 20) });
-  } else if (format === "jira") {
-    // Jira ticket format
-    const tickets = [
-      ...patches.filter(p => p.status === "pending").map(p => ({
-        project: { key: "SEC" },
-        summary: `[${p.severity.toUpperCase()}] ${p.title}`,
-        description: `GuardianX found: ${p.title}\nPatch ID: ${p.patchId}\nSeverity: ${p.severity}\nStatus: ${p.status}`,
-        issuetype: { name: p.severity === "critical" ? "Bug" : "Task" },
-        priority: { name: p.severity === "critical" ? "Highest" : p.severity === "high" ? "High" : "Medium" },
-        labels: ["security", "guardianx", p.severity],
-      })),
-    ];
-    return NextResponse.json({ format: "jira", ticketCount: tickets.length, tickets: tickets.slice(0, 10) });
+    const integrations = await db.integration.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json(
+      integrations.map((i: Record<string, unknown>) => {
+        let config: Record<string, unknown> = {};
+        try {
+          config = i.config ? JSON.parse(i.config as string) : {};
+        } catch {
+          config = {};
+        }
+        return {
+          id: i.id,
+          type: i.type,
+          config,
+          isActive: i.isActive,
+          createdAt: (i.createdAt as Date).toISOString(),
+        };
+      })
+    );
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to load integrations" },
+      { status: 500 }
+    );
   }
+}
 
-  return NextResponse.json({ error: "format must be splunk, elk, or jira" }, { status: 400 });
+// POST /api/integrations
+// Body: { type: string, config: object, isActive?: boolean }
+// OR:    { test: true, type, config }     -> probe the connector without saving
+// OR:    { forward: true, event: SecurityEvent } -> fan-out a single event to every active connector
+export async function POST(req: Request) {
+  const auth = requireAuth(req);
+  if (!auth.ok) return auth.response;
+
+  try {
+    const body = await req.json().catch(() => ({}));
+
+    // Forward-mode: fan an event out to every active integration.
+    if (body.forward === true && body.event) {
+      const event = body.event as SecurityEvent;
+      const result = await forwardEvent(event);
+      return NextResponse.json({
+        forwarded: result.forwarded,
+        succeeded: result.succeeded,
+        failed: result.failed,
+        log: result.log,
+      });
+    }
+
+    const { type, config, isActive, test } = body as {
+      type?: string;
+      config?: Record<string, unknown>;
+      isActive?: boolean;
+      test?: boolean;
+    };
+
+    if (!type || typeof type !== "string") {
+      return NextResponse.json({ error: "type is required" }, { status: 400 });
+    }
+
+    // Test-mode: probe the connector without persisting.
+    if (test === true) {
+      const result = await testIntegration(type, config || {});
+      return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+    }
+
+    const created = await db.integration.create({
+      data: {
+        type,
+        config: JSON.stringify(config || {}),
+        isActive: isActive !== false,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        id: created.id,
+        type: created.type,
+        isActive: created.isActive,
+        message: `${type} integration configured`,
+      },
+      { status: 201 }
+    );
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to configure integration" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH /api/integrations
+// Body: { id: string, isActive?: boolean, config?: object }
+// Toggles active state or updates the config of an existing integration.
+export async function PATCH(req: Request) {
+  const auth = requireAuth(req);
+  if (!auth.ok) return auth.response;
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const { id, isActive, config } = body as {
+      id?: string;
+      isActive?: boolean;
+      config?: Record<string, unknown>;
+    };
+
+    if (!id) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    }
+
+    const existing = await db.integration.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Integration not found" }, { status: 404 });
+    }
+
+    const data: Record<string, unknown> = {};
+    if (typeof isActive === "boolean") data.isActive = isActive;
+    if (config !== undefined) data.config = JSON.stringify(config);
+
+    const updated = await db.integration.update({ where: { id }, data });
+
+    return NextResponse.json({
+      id: updated.id,
+      type: updated.type,
+      isActive: updated.isActive,
+      message: "Integration updated",
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to update integration" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/integrations?id=<integrationId>
+export async function DELETE(req: Request) {
+  const auth = requireAuth(req);
+  if (!auth.ok) return auth.response;
+
+  try {
+    const url = new URL(req.url);
+    const id = url.searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "id query parameter is required" }, { status: 400 });
+    }
+
+    const existing = await db.integration.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Integration not found" }, { status: 404 });
+    }
+
+    await db.integration.delete({ where: { id } });
+
+    return NextResponse.json({ id, message: "Integration removed" });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to remove integration" },
+      { status: 500 }
+    );
+  }
 }
