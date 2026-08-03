@@ -78,6 +78,7 @@ export interface AdversarialRound {
   round: number;
   attackerTechnique: string;
   attackerReasoning: string;
+  strategyId?: string;
   bypassFound: boolean;
   bypassResult: {
     success: boolean;
@@ -96,10 +97,51 @@ export interface AdversarialRound {
     bypassLogs: string;
   } | null;
   outcome:
+    | "attacker-won"
+    | "defender-won"
+    | "partial"
     | "attacker-conceded"
     | "bypass-unconfirmed"
-    | "defender-won-round"
-    | "defender-partial";
+    | "inconclusive";
+}
+
+// ── auto-remediation-enhance: structured patch explanation + confidence breakdown
+export interface PatchExplanation {
+  cweId: string | null;
+  vulnClass: string;
+  fixStrategy: string;
+  behaviorChange: string;
+}
+
+export interface ConfidenceBreakdown {
+  sandboxPassed: number;      // 0 or 40
+  redTeamBlocked: number;     // 0 or 30
+  owaspPatterns: number;      // 0..15
+  noNewVulns: number;         // 0 or 15
+  total: number;              // 0..100
+}
+
+export interface MultiVectorSandboxSummary {
+  overallPassed: boolean;
+  summary: {
+    total: number;
+    blocked: number;
+    bypassed: number;
+    inconclusive: number;
+    errors: number;
+  };
+  performance: {
+    originalMs: number;
+    patchedMs: number;
+    ratio: number;
+    passed: boolean;
+    detail: string;
+  } | null;
+  sideEffect: {
+    passed: boolean;
+    detail: string;
+    logs: string;
+  } | null;
 }
 
 export interface PatchDetail extends PatchSummary {
@@ -121,6 +163,12 @@ export interface PatchDetail extends PatchSummary {
   adversarial_won: boolean;
   adversarial_transcript: AdversarialRound[];
   chat: ChatMessage[];
+  // ── auto-remediation-enhance ─────────────────────────────────────────
+  language?: string;
+  patch_explanation?: PatchExplanation | null;
+  confidence_breakdown?: ConfidenceBreakdown | null;
+  multi_vector_sandbox?: MultiVectorSandboxSummary | null;
+  supersedes?: string | null;
 }
 
 export interface RunExploitResponse {
@@ -326,6 +374,101 @@ export interface ComplianceStatus {
   dpdpa_findings: Array<{ issue_id: string; title: string; severity: string; source: string; target: string; dpdpa_section: string; dpdpa_title: string; dpdpa_requirement: string; status: string }>;
   breach_notification_required: boolean;
   mapped_issues: unknown[];
+  // NEW (enhanced DPDPA dashboard) — deep dive into the selected framework
+  framework_detail?: FrameworkDetail;
+  score_breakdown?: ScoreBreakdown;
+  available_frameworks?: FrameworkId[];
+  selected_framework?: FrameworkId;
+  cached?: boolean;
+  cached_at?: string;
+  cached_until?: string;
+}
+
+// ── Enhanced compliance framework detail ───────────────────────────────────
+export type FrameworkId = "DPDPA" | "ISO27001" | "SOC2";
+export type CheckStatus = "pass" | "fail" | "manual";
+export type ComplianceLevel = "compliant" | "at-risk" | "non-compliant";
+
+export interface AutomatedCheckResult {
+  id: string;
+  checkType: string;
+  description: string;
+  status: CheckStatus;
+  evidence: string;
+  collectedAt: string;
+}
+
+export interface ControlStatus {
+  id: string;
+  title: string;
+  ref: string;
+  status: CheckStatus;
+  score: number;
+  evidence: AutomatedCheckResult[];
+  requiredEvidence: string[];
+  recommendations: string[];
+  lastChecked: string;
+}
+
+export interface SectionStatus {
+  id: string;
+  section: string;
+  title: string;
+  description: string;
+  status: CheckStatus;
+  score: number;
+  controls: ControlStatus[];
+  lastChecked: string;
+}
+
+export interface FrameworkDetail {
+  id: FrameworkId;
+  name: string;
+  fullName: string;
+  description: string;
+  score: number;
+  level: ComplianceLevel;
+  sections: SectionStatus[];
+  lastChecked: string;
+}
+
+export interface ScoreBreakdown {
+  score: number;
+  level: ComplianceLevel;
+  automatedPassRate: number;
+  manualScore: number;
+  remediationScore: number;
+  gaps: string[];
+  recommendations: string[];
+}
+
+export interface GapItem {
+  sectionId: string;
+  section: string;
+  sectionTitle: string;
+  controlId: string;
+  controlTitle: string;
+  gap: string;
+  impact: "high" | "medium" | "low";
+  effort: "low" | "medium" | "high";
+  recommendation: string;
+}
+
+export interface GapAnalysisResponse {
+  framework: FrameworkId;
+  score: number;
+  level: ComplianceLevel;
+  total_gaps: number;
+  high_impact: number;
+  medium_impact: number;
+  low_impact: number;
+  quick_wins: number;
+  automated_pass_rate: number;
+  manual_score: number;
+  remediation_score: number;
+  gaps: GapItem[];
+  recommendations: string[];
+  generated_at: string;
 }
 
 // ── Data Privacy ────────────────────────────────────────────────────────────
@@ -496,6 +639,41 @@ export interface PatchHistory {
   adversarial_won: boolean;
   total_versions: number;
   versions: PatchVersion[];
+}
+
+// ── Patch Lineage (auto-remediation-enhance) ────────────────────────────────
+// A patch may be superseded by a newer one when an attacker later finds a
+// bypass. The lineage walks the `supersedes` field back to the root patch
+// and returns the full chain (v1 → bypassed → v2 → ... → current).
+export interface LineageEntry {
+  patchId: string;
+  internalId: string;
+  title: string;
+  severity: string;
+  cve: string | null;
+  status: string;
+  confidence: number;
+  language: string;
+  createdAt: string;
+  approvedAt: string | null;
+  adversarialRounds: number;
+  adversarialWon: boolean;
+  supersedes: string | null;
+  patchExplanation: {
+    cweId: string | null;
+    vulnClass: string;
+    fixStrategy: string;
+    behaviorChange: string;
+  } | null;
+  supersededBy: string | null;
+  supersededByReason: string | null;
+}
+export interface PatchLineage {
+  patch_id: string;
+  title: string;
+  lineage_depth: number;
+  is_current: boolean;
+  lineage: LineageEntry[];
 }
 
 // ── PR Artifacts ────────────────────────────────────────────────────────────
@@ -760,7 +938,12 @@ export const sentinelApi = {
     ),
 
   // Compliance + Privacy
-  compliance: () => http<ComplianceStatus>("/api/compliance"),
+  compliance: (framework?: FrameworkId) =>
+    http<ComplianceStatus>(`/api/compliance${framework ? `?framework=${framework}` : ""}`),
+  gapAnalysis: (framework?: FrameworkId) =>
+    http<GapAnalysisResponse>(`/api/compliance/gap-analysis${framework ? `?framework=${framework}` : ""}`),
+  complianceExportUrl: (framework: FrameworkId, format: "html" | "json" = "html") =>
+    `/api/compliance/export?framework=${framework}&format=${format}`,
   dataPrivacy: () => http<DataPrivacyStatus>("/api/data-privacy"),
   breachNotification: () => http<BreachNotificationStatus>("/api/breach-notification"),
 
@@ -775,6 +958,24 @@ export const sentinelApi = {
     http<ScaScanResult>(`/api/sca-scan${codebaseId ? `?codebaseId=${codebaseId}` : ""}`),
   patchHistory: (patchId: string) =>
     http<PatchHistory>(`/api/patches/${encodeURIComponent(patchId)}/history`),
+  patchLineage: (patchId: string) =>
+    http<PatchLineage>(`/api/patches/${encodeURIComponent(patchId)}/lineage`),
+  runTest: (patchId: string, target?: "patched" | "original") =>
+    http<{
+      ok: boolean;
+      patch_id: string;
+      target: string;
+      passed: boolean;
+      exit_code: number | null;
+      stdout: string;
+      stderr: string;
+      logs: string;
+      duration_ms: number;
+      timed_out: boolean;
+    }>(`/api/patches/${encodeURIComponent(patchId)}/test`, {
+      method: "POST",
+      body: JSON.stringify({ target: target ?? "patched" }),
+    }),
   rollbackPatch: (patchId: string, reason?: string) =>
     http<{ patch_id: string; status: string; message: string }>(
       `/api/patches/${encodeURIComponent(patchId)}/rollback`,

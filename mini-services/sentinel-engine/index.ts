@@ -23,7 +23,7 @@ import { join } from "node:path";
 
 import { runScan } from "./src/lib/sentinel/engine/pipeline";
 import { runEngagement } from "./src/lib/sentinel/engine/redagent-pipeline";
-import { runExploit } from "./src/lib/sentinel/engine/sandbox";
+import { runExploit, runSandbox } from "./src/lib/sentinel/engine/sandbox";
 import { db } from "./src/lib/db";
 
 const PORT = parseInt(process.env.PORT || "3003", 10);
@@ -181,6 +181,34 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
 
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
+      return;
+    }
+
+    // ── POST /api/run-sandbox-test (auto-remediation-enhance) ────────────
+    // Runs an arbitrary testCode against a targetCode (patched or original)
+    // in the bun sandbox. Used by /api/patches/[id]/test to run the
+    // auto-generated regression test.
+    if (path === "/api/run-sandbox-test" && method === "POST") {
+      const { testCode, patchedCode, targetFilename } = json;
+      if (!testCode || !patchedCode) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "testCode and patchedCode required" }));
+        return;
+      }
+      const result = await runSandbox(testCode, {
+        patchedCode,
+        patchedFilename: targetFilename || "target.js",
+      });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        exit_code: result.exitCode,
+        passed: result.passed,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        logs: result.logs,
+        duration_ms: result.durationMs,
+        timed_out: result.timedOut,
+      }));
       return;
     }
 

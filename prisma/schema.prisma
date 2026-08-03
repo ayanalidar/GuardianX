@@ -95,6 +95,12 @@ model Patch {
   adversarialWon       Boolean  @default(false)
   adversarialTranscript String?
   status         String   @default("pending")
+  // ── auto-remediation-enhance ───────────────────────────────────────────
+  supersedes     String?  // patchId of the previous patch this one supersedes (lineage)
+  language       String   @default("javascript") // target language: js|ts|py|go|java|php|rb|cs|cpp|rs
+  patchExplanation String?  // JSON: { cweId, vulnClass, fixStrategy, behaviorChange }
+  confidenceBreakdown String? // JSON: { sandboxPassed, redTeamBlocked, owaspPatterns, noNewVulns, total }
+  multiVectorSandbox String? // JSON: per-vector pass/fail from the multi-vector sandbox
   createdAt      DateTime @default(now())
   approvedAt     DateTime?
   chatMessages   ChatMessage[]

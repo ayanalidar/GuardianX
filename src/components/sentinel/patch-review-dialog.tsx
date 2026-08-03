@@ -26,6 +26,7 @@ import {
   type ChatMessage,
   type PatchHistory,
   type PrArtifacts,
+  type PatchLineage,
 } from "@/lib/sentinel/api";
 import {
   severityStyles,
@@ -41,9 +42,11 @@ import {
   FileCode2,
   Gauge,
   GitBranch,
+  GitCompare,
   History,
   Loader2,
   MessageSquare,
+  Play,
   ShieldCheck,
   ShieldX,
   Sparkles,
@@ -75,8 +78,18 @@ export function PatchReviewDialog({
   const [rollbackLoading, setRollbackLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [prOpen, setPrOpen] = useState(false);
+  const [lineageOpen, setLineageOpen] = useState(false);
   const [historyData, setHistoryData] = useState<PatchHistory | null>(null);
   const [prData, setPrData] = useState<PrArtifacts | null>(null);
+  const [lineageData, setLineageData] = useState<PatchLineage | null>(null);
+  const [testRunning, setTestRunning] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    passed: boolean;
+    target: string;
+    exit_code: number | null;
+    logs: string;
+    duration_ms: number;
+  } | null>(null);
 
   const patchId = patch?.patch_id ?? null;
 
@@ -153,6 +166,42 @@ export function PatchReviewDialog({
       setHistoryOpen(true);
     } catch (err) {
       toast({ variant: "destructive", title: "Failed to load history", description: err instanceof Error ? err.message : "unknown" });
+    }
+  }, [patchId, toast]);
+
+  const loadLineage = useCallback(async () => {
+    if (!patchId) return;
+    try {
+      const l = await sentinelApi.patchLineage(patchId);
+      setLineageData(l);
+      setLineageOpen(true);
+    } catch (err) {
+      toast({ variant: "destructive", title: "Failed to load lineage", description: err instanceof Error ? err.message : "unknown" });
+    }
+  }, [patchId, toast]);
+
+  const runTest = useCallback(async (target: "patched" | "original") => {
+    if (!patchId) return;
+    setTestRunning(true);
+    setTestResult(null);
+    try {
+      const r = await sentinelApi.runTest(patchId, target);
+      setTestResult({
+        passed: r.passed,
+        target: r.target,
+        exit_code: r.exit_code,
+        logs: r.logs,
+        duration_ms: r.duration_ms,
+      });
+      toast({
+        title: r.passed ? `Test passed (${r.target})` : `Test failed (${r.target})`,
+        description: `exit ${r.exit_code} in ${r.duration_ms}ms`,
+        variant: r.passed ? "default" : "destructive",
+      });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Test run failed", description: err instanceof Error ? err.message : "unknown" });
+    } finally {
+      setTestRunning(false);
     }
   }, [patchId, toast]);
 
@@ -248,7 +297,7 @@ export function PatchReviewDialog({
                 />
               </div>
 
-              {/* Confidence meter */}
+              {/* Confidence meter + breakdown (auto-remediation-enhance) */}
               <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
@@ -279,6 +328,48 @@ export function PatchReviewDialog({
                     style={{ width: `${Math.round(confidence * 100)}%` }}
                   />
                 </div>
+                {detail.confidence_breakdown && (
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] sm:grid-cols-4">
+                    {[
+                      { label: "Sandbox", v: detail.confidence_breakdown.sandboxPassed, max: 40 },
+                      { label: "Red-Team", v: detail.confidence_breakdown.redTeamBlocked, max: 30 },
+                      { label: "OWASP", v: detail.confidence_breakdown.owaspPatterns, max: 15 },
+                      { label: "No New Vulns", v: detail.confidence_breakdown.noNewVulns, max: 15 },
+                    ].map((row) => (
+                      <div key={row.label} className="rounded border border-zinc-800 bg-zinc-950/60 p-1.5">
+                        <div className="text-[9px] uppercase text-zinc-500">{row.label}</div>
+                        <div className={`font-mono text-xs ${row.v === row.max ? "text-emerald-300" : row.v === 0 ? "text-zinc-500" : "text-amber-300"}`}>
+                          {row.v}/{row.max}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {detail.patch_explanation && (
+                  <div className="mt-3 rounded border border-zinc-800 bg-zinc-950/40 p-2.5 text-[11px]">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {detail.patch_explanation.cweId && (
+                        <Badge variant="outline" className="border-zinc-700 bg-zinc-800/40 text-[10px] text-cyan-300">
+                          {detail.patch_explanation.cweId}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="border-zinc-700 bg-zinc-800/40 text-[10px] text-violet-300">
+                        {detail.patch_explanation.vulnClass}
+                      </Badge>
+                      {detail.language && (
+                        <Badge variant="outline" className="border-zinc-700 bg-zinc-800/40 text-[10px] text-zinc-400">
+                          {detail.language}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-1.5 text-zinc-300">
+                      <strong className="text-zinc-400">Fix:</strong> {detail.patch_explanation.fixStrategy}
+                    </div>
+                    <div className="text-zinc-400">
+                      <strong className="text-zinc-500">Behavior:</strong> {detail.patch_explanation.behaviorChange}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* AI explanation */}
@@ -387,10 +478,47 @@ export function PatchReviewDialog({
                   />
                 </TabsContent>
                 <TabsContent value="test" className="mt-3">
-                  <DiffViewer
-                    diff={detail.test_code}
-                    filename="generated-test.js"
-                  />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => runTest("patched")}
+                        disabled={testRunning}
+                        className="bg-emerald-600 text-white hover:bg-emerald-500"
+                      >
+                        {testRunning ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+                        Run Test (patched)
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => runTest("original")}
+                        disabled={testRunning}
+                        className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+                      >
+                        {testRunning ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+                        Run Test (original — should fail)
+                      </Button>
+                    </div>
+                    {testResult && (
+                      <div className={`rounded-md border p-3 text-xs ${
+                        testResult.passed
+                          ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-300"
+                          : "border-red-500/30 bg-red-500/5 text-red-300"
+                      }`}>
+                        <div className="font-semibold">
+                          {testResult.passed ? "✓ Test PASSED" : "✗ Test FAILED"} (target: {testResult.target}, exit {testResult.exit_code}, {testResult.duration_ms}ms)
+                        </div>
+                        <pre className="custom-scrollbar mt-2 max-h-40 overflow-auto rounded bg-zinc-950/60 p-2 font-mono text-[9px] text-zinc-400">
+                          {testResult.logs.slice(0, 2000)}
+                        </pre>
+                      </div>
+                    )}
+                    <DiffViewer
+                      diff={detail.test_code}
+                      filename="generated-test.js"
+                    />
+                  </div>
                 </TabsContent>
                 <TabsContent value="chat" className="mt-3">
                   <ChatPanel
@@ -424,6 +552,17 @@ export function PatchReviewDialog({
             >
               <History className="size-3.5" />
               <span className="hidden sm:inline">History</span>
+            </Button>
+            {/* Lineage button (auto-remediation-enhance) */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { void loadLineage(); }}
+              disabled={loading}
+              className="text-zinc-400 hover:text-violet-400"
+            >
+              <GitCompare className="size-3.5" />
+              <span className="hidden sm:inline">Lineage</span>
             </Button>
             {/* Generate PR button */}
             <Button
@@ -499,6 +638,69 @@ export function PatchReviewDialog({
                 <pre className="custom-scrollbar mt-1 max-h-24 overflow-auto rounded border border-zinc-800 bg-zinc-950 p-2 font-mono text-[8px] text-zinc-500">{v.code_preview}</pre>
               </div>
             ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lineage dialog (auto-remediation-enhance) */}
+      <Dialog open={lineageOpen} onOpenChange={setLineageOpen}>
+        <DialogContent className="max-h-[90vh] gap-0 overflow-hidden border-zinc-800 bg-zinc-950 p-0 text-zinc-100 sm:max-w-2xl">
+          <DialogHeader className="gap-2 border-b border-zinc-800 px-5 py-4">
+            <DialogTitle className="flex items-center gap-2 text-base text-violet-400">
+              <GitCompare className="size-4" /> Patch Lineage
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400">
+              {lineageData
+                ? `${lineageData.title} — ${lineageData.lineage_depth} version(s) in the chain`
+                : "Loading…"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="custom-scrollbar max-h-[calc(90vh-8rem)] overflow-y-auto p-5">
+            {lineageData?.lineage.map((entry, i) => {
+              const isCurrent = i === lineageData.lineage.length - 1;
+              const isRoot = i === 0;
+              return (
+                <div key={entry.patchId} className={`relative mb-4 border-l-2 pl-4 ${
+                  isCurrent ? "border-emerald-500" : "border-zinc-700"
+                }`}>
+                  <div className={`absolute -left-1.5 top-1 size-3 rounded-full ${
+                    isRoot ? "bg-red-500" : isCurrent ? "bg-emerald-500 pulse-dot" : "bg-violet-500"
+                  }`} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-zinc-100">
+                      v{i + 1}{isCurrent && " (current)"}
+                    </span>
+                    <span className="font-mono text-[9px] text-zinc-500">{entry.patchId}</span>
+                    <span className={`rounded px-1.5 py-0.5 text-[9px] ${
+                      entry.status === "approved" ? "bg-emerald-500/10 text-emerald-300" : "bg-amber-500/10 text-amber-300"
+                    }`}>
+                      {entry.status}
+                    </span>
+                    <span className="text-[10px] text-zinc-500">
+                      conf {(entry.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-zinc-400">
+                    {new Date(entry.createdAt).toLocaleString()}
+                  </div>
+                  {entry.patchExplanation && (
+                    <div className="mt-1 text-[10px] text-zinc-400">
+                      <span className="text-cyan-400">{entry.patchExplanation.cweId ?? "—"}</span>
+                      {" · "}<span className="text-violet-400">{entry.patchExplanation.vulnClass}</span>
+                      {" · "}{entry.patchExplanation.fixStrategy}
+                    </div>
+                  )}
+                  {entry.supersededBy && (
+                    <div className="mt-1 rounded border border-red-500/20 bg-red-500/5 p-1.5 text-[10px] text-red-300">
+                      ↓ Superseded by <span className="font-mono">{entry.supersededBy}</span>
+                      {entry.supersededByReason && (
+                        <div className="mt-0.5 text-red-400/80">Reason: {entry.supersededByReason}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </DialogContent>
       </Dialog>

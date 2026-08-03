@@ -95,11 +95,8 @@ function RoundCard({
   round: AdversarialRound;
   isLast: boolean;
 }) {
-  const attackerWon =
-    round.bypassFound &&
-    round.bypassResult?.success &&
-    round.outcome !== "defender-won-round";
-  const defenderWon = round.outcome === "defender-won-round";
+  const attackerWon = round.outcome === "attacker-won";
+  const defenderWon = round.outcome === "defender-won";
   const conceded = round.outcome === "attacker-conceded";
 
   return (
@@ -118,6 +115,11 @@ function RoundCard({
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
               Round {round.round}
             </span>
+            {round.strategyId && (
+              <Badge variant="outline" className="border-zinc-700 bg-zinc-800/40 text-[9px] text-violet-300">
+                {round.strategyId}
+              </Badge>
+            )}
           </div>
           <OutcomeBadge outcome={round.outcome} />
         </div>
@@ -225,14 +227,21 @@ function OutcomeBadge({
           Defender wins
         </Badge>
       );
-    case "defender-won-round":
+    case "defender-won":
       return (
         <Badge className="border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
           <ShieldCheck className="size-3" />
           Patch held
         </Badge>
       );
-    case "defender-partial":
+    case "attacker-won":
+      return (
+        <Badge className="border border-red-500/40 bg-red-500/10 text-red-300">
+          <Skull className="size-3" />
+          Attacker won
+        </Badge>
+      );
+    case "partial":
       return (
         <Badge className="border border-amber-500/40 bg-amber-500/10 text-amber-300">
           <Zap className="size-3" />
@@ -243,6 +252,12 @@ function OutcomeBadge({
       return (
         <Badge className="border border-zinc-600 bg-zinc-700/40 text-zinc-300">
           Bypass unconfirmed
+        </Badge>
+      );
+    case "inconclusive":
+      return (
+        <Badge className="border border-zinc-600 bg-zinc-700/40 text-zinc-300">
+          Inconclusive
         </Badge>
       );
     default:

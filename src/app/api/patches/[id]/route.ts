@@ -29,6 +29,14 @@ export async function GET(
 
   if (!patch) return NextResponse.json({ error: "Patch not found" }, { status: 404 });
 
+  // New auto-remediation-enhance fields are nullable; read defensively.
+  const p = patch as Record<string, unknown>;
+  const language = typeof p.language === "string" ? p.language : "javascript";
+  const supersedes = typeof p.supersedes === "string" ? p.supersedes : null;
+  const patchExplanation = safeJson(p.patchExplanation as string | null, null);
+  const confidenceBreakdown = safeJson(p.confidenceBreakdown as string | null, null);
+  const multiVectorSandbox = safeJson(p.multiVectorSandbox as string | null, null);
+
   return NextResponse.json({
     patch_id: patch.patchId,
     internal_id: patch.id,
@@ -63,6 +71,12 @@ export async function GET(
       content: m.content,
       created_at: m.createdAt.toISOString(),
     })),
+    // ── auto-remediation-enhance ───────────────────────────────────────
+    language,
+    patch_explanation: patchExplanation,
+    confidence_breakdown: confidenceBreakdown,
+    multi_vector_sandbox: multiVectorSandbox,
+    supersedes,
   });
 }
 

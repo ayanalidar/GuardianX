@@ -2,6 +2,22 @@
 // Runs: analyze -> generate patch (per vuln) -> sandbox test -> persist.
 // Emits real-time events through a callback so the socket.io server can
 // broadcast them to connected clients.
+//
+// ─── Enhanced (auto-remediation-enhance) ────────────────────────────────────
+//  • Multi-vector sandbox: every patch is now tested against the original
+//    exploit + every deterministic strategy from ATTACK_STRATEGIES for the
+//    vuln class + 50 fuzzed payloads + a perf check + a side-effect check.
+//  • Adversarial arena: bumped to 5 rounds, uses the strategy library for
+//    deterministic coverage, concedes after 2 rounds with no progress, and
+//    classifies each round as attacker_won / defender_won / partial /
+//    inconclusive.
+//  • Confidence: the final 0..100 score is computed via computeConfidence()
+//    using the sandbox result, adversarial outcome, OWASP-pattern adoption,
+//    and the "no new vulnerabilities" heuristic. The full breakdown is
+//    persisted on the Patch row.
+//  • Patch lineage: if a patch is later found to be bypassable, a new patch
+//    is generated with `supersedes` set to the previous patchId, forming a
+//    version chain (Patch v1 → bypassed → Patch v2).
 
 import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
@@ -11,9 +27,14 @@ import {
   generateExploit,
   generateBypass,
   generateImprovedPatch,
+  computeConfidence,
+  pickStrategy,
+  classifyVulnerability,
   type DetectedVulnerability,
+  type AttackStrategy,
+  type VulnClass,
 } from "./ai";
-import { runSandbox, runExploit } from "./sandbox";
+import { runSandbox, runExploit, runMultiVectorSandbox } from "./sandbox";
 import { unifiedDiff } from "./diff";
 
 export interface PipelineEvent {
@@ -28,10 +49,12 @@ export interface PipelineEvent {
 type Emit = (e: PipelineEvent) => void;
 
 // One round of the adversarial red-team/blue-team loop.
+// Enhanced with explicit outcome classification.
 interface AdversarialRound {
   round: number;
   attackerTechnique: string;
   attackerReasoning: string;
+  strategyId?: string;
   bypassFound: boolean;
   bypassResult: {
     success: boolean;
@@ -49,12 +72,16 @@ interface AdversarialRound {
     originalLogs: string | null;
     bypassLogs: string;
   } | null;
-  outcome:
-    | "attacker-conceded"
-    | "bypass-unconfirmed"
-    | "defender-won-round"
-    | "defender-partial";
+  outcome: AdversarialOutcome;
 }
+
+type AdversarialOutcome =
+  | "attacker-won"        // bypass confirmed AND defender failed to block it
+  | "defender-won"        // bypass blocked by defender's iteration
+  | "partial"             // defender blocked one of (original/bypass) but not both
+  | "attacker-conceded"   // attacker did not find a bypass
+  | "bypass-unconfirmed"  // attacker claimed a bypass but it didn't reproduce
+  | "inconclusive";       // arena exhausted without a clear winner
 
 // Collision-proof patch id: sequential-ish number + random suffix so concurrent
 // scans can never clash on the unique `patchId` constraint.
@@ -144,12 +171,13 @@ export async function runScan(
     let created = 0;
     for (const vuln of scanResult.vulnerabilities) {
       const patchId = await nextPatchId();
+      const vulnClass: VulnClass = vuln.vulnClass ?? classifyVulnerability(vuln);
 
       await emitAndStore({
         stage: "patching",
-        message: `Generating patch for "${vuln.title}"…`,
+        message: `Generating patch for "${vuln.title}" (class: ${vulnClass})…`,
         level: "info",
-        meta: { patchId, severity: vuln.severity },
+        meta: { patchId, severity: vuln.severity, vulnClass },
       });
 
       const generated = await generatePatch(
@@ -240,6 +268,53 @@ export async function runScan(
         meta: { patchId, exitCode: sandbox.exitCode },
       });
 
+      // ── Stage B+: Multi-vector sandbox (NEW, auto-remediation-enhance) ─
+      await db.scan.update({
+        where: { id: scan.id },
+        data: { status: "sandboxing", stageLabel: `${patchId}: multi-vector battery…` },
+      });
+      await emitAndStore({
+        stage: "sandboxing",
+        message: `${patchId}: 🛡️ running multi-vector battery (original + library strategies + 50 fuzz + perf + side-effect)…`,
+        level: "info",
+        meta: { patchId, phase: "multi-vector", vulnClass },
+      });
+
+      let multiVector = null as Awaited<ReturnType<typeof runMultiVectorSandbox>> | null;
+      try {
+        multiVector = await runMultiVectorSandbox(
+          exploit.exploitCode,
+          generated.patchedCode,
+          codebase.sourceCode,
+          codebase.name,
+          vulnClass,
+          { label: `${patchId} multi-vector` }
+        );
+        await emitAndStore({
+          stage: "sandboxing",
+          message: multiVector.overallPassed
+            ? `${patchId}: ✅ multi-vector PASSED — ${multiVector.summary.blocked}/${multiVector.summary.total} vectors blocked, ${multiVector.summary.bypassed} bypassed`
+            : `${patchId}: ⚠️ multi-vector found issues — ${multiVector.summary.bypassed} bypassed, ${multiVector.summary.inconclusive} inconclusive`,
+          level: multiVector.overallPassed ? "success" : "warning",
+          meta: {
+            patchId,
+            phase: "multi-vector-result",
+            summary: multiVector.summary,
+            perf: multiVector.performance
+              ? { ratio: multiVector.performance.ratio, passed: multiVector.performance.passed }
+              : null,
+            sideEffect: multiVector.sideEffect?.passed ?? null,
+          },
+        });
+      } catch (mvErr) {
+        await emitAndStore({
+          stage: "sandboxing",
+          message: `${patchId}: ⚠️ multi-vector sandbox failed (${(mvErr as Error)?.message?.slice(0, 80)}), continuing`,
+          level: "warning",
+          meta: { patchId, phase: "multi-vector-error" },
+        });
+      }
+
       // ── Stage C: Adversarial red-team / blue-team loop ─────────────────
       await db.scan.update({
         where: { id: scan.id },
@@ -247,23 +322,30 @@ export async function runScan(
       });
       await emitAndStore({
         stage: "sandboxing",
-        message: `${patchId}: ⚔️  entering adversarial arena — attacker vs defender…`,
+        message: `${patchId}: ⚔️  entering adversarial arena — attacker vs defender (max 5 rounds, deterministic strategy library)…`,
         level: "info",
-        meta: { patchId, phase: "adversarial-start" },
+        meta: { patchId, phase: "adversarial-start", vulnClass },
       });
 
       let currentPatched = generated.patchedCode;
       let adversarialWon = !exploitPatched?.success; // already blocks the original exploit
       const transcript: AdversarialRound[] = [];
       const previousAttempts: { technique: string; outcome: string }[] = [];
-      const MAX_ROUNDS = 2;
+      const triedStrategyIds: string[] = [];
+      const MAX_ROUNDS = 5;
+      let noProgressStreak = 0; // for diminishing-returns concession
+      let attackerOverallWin = false; // any round where attacker-won happened
 
       for (let round = 1; round <= MAX_ROUNDS; round++) {
+        // ── Pick a deterministic strategy for this round ──────────────────
+        const strategy: AttackStrategy | null = pickStrategy(vulnClass, triedStrategyIds);
+        if (strategy) triedStrategyIds.push(strategy.id);
+
         await emitAndStore({
           stage: "sandboxing",
-          message: `${patchId}: ⚔️ round ${round}/${MAX_ROUNDS} — attacker probing for a bypass…`,
+          message: `${patchId}: ⚔️ round ${round}/${MAX_ROUNDS} — attacker probing for a bypass${strategy ? ` (strategy: ${strategy.technique})` : " (free-form)"}…`,
           level: "info",
-          meta: { patchId, phase: "adversarial-round", round },
+          meta: { patchId, phase: "adversarial-round", round, strategyId: strategy?.id },
         });
 
         let attack;
@@ -273,7 +355,8 @@ export async function runScan(
             currentPatched,
             vuln,
             exploit.exploitCode,
-            previousAttempts
+            previousAttempts,
+            strategy
           );
         } catch (bypassErr) {
           // Z.AI API may rate-limit or block the adversarial call. Don't lose
@@ -284,6 +367,17 @@ export async function runScan(
             level: "warning",
             meta: { patchId, phase: "adversarial-skipped", round },
           });
+          transcript.push({
+            round,
+            attackerTechnique: strategy?.technique ?? "free-form",
+            attackerReasoning: "LLM call failed",
+            strategyId: strategy?.id,
+            bypassFound: false,
+            bypassResult: null,
+            defender: null,
+            defenseVerification: null,
+            outcome: "inconclusive",
+          });
           break;
         }
 
@@ -292,12 +386,13 @@ export async function runScan(
             stage: "sandboxing",
             message: `${patchId}: 🟢 round ${round} — attacker concedes: "${attack.reasoning.slice(0, 120)}"`,
             level: "success",
-            meta: { patchId, round, outcome: "attacker-conceded" },
+            meta: { patchId, round, outcome: "attacker-conceded", strategyId: strategy?.id },
           });
           transcript.push({
             round,
             attackerTechnique: attack.technique,
             attackerReasoning: attack.reasoning,
+            strategyId: attack.strategyId ?? strategy?.id,
             bypassFound: false,
             bypassResult: null,
             defender: null,
@@ -305,6 +400,7 @@ export async function runScan(
             outcome: "attacker-conceded",
           });
           adversarialWon = true;
+          noProgressStreak = 0;
           break;
         }
 
@@ -321,11 +417,12 @@ export async function runScan(
             ? `${patchId}: 🔴 round ${round} — attacker bypass SUCCEEDED: ${attack.technique} — ${bypassResult.detail}`
             : `${patchId}: round ${round} — attacker claimed bypass but it was BLOCKED (${bypassResult.detail})`,
           level: bypassResult.success ? "error" : "warning",
-          meta: { patchId, round, outcome: bypassResult.success ? "bypass-confirmed" : "bypass-failed" },
+          meta: { patchId, round, outcome: bypassResult.success ? "bypass-confirmed" : "bypass-failed", strategyId: strategy?.id },
         });
 
         if (!bypassResult.success) {
-          // Attacker claimed a bypass but it didn't actually work — count as concede for this round
+          // Attacker claimed a bypass but it didn't actually work — count as
+          // a no-progress round for the diminishing-returns concession.
           previousAttempts.push({
             technique: attack.technique,
             outcome: "bypass did not confirm",
@@ -334,6 +431,7 @@ export async function runScan(
             round,
             attackerTechnique: attack.technique,
             attackerReasoning: attack.reasoning,
+            strategyId: attack.strategyId ?? strategy?.id,
             bypassFound: true,
             bypassResult: {
               success: false,
@@ -344,16 +442,28 @@ export async function runScan(
             defenseVerification: null,
             outcome: "bypass-unconfirmed",
           });
+          noProgressStreak++;
           // Continue to next round — attacker may try again
+          if (noProgressStreak >= 2) {
+            await emitAndStore({
+              stage: "sandboxing",
+              message: `${patchId}: ⚪ round ${round} — diminishing returns (2 rounds no progress), attacker concedes`,
+              level: "info",
+              meta: { patchId, round, outcome: "diminishing-returns" },
+            });
+            adversarialWon = true;
+            break;
+          }
           continue;
         }
 
         // Bypass confirmed — defender must iterate
+        noProgressStreak = 0;
         await emitAndStore({
           stage: "sandboxing",
           message: `${patchId}: 🛡️  round ${round} — defender iterating patch to block "${attack.technique}"…`,
           level: "info",
-          meta: { patchId, round, phase: "defender-iterate" },
+          meta: { patchId, round, phase: "defender-iterate", strategyId: strategy?.id },
         });
 
         const defense = await generateImprovedPatch(
@@ -377,20 +487,30 @@ export async function runScan(
         const originalBlocked = !reOriginal?.success;
         const bypassBlocked = !reBypass.success;
 
+        const roundOutcome: AdversarialOutcome =
+          originalBlocked && bypassBlocked
+            ? "defender-won"
+            : !originalBlocked && !bypassBlocked
+              ? "attacker-won"
+              : "partial";
+
         await emitAndStore({
           stage: "sandboxing",
           message:
-            originalBlocked && bypassBlocked
+            roundOutcome === "defender-won"
               ? `${patchId}: 🟢 round ${round} — defender's new patch blocks both original + bypass`
-              : `${patchId}: ⚠️ round ${round} — defender patch incomplete (original blocked: ${originalBlocked}, bypass blocked: ${bypassBlocked})`,
-          level: originalBlocked && bypassBlocked ? "success" : "warning",
-          meta: { patchId, round, originalBlocked, bypassBlocked },
+              : roundOutcome === "attacker-won"
+                ? `${patchId}: 🔴 round ${round} — defender patch incomplete (original blocked: ${originalBlocked}, bypass blocked: ${bypassBlocked}) — attacker wins this round`
+                : `${patchId}: ⚠️ round ${round} — defender patch partial (original blocked: ${originalBlocked}, bypass blocked: ${bypassBlocked})`,
+          level: roundOutcome === "defender-won" ? "success" : roundOutcome === "attacker-won" ? "error" : "warning",
+          meta: { patchId, round, originalBlocked, bypassBlocked, outcome: roundOutcome, strategyId: strategy?.id },
         });
 
         transcript.push({
           round,
           attackerTechnique: attack.technique,
           attackerReasoning: attack.reasoning,
+          strategyId: attack.strategyId ?? strategy?.id,
           bypassFound: true,
           bypassResult: {
             success: true,
@@ -408,83 +528,210 @@ export async function runScan(
             originalLogs: reOriginal?.logs ?? null,
             bypassLogs: reBypass.logs,
           },
-          outcome: originalBlocked && bypassBlocked ? "defender-won-round" : "defender-partial",
+          outcome: roundOutcome,
         });
 
         previousAttempts.push({
           technique: attack.technique,
-          outcome: originalBlocked && bypassBlocked ? "blocked by defender" : "partially blocked",
+          outcome:
+            roundOutcome === "defender-won"
+              ? "blocked by defender"
+              : roundOutcome === "attacker-won"
+                ? "attacker won (both re-exploded)"
+                : "partially blocked",
         });
 
         currentPatched = defense.patchedCode;
         adversarialWon = originalBlocked && bypassBlocked;
-
-        // If defender won this round AND it was the bypass round, the loop
-        // continues to let the attacker try once more (unless we hit MAX_ROUNDS).
+        if (roundOutcome === "attacker-won") attackerOverallWin = true;
       }
+
+      // Final adversarial verdict.
+      const finalOutcome: AdversarialOutcome = attackerOverallWin
+        ? "attacker-won"
+        : adversarialWon
+          ? "defender-won"
+          : "inconclusive";
 
       await emitAndStore({
         stage: "sandboxing",
-        message: adversarialWon
-          ? `${patchId}: 🏆 adversarial arena complete — defender wins after ${transcript.length} round(s)`
-          : `${patchId}: ⚠️ adversarial arena ended without a clear defender win after ${transcript.length} round(s)`,
-        level: adversarialWon ? "success" : "warning",
-        meta: { patchId, phase: "adversarial-end", rounds: transcript.length, adversarialWon },
+        message:
+          finalOutcome === "defender-won"
+            ? `${patchId}: 🏆 adversarial arena complete — defender wins after ${transcript.length} round(s)`
+            : finalOutcome === "attacker-won"
+              ? `${patchId}: ⚠️ adversarial arena ended with attacker wins — patch has known weaknesses`
+              : `${patchId}: ⚪ adversarial arena ended inconclusive after ${transcript.length} round(s)`,
+        level: finalOutcome === "defender-won" ? "success" : finalOutcome === "attacker-won" ? "error" : "warning",
+        meta: { patchId, phase: "adversarial-end", rounds: transcript.length, finalOutcome },
+      });
+
+      // ── Compute final confidence (auto-remediation-enhance) ────────────
+      const redTeamBlocked = finalOutcome === "defender-won" || (adversarialWon && !attackerOverallWin);
+      const conf = computeConfidence({
+        sandboxPassed: sandbox.passed,
+        redTeamBlocked,
+        patchedCode: currentPatched,
+        originalCode: codebase.sourceCode,
+        language: generated.language,
+      });
+
+      await emitAndStore({
+        stage: "sandboxing",
+        message: `${patchId}: 🎯 confidence = ${conf.breakdown.total}/100 (sandbox ${conf.breakdown.sandboxPassed}, red-team ${conf.breakdown.redTeamBlocked}, owasp ${conf.breakdown.owaspPatterns}, no-new-vulns ${conf.breakdown.noNewVulns})`,
+        level: conf.score >= 0.7 ? "success" : conf.score >= 0.4 ? "warning" : "error",
+        meta: {
+          patchId,
+          phase: "confidence",
+          score: conf.score,
+          breakdown: conf.breakdown,
+        },
       });
 
       // Compute a REAL diff from original -> FINAL patched (after adversarial loop)
       const realDiff = unifiedDiff(codebase.sourceCode, currentPatched, codebase.name);
 
-      await db.patch.create({
-        data: {
-          patchId,
-          codebaseId: codebase.id,
-          scanId: scan.id,
-          title: vuln.title,
-          severity: vuln.severity,
-          cve: vuln.cve,
-          affectedFile: vuln.affectedFile,
-          aiExplanation: vuln.explanation,
-          aiReasoning: vuln.reasoning,
-          confidence: vuln.confidence,
-          originalCode: codebase.sourceCode,
-          patchedCode: currentPatched,
-          diffPayload: realDiff,
-          testCode: generated.testCode,
-          sandboxLogs: sandbox.logs,
-          sandboxPassed: sandbox.passed,
-          exploitCode: exploit.exploitCode || null,
-          exploitOriginalResult: exploitOriginal
-            ? JSON.stringify({
-                success: exploitOriginal.success,
-                blocked: exploitOriginal.blocked,
-                detail: exploitOriginal.detail,
-                logs: exploitOriginal.logs,
-                durationMs: exploitOriginal.durationMs,
-              })
-            : null,
-          exploitPatchedResult: exploitPatched
-            ? JSON.stringify({
-                success: exploitPatched.success,
-                blocked: exploitPatched.blocked,
-                detail: exploitPatched.detail,
-                logs: exploitPatched.logs,
-                durationMs: exploitPatched.durationMs,
-              })
-            : null,
-          adversarialRounds: transcript.length,
-          adversarialWon,
-          adversarialTranscript: JSON.stringify(transcript),
-          status: "pending",
-        },
-      });
+      // ── Detect lineage: was this vuln already patched before? ──────────
+      // If a previous Patch on this codebase with the same title exists and
+      // is in status "rolled-back" or "rejected", we mark the new patch as
+      // superseding the most recent one. This is the "Patch v1 → bypassed →
+      // Patch v2" lineage.
+      let supersedesId: string | null = null;
+      try {
+        const priorPatches = await db.patch.findMany({
+          where: { codebaseId: codebase.id, title: vuln.title },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        });
+        if (priorPatches && priorPatches.length > 0) {
+          const prior = priorPatches[0] as { patchId?: string };
+          if (prior.patchId && prior.patchId !== patchId) {
+            supersedesId = prior.patchId;
+            await emitAndStore({
+              stage: "patching",
+              message: `${patchId}: 🔗 lineage — supersedes prior patch ${supersedesId} for "${vuln.title}"`,
+              level: "info",
+              meta: { patchId, phase: "lineage", supersedes: supersedesId },
+            });
+          }
+        }
+      } catch (linErr) {
+        // If the supersedes column isn't migrated yet, just skip lineage.
+        await emitAndStore({
+          stage: "patching",
+          message: `${patchId}: lineage lookup skipped (${(linErr as Error)?.message?.slice(0, 60)})`,
+          level: "warning",
+          meta: { patchId, phase: "lineage-skip" },
+        });
+      }
+
+      // ── Persist the patch (defensive: gracefully handle the case where the
+      // auto-remediation-enhance columns haven't been migrated into Supabase
+      // yet — we still persist the patch with the legacy field set, then
+      // attempt a follow-up update with the new fields and swallow the error
+      // if it fails).
+      const legacyData = {
+        patchId,
+        codebaseId: codebase.id,
+        scanId: scan.id,
+        title: vuln.title,
+        severity: vuln.severity,
+        cve: vuln.cve,
+        affectedFile: vuln.affectedFile,
+        aiExplanation: vuln.explanation,
+        aiReasoning: vuln.reasoning,
+        confidence: conf.score,
+        originalCode: codebase.sourceCode,
+        patchedCode: currentPatched,
+        diffPayload: realDiff,
+        testCode: generated.testCode,
+        sandboxLogs: sandbox.logs,
+        sandboxPassed: sandbox.passed,
+        exploitCode: exploit.exploitCode || null,
+        exploitOriginalResult: exploitOriginal
+          ? JSON.stringify({
+              success: exploitOriginal.success,
+              blocked: exploitOriginal.blocked,
+              detail: exploitOriginal.detail,
+              logs: exploitOriginal.logs,
+              durationMs: exploitOriginal.durationMs,
+            })
+          : null,
+        exploitPatchedResult: exploitPatched
+          ? JSON.stringify({
+              success: exploitPatched.success,
+              blocked: exploitPatched.blocked,
+              detail: exploitPatched.detail,
+              logs: exploitPatched.logs,
+              durationMs: exploitPatched.durationMs,
+            })
+          : null,
+        adversarialRounds: transcript.length,
+        adversarialWon,
+        adversarialTranscript: JSON.stringify(transcript),
+        status: "pending" as const,
+      };
+
+      // ── auto-remediation-enhance new fields (only persisted if the
+      // 0007_patch_lineage.sql migration has been applied).
+      const enhancedData: Record<string, unknown> = {
+        supersedes: supersedesId,
+        language: generated.language,
+        patchExplanation: JSON.stringify(generated.patchExplanation),
+        confidenceBreakdown: JSON.stringify(conf.breakdown),
+        multiVectorSandbox: multiVector
+          ? JSON.stringify({
+              overallPassed: multiVector.overallPassed,
+              summary: multiVector.summary,
+              vectors: multiVector.vectors.map((v) => ({
+                id: v.id,
+                label: v.label,
+                payload: v.payload,
+                outcome: v.outcome,
+                detail: v.detail,
+                durationMs: v.durationMs,
+              })),
+              performance: multiVector.performance,
+              sideEffect: multiVector.sideEffect,
+            })
+          : null,
+      };
+
+      let persistedId: string | undefined;
+      try {
+        // First try with the enhanced fields. If the columns exist this
+        // succeeds in one shot.
+        const created0 = await db.patch.create({
+          data: { ...legacyData, ...enhancedData } as Record<string, unknown>,
+        });
+        persistedId = (created0 as { id?: string }).id;
+      } catch (enhErr) {
+        // Columns missing — retry with the legacy field set only.
+        await emitAndStore({
+          stage: "patching",
+          message: `${patchId}: enhanced columns missing (${(enhErr as Error)?.message?.slice(0, 80)}), retrying with legacy schema`,
+          level: "warning",
+          meta: { patchId, phase: "patch-create-legacy-fallback" },
+        });
+        const created1 = await db.patch.create({ data: legacyData as Record<string, unknown> });
+        persistedId = (created1 as { id?: string }).id;
+      }
       created++;
 
       await emitAndStore({
         stage: "reviewing",
-        message: `Patch ${patchId} queued for review (adversarial: ${adversarialWon ? "defender won" : "inconclusive"}, ${transcript.length} rounds).`,
+        message: `Patch ${patchId} queued for review (adversarial: ${finalOutcome}, ${transcript.length} rounds, confidence ${conf.breakdown.total}/100).`,
         level: "success",
-        meta: { patchId, severity: vuln.severity, passed: sandbox.passed, adversarialWon, rounds: transcript.length },
+        meta: {
+          patchId,
+          persistedId,
+          severity: vuln.severity,
+          passed: sandbox.passed,
+          adversarialWon,
+          finalOutcome,
+          rounds: transcript.length,
+          confidence: conf.score,
+          confidenceBreakdown: conf.breakdown,
+        },
       });
     }
 

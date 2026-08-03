@@ -1,9 +1,44 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import {
+  DPDPA_FRAMEWORK,
+  ISO27001_FRAMEWORK,
+  SOC2_FRAMEWORK,
+  collectFrameworkEvidence,
+  scoreFramework,
+  getManualActivityCounts,
+  getRemediationCounts,
+  type FrameworkId,
+  type FrameworkDef,
+} from "@/lib/compliance";
 
 export const dynamic = "force-dynamic";
 
-// DPDPA 2023 sections relevant to security findings
+// ── 5-minute in-memory cache ──────────────────────────────────────────────
+// Compliance evidence doesn't change every second. We cache per framework.
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const cache = new Map<string, { data: unknown; expiresAt: number; cachedAt: string }>();
+
+function getCached(key: string) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt < Date.now()) {
+    cache.delete(key);
+    return null;
+  }
+  return entry;
+}
+
+function setCached(key: string, data: unknown) {
+  const now = new Date();
+  cache.set(key, {
+    data,
+    cachedAt: now.toISOString(),
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
+}
+
+// ── Legacy DPDPA / GDPR / HIPAA finding→section maps (kept for backward compat) ─
 const DPDPA_SECTIONS: Record<string, { section: string; title: string; requirement: string }> = {
   "Sensitive Data Exposure": {
     section: "§ 8(5)",
@@ -52,7 +87,6 @@ const DPDPA_SECTIONS: Record<string, { section: string; title: string; requireme
   },
 };
 
-// GDPR articles
 const GDPR_ARTICLES: Record<string, { article: string; title: string }> = {
   "Sensitive Data Exposure": { article: "Art. 32", title: "Security of Processing" },
   "PII Exposure": { article: "Art. 5(1)(f)", title: "Integrity & Confidentiality" },
@@ -65,7 +99,6 @@ const GDPR_ARTICLES: Record<string, { article: string; title: string }> = {
   "Authentication Bypass": { article: "Art. 32", title: "Security of Processing" },
 };
 
-// HIPAA Security Rule
 const HIPAA_RULES: Record<string, { rule: string; title: string }> = {
   "Sensitive Data Exposure": { rule: "§ 164.312(a)(1)", title: "Access Control" },
   "PII Exposure": { rule: "§ 164.312(a)(1)", title: "Access Control" },
@@ -77,15 +110,20 @@ const HIPAA_RULES: Record<string, { rule: string; title: string }> = {
   "Authentication Bypass": { rule: "§ 164.312(d)", title: "Person/Entity Authentication" },
 };
 
-const SEV_WEIGHT: Record<string, number> = { critical: 0, high: 20, medium: 40, low: 60, info: 80 };
+const FRAMEWORK_MAP: Record<FrameworkId, FrameworkDef> = {
+  DPDPA: DPDPA_FRAMEWORK,
+  ISO27001: ISO27001_FRAMEWORK,
+  SOC2: SOC2_FRAMEWORK,
+};
 
-// GET /api/compliance, multi-framework compliance status
-export async function GET() {
-  const findings = await db.finding.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+function isValidFramework(id: string | null): id is FrameworkId {
+  return id === "DPDPA" || id === "ISO27001" || id === "SOC2";
+}
 
-  // Resolve engagement → target names separately (dispatcher can't do nested includes)
+// ── Legacy multi-framework summary (kept for the existing UI cards) ────────
+async function buildLegacyFrameworks() {
+  const findings = await db.finding.findMany({ orderBy: { createdAt: "desc" } });
+
   const targetNames: Record<string, string> = {};
   for (const f of findings) {
     const engId = (f as Record<string, unknown>).engagementId as string;
@@ -103,12 +141,8 @@ export async function GET() {
     }
   }
 
-  // Also pull patch findings (from SAST)
-  const patches = await db.patch.findMany({
-    where: { status: "pending" },
-  });
+  const patches = await db.patch.findMany({ where: { status: "pending" } });
 
-  // Combine all security issues
   const allIssues = [
     ...findings.map((f) => {
       const fr = f as Record<string, unknown>;
@@ -135,12 +169,10 @@ export async function GET() {
     }),
   ];
 
-  // Map each issue to frameworks
   const mapped = allIssues.map((issue) => {
     const categoryKey = Object.keys(DPDPA_SECTIONS).find((k) =>
       issue.category.includes(k) || issue.title.includes(k)
     ) || "Info Disclosure";
-
     return {
       ...issue,
       dpdpa: DPDPA_SECTIONS[categoryKey] ?? null,
@@ -152,7 +184,6 @@ export async function GET() {
     };
   });
 
-  // Compute per-framework compliance score
   const totalIssues = mapped.length;
   const criticalOpen = mapped.filter((m) => m.severity === "critical").length;
   const highOpen = mapped.filter((m) => m.severity === "high").length;
@@ -164,14 +195,18 @@ export async function GET() {
     return Math.max(0, Math.min(100, s));
   };
 
+  const dpdpaScore = computeScore(100);
+  const isoScore = computeScore(95);
+  const soc2Score = computeScore(95);
+
   const frameworks = [
     {
       name: "DPDPA 2023",
       full_name: "Digital Personal Data Protection Act (India)",
-      score: computeScore(100),
-      status: computeScore(100) >= 80 ? "compliant" : computeScore(100) >= 50 ? "at-risk" : "non-compliant",
+      score: dpdpaScore,
+      status: dpdpaScore >= 80 ? "compliant" : dpdpaScore >= 50 ? "at-risk" : "non-compliant",
       icon: "shield",
-      color: computeScore(100) >= 80 ? "#10b981" : computeScore(100) >= 50 ? "#f59e0b" : "#ef4444",
+      color: dpdpaScore >= 80 ? "#10b981" : dpdpaScore >= 50 ? "#f59e0b" : "#ef4444",
       mapped_findings: mapped.filter((m) => m.dpdpa).length,
       sections: [
         { section: "§ 4", title: "Purpose Limitation & Notice", status: criticalOpen > 0 ? "violated" : "compliant" },
@@ -184,10 +219,10 @@ export async function GET() {
     {
       name: "GDPR",
       full_name: "General Data Protection Regulation (EU)",
-      score: computeScore(100),
-      status: computeScore(100) >= 80 ? "compliant" : computeScore(100) >= 50 ? "at-risk" : "non-compliant",
+      score: dpdpaScore,
+      status: dpdpaScore >= 80 ? "compliant" : dpdpaScore >= 50 ? "at-risk" : "non-compliant",
       icon: "globe",
-      color: computeScore(100) >= 80 ? "#10b981" : computeScore(100) >= 50 ? "#f59e0b" : "#ef4444",
+      color: dpdpaScore >= 80 ? "#10b981" : dpdpaScore >= 50 ? "#f59e0b" : "#ef4444",
       mapped_findings: mapped.filter((m) => m.gdpr).length,
       sections: [
         { section: "Art. 5", title: "Principles (lawfulness, purpose, minimization)", status: criticalOpen > 0 ? "violated" : "compliant" },
@@ -200,10 +235,10 @@ export async function GET() {
     {
       name: "HIPAA",
       full_name: "Health Insurance Portability & Accountability Act (US)",
-      score: computeScore(100),
-      status: computeScore(100) >= 80 ? "compliant" : computeScore(100) >= 50 ? "at-risk" : "non-compliant",
+      score: dpdpaScore,
+      status: dpdpaScore >= 80 ? "compliant" : dpdpaScore >= 50 ? "at-risk" : "non-compliant",
       icon: "heart",
-      color: computeScore(100) >= 80 ? "#10b981" : computeScore(100) >= 50 ? "#f59e0b" : "#ef4444",
+      color: dpdpaScore >= 80 ? "#10b981" : dpdpaScore >= 50 ? "#f59e0b" : "#ef4444",
       mapped_findings: mapped.filter((m) => m.hipaa).length,
       sections: [
         { section: "§ 164.312", title: "Technical Safeguards", status: criticalOpen > 0 ? "violated" : "compliant" },
@@ -229,10 +264,10 @@ export async function GET() {
     {
       name: "ISO 27001:2022",
       full_name: "Information Security Management Systems",
-      score: computeScore(95),
-      status: computeScore(95) >= 80 ? "compliant" : computeScore(95) >= 50 ? "at-risk" : "non-compliant",
+      score: isoScore,
+      status: isoScore >= 80 ? "compliant" : isoScore >= 50 ? "at-risk" : "non-compliant",
       icon: "award",
-      color: computeScore(95) >= 80 ? "#10b981" : computeScore(95) >= 50 ? "#f59e0b" : "#ef4444",
+      color: isoScore >= 80 ? "#10b981" : isoScore >= 50 ? "#f59e0b" : "#ef4444",
       mapped_findings: totalIssues,
       sections: [
         { section: "A.8.8", title: "Technical vulnerability management", status: totalIssues > 0 ? "at-risk" : "compliant" },
@@ -243,10 +278,10 @@ export async function GET() {
     {
       name: "SOC 2",
       full_name: "Service Organization Control 2",
-      score: computeScore(95),
-      status: computeScore(95) >= 80 ? "compliant" : computeScore(95) >= 50 ? "at-risk" : "non-compliant",
+      score: soc2Score,
+      status: soc2Score >= 80 ? "compliant" : soc2Score >= 50 ? "at-risk" : "non-compliant",
       icon: "check-shield",
-      color: computeScore(95) >= 80 ? "#10b981" : computeScore(95) >= 50 ? "#f59e0b" : "#ef4444",
+      color: soc2Score >= 80 ? "#10b981" : soc2Score >= 50 ? "#f59e0b" : "#ef4444",
       mapped_findings: totalIssues,
       sections: [
         { section: "CC7.1", title: "Vulnerability detection & monitoring", status: totalIssues > 0 ? "at-risk" : "compliant" },
@@ -258,30 +293,114 @@ export async function GET() {
 
   const overallScore = Math.round(frameworks.reduce((s, f) => s + f.score, 0) / frameworks.length);
 
-  // DPDPA-specific findings mapping
-  const dpdpaFindings = mapped
+  return {
+    overallScore,
+    frameworks,
+    mapped,
+    totalIssues,
+    criticalOpen,
+    highOpen,
+  };
+}
+
+// GET /api/compliance?framework=DPDPA|ISO27001|SOC2
+// Returns the full multi-framework summary (legacy) PLUS a deep dive into
+// the selected framework (default DPDPA) with per-section evidence +
+// the transparent score breakdown.
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const requested = url.searchParams.get("framework");
+  const frameworkId: FrameworkId = isValidFramework(requested) ? requested : "DPDPA";
+
+  const cacheKey = `framework:${frameworkId}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    return NextResponse.json({
+      ...(cached.data as Record<string, unknown>),
+      cached: true,
+      cached_at: cached.cachedAt,
+      cached_until: new Date(cached.expiresAt).toISOString(),
+    });
+  }
+
+  // ── Build the deep dive for the selected framework ──────────────────────
+  const frameworkDef = FRAMEWORK_MAP[frameworkId];
+  const frameworkStatus = collectFrameworkEvidence(frameworkDef);
+  const [manual, remediation] = await Promise.all([
+    getManualActivityCounts(),
+    getRemediationCounts(),
+  ]);
+  const scoreBreakdown = scoreFramework(frameworkStatus, manual, remediation);
+
+  // Attach the level onto the framework status.
+  const frameworkDetail = {
+    ...frameworkStatus,
+    level: scoreBreakdown.level,
+    score: scoreBreakdown.score,
+  };
+
+  // ── Build the legacy multi-framework summary (cached separately) ────────
+  const legacyCacheKey = "legacy-summary";
+  let legacy = getCached(legacyCacheKey);
+  if (!legacy) {
+    const built = await buildLegacyFrameworks();
+    setCached(legacyCacheKey, built);
+    legacy = getCached(legacyCacheKey)!;
+  }
+  const legacyData = legacy.data as {
+    overallScore: number;
+    frameworks: unknown[];
+    mapped: unknown[];
+    totalIssues: number;
+    criticalOpen: number;
+    highOpen: number;
+  };
+
+  // ── DPDPA-specific findings mapping (legacy) ────────────────────────────
+  const dpdpaFindings = (legacyData.mapped as Array<Record<string, unknown>>)
     .filter((m) => m.dpdpa)
     .map((m) => ({
-      issue_id: m.id,
-      title: m.title,
-      severity: m.severity,
-      source: m.source,
-      target: m.target,
-      dpdpa_section: m.dpdpa!.section,
-      dpdpa_title: m.dpdpa!.title,
-      dpdpa_requirement: m.dpdpa!.requirement,
+      issue_id: m.id as string,
+      title: m.title as string,
+      severity: m.severity as string,
+      source: m.source as string,
+      target: m.target as string,
+      dpdpa_section: (m.dpdpa as { section: string }).section,
+      dpdpa_title: (m.dpdpa as { title: string }).title,
+      dpdpa_requirement: (m.dpdpa as { requirement: string }).requirement,
       status: "open",
     }));
 
-  return NextResponse.json({
+  const overallScore = legacyData.overallScore;
+
+  const response = {
+    // Legacy fields (backward compat)
     overall_score: overallScore,
     overall_status: overallScore >= 80 ? "compliant" : overallScore >= 50 ? "at-risk" : "non-compliant",
-    total_findings: totalIssues,
-    critical_open: criticalOpen,
-    high_open: highOpen,
-    frameworks,
+    total_findings: legacyData.totalIssues,
+    critical_open: legacyData.criticalOpen,
+    high_open: legacyData.highOpen,
+    frameworks: legacyData.frameworks,
     dpdpa_findings: dpdpaFindings,
-    breach_notification_required: criticalOpen > 0,
-    mapped_issues: mapped,
+    breach_notification_required: legacyData.criticalOpen > 0,
+    mapped_issues: legacyData.mapped,
+
+    // NEW: deep dive into the selected framework
+    framework_detail: frameworkDetail,
+
+    // NEW: transparent scoring breakdown
+    score_breakdown: scoreBreakdown,
+
+    // NEW: available frameworks (for the UI selector)
+    available_frameworks: ["DPDPA", "ISO27001", "SOC2"] as FrameworkId[],
+    selected_framework: frameworkId,
+  };
+
+  setCached(cacheKey, response);
+
+  return NextResponse.json({
+    ...response,
+    cached: false,
+    cached_at: new Date().toISOString(),
   });
 }

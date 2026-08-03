@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createHash } from "node:crypto";
+import {
+  GENESIS_PREV_HASH,
+  computeAttestationHash,
+} from "@/lib/sentinel/attestation";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/patches/[id]/approve, apply the patch + create a cryptographic attestation.
+// The attestation is appended to the tamper-evident hash chain
+// (genesis prevHash = "0"). Hash formula:
+//   SHA-256(prevHash + patch.id + patchedCodeHash + approvedAtIso)
+// This matches the canonical verifier in src/lib/sentinel/attestation.ts so
+// every issued attestation verifies without re-issuance.
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -37,11 +46,11 @@ export async function POST(
   }
 
   // ── Create a cryptographic attestation (hash-chained ledger) ──────────
-  // Get the latest attestation in the chain (genesis prevHash = "0")
+  // Get the latest attestation in the chain (genesis prevHash = GENESIS_PREV_HASH)
   const latestAtt = await db.attestation.findFirst({
     orderBy: { createdAt: "desc" },
   });
-  const prevHash = latestAtt?.hash ?? "0";
+  const prevHash = (latestAtt?.hash as string | undefined) ?? GENESIS_PREV_HASH;
   const approvedAt = updated.approvedAt!.toISOString();
   const patchedCodeHash = createHash("sha256")
     .update(patch.patchedCode || "")
@@ -52,13 +61,16 @@ export async function POST(
     codebase: patch.codebase.name,
     title: patch.title,
     severity: patch.severity,
+    cve: patch.cve ?? null,
+    affectedFile: patch.affectedFile,
     approvedAt,
     patchedCodeHash,
+    // Schema version — lets us evolve the data shape without breaking the
+    // hash chain (the hash is computed from the four canonical fields only).
+    schemaVersion: 1,
   });
 
-  const hash = createHash("sha256")
-    .update(prevHash + patch.id + patchedCodeHash + approvedAt)
-    .digest("hex");
+  const hash = computeAttestationHash(prevHash, patch.id, patchedCodeHash, approvedAt);
 
   const att = await db.attestation.create({
     data: { patchId: patch.id, prevHash, hash, data },
@@ -73,6 +85,8 @@ export async function POST(
       hash: att.hash,
       prev_hash: att.prevHash,
       patched_code_hash: patchedCodeHash,
+      chain_prev_hash: prevHash,
+      verify_url: `/attestations/${updated.patchId}`,
     },
     message: "Patch approved, applied to codebase, and cryptographically attested.",
   });

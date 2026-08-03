@@ -1,49 +1,65 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { createHash } from "node:crypto";
+import {
+  verifyAttestationChain,
+  parseAttestationData,
+  type AttestationRow,
+} from "@/lib/sentinel/attestation";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/attestations, list the full hash-chained ledger + verify integrity.
+// Uses the canonical verifier (auto-remediation-enhance) which matches the
+// formula used by /api/patches/[id]/approve: SHA-256(prevHash + patchId +
+// patchedCodeHash + approvedAt). The previous implementation used `createdAt`
+// instead of `approvedAt`, which caused false negatives — this is now fixed.
 export async function GET() {
-  const attestations = await db.attestation.findMany({
+  const rows = (await db.attestation.findMany({
     orderBy: { createdAt: "asc" },
     include: { patch: { select: { patchId: true, title: true, severity: true } } },
-  });
+  })) as unknown as Array<AttestationRow & {
+    patch?: { patchId: string | null; title: string | null; severity: string | null };
+  }>;
 
-  // Verify the chain: recompute each hash and check prevHash linkage
-  let chainValid = true;
-  let prevHash = "0";
-  const verified = attestations.map((a: Record<string, unknown>) => {
-    const expectedPrev = prevHash;
-    const dataObj = JSON.parse((a.data as string) || "{}");
-    const recomputed = createHash("sha256")
-      .update((a.prevHash as string) + (a.patchId as string) + (dataObj.patchedCodeHash || "") + (a.createdAt as Date).toISOString())
-      .digest("hex");
-    const hashOk = recomputed === (a.hash as string);
-    const linkOk = (a.prevHash as string) === expectedPrev;
-    if (!hashOk || !linkOk) chainValid = false;
-    prevHash = a.hash as string;
-    const patch = a.patch as Record<string, unknown> | null;
+  const verification = verifyAttestationChain(rows);
+
+  const attestations = rows.map((a) => {
+    const link = verification.links.find((l) => l.attestationId === a.id)!;
+    const patch = a.patch ?? null;
     return {
       id: a.id,
-      patch_id: patch?.patchId || a.patchId,
+      patch_id: patch?.patchId || link.patchHumanId || a.patchId,
       title: patch?.title || "Unknown",
       severity: patch?.severity || "unknown",
       prev_hash: a.prevHash,
       hash: a.hash,
-      hash_ok: hashOk,
-      link_ok: linkOk,
-      created_at: (a.createdAt as Date).toISOString(),
-      data: dataObj,
+      recomputed_hash: link.recomputedHash,
+      hash_ok: link.hashOk,
+      link_ok: link.linkOk,
+      created_at:
+        a.createdAt instanceof Date ? a.createdAt.toISOString() : String(a.createdAt),
+      data: link.data,
     };
   });
 
   return NextResponse.json({
-    chain_valid: chainValid,
-    count: attestations.length,
-    genesis_hash: attestations[0]?.hash ?? null,
-    latest_hash: attestations[attestations.length - 1]?.hash ?? null,
-    attestations: verified,
+    chain_valid: verification.valid,
+    chain_length: verification.chainLength,
+    count: rows.length,
+    genesis_hash: verification.genesisHash,
+    latest_hash: verification.latestHash,
+    tampered_at: verification.tamperedAt,
+    tampered_at_human: verification.tamperedAtHuman,
+    tamper_reason: verification.tamperReason,
+    attestations,
+    // Keep legacy field names for backward compat with existing UI clients.
+    hash_formula:
+      "SHA-256(prevHash + patchInternalId + patchedCodeHash + approvedAtIso)",
   });
 }
+
+// Re-export parseAttestationData so callers importing from this module still
+// have access to the parser (the legacy list endpoint exposed it indirectly
+// via the data field).
+export { parseAttestationData };
+
