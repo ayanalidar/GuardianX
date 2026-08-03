@@ -34,6 +34,7 @@ import {
   Plus,
   ScanLine,
   Search,
+  Upload,
 } from "lucide-react";
 
 interface CodebaseViewerProps {
@@ -213,13 +214,20 @@ export function AddCodebaseDialog({
   clientId,
 }: AddCodebaseDialogProps) {
   const { toast } = useToast();
-  const [mode, setMode] = useState<"paste" | "git">("paste");
+  const [mode, setMode] = useState<"paste" | "git" | "upload">("paste");
 
   // paste mode
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [source, setSource] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // upload mode
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadName, setUploadName] = useState("");
+  const [uploadDescription, setUploadDescription] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   // git mode
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -235,6 +243,9 @@ export function AddCodebaseDialog({
     setName("");
     setDescription("");
     setSource("");
+    setUploadedFile(null);
+    setUploadName("");
+    setUploadDescription("");
     setCredId("");
     setRepoUrl("");
     setFiles([]);
@@ -275,6 +286,67 @@ export function AddCodebaseDialog({
     } finally {
       setSaving(false);
     }
+  };
+
+  // File upload handler — uses multipart/form-data
+  const handleFileUpload = async () => {
+    if (!uploadedFile) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+      formData.append("name", uploadName.trim() || uploadedFile.name);
+      if (uploadDescription.trim()) formData.append("description", uploadDescription.trim());
+      if (clientId) formData.append("clientId", clientId);
+
+      const token = typeof localStorage !== "undefined" ? localStorage.getItem("guardianx_token") : null;
+      const res = await fetch("/api/codebases", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+
+      toast({ title: "Codebase uploaded", description: data.name });
+      onCreated(data);
+      reset();
+      onOpenChange(false);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: err instanceof Error ? err.message : "unknown error",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileSelect = (file: File | null) => {
+    if (!file) return;
+    // Validate file type
+    const validExts = [".js", ".mjs", ".cjs", ".ts", ".tsx", ".py", ".go", ".rb", ".php", ".java", ".cs", ".cpp", ".cc", ".cxx", ".c", ".rs", ".swift", ".kt", ".txt"];
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!validExts.includes(ext) && file.type !== "text/plain") {
+      toast({
+        variant: "destructive",
+        title: "Unsupported file type",
+        description: `Supported: ${validExts.join(", ")}`,
+      });
+      return;
+    }
+    // Validate size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: "Maximum file size is 5MB.",
+      });
+      return;
+    }
+    setUploadedFile(file);
+    if (!uploadName) setUploadName(file.name);
   };
 
   const handleExplore = async () => {
@@ -354,6 +426,10 @@ export function AddCodebaseDialog({
 
         {/* Mode toggle */}
         <div className="flex gap-1 border-b border-zinc-800 bg-zinc-900/40 px-5 py-2">
+          <ModeToggle active={mode === "upload"} onClick={() => setMode("upload")}>
+            <Upload className="size-3.5" />
+            Upload File
+          </ModeToggle>
           <ModeToggle active={mode === "paste"} onClick={() => setMode("paste")}>
             <FileCode2 className="size-3.5" />
             Paste Source
@@ -365,7 +441,103 @@ export function AddCodebaseDialog({
         </div>
 
         <div className="custom-scrollbar max-h-[calc(92vh-12rem)] overflow-y-auto px-5 py-4">
-          {mode === "paste" ? (
+          {mode === "upload" ? (
+            <div className="space-y-4">
+              {/* Drag & drop zone */}
+              <div
+                onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragActive(false);
+                  const file = e.dataTransfer.files?.[0] || null;
+                  handleFileSelect(file);
+                }}
+                className={`relative flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+                  dragActive
+                    ? "border-emerald-500 bg-emerald-500/10"
+                    : uploadedFile
+                      ? "border-emerald-600/50 bg-emerald-950/20"
+                      : "border-zinc-700 bg-zinc-900/40 hover:border-zinc-600"
+                }`}
+                onClick={() => {
+                  const input = document.getElementById("cb-file-input") as HTMLInputElement | null;
+                  input?.click();
+                }}
+              >
+                <input
+                  id="cb-file-input"
+                  type="file"
+                  className="hidden"
+                  accept=".js,.mjs,.cjs,.ts,.tsx,.py,.go,.rb,.php,.java,.cs,.cpp,.cc,.cxx,.c,.rs,.swift,.kt,.txt"
+                  onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+                />
+                {uploadedFile ? (
+                  <>
+                    <FileCode2 className="mb-2 size-8 text-emerald-400" />
+                    <p className="text-sm font-medium text-emerald-300">{uploadedFile.name}</p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {(uploadedFile.size / 1024).toFixed(1)} KB · click to replace
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mb-2 size-8 text-zinc-500" />
+                    <p className="text-sm font-medium text-zinc-300">Drop your source file here</p>
+                    <p className="mt-1 text-xs text-zinc-500">or click to browse</p>
+                    <p className="mt-2 text-[10px] text-zinc-600">
+                      .js .ts .py .go .rb .php .java .cs .cpp .c .rs .swift .kt — max 5MB
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/* Name + description */}
+              <div className="grid gap-2">
+                <Label htmlFor="cb-upload-name" className="text-xs text-zinc-400">
+                  Filename
+                </Label>
+                <Input
+                  id="cb-upload-name"
+                  value={uploadName}
+                  onChange={(e) => setUploadName(e.target.value)}
+                  placeholder="e.g. payment-handler.js"
+                  className="border-zinc-800 bg-zinc-900/60 font-mono text-sm text-zinc-200 placeholder:text-zinc-600 focus-visible:border-emerald-500/50"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="cb-upload-desc" className="text-xs text-zinc-400">
+                  Description (optional)
+                </Label>
+                <Input
+                  id="cb-upload-desc"
+                  value={uploadDescription}
+                  onChange={(e) => setUploadDescription(e.target.value)}
+                  placeholder="Short summary of what this module does"
+                  className="border-zinc-800 bg-zinc-900/60 text-sm text-zinc-200 placeholder:text-zinc-600 focus-visible:border-emerald-500/50"
+                />
+              </div>
+
+              <Button
+                onClick={handleFileUpload}
+                disabled={uploading || !uploadedFile}
+                className="w-full bg-emerald-600 text-white hover:bg-emerald-500"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 size-4" />
+                    Upload & Scan
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : mode === "paste" ? (
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="cb-name" className="text-xs text-zinc-400">
