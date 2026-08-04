@@ -427,7 +427,7 @@ function createModelHandler(modelKey: string): ModelHandler {
       const { where, data, select, include } = args || {};
       let q = supabase.from(table).update(data);
       q = applyWhere(q, where);
-      const { data: result, error } = await q.select(buildSelect(select) || "*").single();
+      const { data: result, error } = await q.select(buildSelect(select) || "*").maybeSingle();
       if (error) throw new Error(`[${table}.update] ${error.message}`);
       const hydrated = result ? hydrateDates(result) : result;
       if (hydrated && include) await resolveIncludes(table, hydrated, include);

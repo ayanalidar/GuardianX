@@ -412,7 +412,10 @@ function createModelHandler(modelKey: string): ModelHandler {
       const { where, data, select, include } = args || {};
       let q = supabase.from(table).update(data);
       q = applyWhere(q, where);
-      const { data: result, error } = await q.select(buildSelect(select) || "*").single();
+      // Use maybeSingle() instead of single() — single() throws if 0 or >1 rows
+      // are returned, which happens when the where clause matches nothing or
+      // when Supabase returns the update as affecting multiple rows.
+      const { data: result, error } = await q.select(buildSelect(select) || "*").maybeSingle();
       if (error) throw new Error(`[${table}.update] ${error.message}`);
       const hydrated = result ? hydrateDates(result) : result;
       if (hydrated && include) await resolveIncludes(table, hydrated, include);
