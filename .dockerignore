@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+*.md
+docs/
+tests/
+tool-results/
+agent-ctx/
+backups/
+.env*
+!.env.example
+dev.log
+*.log

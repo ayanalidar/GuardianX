@@ -1,0 +1,108 @@
+# GuardianX Production Docker Compose
+# Usage: docker compose up -d
+# All services auto-restart, memory-limited, health-checked
+
+services:
+  # ── Main Web App (Next.js) ───────────────────────────────────────────────
+  guardianx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: guardianx-web
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - ENGINE_URL=http://sentinel-engine:3003
+      - RECON_TOOLS_URL=http://recon-tools:3004
+    depends_on:
+      sentinel-engine:
+        condition: service_healthy
+    mem_limit: 2g
+    mem_reservation: 1g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - guardianx-net
+
+  # ── Sentinel Engine (SAST/DAST pipeline) ────────────────────────────────
+  sentinel-engine:
+    build:
+      context: ./mini-services/sentinel-engine
+      dockerfile: Dockerfile
+    container_name: guardianx-engine
+    ports:
+      - "3003:3003"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - RECON_TOOLS_URL=http://recon-tools:3004
+    mem_limit: 2g
+    mem_reservation: 1g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - guardianx-net
+
+  # ── Recon Tools (Nmap/Nuclei/SQLmap/FFuF) ───────────────────────────────
+  recon-tools:
+    build:
+      context: ./mini-services/recon-tools
+      dockerfile: Dockerfile
+    container_name: guardianx-recon
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+    mem_limit: 1g
+    mem_reservation: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/healthz"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - guardianx-net
+
+  # ── Caddy Reverse Proxy (auto-HTTPS) ────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: guardianx-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.production:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - guardianx
+      - sentinel-engine
+    restart: unless-stopped
+    networks:
+      - guardianx-net
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  guardianx-net:
+    driver: bridge

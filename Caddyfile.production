@@ -1,0 +1,63 @@
+# GuardianX Production Caddyfile
+# Automatic HTTPS via Let's Encrypt
+# Replace guardianx.in with your actual domain
+
+{
+    email hello@guardianx.in
+    # Uncomment for staging certs (testing):
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# ── Main domain — Web App ──────────────────────────────────────────────────
+guardianx.in, www.guardianx.in {
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        X-XSS-Protection "1; mode=block"
+    }
+
+    # Reverse proxy to Next.js
+    reverse_proxy guardianx:3000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Gzip compression
+    encode gzip zstd
+
+    # Cache static assets
+    @static path /_next/static/*
+    header @static Cache-Control "public, max-age=31536000, immutable"
+
+    # WebSocket support (for live terminal)
+    @websocket {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websocket guardianx:3000
+}
+
+# ── API subdomain — Engine + Socket.io ─────────────────────────────────────
+api.guardianx.in {
+    reverse_proxy sentinel-engine:3003 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    # WebSocket for real-time scan events
+    @websocket {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websocket sentinel-engine:3003
+}
+
+# ── Health check endpoint (no auth) ────────────────────────────────────────
+health.guardianx.in {
+    reverse_proxy guardianx:3000/api/health
+}
