@@ -3,6 +3,35 @@
 //       craft + execute each attack → analyze response → persist findings →
 //       [3.5 SQLmap] → exposure sweep → [4c dedup] → complete.
 //
+
+// ── Safe Finding creator ──────────────────────────────────────────────────
+// Cloudflare's WAF on Supabase REST API can block POST requests that contain
+// SQLi/XSS payloads in the body (which happens when storing proofRequest/
+// proofResponse). This helper sanitizes the data + wraps in try/catch so
+// one blocked insert doesn't crash the whole DAST pipeline.
+function sanitizeProof(text: string | null | undefined): string | null {
+  if (!text) return null;
+  let s = String(text);
+  // Truncate to prevent oversized payloads
+  if (s.length > 2000) s = s.substring(0, 2000) + "\n... [truncated by GuardianX]";
+  return s;
+}
+
+async function safeCreateFinding(data: Record<string, unknown>): Promise<boolean> {
+  try {
+    const sanitized = {
+      ...data,
+      proofRequest: sanitizeProof(data.proofRequest as string),
+      proofResponse: sanitizeProof(data.proofResponse as string),
+      description: sanitizeProof(data.description as string),
+    };
+    await safeCreateFinding({ data: sanitized });
+    return true;
+  } catch (err) {
+    console.error("[finding.create] failed (WAF block or DB error):", err instanceof Error ? err.message.substring(0, 80) : "unknown");
+    return false;
+  }
+}
 // Stages marked with a decimal (1.5, 1.6, 2.5, 3.5, 4c) are powered by the
 // recon-tools Docker service. If that service is unreachable, every recon
 // stage no-ops gracefully and the pipeline falls back to AI-only DAST — the
@@ -245,21 +274,32 @@ export async function runEngagement(
     throw new Error("Target is not authorized for testing.");
 
   const emitAndStore = async (e: Omit<RedAgentEvent, "ts" | "engagementId">) => {
+    // Truncate message to prevent DB errors when error messages contain
+    // large HTML pages (e.g. Cloudflare block pages from the z-ai API)
+    const safeMessage = typeof e.message === "string" && e.message.length > 500
+      ? e.message.substring(0, 500) + "... [truncated]"
+      : String(e.message || "");
     const full: RedAgentEvent = {
       ...e,
+      message: safeMessage,
       engagementId,
       ts: new Date().toISOString(),
     };
     emit(full);
-    await db.redAgentEvent.create({
-      data: {
-        engagementId,
-        stage: full.stage,
-        message: full.message,
-        level: full.level,
-        meta: full.meta ? JSON.stringify(full.meta) : null,
-      },
-    });
+    try {
+      await db.redAgentEvent.create({
+        data: {
+          engagementId,
+          stage: full.stage,
+          message: full.message,
+          level: full.level,
+          meta: full.meta ? JSON.stringify(full.meta).substring(0, 4000) : null,
+        },
+      });
+    } catch (dbErr) {
+      // Don't let audit/event logging crash the DAST pipeline
+      console.error("[emitAndStore] DB insert failed:", dbErr instanceof Error ? dbErr.message.substring(0, 100) : "unknown");
+    }
   };
 
   // Probe the recon-tools service once up-front so every stage can just
@@ -566,7 +606,7 @@ export async function runEngagement(
               0.85,
               typeof f.cvss === "number" ? f.cvss / 10 : 0.7
             );
-            await db.finding.create({
+            await safeCreateFinding({
               data: {
                 engagementId,
                 title: `${f.name || f.templateId} on ${endpointPath}`,
@@ -730,7 +770,7 @@ export async function runEngagement(
         });
         const descriptionWithScore = `${analysis.description} Exploitability score: ${exploitability.toFixed(2)}/1.00.`;
 
-        await db.finding.create({
+        await safeCreateFinding({
           data: {
             engagementId,
             title: analysis.title,
@@ -889,7 +929,7 @@ export async function runEngagement(
                 });
               } else {
                 // SQLmap found something the AI missed — create a new finding.
-                await db.finding.create({
+                await safeCreateFinding({
                   data: {
                     engagementId,
                     title: `SQL Injection (SQLmap-confirmed) on ${endpointPath}`,
@@ -984,7 +1024,7 @@ export async function runEngagement(
         if (hit) {
           for (const h of hit.hits) {
             const proof = `GET ${url}\nHTTP ${res.status}\n\nDetected: ${h.type} (${h.count} match${h.count === 1 ? "" : "es"})\nRedacted sample: ${h.redactedSample}\nContext: ${h.context}`;
-            await db.finding.create({
+            await safeCreateFinding({
               data: {
                 engagementId,
                 title: `Exposed ${h.type} on ${ep.path}`,
@@ -1029,7 +1069,7 @@ export async function runEngagement(
 
     const probes = await probeKnownPaths(target.baseUrl, target.authHeader);
     for (const p of probes) {
-      await db.finding.create({
+      await safeCreateFinding({
         data: {
           engagementId,
           title: `${p.label} at ${p.path}`,

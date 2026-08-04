@@ -1,5 +1,5 @@
 // Deliberately vulnerable target app for GuardianX testing.
-// Port 3004. Now with Data Exfiltration Defense features:
+// Port 3005. Now with Data Exfiltration Defense features:
 //   - Canary data injection in API responses
 //   - API access logging (every request recorded)
 //   - Honeypot endpoint traps
@@ -11,7 +11,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { request as httpRequest } from "node:http";
 
-const PORT = 3004;
+const PORT = 3007;
 const UPLOAD_DIR = "/tmp/vuln-target-uploads";
 const GUARDIANX_API = "http://localhost:3000/api"; // GuardianX backend for logging
 

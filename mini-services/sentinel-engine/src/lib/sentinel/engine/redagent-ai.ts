@@ -5,6 +5,56 @@
 
 import ZAI from "z-ai-web-dev-sdk";
 
+// ── Static fallback attacks (used when the AI API is rate-limited/unavailable) ──
+const FALLBACK_ATTACKS: { category: string; owasp: string; payloadStrategy: string; payload: string }[] = [
+  { category: "SQL Injection", owasp: "A03:2021-Injection", payloadStrategy: "Union-based", payload: "' OR '1'='1" },
+  { category: "SQL Injection", owasp: "A03:2021-Injection", payloadStrategy: "Error-based", payload: "' AND 1=CONVERT(int,(SELECT @@version))--" },
+  { category: "XSS", owasp: "A03:2021-Injection", payloadStrategy: "Reflected", payload: "<script>alert(1)</script>" },
+  { category: "XSS", owasp: "A03:2021-Injection", payloadStrategy: "Event handler", payload: "\" onerror=\"alert(1)" },
+  { category: "Path Traversal", owasp: "A01:2021-Broken Access Control", payloadStrategy: "Directory traversal", payload: "../../../../etc/passwd" },
+  { category: "Open Redirect", owasp: "A01:2021-Broken Access Control", payloadStrategy: "URL redirect", payload: "https://evil.com" },
+  { category: "IDOR", owasp: "A01:2021-Broken Access Control", payloadStrategy: "ID enumeration", payload: "2" },
+  { category: "Info Disclosure", owasp: "A05:2021-Security Misconfiguration", payloadStrategy: "Known paths", payload: "/.env" },
+];
+
+// Wrap AI calls in try/catch — if the z-ai API is rate-limited, return null so
+// callers can fall back to static attacks.
+async function safeAiCall(fn: () => Promise<{ choices: { message: { content: string } }[] }>): Promise<string | null> {
+  try {
+    const completion = await fn();
+    const content = completion.choices[0]?.message?.content ?? "";
+    // Detect HTML responses (Cloudflare block pages, WAF blocks)
+    if (content.includes("<!DOCTYPE html>") || content.includes("<html") || content.length > 10000) {
+      console.error("[AI] response appears to be HTML/WAF block, not JSON — treating as failure");
+      return null;
+    }
+    return content;
+  } catch (err) {
+    console.error("[AI] call failed (rate limit or error):", err instanceof Error ? err.message.substring(0, 100) : "unknown");
+    return null;
+  }
+}
+
+// Static success indicators per attack category — used when AI is unavailable.
+function getSuccessIndicators(category: string): string[] {
+  switch (category.toLowerCase()) {
+    case "sql injection":
+      return ["sql", "syntax error", "mysql", "postgresql", "sqlite", "oracle", "database error", "unclosed quotation"];
+    case "xss":
+      return ["<script>", "alert(1)", "onerror=", "<img onerror"];
+    case "path traversal":
+      return ["root:", "bin/bash", "/etc/passwd", "boot.ini", "[fonts]"];
+    case "open redirect":
+      return ["Location: https://evil.com", "redirect", "302"];
+    case "idor":
+      return ["email", "password", "user_id", "admin"];
+    case "info disclosure":
+      return ["DB_PASSWORD", "API_KEY", "SECRET", "DATABASE_URL", "AWS_SECRET"];
+    default:
+      return ["error", "exception", "stack trace"];
+  }
+}
+
 export interface CrawledEndpoint {
   method: "GET" | "POST";
   path: string; // e.g. "/login"
@@ -106,15 +156,39 @@ export async function planAttacks(crawl: CrawlSummary): Promise<PlannedAttack[]>
     "Plan at most 8 attacks total — focus on the most promising.",
   ].join("\n");
 
-  const completion = await z.chat.completions.create({
+  const raw = await safeAiCall(() => z.chat.completions.create({
     messages: [
       { role: "assistant", content: system },
       { role: "user", content: user },
     ],
     thinking: { type: "disabled" },
-  });
+  }));
 
-  const raw = completion.choices[0]?.message?.content ?? "";
+  // If AI failed (rate limit), use static fallback attacks based on crawled endpoints
+  if (raw === null) {
+    console.log("[AI] Using static fallback attack plan (AI API unavailable)");
+    const fallbackAttacks: PlannedAttack[] = [];
+    for (const ep of crawl.endpoints) {
+      // Apply each relevant fallback attack to each endpoint
+      for (const fb of FALLBACK_ATTACKS) {
+        if (fb.category === "Info Disclosure" && ep.path !== "/") {
+          // Skip info disclosure for non-root paths
+          continue;
+        }
+        fallbackAttacks.push({
+          endpoint: ep.path,
+          method: ep.method,
+          category: fb.category,
+          owasp: fb.owasp,
+          rationale: `Static ${fb.category} test on ${ep.path}`,
+          payloadStrategy: fb.payloadStrategy,
+          targetParam: ep.params[0],
+        });
+      }
+    }
+    return fallbackAttacks.slice(0, 16);
+  }
+
   const parsed = safeParse<{ attacks?: PlannedAttack[] }>(raw, { attacks: [] });
   return (parsed.attacks ?? []).slice(0, 8);
 }
@@ -157,15 +231,32 @@ export async function craftHttpAttack(
     "- successIndicators: 1-3 substrings/patterns that prove success in the response body or status.",
   ].join("\n");
 
-  const completion = await z.chat.completions.create({
+  const raw = await safeAiCall(() => z.chat.completions.create({
     messages: [
       { role: "assistant", content: system },
       { role: "user", content: user },
     ],
     thinking: { type: "disabled" },
-  });
+  }));
 
-  const raw = completion.choices[0]?.message?.content ?? "";
+  // If AI failed, use static payload from the fallback list
+  if (raw === null) {
+    const fb = FALLBACK_ATTACKS.find(f => f.category === plan.category);
+    const payload = fb?.payload || "test";
+    const param = endpoint.params[0] || "q";
+    const url = plan.method === "GET"
+      ? `${baseUrl}${plan.endpoint}?${param}=${encodeURIComponent(payload)}`
+      : `${baseUrl}${plan.endpoint}`;
+    return {
+      method: plan.method,
+      url,
+      body: plan.method === "POST" ? `${param}=${encodeURIComponent(payload)}` : undefined,
+      headers: plan.method === "POST" ? { "Content-Type": "application/x-www-form-urlencoded" } : {},
+      payload,
+      successIndicators: getSuccessIndicators(plan.category),
+    };
+  }
+
   const parsed = safeParse<CraftedAttack>(raw, {
     method: endpoint.method,
     url: baseUrl + endpoint.path,
