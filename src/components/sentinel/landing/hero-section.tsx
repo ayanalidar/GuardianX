@@ -33,18 +33,6 @@ export function HeroSection({ onEnter }: { onEnter: () => void }) {
       {/* Center stage: glow orb behind logo */}
       <div className="relative mx-auto flex max-w-6xl flex-col items-center">
         <motion.div
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-          className="relative mb-6"
-        >
-          <GlowOrb size={420} />
-          <div className="relative">
-            <GuardianXLogo size={120} />
-          </div>
-        </motion.div>
-
-        <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15 }}
