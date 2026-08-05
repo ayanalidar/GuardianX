@@ -6,6 +6,7 @@ import { Terminal, Menu, X, ChevronDown, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { GuardianXLogo } from "./guardianx-logo";
+import { ThemeToggle } from "./theme-toggle";
 
 // ── Nav structure with dropdowns ──────────────────────────────────────────
 interface NavSubItem {
@@ -163,6 +164,10 @@ export function SiteHeader({ onEnter }: { onEnter?: () => void }) {
               </Button>
             </a>
           )}
+          {/* Theme toggle (dark/light) — marketing pages only.
+              Dashboard console uses hardcoded dark surfaces so it stays
+              dark regardless of the html class. */}
+          <ThemeToggle />
           {/* Mobile menu toggle */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}

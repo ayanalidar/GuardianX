@@ -31,6 +31,7 @@ const FOOTER_SECTIONS = [
   {
     title: "Resources",
     links: [
+      { label: "Blog", href: "/blog" },
       { label: "Whitepapers", href: "/resources#whitepapers" },
       { label: "Case Studies", href: "/resources#case-studies" },
       { label: "Documentation", href: "/resources#docs" },
@@ -43,6 +44,7 @@ const FOOTER_SECTIONS = [
       { label: "About GuardianX", href: "/company" },
       { label: "Contact", href: "/contact" },
       { label: "Request Demo", href: "/contact" },
+      { label: "System Status", href: "/status" },
       { label: "Privacy Policy", href: "/privacy" },
     ],
   },
@@ -163,6 +165,13 @@ export function SiteFooter() {
             </span>
           </div>
           <div className="flex items-center gap-4 text-[10px] text-zinc-700">
+            <a href="/blog" className="transition-colors hover:text-emerald-400">Blog</a>
+            <span>·</span>
+            <a href="/status" className="inline-flex items-center gap-1 transition-colors hover:text-emerald-400">
+              <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
+              Status
+            </a>
+            <span>·</span>
             <a href="/privacy" className="transition-colors hover:text-emerald-400">Privacy</a>
             <span>·</span>
             <a href="/terms" className="transition-colors hover:text-emerald-400">Terms</a>

@@ -43,6 +43,18 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   Theme tokens (next-themes)
+   - :root  → light theme (marketing pages when user toggles)
+       background: white, foreground: zinc-900, borders: zinc-200,
+       accents stay emerald/cyan (defined in neon-* utilities above).
+   - .dark  → dark theme (default; dashboard always dark).
+   next-themes adds/removes the `.dark` class on <html> based on the
+   user's choice (defaultTheme="dark", enableSystem). The dashboard
+   console view uses hardcoded zinc-950 surfaces so it stays dark
+   regardless of the html class — only opt-in marketing pages
+   (blog, status, and future pages using `dark:` variants) toggle.
+   ════════════════════════════════════════════════════════════════════ */
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -120,11 +132,14 @@
   html {
     overflow-x: hidden;
     scroll-behavior: smooth;
+    color-scheme: light dark;
   }
   body {
     @apply bg-background text-foreground;
     overflow-x: hidden;
     max-width: 100vw;
+    /* Smooth theme transition when toggling next-themes */
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 
@@ -766,3 +781,69 @@
   .attack-scan,
   .final-cta-bg { animation: none; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   ROI calculator — native range slider styling
+   - Track is painted via inline `background: linear-gradient(...)` using
+     `currentColor` (driven by per-instance `--accent` CSS variable).
+   - Thumb is a glowing dot in the same accent color.
+   - Works in WebKit + Firefox. Color adapts to selected industry.
+   ════════════════════════════════════════════════════════════════════ */
+.roi-slider {
+  outline: none;
+  color: var(--accent, #34d399);
+}
+/* WebKit thumb */
+.roi-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: currentColor;
+  border: 2px solid rgba(9, 9, 11, 0.9);
+  box-shadow:
+    0 0 0 1px currentColor,
+    0 0 10px currentColor,
+    0 0 18px color-mix(in srgb, currentColor 60%, transparent);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.roi-slider::-webkit-slider-thumb:hover { transform: scale(1.18); }
+.roi-slider::-webkit-slider-thumb:active { transform: scale(1.05); }
+/* WebKit track (we use the element's own background for the fill, but
+   still need to neutralize the default track) */
+.roi-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: transparent;
+}
+/* Firefox thumb + track */
+.roi-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: currentColor;
+  border: 2px solid rgba(9, 9, 11, 0.9);
+  box-shadow:
+    0 0 0 1px currentColor,
+    0 0 10px currentColor;
+  cursor: pointer;
+}
+.roi-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: rgba(63, 63, 70, 0.6);
+}
+/* Firefox fill: mirror the WebKit gradient via a progress-color hack.
+   (--accent-driven, falls back to zinc track) */
+.roi-slider::-moz-range-progress {
+  height: 8px;
+  border-radius: 9999px;
+  background: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roi-slider::-webkit-slider-thumb { transition: none; }
+}
+
