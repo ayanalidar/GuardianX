@@ -57,37 +57,39 @@
    ════════════════════════════════════════════════════════════════════ */
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Premium blueish light theme — deep navy/slate, not stark white.
+     Visible in daylight, cards stay colorful, text is high-contrast. */
+  --background: oklch(0.23 0.04 250);          /* deep navy-blue */
+  --foreground: oklch(0.93 0.02 250);          /* light blue-white text */
+  --card: oklch(0.28 0.05 250);                /* slightly lighter navy for cards */
+  --card-foreground: oklch(0.93 0.02 250);
+  --popover: oklch(0.26 0.04 250);
+  --popover-foreground: oklch(0.93 0.02 250);
+  --primary: oklch(0.65 0.18 160);             /* emerald accent */
+  --primary-foreground: oklch(0.15 0.02 250);
+  --secondary: oklch(0.32 0.04 250);
+  --secondary-foreground: oklch(0.93 0.02 250);
+  --muted: oklch(0.30 0.03 250);
+  --muted-foreground: oklch(0.70 0.03 250);    /* readable blue-grey */
+  --accent: oklch(0.35 0.05 250);
+  --accent-foreground: oklch(0.93 0.02 250);
+  --destructive: oklch(0.65 0.25 25);
+  --border: oklch(0.38 0.04 250);              /* visible blue border */
+  --input: oklch(0.32 0.04 250);
+  --ring: oklch(0.55 0.15 200);
+  --chart-1: oklch(0.65 0.22 41);
+  --chart-2: oklch(0.60 0.18 185);
+  --chart-3: oklch(0.55 0.15 270);
+  --chart-4: oklch(0.70 0.20 145);
+  --chart-5: oklch(0.65 0.25 340);
+  --sidebar: oklch(0.25 0.04 250);
+  --sidebar-foreground: oklch(0.93 0.02 250);
+  --sidebar-primary: oklch(0.65 0.18 160);
+  --sidebar-primary-foreground: oklch(0.15 0.02 250);
+  --sidebar-accent: oklch(0.32 0.04 250);
+  --sidebar-accent-foreground: oklch(0.93 0.02 250);
+  --sidebar-border: oklch(0.35 0.04 250);
+  --sidebar-ring: oklch(0.55 0.15 200);
 }
 
 .dark {
@@ -142,49 +144,63 @@
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  /* ── Light theme override for marketing pages ──────────────────────────
+  /* ── Premium blueish light theme overrides ─────────────────────────────
      When next-themes removes the .dark class (light mode), override the
-     hardcoded zinc-950/zinc-900 backgrounds and zinc-50/100 text colors
-     used in landing/header/footer components so they adapt to light. */
+     hardcoded zinc-950/zinc-900 backgrounds with deep navy-blue so the
+     page is visible in daylight but NOT stark white. Cards keep their
+     colorful accents (emerald, cyan, red, violet) from the dark theme. */
   html:not(.dark) .scanlines,
   html:not(.dark) .cyber-vignette {
-    background: var(--background) !important;
-    color: var(--foreground) !important;
+    background: #1a2238 !important;   /* deep navy */
+    color: #dbe4f5 !important;        /* light blue-white text */
   }
   html:not(.dark) .scanlines::before,
   html:not(.dark) .cyber-vignette::before,
   html:not(.dark) .cyber-grid {
-    opacity: 0.05 !important;
+    opacity: 0.08 !important;
   }
-  /* Light mode: override hardcoded dark backgrounds on marketing pages */
+  /* Light mode: override dark backgrounds to navy blue */
   html:not(.dark) .bg-zinc-950,
   html:not(.dark) .bg-zinc-950\/90,
   html:not(.dark) .bg-zinc-950\/95,
   html:not(.dark) .bg-zinc-950\/40,
   html:not(.dark) .bg-zinc-950\/60 {
-    background-color: rgba(255, 255, 255, 0.9) !important;
+    background-color: rgba(26, 34, 56, 0.92) !important;   /* navy */
   }
   html:not(.dark) .bg-zinc-900,
   html:not(.dark) .bg-zinc-900\/40,
   html:not(.dark) .bg-zinc-900\/50,
   html:not(.dark) .bg-zinc-900\/60 {
-    background-color: rgba(241, 245, 249, 0.8) !important;
+    background-color: rgba(35, 45, 70, 0.85) !important;   /* lighter navy */
   }
-  /* Light mode: override hardcoded light text to dark */
+  /* Light mode: text stays light (on navy bg) — keep readable */
   html:not(.dark) .text-zinc-50,
   html:not(.dark) .text-zinc-100,
   html:not(.dark) .text-zinc-200 {
-    color: #18181b !important;
+    color: #e8edf7 !important;   /* light blue-white */
   }
   html:not(.dark) .text-zinc-400,
   html:not(.dark) .text-zinc-500 {
-    color: #52525b !important;
+    color: #94a3c4 !important;   /* muted blue-grey, still readable */
   }
+  html:not(.dark) .text-zinc-600,
+  html:not(.dark) .text-zinc-700 {
+    color: #6b7a9c !important;
+  }
+  /* Borders: blue-tinted */
   html:not(.dark) .border-zinc-800,
   html:not(.dark) .border-zinc-800\/80,
-  html:not(.dark) .border-zinc-800\/60 {
-    border-color: rgba(228, 228, 231, 0.8) !important;
+  html:not(.dark) .border-zinc-800\/60,
+  html:not(.dark) .border-zinc-800\/50,
+  html:not(.dark) .border-zinc-700 {
+    border-color: rgba(71, 85, 120, 0.6) !important;
   }
+  /* Keep neon accents vibrant in light mode (don't dim them) */
+  html:not(.dark) .neon-emerald { text-shadow: 0 0 12px rgba(16, 185, 129, 0.5); }
+  html:not(.dark) .neon-cyan { text-shadow: 0 0 12px rgba(6, 182, 212, 0.5); }
+  html:not(.dark) .neon-red { text-shadow: 0 0 12px rgba(239, 68, 68, 0.5); }
+  html:not(.dark) .neon-violet { text-shadow: 0 0 12px rgba(139, 92, 246, 0.5); }
+  html:not(.dark) .neon-amber { text-shadow: 0 0 12px rgba(245, 158, 11, 0.5); }
 }
 
 /* Custom scrollbar for the SentinelPatch dashboard dark surfaces */
