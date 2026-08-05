@@ -151,8 +151,30 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 15000); // refresh every 15s (was 5s, too aggressive)
-    return () => clearInterval(id);
+    // Visibility-aware polling: pauses when the tab is hidden so the
+    // dashboard doesn't burn CPU + network while the user is elsewhere.
+    // Previously this was a bare setInterval(load, 15000).
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (interval) return;
+      interval = setInterval(load, 15000);
+    };
+    const stop = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else start();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    start();
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [load]);
 
   // Compute aggregate stats

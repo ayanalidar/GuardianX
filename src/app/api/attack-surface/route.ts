@@ -50,8 +50,8 @@ export async function GET(req: Request) {
   if (targetId) {
     const target = await db.target.findUnique({ where: { id: targetId } });
     if (!target) return NextResponse.json({ error: "target not found" }, { status: 404 });
-    baseUrl = target.baseUrl;
-    targetName = target.name;
+    baseUrl = target.baseUrl as string;
+    targetName = target.name as string;
   } else {
     // Use the built-in vuln target as default
     baseUrl = "http://localhost:3004";

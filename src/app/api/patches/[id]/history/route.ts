@@ -8,6 +8,15 @@ function safeJson(s: string | null, fallback: unknown) {
   try { return JSON.parse(s); } catch { return fallback; }
 }
 
+function hash(s: string | null | undefined): string {
+  const str = s ?? "";
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  }
+  return `sha:${Math.abs(h).toString(16).padStart(8, "0")}`;
+}
+
 // GET /api/patches/[id]/history, return the full version timeline of a patch.
 // Extracts iterations from: original code → AI patch → each adversarial defender iteration → final.
 export async function GET(
@@ -40,9 +49,9 @@ export async function GET(
     source: "codebase",
     technique: null,
     reasoning: null,
-    timestamp: patch.createdAt.toISOString(),
-    code_hash: hash(patch.originalCode),
-    code_preview: patch.originalCode.slice(0, 300),
+    timestamp: (patch.createdAt as Date).toISOString(),
+    code_hash: hash(patch.originalCode as string),
+    code_preview: ((patch.originalCode as string) || "").slice(0, 300),
   });
 
   // Version 1: Initial AI patch (before adversarial loop)
@@ -52,13 +61,13 @@ export async function GET(
     source: "ai-patcher",
     technique: "AI-generated fix",
     reasoning: patch.aiReasoning,
-    timestamp: patch.createdAt.toISOString(),
-    code_hash: hash(patch.patchedCode), // This is the FINAL patched code; v1 may differ
-    code_preview: patch.patchedCode.slice(0, 300),
+    timestamp: (patch.createdAt as Date).toISOString(),
+    code_hash: hash(patch.patchedCode as string), // This is the FINAL patched code; v1 may differ
+    code_preview: ((patch.patchedCode as string) || "").slice(0, 300),
   });
 
   // Versions 2+: Adversarial defender iterations
-  const transcript = safeJson(patch.adversarialTranscript, []) as Array<{
+  const transcript = safeJson(patch.adversarialTranscript as string | null, []) as Array<{
     round: number;
     defender?: { technique: string; reasoning: string; patchedCode: string };
     attackerTechnique?: string;
@@ -73,7 +82,7 @@ export async function GET(
         source: "ai-defender",
         technique: round.defender.technique,
         reasoning: round.defender.reasoning,
-        timestamp: patch.createdAt.toISOString(),
+        timestamp: (patch.createdAt as Date).toISOString(),
         code_hash: hash(round.defender.patchedCode),
         code_preview: round.defender.patchedCode.slice(0, 300),
       });
@@ -89,18 +98,10 @@ export async function GET(
   return NextResponse.json({
     patch_id: patch.patchId,
     title: patch.title,
-    codebase: patch.codebase.name,
+    codebase: (patch.codebase as { name: string })?.name,
     adversarial_rounds: patch.adversarialRounds,
     adversarial_won: patch.adversarialWon,
     total_versions: versions.length,
     versions,
   });
-}
-
-function hash(s: string): string {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  }
-  return `sha:${Math.abs(h).toString(16).padStart(8, "0")}`;
 }

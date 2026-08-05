@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Card } from "@/components/ui/card";
 import {
   Clock,
@@ -61,40 +62,47 @@ const STATS: StatDef[] = [
   },
 ];
 
-export function StatsBar({ stats, loading }: StatsBarProps) {
+function StatCell({ stat, value, loading }: { stat: StatDef; value: number | null; loading?: boolean }) {
+  return (
+    <Card
+      key={stat.key}
+      className="holo-card hud-corners glow-hover gap-0 rounded-lg py-4"
+    >
+      <div className="flex items-center gap-3 px-4">
+        <div
+          className={`flex size-9 shrink-0 items-center justify-center rounded-lg border ${stat.iconWrap}`}
+        >
+          <stat.icon className="size-4" />
+        </div>
+        <div className="min-w-0">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">
+            {stat.label}
+          </div>
+          <div
+            className={`text-2xl font-bold tabular-nums ${stat.accent} neon-emerald`}
+          >
+            {loading || value === null ? (
+              <span className="inline-block h-6 w-6 animate-pulse rounded bg-emerald-500/20" />
+            ) : (
+              value
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// Memoize so the parent (ConsoleView) re-rendering on unrelated state
+// (e.g. sidebar toggling, search query typing) doesn't re-render the
+// StatsBar — the props (`stats`, `loading`) only change on data refresh.
+export const StatsBar = memo(function StatsBar({ stats, loading }: StatsBarProps) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
       {STATS.map((s) => {
         const value = stats ? stats[s.key] : null;
-        return (
-          <Card
-            key={s.key}
-            className="holo-card hud-corners glow-hover gap-0 rounded-lg py-4"
-          >
-            <div className="flex items-center gap-3 px-4">
-              <div
-                className={`flex size-9 shrink-0 items-center justify-center rounded-lg border ${s.iconWrap}`}
-              >
-                <s.icon className="size-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">
-                  {s.label}
-                </div>
-                <div
-                  className={`text-2xl font-bold tabular-nums ${s.accent} neon-emerald`}
-                >
-                  {loading || value === null ? (
-                    <span className="inline-block h-6 w-6 animate-pulse rounded bg-emerald-500/20" />
-                  ) : (
-                    value
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-        );
+        return <StatCell key={s.key} stat={s} value={value} loading={loading} />;
       })}
     </div>
   );
-}
+});

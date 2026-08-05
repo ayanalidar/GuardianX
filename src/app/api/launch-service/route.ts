@@ -49,7 +49,7 @@ export async function POST(req: Request) {
               data: { codebaseId: cb.id, status: "queued", stageLabel: `Service Launcher: SAST scan` },
             });
             engineFireAndForget("/api/run-sast", { codebaseId: cb.id, scanId: scan.id });
-            launched.push({ client: client.name, service: "SAST", action: "scan_started", id: scan.id, status: "queued" });
+            launched.push({ client: client.name as string, service: "SAST", action: "scan_started", id: scan.id as string, status: "queued" });
           }
 
           // DAST: attack all targets (or selected ones)
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
                 },
               });
               targets = [newTarget as Record<string, unknown>];
-              launched.push({ client: client.name, service: "Target", action: "auto_created", id: newTarget.id as string, status: `from ${(client as Record<string, unknown>).targetUrl}` });
+              launched.push({ client: client.name as string, service: "Target", action: "auto_created", id: newTarget.id as string, status: `from ${(client as Record<string, unknown>).targetUrl}` });
             }
 
             for (const t of targets) {
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
                 data: { targetId: t.id as string, status: "queued", stageLabel: "Service Launcher: DAST VAPT" },
               });
               engineFireAndForget("/api/run-dast", { targetId: t.id, engagementId: eng.id });
-              launched.push({ client: client.name, service: "DAST", action: "engagement_started", id: eng.id, status: "queued" });
+              launched.push({ client: client.name as string, service: "DAST", action: "engagement_started", id: eng.id as string, status: "queued" });
             }
           }
           break;
@@ -103,12 +103,12 @@ export async function POST(req: Request) {
             for (const p of patches) {
               // Queue exploit replay via engine
               engineFireAndForget("/api/run-exploit", { patchId: p.id, target: "original" });
-              launched.push({ client: client.name, service: "Exploit PoC", action: "exploit_run", id: p.patchId as string, status: "queued" });
+              launched.push({ client: client.name as string, service: "Exploit PoC", action: "exploit_run", id: p.patchId as string, status: "queued" });
               testCount++;
             }
           }
           if (testCount === 0) {
-            launched.push({ client: client.name, service: "Test", action: "no_exploits", id: "-", status: "No exploits found. Run 'Scan' first to generate patches with exploit PoCs." });
+            launched.push({ client: client.name as string, service: "Test", action: "no_exploits", id: "-", status: "No exploits found. Run 'Scan' first to generate patches with exploit PoCs." });
           }
           break;
         }
@@ -129,11 +129,11 @@ export async function POST(req: Request) {
                 data: { status: "approved", approvedAt: new Date() },
               });
               patchCount++;
-              launched.push({ client: client.name, service: "Patch", action: "auto_approved", id: p.patchId as string, status: "approved" });
+              launched.push({ client: client.name as string, service: "Patch", action: "auto_approved", id: p.patchId as string, status: "approved" });
             }
           }
           if (patchCount === 0) {
-            launched.push({ client: client.name, service: "Patch", action: "no_pending", id: "-", status: "no patches to approve" });
+            launched.push({ client: client.name as string, service: "Patch", action: "no_pending", id: "-", status: "no patches to approve" });
           }
           break;
         }
@@ -149,7 +149,7 @@ export async function POST(req: Request) {
             for (const p of patches) {
               // Queue exploit replay via engine
               engineFireAndForget("/api/run-exploit", { patchId: p.id, target: "patched" });
-              launched.push({ client: client.name, service: "Verify", action: "exploit_replay", id: p.patchId as string, status: "verifying" });
+              launched.push({ client: client.name as string, service: "Verify", action: "exploit_replay", id: p.patchId as string, status: "verifying" });
             }
           }
           break;
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
         case "defend": {
           // ── Deploy canaries + honeypots ──────────────────────────────────
           if (!client.authorized) {
-            launched.push({ client: client.name, service: "Defend", action: "not_authorized", id: "-", status: "skipped, not authorized" });
+            launched.push({ client: client.name as string, service: "Defend", action: "not_authorized", id: "-", status: "skipped, not authorized" });
             continue;
           }
           const targets = await db.target.findMany({ where: { clientId, authorized: true }, select: { id: true, name: true } });
@@ -180,7 +180,7 @@ export async function POST(req: Request) {
                 },
               });
             }
-            launched.push({ client: client.name, service: "Defend", action: "canaries_deployed", id: t.id, status: `${canaryTypes.length} canaries` });
+            launched.push({ client: client.name as string, service: "Defend", action: "canaries_deployed", id: t.id as string, status: `${canaryTypes.length} canaries` });
           }
           break;
         }
@@ -197,17 +197,17 @@ export async function POST(req: Request) {
             data: { status: "compliant" },
           });
           launched.push({
-            client: client.name,
+            client: client.name as string,
             service: "Comply",
             action: "compliance_verified",
             id: clientId,
-            status: `frameworks: ${clientFull?.frameworks || "none"}`,
+            status: `frameworks: ${(clientFull?.frameworks as string) || "none"}`,
           });
           break;
         }
 
         default:
-          launched.push({ client: client.name, service: "unknown", action: "error", id: "-", status: `unknown service: ${service}` });
+          launched.push({ client: client.name as string, service: "unknown", action: "error", id: "-", status: `unknown service: ${service}` });
       }
     }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
@@ -7,18 +8,59 @@ import { AnimatedDemo } from "./animated-demo";
 import { HeroSection } from "./landing/hero-section";
 import { VulnFeed } from "./landing/vuln-feed";
 import { StatsStrip } from "./landing/stats-strip";
-import { ScanWidget } from "./landing/scan-widget";
 import { FeaturesSection } from "./landing/features-section";
 import { HowItWorks } from "./landing/how-it-works";
 import { LiveAttackMap } from "./landing/attack-map";
-import { LiveDemo } from "./landing/live-demo";
 import { Testimonials } from "./landing/testimonials";
 import { ComparisonTable } from "./landing/comparison-table";
-import { CaseStudies } from "./landing/case-studies";
-import { ArchitectureDiagram } from "./landing/architecture-diagram";
-import { ROICalculator } from "./landing/roi-calculator";
 import { FinalCTA } from "./landing/final-cta";
 import { LatestBlogSection } from "./landing/latest-blog-section";
+
+/**
+ * Below-the-fold, code-heavy interactive sections are lazy-loaded with
+ * `next/dynamic` + `ssr: false` so they don't ship in the initial JS
+ * bundle. The homepage's first paint is dominated by Hero + VulnFeed +
+ * StatsStrip; everything else can wait until the user scrolls.
+ *
+ * Components lazy-loaded here (estimated gzipped bundle weight saved on
+ * initial load):
+ *   - LiveDemo           (~757 lines, guided-tour modal with diff/code)
+ *   - ScanWidget         (~656 lines, simulated scan + lead capture)
+ *   - ArchitectureDiagram(~536 lines, interactive SVG with popovers)
+ *   - ROICalculator      (~371 lines, animated number tweening)
+ *   - CaseStudies        (~248 lines, count-up + score pairs)
+ */
+const LiveDemo = dynamic(
+  () => import("./landing/live-demo").then((m) => m.LiveDemo),
+  { ssr: false, loading: () => <SectionPlaceholder /> },
+);
+const ScanWidgetLazy = dynamic(
+  () => import("./landing/scan-widget").then((m) => m.ScanWidget),
+  { ssr: false, loading: () => <SectionPlaceholder /> },
+);
+const ArchitectureDiagram = dynamic(
+  () => import("./landing/architecture-diagram").then((m) => m.ArchitectureDiagram),
+  { ssr: false, loading: () => <SectionPlaceholder /> },
+);
+const ROICalculator = dynamic(
+  () => import("./landing/roi-calculator").then((m) => m.ROICalculator),
+  { ssr: false, loading: () => <SectionPlaceholder /> },
+);
+const CaseStudies = dynamic(
+  () => import("./landing/case-studies").then((m) => m.CaseStudies),
+  { ssr: false, loading: () => <SectionPlaceholder /> },
+);
+
+/** Tiny placeholder shown while a lazy section's chunk is loading. */
+function SectionPlaceholder() {
+  return (
+    <section
+      className="mx-auto max-w-6xl px-4 py-16 sm:px-6"
+      aria-hidden
+      style={{ minHeight: 280 }}
+    />
+  );
+}
 
 interface LandingPageProps {
   onEnter: () => void;
@@ -81,16 +123,20 @@ export function LandingPage({ onEnter }: LandingPageProps) {
           <StatsStrip />
 
           {/* 2b. Scan Your Website Free — simulated scan + email lead capture */}
-          <ScanWidget onEnter={onEnter} />
+          <ScanWidgetLazy onEnter={onEnter} />
 
           {/* 3. Live command-center demo (existing) */}
           <AnimatedDemo />
 
           {/* 4. How it works */}
-          <HowItWorks />
+          <div className="gx-cv-auto">
+            <HowItWorks />
+          </div>
 
           {/* 5. Features */}
-          <FeaturesSection />
+          <div className="gx-cv-auto">
+            <FeaturesSection />
+          </div>
 
           {/* 5b. Interactive live demo — guided 5-step tour (no signup) */}
           <LiveDemo onEnter={onEnter} />
@@ -99,7 +145,9 @@ export function LandingPage({ onEnter }: LandingPageProps) {
           <LiveAttackMap />
 
           {/* 7. Comparison */}
-          <ComparisonTable />
+          <div className="gx-cv-auto">
+            <ComparisonTable />
+          </div>
 
           {/* 8. Case studies — real outcome cards */}
           <CaseStudies />
@@ -111,7 +159,9 @@ export function LandingPage({ onEnter }: LandingPageProps) {
           <Testimonials />
 
           {/* 11. Tech stack + compliance */}
-          <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+          <section
+            className="mx-auto max-w-6xl px-4 py-12 sm:px-6 gx-cv-auto"
+          >
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -156,7 +206,9 @@ export function LandingPage({ onEnter }: LandingPageProps) {
           <ROICalculator />
 
           {/* 13. Latest from the blog — 3 most recent posts */}
-          <LatestBlogSection />
+          <div className="gx-cv-auto">
+            <LatestBlogSection />
+          </div>
 
           {/* 14. Final CTA */}
           <FinalCTA onEnter={onEnter} />

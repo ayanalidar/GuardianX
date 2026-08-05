@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Globe2, Activity, Crosshair } from "lucide-react";
 
@@ -43,10 +43,18 @@ const TARGET = { x: 50, y: 50 };
 export function LiveAttackMap() {
   const [attacks, setAttacks] = useState<Attack[]>([]);
   const [counter, setCounter] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
 
+  // Spawn attack blips at 1.1s intervals, but pause when the section is
+  // scrolled out of view OR the document is hidden — saves a setInterval
+  // and the per-tick React state churn when the user is elsewhere.
   useEffect(() => {
     let id = 0;
     let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | null = null;
+    let inViewport = true;
+    let docVisible = !document.hidden;
+
     const spawn = () => {
       if (cancelled) return;
       const a: Attack = {
@@ -63,16 +71,61 @@ export function LiveAttackMap() {
         setAttacks((prev) => prev.filter((p) => p.id !== a.id));
       }, 3500);
     };
-    const interval = setInterval(spawn, 1100);
-    spawn();
+
+    const start = () => {
+      if (interval || cancelled) return;
+      spawn();
+      interval = setInterval(spawn, 1100);
+    };
+    const stop = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+    const updateRunning = () => {
+      if (inViewport && docVisible) start();
+      else stop();
+    };
+
+    const onVisibility = () => {
+      docVisible = !document.hidden;
+      updateRunning();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    let io: IntersectionObserver | null = null;
+    if (sectionRef.current && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[entries.length - 1];
+          if (entry) {
+            inViewport = entry.isIntersecting;
+            updateRunning();
+          }
+        },
+        { threshold: 0.05 },
+      );
+      io.observe(sectionRef.current);
+    } else {
+      // No IO available — just start.
+      start();
+    }
+
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+      io?.disconnect();
     };
   }, []);
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <section
+      ref={sectionRef}
+      className="mx-auto max-w-6xl px-4 py-16 sm:px-6"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "800px" }}
+    >
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-red-500/70">

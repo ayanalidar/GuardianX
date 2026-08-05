@@ -33,7 +33,7 @@ export async function POST() {
           data: { codebaseId: cb.id, status: "queued", stageLabel: "Attack All: SAST scan" },
         });
         engineFireAndForget("/api/run-sast", { codebaseId: cb.id, scanId: scan.id });
-        triggered.push({ client: c.name, type: "SAST", target: cb.name, id: scan.id });
+        triggered.push({ client: c.name as string, type: "SAST", target: cb.name as string, id: scan.id as string });
       }
 
       // Trigger DAST on all targets
@@ -52,7 +52,7 @@ export async function POST() {
           data: { targetId: t.id, status: "queued", stageLabel: "Attack All: DAST VAPT" },
         });
         engineFireAndForget("/api/run-dast", { targetId: t.id, engagementId: eng.id });
-        triggered.push({ client: c.name, type: "DAST", target: t.name, id: eng.id });
+        triggered.push({ client: c.name as string, type: "DAST", target: t.name as string, id: eng.id as string });
       }
     }
 

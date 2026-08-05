@@ -233,18 +233,38 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
   // refresh patch list periodically so newly generated patches show up
   const lastPatchRefresh = useRef(0);
   useEffect(() => {
-    const id = setInterval(() => {
-      // Only auto-refresh patches if there's no active scan (the scan poll
-      // handles refreshes during scanning).
-      if (!scanning && Date.now() - lastPatchRefresh.current > 15_000) {
-        lastPatchRefresh.current = Date.now();
-        sentinelApi
-          .listPending()
-          .then(setPatches)
-          .catch(() => null);
+    // Visibility-aware: don't poll the patch list while the tab is hidden.
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (interval) return;
+      interval = setInterval(() => {
+        // Only auto-refresh patches if there's no active scan (the scan poll
+        // handles refreshes during scanning).
+        if (!scanning && Date.now() - lastPatchRefresh.current > 15_000) {
+          lastPatchRefresh.current = Date.now();
+          sentinelApi
+            .listPending()
+            .then(setPatches)
+            .catch(() => null);
+        }
+      }, 10_000);
+    };
+    const stop = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
       }
-    }, 10_000);
-    return () => clearInterval(id);
+    };
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else start();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    start();
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [scanning]);
 
   // ── actions ───────────────────────────────────────────────────────────

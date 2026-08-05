@@ -51,14 +51,14 @@ export async function POST(
     orderBy: { createdAt: "desc" },
   });
   const prevHash = (latestAtt?.hash as string | undefined) ?? GENESIS_PREV_HASH;
-  const approvedAt = updated.approvedAt!.toISOString();
+  const approvedAt = (updated.approvedAt as Date).toISOString();
   const patchedCodeHash = createHash("sha256")
-    .update(patch.patchedCode || "")
+    .update((patch.patchedCode as string) || "")
     .digest("hex");
 
   const data = JSON.stringify({
     patchId: patch.patchId,
-    codebase: patch.codebase.name,
+    codebase: (patch.codebase as { name: string })?.name,
     title: patch.title,
     severity: patch.severity,
     cve: patch.cve ?? null,
@@ -70,7 +70,7 @@ export async function POST(
     schemaVersion: 1,
   });
 
-  const hash = computeAttestationHash(prevHash, patch.id, patchedCodeHash, approvedAt);
+  const hash = computeAttestationHash(prevHash, patch.id as string, patchedCodeHash, approvedAt);
 
   const att = await db.attestation.create({
     data: { patchId: patch.id, prevHash, hash, data },

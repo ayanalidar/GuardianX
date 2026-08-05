@@ -52,7 +52,8 @@ export async function GET(req: Request) {
   const scan = await db.scan.findUnique({ where: { id: scanId }, include: { patches: { select: { severity: true, status: true } } } });
   if (!scan) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const criticalPending = scan.patches.filter(p => p.severity === "critical" && p.status === "pending").length;
+  const patches = (scan.patches as Array<{ severity: string; status: string }>) || [];
+  const criticalPending = patches.filter(p => p.severity === "critical" && p.status === "pending").length;
   const blockMerge = scan.status === "completed" && criticalPending > 0;
 
   return NextResponse.json({
@@ -61,6 +62,6 @@ export async function GET(req: Request) {
     blockMerge,
     reason: blockMerge ? `${criticalPending} critical vulnerability(ies) found, merge blocked` : "Safe to merge",
     criticalPending,
-    totalPatches: scan.patches.length,
+    totalPatches: patches.length,
   });
 }

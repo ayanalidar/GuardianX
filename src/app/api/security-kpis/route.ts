@@ -36,7 +36,7 @@ export async function GET() {
   const resolvedTimes = approved
     .map((p) => {
       if (!p.approvedAt) return null;
-      return (p.approvedAt.getTime() - p.createdAt.getTime()) / 3600000;
+      return ((p.approvedAt as Date).getTime() - (p.createdAt as Date).getTime()) / 3600000;
     })
     .filter((t): t is number => t !== null && t >= 0);
   const mttr = resolvedTimes.length > 0
@@ -47,14 +47,14 @@ export async function GET() {
   // Since patches are created during scans, MTTD ≈ scan duration
   const scanDurations = scans
     .filter((s) => s.completedAt && s.status === "completed")
-    .map((s) => (s.completedAt!.getTime() - s.startedAt.getTime()) / 1000)
+    .map((s) => ((s.completedAt as Date).getTime() - (s.startedAt as Date).getTime()) / 1000)
     .filter((d) => d > 0);
   const mttd = scanDurations.length > 0
     ? Math.round(scanDurations.reduce((s, d) => s + d, 0) / scanDurations.length)
     : null;
 
   // Vulnerability density: vulns per 1000 lines of code
-  const totalLines = codebases.reduce((s, c) => s + c.sourceCode.split("\n").length, 0);
+  const totalLines = codebases.reduce((s, c) => s + ((c.sourceCode as string) || "").split("\n").length, 0);
   const totalVulns = total + findings.length;
   const vulnDensity = totalLines > 0 ? Math.round((totalVulns / totalLines) * 1000 * 10) / 10 : 0;
 
@@ -66,7 +66,7 @@ export async function GET() {
   const sandboxPassRate = total > 0 ? Math.round((sandboxPassed / total) * 100) : 100;
 
   // Adversarial win rate
-  const advRounds = patches.filter((p) => p.adversarialRounds > 0).length;
+  const advRounds = patches.filter((p) => (p.adversarialRounds as number) > 0).length;
   const advWon = patches.filter((p) => p.adversarialWon).length;
   const advWinRate = advRounds > 0 ? Math.round((advWon / advRounds) * 100) : 100;
 
@@ -84,7 +84,7 @@ export async function GET() {
 
   // Average confidence
   const avgConfidence = total > 0
-    ? Math.round((patches.reduce((s, p) => s + p.confidence, 0) / total) * 100)
+    ? Math.round((patches.reduce((s, p) => s + (p.confidence as number), 0) / total) * 100)
     : 0;
 
   // 7-day trend (mock from real data: group by day)
@@ -93,8 +93,8 @@ export async function GET() {
   for (let i = 6; i >= 0; i--) {
     const dayStart = new Date(now - i * 86400000);
     const dayEnd = new Date(now - (i - 1) * 86400000);
-    const dayVulns = patches.filter((p) => p.createdAt >= dayStart && p.createdAt < dayEnd).length
-      + findings.filter((f) => f.createdAt >= dayStart && f.createdAt < dayEnd).length;
+    const dayVulns = patches.filter((p) => (p.createdAt as Date) >= dayStart && (p.createdAt as Date) < dayEnd).length
+      + findings.filter((f) => (f.createdAt as Date) >= dayStart && (f.createdAt as Date) < dayEnd).length;
     const dayResolved = approved.filter((p) => p.approvedAt && p.approvedAt >= dayStart && p.approvedAt < dayEnd).length;
     trend.push({
       day: dayStart.toLocaleDateString("en-US", { weekday: "short" }),

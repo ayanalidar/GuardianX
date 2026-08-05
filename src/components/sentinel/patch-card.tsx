@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   severityStyles,
@@ -42,7 +43,10 @@ function ConfidencePill({ value }: { value: number }) {
   );
 }
 
-export function PatchCard({ patch, onSelect }: PatchCardProps) {
+// Memoize so the parent re-rendering on unrelated state (search query typing,
+// sidebar toggle) doesn't re-render every patch card. The `onSelect` prop is
+// stable (useCallback in ConsoleView) and `patch` is per-item.
+export const PatchCard = memo(function PatchCard({ patch, onSelect }: PatchCardProps) {
   const style = severityStyles[patch.severity];
 
   return (
@@ -138,4 +142,4 @@ export function PatchCard({ patch, onSelect }: PatchCardProps) {
       </div>
     </motion.button>
   );
-}
+});

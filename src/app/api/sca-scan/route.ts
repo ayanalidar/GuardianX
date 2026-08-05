@@ -46,9 +46,9 @@ export async function GET(req: Request) {
     const codebases = await db.codebase.findMany({ select: { id: true, name: true, sourceCode: true } });
     const allResults: Array<{ codebase_id: string; codebase_name: string; dependencies: string[] }> = [];
     for (const cb of codebases) {
-      const deps = extractDependencies(cb.sourceCode);
+      const deps = extractDependencies((cb.sourceCode as string) || "");
       if (deps.length > 0) {
-        allResults.push({ codebase_id: cb.id, codebase_name: cb.name, dependencies: deps });
+        allResults.push({ codebase_id: cb.id as string, codebase_name: cb.name as string, dependencies: deps });
       }
     }
     return NextResponse.json({ codebases: allResults, total_deps: allResults.reduce((s, c) => s + c.dependencies.length, 0) });
@@ -57,9 +57,9 @@ export async function GET(req: Request) {
   const cb = await db.codebase.findUnique({ where: { id: codebaseId } });
   if (!cb) return NextResponse.json({ error: "codebase not found" }, { status: 404 });
 
-  const dependencies = extractDependencies(cb.sourceCode);
+  const dependencies = extractDependencies((cb.sourceCode as string) || "");
   if (dependencies.length === 0) {
-    return NextResponse.json({ codebase: cb.name, dependencies: [], vulnerabilities: [], message: "No external dependencies detected in source code." });
+    return NextResponse.json({ codebase: cb.name as string, dependencies: [], vulnerabilities: [], message: "No external dependencies detected in source code." });
   }
 
   // Search for CVEs in each dependency (batch: search for top 5 deps at once)
@@ -96,8 +96,8 @@ export async function GET(req: Request) {
   const high = vulnResults.filter(v => v.severity === "high").length;
 
   return NextResponse.json({
-    codebase: cb.name,
-    codebase_id: cb.id,
+    codebase: cb.name as string,
+    codebase_id: cb.id as string,
     total_dependencies: dependencies.length,
     scanned_dependencies: topDeps.length,
     vulnerabilities_found: vulnResults.length,

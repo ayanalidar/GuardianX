@@ -18,8 +18,8 @@ export async function GET(req: Request) {
       action: l.action,
       entity: l.entity,
       actor: l.actor,
-      details: l.details ? JSON.parse(l.details) : null,
-      timestamp: l.createdAt.toISOString(),
+      details: l.details ? JSON.parse(l.details as string) : null,
+      timestamp: (l.createdAt as Date).toISOString(),
     })),
   });
 }

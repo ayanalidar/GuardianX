@@ -49,51 +49,92 @@ const SCENARIO: TermLine[] = [
 export function TerminalTyping() {
   const [revealedLines, setRevealedLines] = useState<TermLine[]>([]);
   const [typedText, setTypedText] = useState("");
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cancelledRef = useRef(false);
 
+  // Build the scenario runner. The loop self-checks `cancelledRef.current`
+  // each tick so it can be cleanly paused/resumed from outside.
   useEffect(() => {
-    let cancelled = false;
+    cancelledRef.current = false;
     let lineIdx = 0;
 
     const runScenario = async () => {
-      while (!cancelled) {
+      while (!cancelledRef.current) {
         setRevealedLines([]);
         setTypedText("");
         for (lineIdx = 0; lineIdx < SCENARIO.length; lineIdx++) {
-          if (cancelled) return;
+          if (cancelledRef.current) return;
           const line = SCENARIO[lineIdx];
 
           if (line.typed) {
-            // Type character by character
             for (let i = 0; i <= line.text.length; i++) {
-              if (cancelled) return;
+              if (cancelledRef.current) return;
               setTypedText(line.text.slice(0, i));
-              // Slightly variable delay for realism
               await sleep(18 + Math.random() * 28);
             }
             await sleep(220);
-            // Lock in the typed line, reset buffer
             setRevealedLines((prev) => [...prev, line]);
             setTypedText("");
           } else {
-            // Reveal instantly with brief delay
             await sleep(280);
             setRevealedLines((prev) => [...prev, line]);
           }
-          // Scroll container to bottom
-          if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          if (containerRef.current) {
+            containerRef.current.scrollTop = containerRef.current.scrollHeight;
           }
           await sleep(180);
         }
-        // Pause at end of scenario, then restart
         await sleep(2400);
       }
     };
 
-    runScenario();
+    // Drive start/stop based on visibility + document visibility.
+    let running = false;
+    let inViewport = true;
+    let docVisible = !document.hidden;
+
+    const start = () => {
+      if (running || cancelledRef.current) return;
+      running = true;
+      cancelledRef.current = false;
+      void runScenario();
+    };
+    const stop = () => {
+      running = false;
+      cancelledRef.current = true;
+    };
+    const updateRunning = () => {
+      if (inViewport && docVisible) start();
+      else stop();
+    };
+
+    const onVisibility = () => {
+      docVisible = !document.hidden;
+      updateRunning();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    let io: IntersectionObserver | null = null;
+    if (containerRef.current && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[entries.length - 1];
+          if (entry) {
+            inViewport = entry.isIntersecting;
+            updateRunning();
+          }
+        },
+        { threshold: 0.05 },
+      );
+      io.observe(containerRef.current);
+    } else {
+      start();
+    }
+
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      io?.disconnect();
     };
   }, []);
 
@@ -103,8 +144,9 @@ export function TerminalTyping() {
 
   return (
     <div
-      ref={scrollRef}
+      ref={containerRef}
       className="custom-scrollbar max-h-44 overflow-y-auto rounded-md border border-zinc-800/80 bg-black/85 p-3 font-mono text-[11px] leading-relaxed shadow-[inset_0_0_24px_rgba(0,0,0,0.6)]"
+      style={{ willChange: "transform" }}
     >
       {revealedLines.map((line, i) => (
         <div key={i} className="flex gap-1.5">

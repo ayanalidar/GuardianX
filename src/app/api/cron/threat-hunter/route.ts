@@ -28,7 +28,7 @@ export async function GET(req: Request) {
         if (recentScans.length === 0) {
           const scan = await db.scan.create({ data: { codebaseId: cb.id, status: "queued", stageLabel: "Threat Hunter: autonomous SAST scan" } });
           engineFireAndForget("/api/run-sast", { codebaseId: cb.id, scanId: scan.id });
-          triggered.push({ client: c.name, type: "SAST", id: scan.id });
+          triggered.push({ client: c.name as string, type: "SAST", id: scan.id as string });
         }
       }
 
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
         if (recentEngs.length === 0) {
           const eng = await db.engagement.create({ data: { targetId: t.id, status: "queued", stageLabel: "Threat Hunter: autonomous DAST VAPT" } });
           engineFireAndForget("/api/run-dast", { targetId: t.id, engagementId: eng.id });
-          triggered.push({ client: c.name, type: "DAST", id: eng.id });
+          triggered.push({ client: c.name as string, type: "DAST", id: eng.id as string });
         }
       }
     }

@@ -11,7 +11,7 @@ export async function GET(
   const { id } = await params;
   const findings = await db.finding.findMany({
     where: { engagementId: id },
-    orderBy: [{ severity: "asc" }, { createdAt: "desc" }],
+    orderBy: { severity: "asc" as const, createdAt: "desc" as const },
   });
   return NextResponse.json(
     findings.map((f) => ({
@@ -28,7 +28,7 @@ export async function GET(
       payload: f.payload,
       confidence: f.confidence,
       remediation: f.remediation,
-      created_at: f.createdAt.toISOString(),
+      created_at: (f.createdAt as Date).toISOString(),
     }))
   );
 }

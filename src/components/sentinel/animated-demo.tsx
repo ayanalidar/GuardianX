@@ -57,7 +57,7 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 // ── Terminal Card ───────────────────────────────────────────────────────
-function TerminalDemo() {
+function TerminalDemo({ active }: { active: boolean }) {
   const [seqIndex, setSeqIndex] = useState(0);
   const [visibleCount, setVisibleCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -65,6 +65,7 @@ function TerminalDemo() {
   const currentSeq = TERMINAL_SEQUENCES[seqIndex];
 
   useEffect(() => {
+    if (!active) return;
     // Reset visible lines when sequence changes
     setVisibleCount(0);
     const interval = setInterval(() => {
@@ -81,7 +82,7 @@ function TerminalDemo() {
       });
     }, 650);
     return () => clearInterval(interval);
-  }, [seqIndex, currentSeq.length]);
+  }, [seqIndex, currentSeq.length, active]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -149,15 +150,16 @@ const STAGE_LABELS: Record<number, string> = {
   6: "○ Pending",
 };
 
-function PipelineDemo() {
+function PipelineDemo({ active }: { active: boolean }) {
   const [activeStage, setActiveStage] = useState(0);
 
   useEffect(() => {
+    if (!active) return;
     const interval = setInterval(() => {
       setActiveStage((prev) => (prev + 1) % (PIPELINE_STAGES.length + 1));
     }, 1200);
     return () => clearInterval(interval);
-  }, []);
+  }, [active]);
 
   return (
     <motion.div
@@ -242,13 +244,14 @@ function useCountUp(target: number, duration = 1200, delay = 0) {
   return value;
 }
 
-function KpiDemo() {
+function KpiDemo({ active }: { active: boolean }) {
   // Cycle re-trigger every 8s so the count-up replays
   const [cycle, setCycle] = useState(0);
   useEffect(() => {
+    if (!active) return;
     const interval = setInterval(() => setCycle((c) => c + 1), 8000);
     return () => clearInterval(interval);
-  }, []);
+  }, [active]);
 
   return (
     <motion.div
@@ -290,22 +293,24 @@ const AI_ALERTS = [
   { icon: "🔵", text: "Hooli reached COMPLIANT status, DPDPA + GDPR certified", color: "sky" },
 ];
 
-function AiBriefingDemo() {
+function AiBriefingDemo({ active }: { active: boolean }) {
   const [visibleAlerts, setVisibleAlerts] = useState(0);
 
   useEffect(() => {
+    if (!active) return;
     const interval = setInterval(() => {
       setVisibleAlerts((prev) => {
         if (prev >= AI_ALERTS.length) {
           // Reset after showing all (with a pause)
           setTimeout(() => setVisibleAlerts(0), 3000);
+          clearInterval(interval);
           return prev;
         }
         return prev + 1;
       });
     }, 1500);
     return () => clearInterval(interval);
-  }, []);
+  }, [active]);
 
   return (
     <motion.div
@@ -343,8 +348,52 @@ function AiBriefingDemo() {
 
 // ── Main exported component ──────────────────────────────────────────────
 export function AnimatedDemo() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [active, setActive] = useState(true);
+
+  // Gate all four child animations on section visibility + document visibility.
+  // Without this, 4 simultaneous `setInterval`s churn React state forever,
+  // even when the section is far below the fold.
+  useEffect(() => {
+    let inViewport = true;
+    let docVisible = !document.hidden;
+    const update = () => setActive(inViewport && docVisible);
+
+    const onVisibility = () => {
+      docVisible = !document.hidden;
+      update();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    let io: IntersectionObserver | null = null;
+    if (sectionRef.current && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[entries.length - 1];
+          if (entry) {
+            inViewport = entry.isIntersecting;
+            update();
+          }
+        },
+        { threshold: 0.1 },
+      );
+      io.observe(sectionRef.current);
+    } else {
+      update();
+    }
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      io?.disconnect();
+    };
+  }, []);
+
   return (
-    <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <section
+      ref={sectionRef}
+      className="mx-auto max-w-6xl px-4 py-16 sm:px-6"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "600px" }}
+    >
       <div className="mb-10 text-center">
         <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-cyan-500/60">
           {"// Live Command Center"}
@@ -356,10 +405,10 @@ export function AnimatedDemo() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <TerminalDemo />
-        <PipelineDemo />
-        <KpiDemo />
-        <AiBriefingDemo />
+        <TerminalDemo active={active} />
+        <PipelineDemo active={active} />
+        <KpiDemo active={active} />
+        <AiBriefingDemo active={active} />
       </div>
     </section>
   );

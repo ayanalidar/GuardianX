@@ -56,16 +56,16 @@ export async function GET(
     sandbox_passed: patch.sandboxPassed,
     // exploit playground
     exploit_code: patch.exploitCode ?? null,
-    exploit_original_result: safeJson(patch.exploitOriginalResult, null),
-    exploit_patched_result: safeJson(patch.exploitPatchedResult, null),
+    exploit_original_result: safeJson(patch.exploitOriginalResult as string | null, null),
+    exploit_patched_result: safeJson(patch.exploitPatchedResult as string | null, null),
     // adversarial arena
     adversarial_rounds: patch.adversarialRounds,
     adversarial_won: patch.adversarialWon,
-    adversarial_transcript: safeJson(patch.adversarialTranscript, []),
+    adversarial_transcript: safeJson(patch.adversarialTranscript as string | null, []),
     status: patch.status,
-    created_at: patch.createdAt.toISOString(),
-    approved_at: patch.approvedAt?.toISOString() ?? null,
-    chat: patch.chatMessages.map((m) => ({
+    created_at: (patch.createdAt as Date).toISOString(),
+    approved_at: (patch.approvedAt as Date | null)?.toISOString() ?? null,
+    chat: (patch.chatMessages as Array<{ id: string; role: string; content: string; createdAt: Date }>).map((m) => ({
       id: m.id,
       role: m.role,
       content: m.content,

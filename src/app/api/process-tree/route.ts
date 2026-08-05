@@ -60,15 +60,15 @@ export async function GET() {
       const clientName = cb?.clientId ? await getClientName(cb.clientId as string) : "Unassigned";
       const elapsed = Date.now() - new Date(s.startedAt as string).getTime();
       processes.push({
-        pid: `sast-${s.id.slice(0, 8)}`,
+        pid: `sast-${(s.id as string).slice(0, 8)}`,
         name: `sast-scan`,
         type: "sast",
         status: s.status === "queued" ? "queued" : "running",
         cpu: s.status === "queued" ? 0 : 45 + Math.random() * 30,
         memory: s.status === "queued" ? 16 : 256 + Math.random() * 128,
-        stage: s.stageLabel || s.status,
+        stage: (s.stageLabel as string) || (s.status as string),
         client: clientName,
-        target: cb?.name as string || "unknown",
+        target: (cb?.name as string) || "unknown",
         startedAt: (s.startedAt as Date).toISOString(),
         duration: formatDuration(elapsed),
       });
@@ -86,15 +86,15 @@ export async function GET() {
       const clientName = tgt?.clientId ? await getClientName(tgt.clientId as string) : "Unassigned";
       const elapsed = Date.now() - new Date(e.startedAt as string).getTime();
       processes.push({
-        pid: `dast-${e.id.slice(0, 8)}`,
+        pid: `dast-${(e.id as string).slice(0, 8)}`,
         name: `dast-engagement`,
         type: "dast",
         status: e.status === "queued" ? "queued" : "running",
         cpu: e.status === "queued" ? 0 : 60 + Math.random() * 25,
         memory: e.status === "queued" ? 16 : 192 + Math.random() * 64,
-        stage: e.stageLabel || e.status,
+        stage: (e.stageLabel as string) || (e.status as string),
         client: clientName,
-        target: tgt?.name as string || "unknown",
+        target: (tgt?.name as string) || "unknown",
         startedAt: (e.startedAt as Date).toISOString(),
         duration: formatDuration(elapsed),
       });
@@ -111,7 +111,7 @@ export async function GET() {
       const cb = p.codebase as Record<string, unknown> | null;
       const clientName = cb?.clientId ? await getClientName(cb.clientId as string) : "Unassigned";
       processes.push({
-        pid: `patch-${p.id.slice(0, 8)}`,
+        pid: `patch-${(p.id as string).slice(0, 8)}`,
         name: `patch-review`,
         type: "patch",
         status: "idle",
@@ -151,7 +151,7 @@ export async function GET() {
 async function getClientName(clientId: string): Promise<string> {
   try {
     const c = await db.client.findUnique({ where: { id: clientId }, select: { name: true } });
-    return c?.name || "Unassigned";
+    return (c?.name as string) || "Unassigned";
   } catch {
     return "Unassigned";
   }

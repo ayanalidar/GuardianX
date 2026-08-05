@@ -45,7 +45,7 @@ export async function POST() {
             },
           });
           engineFireAndForget("/api/run-sast", { codebaseId: cb.id, scanId: scan.id });
-          triggered.push({ client: c.name, codebase: cb.name, scanId: scan.id });
+          triggered.push({ client: c.name as string, codebase: cb.name as string, scanId: scan.id as string });
         }
       }
 
@@ -70,7 +70,7 @@ export async function POST() {
             },
           });
           engineFireAndForget("/api/run-dast", { targetId: t.id, engagementId: eng.id });
-          engagements.push({ client: c.name, target: t.name, engagementId: eng.id });
+          engagements.push({ client: c.name as string, target: t.name as string, engagementId: eng.id as string });
         }
       }
     }
@@ -118,8 +118,8 @@ export async function GET() {
             orderBy: { startedAt: "desc" },
           });
           stale.push({
-            client: c.name,
-            asset: cb.name,
+            client: c.name as string,
+            asset: cb.name as string,
             type: "SAST",
             lastScan: lastScan ? (lastScan.startedAt as Date).toISOString() : null,
           });
@@ -133,7 +133,7 @@ export async function GET() {
           select: { id: true },
         });
         if (recentEngs.length === 0) {
-          stale.push({ client: c.name, asset: t.name, type: "DAST", lastScan: null });
+          stale.push({ client: c.name as string, asset: t.name as string, type: "DAST", lastScan: null });
         }
       }
     }

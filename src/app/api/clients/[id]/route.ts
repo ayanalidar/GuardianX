@@ -37,14 +37,14 @@ export async function GET(
       frameworks: client.frameworks ? (client.frameworks as string).split(",").map((s) => s.trim()) : [],
       status: client.status,
       created_at: (client.createdAt as Date).toISOString(),
-      codebases: (client.codebases || []).map((cb: Record<string, unknown>) => ({
+      codebases: ((client.codebases as Array<Record<string, unknown>>) || []).map((cb) => ({
         id: cb.id,
         name: cb.name,
         language: cb.language,
         description: cb.description,
         created_at: (cb.createdAt as Date).toISOString(),
       })),
-      targets: (client.targets || []).map((t: Record<string, unknown>) => ({
+      targets: ((client.targets as Array<Record<string, unknown>>) || []).map((t) => ({
         id: t.id,
         name: t.name,
         base_url: t.baseUrl,

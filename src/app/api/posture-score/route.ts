@@ -17,7 +17,7 @@ export async function GET() {
   });
 
   const scores = codebases.map((cb) => {
-    const patches = cb.patches;
+    const patches = (cb.patches as Array<{ severity: string; status: string; sandboxPassed: boolean; adversarialWon: boolean; adversarialRounds: number }>) || [];
     const total = patches.length;
     const pending = patches.filter((p) => p.status === "pending");
     const approved = patches.filter((p) => p.status === "approved");

@@ -44,9 +44,9 @@ export async function GET(
     kind: cred.kind,
     target: cred.target,
     username: cred.username,
-    created_at: cred.createdAt.toISOString(),
-    last_used_at: cred.lastUsedAt?.toISOString() ?? null,
-    audits: cred.audits.map((a) => ({
+    created_at: (cred.createdAt as Date).toISOString(),
+    last_used_at: (cred.lastUsedAt as Date | null)?.toISOString() ?? null,
+    audits: (cred.audits as Array<{ id: string; action: string; context: string; createdAt: Date }>).map((a) => ({
       id: a.id,
       action: a.action,
       context: a.context,

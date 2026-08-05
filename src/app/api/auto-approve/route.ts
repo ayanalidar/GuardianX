@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       if (patchRank > maxRank) continue; // skip high/critical
 
       // Must have won adversarial (if rounds > 0)
-      if (p.adversarialRounds > 0 && !p.adversarialWon) continue;
+      if ((p.adversarialRounds as number) > 0 && !p.adversarialWon) continue;
 
       // Auto-approve
       await db.patch.update({

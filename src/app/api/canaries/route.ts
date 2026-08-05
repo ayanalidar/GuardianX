@@ -41,9 +41,9 @@ export async function GET() {
       injected_endpoint: c.injectedEndpoint,
       is_active: c.isActive,
       detected: c.detected,
-      detected_at: c.detectedAt?.toISOString() ?? null,
+      detected_at: (c.detectedAt as Date | null)?.toISOString() ?? null,
       detected_on: c.detectedOn,
-      created_at: c.createdAt.toISOString(),
+      created_at: (c.createdAt as Date).toISOString(),
     })),
   });
 }

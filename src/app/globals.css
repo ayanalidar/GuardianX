@@ -907,3 +907,40 @@
   .roi-slider::-webkit-slider-thumb { transition: none; }
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   Performance utilities — perf-optimize task
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Skip rendering work for off-screen sections. The browser skips layout,
+   paint, and hit-testing for elements with `content-visibility: auto` when
+   they're outside the viewport — a huge win on the long GuardianX landing
+   page (12+ sections). `contain-intrinsic-size` provides an estimated
+   height so the scrollbar doesn't jump as sections hydrate. */
+.gx-cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 600px;
+}
+
+/* Hint to the browser that this element will animate via transform — the
+   compositor creates a separate GPU layer so the main thread doesn't have
+   to repaint on every frame. Use sparingly (only on elements that actually
+   animate) — overuse causes memory bloat. */
+.gx-will-transform {
+  will-change: transform;
+}
+
+/* Same idea, but for elements that animate opacity (e.g. fade-in entrants). */
+.gx-will-opacity {
+  will-change: opacity;
+}
+
+/* On reduced-motion devices, force these hints off — they cost memory and
+   don't help when nothing is animating. */
+@media (prefers-reduced-motion: reduce) {
+  .gx-will-transform,
+  .gx-will-opacity {
+    will-change: auto;
+  }
+}
+
+

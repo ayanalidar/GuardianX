@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Quote, ChevronLeft, ChevronRight, Star } from "lucide-react";
 
@@ -74,12 +74,59 @@ const TRUSTED_BY = [
 
 export function Testimonials() {
   const [idx, setIdx] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
 
+  // Auto-rotate every 6s, but pause when off-screen or tab hidden.
   useEffect(() => {
-    const t = setInterval(() => {
-      setIdx((i) => (i + 1) % TESTIMONIALS.length);
-    }, 6000);
-    return () => clearInterval(t);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    let inViewport = true;
+    let docVisible = !document.hidden;
+
+    const start = () => {
+      if (interval) return;
+      interval = setInterval(() => {
+        setIdx((i) => (i + 1) % TESTIMONIALS.length);
+      }, 6000);
+    };
+    const stop = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+    const updateRunning = () => {
+      if (inViewport && docVisible) start();
+      else stop();
+    };
+
+    const onVisibility = () => {
+      docVisible = !document.hidden;
+      updateRunning();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    let io: IntersectionObserver | null = null;
+    if (sectionRef.current && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[entries.length - 1];
+          if (entry) {
+            inViewport = entry.isIntersecting;
+            updateRunning();
+          }
+        },
+        { threshold: 0.1 },
+      );
+      io.observe(sectionRef.current);
+    } else {
+      start();
+    }
+
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+      io?.disconnect();
+    };
   }, []);
 
   const next = () => setIdx((i) => (i + 1) % TESTIMONIALS.length);
@@ -87,7 +134,11 @@ export function Testimonials() {
   const t = TESTIMONIALS[idx];
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <section
+      ref={sectionRef}
+      className="mx-auto max-w-6xl px-4 py-16 sm:px-6"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "600px" }}
+    >
       {/* Trusted by */}
       <div className="mb-12">
         <div className="mb-4 text-center font-mono text-[10px] uppercase tracking-widest text-zinc-500">

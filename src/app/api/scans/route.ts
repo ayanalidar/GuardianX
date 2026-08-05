@@ -75,10 +75,10 @@ export async function GET() {
       id: s.id,
       status: s.status,
       stage_label: s.stageLabel,
-      started_at: s.startedAt.toISOString(),
-      completed_at: s.completedAt?.toISOString() ?? null,
+      started_at: (s.startedAt as Date).toISOString(),
+      completed_at: (s.completedAt as Date | null)?.toISOString() ?? null,
       codebase: s.codebase,
-      patch_count: s._count.patches,
+      patch_count: (s._count as { patches: number })?.patches,
     }))
   );
 }

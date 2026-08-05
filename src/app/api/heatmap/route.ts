@@ -10,19 +10,20 @@ export async function GET() {
   });
 
   const codebases = await db.codebase.findMany({ select: { id: true, name: true } });
-  const cbMap = new Map(codebases.map(c => [c.id, c.name]));
+  const cbMap = new Map<string, string>(codebases.map(c => [c.id as string, c.name as string]));
 
   // Group by codebase → file → severity counts
   const heatmap: Record<string, Record<string, { critical: number; high: number; medium: number; low: number; total: number; resolved: number }>> = {};
 
   for (const p of patches) {
-    const cbName = cbMap.get(p.codebaseId) ?? "unknown";
+    const cbName: string = cbMap.get(p.codebaseId as string) ?? "unknown";
+    const file: string = (p.affectedFile as string) ?? "unknown";
     if (!heatmap[cbName]) heatmap[cbName] = {};
-    if (!heatmap[cbName][p.affectedFile]) heatmap[cbName][p.affectedFile] = { critical: 0, high: 0, medium: 0, low: 0, total: 0, resolved: 0 };
-    const sev = p.severity as keyof typeof heatmap[string][string];
-    if (sev in heatmap[cbName][p.affectedFile]) heatmap[cbName][p.affectedFile][sev]++;
-    heatmap[cbName][p.affectedFile].total++;
-    if (p.status !== "pending") heatmap[cbName][p.affectedFile].resolved++;
+    if (!heatmap[cbName][file]) heatmap[cbName][file] = { critical: 0, high: 0, medium: 0, low: 0, total: 0, resolved: 0 };
+    const sev = p.severity as "critical" | "high" | "medium" | "low";
+    if (sev in heatmap[cbName][file]) heatmap[cbName][file][sev]++;
+    heatmap[cbName][file].total++;
+    if (p.status !== "pending") heatmap[cbName][file].resolved++;
   }
 
   // Compute risk score per file (0-100)

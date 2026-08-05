@@ -74,8 +74,8 @@ export async function GET() {
           anomalies.push({
             severity: "warning",
             title: "Patch Review Bottleneck",
-            detail: `${c.name} has ${critical} critical patches pending review, remediation is blocked.`,
-            client: c.name,
+            detail: `${c.name as string} has ${critical} critical patches pending review, remediation is blocked.`,
+            client: c.name as string,
           });
         }
       } catch { /* ignore */ }

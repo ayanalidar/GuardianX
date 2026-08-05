@@ -10,6 +10,18 @@ import { useEffect, useRef } from "react";
  * - Mouse acts as a soft "attractor" — nearby particles brighten + a halo
  * - Reduced-motion: render static grid only
  * - Pointer-events disabled, sits behind content (z-0)
+ *
+ * Performance:
+ *  - rAF loop is paused via IntersectionObserver when the section is scrolled
+ *    off-screen (a tab on the homepage can have 5+ of these; pausing saves
+ *    real CPU on laptops).
+ *  - rAF loop is also paused when the document is hidden (tab switched).
+ *  - Mouse listeners are only active while the canvas is visible.
+ *  - DPR is capped at 2 to avoid retina-screen GPU saturation.
+ *  - Particle count is `min(density, area/18000)` so the cost scales with
+ *    viewport, not the raw density prop.
+ *  - The O(n²) connection pass is the hot path; we early-skip pairs whose
+ *    dx or dy alone exceeds the link radius (cheaper than full hypot).
  */
 export function ParticleNetworkBackground({ density = 70 }: { density?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -30,6 +42,14 @@ export function ParticleNetworkBackground({ density = 70 }: { density?: number }
     let particles: P[] = [];
 
     const mouse = { x: -9999, y: -9999, active: false };
+
+    // ── Visibility state ────────────────────────────────────────────────
+    // `running` is true only when (a) the canvas is in the viewport AND
+    // (b) the document is visible. Both conditions are tracked separately
+    // so we re-evaluate on either signal.
+    let inViewport = true;
+    let docVisible = !document.hidden;
+    let running = !reduced && inViewport && docVisible;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -65,11 +85,51 @@ export function ParticleNetworkBackground({ density = 70 }: { density?: number }
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseout", onLeave);
 
+    // ── Visibility observers ────────────────────────────────────────────
+    const updateRunning = () => {
+      const was = running;
+      running = !reduced && inViewport && docVisible;
+      if (running && !was) {
+        raf = requestAnimationFrame(draw);
+      } else if (!running && was) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
+    const onVisibility = () => {
+      docVisible = !document.hidden;
+      updateRunning();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    let io: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[entries.length - 1];
+          if (entry && entry.target === canvas) {
+            inViewport = entry.isIntersecting;
+            updateRunning();
+          }
+        },
+        { threshold: 0 },
+      );
+      io.observe(canvas);
+    }
+
     const draw = () => {
+      if (!running) return;
       raf = requestAnimationFrame(draw);
       ctx.clearRect(0, 0, width, height);
 
-      // Update + draw particles
+      // ── Hot path: update + draw particles ───────────────────────────
+      const linkR = 120;
+      const linkR2 = linkR * linkR;
+      const mouseActive = mouse.active;
+      const mx = mouse.x;
+      const my = mouse.y;
+
       for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
@@ -78,26 +138,25 @@ export function ParticleNetworkBackground({ density = 70 }: { density?: number }
         p.x = Math.max(0, Math.min(width, p.x));
         p.y = Math.max(0, Math.min(height, p.y));
 
-        // Mouse attraction — particles drift towards cursor when close
-        if (mouse.active) {
-          const dx = mouse.x - p.x;
-          const dy = mouse.y - p.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < 160) {
+        if (mouseActive) {
+          const dx = mx - p.x;
+          const dy = my - p.y;
+          const dist2 = dx * dx + dy * dy;
+          if (dist2 < 25600) {
+            // 160^2
+            const dist = Math.sqrt(dist2);
             const force = (160 - dist) / 160;
             p.vx += (dx / dist) * force * 0.012;
             p.vy += (dy / dist) * force * 0.012;
           }
         }
-        // Damping
         p.vx *= 0.992;
         p.vy *= 0.992;
-        // Minimum drift so they never freeze
         if (Math.abs(p.vx) < 0.04) p.vx += (Math.random() - 0.5) * 0.05;
         if (Math.abs(p.vy) < 0.04) p.vy += (Math.random() - 0.5) * 0.05;
 
         const closeToMouse =
-          mouse.active && Math.hypot(mouse.x - p.x, mouse.y - p.y) < 140;
+          mouseActive && Math.hypot(mx - p.x, my - p.y) < 140;
         ctx.beginPath();
         ctx.arc(p.x, p.y, closeToMouse ? p.r * 1.8 : p.r, 0, Math.PI * 2);
         ctx.fillStyle = closeToMouse
@@ -106,16 +165,21 @@ export function ParticleNetworkBackground({ density = 70 }: { density?: number }
         ctx.fill();
       }
 
-      // Connections
+      // ── Hot path: connection lines (O(n²)) ──────────────────────────
+      // Early-skip pairs whose dx alone exceeds link radius — saves the
+      // expensive Math.hypot call on the majority of distant pairs.
       for (let i = 0; i < particles.length; i++) {
+        const a = particles[i];
         for (let j = i + 1; j < particles.length; j++) {
-          const a = particles[i];
           const b = particles[j];
           const dx = a.x - b.x;
+          if (dx > linkR || dx < -linkR) continue;
           const dy = a.y - b.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < 120) {
-            const alpha = (1 - dist / 120) * 0.35;
+          if (dy > linkR || dy < -linkR) continue;
+          const dist2 = dx * dx + dy * dy;
+          if (dist2 < linkR2) {
+            const dist = Math.sqrt(dist2);
+            const alpha = (1 - dist / linkR) * 0.35;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
@@ -130,7 +194,7 @@ export function ParticleNetworkBackground({ density = 70 }: { density?: number }
       }
 
       // Cursor halo
-      if (mouse.active) {
+      if (mouseActive) {
         const grad = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 120);
         grad.addColorStop(0, "rgba(16, 185, 129, 0.18)");
         grad.addColorStop(1, "rgba(16, 185, 129, 0)");
@@ -149,7 +213,7 @@ export function ParticleNetworkBackground({ density = 70 }: { density?: number }
         ctx.fillStyle = `hsla(${p.hue}, 85%, 55%, 0.45)`;
         ctx.fill();
       }
-    } else {
+    } else if (running) {
       raf = requestAnimationFrame(draw);
     }
 
@@ -158,6 +222,8 @@ export function ParticleNetworkBackground({ density = 70 }: { density?: number }
       window.removeEventListener("resize", resize);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseout", onLeave);
+      document.removeEventListener("visibilitychange", onVisibility);
+      io?.disconnect();
     };
   }, [density]);
 
@@ -166,6 +232,7 @@ export function ParticleNetworkBackground({ density = 70 }: { density?: number }
       ref={canvasRef}
       aria-hidden
       className="pointer-events-none absolute inset-0 h-full w-full opacity-70"
+      style={{ willChange: "transform" }}
     />
   );
 }

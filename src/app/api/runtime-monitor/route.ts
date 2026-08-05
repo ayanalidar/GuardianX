@@ -9,7 +9,7 @@ export async function GET() {
     const patches = await db.patch.findMany({
       where: { status: { in: ["pending", "approved"] } },
       include: { codebase: { select: { name: true } } },
-      orderBy: [{ severity: "asc" }, { createdAt: "desc" }],
+      orderBy: { severity: "asc" as const, createdAt: "desc" as const },
       take: 50,
     });
 

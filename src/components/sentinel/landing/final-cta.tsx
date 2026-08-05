@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ShieldHalf, Terminal, ArrowRight, Users, Activity } from "lucide-react";
 import { GlowCTA } from "./glow-cta";
@@ -12,21 +12,71 @@ import { GlowCTA } from "./glow-cta";
  */
 export function FinalCTA({ onEnter }: { onEnter: () => void }) {
   const [users, setUsers] = useState(1247);
+  const sectionRef = useRef<HTMLElement>(null);
 
+  // Users-counter interval pauses when off-screen or document hidden.
   useEffect(() => {
-    const t = setInterval(() => {
-      // Fluctuate between 1100 and 1500, never exactly the same
-      setUsers((u) => {
-        const delta = Math.floor(Math.random() * 21) - 10;
-        const next = u + delta;
-        return Math.max(1100, Math.min(1500, next));
-      });
-    }, 2200);
-    return () => clearInterval(t);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    let inViewport = true;
+    let docVisible = !document.hidden;
+
+    const start = () => {
+      if (interval) return;
+      interval = setInterval(() => {
+        setUsers((u) => {
+          const delta = Math.floor(Math.random() * 21) - 10;
+          const next = u + delta;
+          return Math.max(1100, Math.min(1500, next));
+        });
+      }, 2200);
+    };
+    const stop = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+    const updateRunning = () => {
+      if (inViewport && docVisible) start();
+      else stop();
+    };
+
+    const onVisibility = () => {
+      docVisible = !document.hidden;
+      updateRunning();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    let io: IntersectionObserver | null = null;
+    if (sectionRef.current && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[entries.length - 1];
+          if (entry) {
+            inViewport = entry.isIntersecting;
+            updateRunning();
+          }
+        },
+        { threshold: 0.05 },
+      );
+      io.observe(sectionRef.current);
+    } else {
+      start();
+    }
+
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+      io?.disconnect();
+    };
   }, []);
 
   return (
-    <section className="relative isolate overflow-hidden px-4 py-20 sm:px-6">
+    <section
+      ref={sectionRef}
+      className="relative isolate overflow-hidden px-4 py-20 sm:px-6"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "700px" }}
+    >
       {/* Animated gradient banner background */}
       <motion.div
         aria-hidden

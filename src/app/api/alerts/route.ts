@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 // GET /api/alerts, list alert rules
 export async function GET() {
   const rules = await db.alertRule.findMany({ orderBy: { createdAt: "desc" } });
-  return NextResponse.json(rules.map(r => ({ ...r, channelConfig: r.channelConfig ? JSON.parse(r.channelConfig) : null })));
+  return NextResponse.json(rules.map(r => ({ ...r, channelConfig: r.channelConfig ? JSON.parse(r.channelConfig as string) : null })));
 }
 
 // POST /api/alerts, create an alert rule
@@ -26,7 +26,7 @@ export async function PATCH(req: Request) {
   let triggered = 0;
   for (const rule of rules) {
     // Simple condition matching: "severity==critical" or "posture_score<50"
-    const match = evaluateCondition(rule.condition, data);
+    const match = evaluateCondition(rule.condition as string, data);
     if (match) {
       await db.alertRule.update({ where: { id: rule.id }, data: { lastTriggered: new Date() } });
       await db.auditLog.create({ data: { action: "alert_triggered", entity: rule.id, details: JSON.stringify({ event, data }) } });

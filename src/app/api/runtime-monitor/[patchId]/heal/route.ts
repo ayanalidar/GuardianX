@@ -37,23 +37,23 @@ export async function POST(
   // Create attestation for the healing
   const { createHash } = await import("node:crypto");
   const latestAtt = await db.attestation.findFirst({ orderBy: { createdAt: "desc" } });
-  const prevHash = latestAtt?.hash ?? "0";
-  const approvedAt = updated.approvedAt!.toISOString();
-  const patchedCodeHash = createHash("sha256").update(patch.patchedCode || "").digest("hex");
+  const prevHash = (latestAtt?.hash as string) ?? "0";
+  const approvedAt = (updated.approvedAt as Date).toISOString();
+  const patchedCodeHash = createHash("sha256").update((patch.patchedCode as string) || "").digest("hex");
   const data = JSON.stringify({
-    patchId: patch.patchId, codebase: patch.codebase.name,
+    patchId: patch.patchId, codebase: (patch.codebase as { name: string })?.name,
     title: patch.title, severity: patch.severity, approvedAt,
     patchedCodeHash, selfHealed: true,
   });
   const hash = createHash("sha256")
-    .update(prevHash + patch.id + patchedCodeHash + approvedAt)
+    .update(prevHash + (patch.id as string) + patchedCodeHash + approvedAt)
     .digest("hex");
   await db.attestation.create({ data: { patchId: patch.id, prevHash, hash, data } });
 
   return NextResponse.json({
     patch_id: updated.patchId,
     runtime_status: "healed",
-    message: `Function hot-swapped at runtime. ${patch.codebase.name} → ${patch.affectedFile} is now executing the patched version with zero downtime.`,
+    message: `Function hot-swapped at runtime. ${(patch.codebase as { name: string })?.name} → ${patch.affectedFile} is now executing the patched version with zero downtime.`,
     healed_at: approvedAt,
     attestation_hash: hash,
   });

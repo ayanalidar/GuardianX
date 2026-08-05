@@ -65,7 +65,7 @@ export async function POST(
       "- explanation: under 100 words on what you changed and why.",
       "- suggestions: 2-4 bullet points for further hardening.",
     ].join("\n");
-  } else {
+  } else { // explain
     // explain
     system = "You are GuardianX's Remediation Copilot. Explain security patches clearly to developers. Respond with STRICT JSON.";
     user = [

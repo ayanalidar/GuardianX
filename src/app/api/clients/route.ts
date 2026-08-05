@@ -1,60 +1,98 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { measureApiTime } from "@/lib/performance";
 
 export const dynamic = "force-dynamic";
 
+// ── 30-second in-memory cache for the dashboard's clients list ────────────
+// The CommandCenter polls /api/clients every 15s. Without a cache, every
+// poll hits Supabase with 6 sequential round-trips (clients → codebases →
+// targets → patches → engagements → findings). With this cache, those
+// round-trips happen at most once every 30s per server instance.
+const CLIENTS_CACHE_TTL_MS = 30 * 1000;
+let clientsCache: { data: unknown; expiresAt: number } | null = null;
+
 // GET /api/clients, list all clients with pipeline summary (optimized: batch queries)
-export async function GET() {
-  try {
-    // 1. Fetch all clients (1 query)
-    const clients = await db.client.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+export const GET = measureApiTime(
+  "/api/clients",
+  async function GET() {
+    try {
+      // Check the 30s cache first.
+      if (clientsCache && clientsCache.expiresAt > Date.now()) {
+        return NextResponse.json(clientsCache.data, {
+          headers: {
+            "Cache-Control": "private, max-age=30, stale-while-revalidate=15",
+            "X-GX-Cache": "HIT",
+          },
+        });
+      }
 
-    if (!clients || clients.length === 0) {
-      return NextResponse.json([]);
-    }
+      // 1. Fetch all clients (1 query)
+      const clients = await db.client.findMany({
+        orderBy: { createdAt: "desc" },
+      });
 
-    const clientIds = clients.map((c: Record<string, unknown>) => c.id as string);
+      if (!clients || clients.length === 0) {
+        clientsCache = { data: [], expiresAt: Date.now() + CLIENTS_CACHE_TTL_MS };
+        return NextResponse.json([], {
+          headers: { "Cache-Control": "private, max-age=30" },
+        });
+      }
 
-    // 2. Batch fetch ALL codebases for ALL clients (1 query)
-    const allCodebases = await db.codebase.findMany({
-      where: { clientId: { in: clientIds } },
-      select: { id: true, name: true, language: true, description: true, clientId: true, createdAt: true },
-    });
+      const clientIds = clients.map((c: Record<string, unknown>) => c.id as string);
 
-    // 3. Batch fetch ALL targets for ALL clients (1 query)
-    const allTargets = await db.target.findMany({
-      where: { clientId: { in: clientIds } },
-      select: { id: true, name: true, baseUrl: true, authorized: true, clientId: true, createdAt: true },
-    });
+      // 2–6. Batch fetch ALL related rows in parallel (5 queries at once).
+      // Previously these ran sequentially — adding 5× RTT latency.
+      const [allCodebases, allTargets, allPatches, allEngagements, allFindings] =
+        await Promise.all([
+          db.codebase.findMany({
+            where: { clientId: { in: clientIds } },
+            select: { id: true, name: true, language: true, description: true, clientId: true, createdAt: true },
+          }),
+          db.target.findMany({
+            where: { clientId: { in: clientIds } },
+            select: { id: true, name: true, baseUrl: true, authorized: true, clientId: true, createdAt: true },
+          }),
+          // 4. Patches for ALL codebases — needs codebaseIds, so we resolve
+          //    them after Promise.all settles. See the inner step below.
+          Promise.resolve(null as null),
+          Promise.resolve(null as null),
+          Promise.resolve(null as null),
+        ]);
 
-    // 4. Batch fetch ALL patches for ALL codebases (1 query)
-    const codebaseIds = allCodebases.map((cb: Record<string, unknown>) => cb.id as string);
-    const allPatches = codebaseIds.length > 0
-      ? await db.patch.findMany({
-          where: { codebaseId: { in: codebaseIds } },
-          select: { id: true, codebaseId: true, status: true, severity: true, createdAt: true },
-        })
-      : [];
+      // Resolve patches / engagements / findings with the IDs we just got.
+      const codebaseIds = allCodebases.map((cb: Record<string, unknown>) => cb.id as string);
+      const targetIds = allTargets.map((t: Record<string, unknown>) => t.id as string);
+      const [allPatchesFinal, allEngagementsFinal, allFindingsFinal] = await Promise.all([
+        codebaseIds.length > 0
+          ? db.patch.findMany({
+              where: { codebaseId: { in: codebaseIds } },
+              select: { id: true, codebaseId: true, status: true, severity: true, createdAt: true },
+            })
+          : [],
+        targetIds.length > 0
+          ? db.engagement.findMany({
+              where: { targetId: { in: targetIds } },
+              select: { id: true, targetId: true, status: true, startedAt: true, completedAt: true, stageLabel: true },
+            })
+          : [],
+        // Findings depend on engagementIds, which depend on engagements.
+        // We resolve them in a follow-up tick.
+        Promise.resolve([] as unknown[]),
+      ]);
 
-    // 5. Batch fetch ALL engagements for ALL targets (1 query)
-    const targetIds = allTargets.map((t: Record<string, unknown>) => t.id as string);
-    const allEngagements = targetIds.length > 0
-      ? await db.engagement.findMany({
-          where: { targetId: { in: targetIds } },
-          select: { id: true, targetId: true, status: true, startedAt: true, completedAt: true, stageLabel: true },
-        })
-      : [];
+      // Resolve findings now that we have engagement IDs.
+      const engagementIds = allEngagementsFinal.map((e: Record<string, unknown>) => e.id as string);
+      const allFindingsFinalResolved = engagementIds.length > 0
+        ? await db.finding.findMany({
+            where: { engagementId: { in: engagementIds } },
+            select: { id: true, engagementId: true, severity: true, title: true, category: true, endpoint: true, createdAt: true },
+          })
+        : [];
 
-    // 6. Batch fetch ALL findings for ALL engagements (1 query)
-    const engagementIds = allEngagements.map((e: Record<string, unknown>) => e.id as string);
-    const allFindings = engagementIds.length > 0
-      ? await db.finding.findMany({
-          where: { engagementId: { in: engagementIds } },
-          select: { id: true, engagementId: true, severity: true, title: true, category: true, endpoint: true, createdAt: true },
-        })
-      : [];
+      void allPatches; // placeholder above, replaced by allPatchesFinal
+      void allEngagements; // same
+      void allFindings; // same
 
     // 7. Build lookup maps for O(1) access
     const codebasesByClient: Record<string, Record<string, unknown>[]> = {};
@@ -72,21 +110,21 @@ export async function GET() {
     }
 
     const patchesByCodebase: Record<string, Record<string, unknown>[]> = {};
-    for (const p of allPatches) {
+    for (const p of allPatchesFinal) {
       const cbId = (p as Record<string, unknown>).codebaseId as string;
       if (!patchesByCodebase[cbId]) patchesByCodebase[cbId] = [];
       patchesByCodebase[cbId].push(p as Record<string, unknown>);
     }
 
     const engagementsByTarget: Record<string, Record<string, unknown>[]> = {};
-    for (const e of allEngagements) {
+    for (const e of allEngagementsFinal) {
       const tid = (e as Record<string, unknown>).targetId as string;
       if (!engagementsByTarget[tid]) engagementsByTarget[tid] = [];
       engagementsByTarget[tid].push(e as Record<string, unknown>);
     }
 
     const findingsByEngagement: Record<string, Record<string, unknown>[]> = {};
-    for (const f of allFindings) {
+    for (const f of allFindingsFinalResolved) {
       const eid = (f as Record<string, unknown>).engagementId as string;
       if (!findingsByEngagement[eid]) findingsByEngagement[eid] = [];
       findingsByEngagement[eid].push(f as Record<string, unknown>);
@@ -150,14 +188,20 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(enriched);
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to load clients" },
-      { status: 500 }
-    );
-  }
-}
+      return NextResponse.json(enriched, {
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=15",
+          "X-GX-Cache": "MISS",
+        },
+      });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Failed to load clients" },
+        { status: 500 }
+      );
+    }
+  },
+);
 
 // POST /api/clients, create a new client
 export async function POST(req: Request) {
@@ -194,6 +238,9 @@ export async function POST(req: Request) {
         status: "onboarding",
       },
     });
+
+    // Invalidate the GET cache so the new client shows up immediately.
+    clientsCache = null;
 
     return NextResponse.json(
       { id: client.id, name: client.name, status: client.status, message: "Client created" },

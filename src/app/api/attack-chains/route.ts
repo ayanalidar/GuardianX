@@ -84,7 +84,11 @@ export async function POST() {
     const c = await db.attackChain.create({
       data: { title: chain.title, description: chain.description, severity: chain.severity, steps: JSON.stringify(chain.steps || []), findingIds: JSON.stringify(allFindings.map(f => f.id)) },
     });
-    created.push(c);
+    created.push({
+      id: c.id as string,
+      title: c.title as string,
+      severity: c.severity as string,
+    });
   }
 
   return NextResponse.json({ chains: created, total: created.length });
