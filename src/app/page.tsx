@@ -26,6 +26,7 @@ import { AuditScraperPanel } from "@/components/sentinel/audit-scraper-panel";
 import { AdvancedPanel } from "@/components/sentinel/advanced-panel";
 import { AuthPage } from "@/components/sentinel/auth-page";
 import { UserManagementPanel } from "@/components/sentinel/user-management-panel";
+import { ContentEditor } from "@/components/sentinel/content-editor";
 import { DfirPanel } from "@/components/sentinel/dfir-panel";
 import { ClientsDashboard } from "@/components/sentinel/clients-dashboard";
 import { ClientDetail } from "@/components/sentinel/client-detail";
@@ -71,9 +72,10 @@ import {
   Sparkles,
   Users,
   Zap,
+  FileText,
 } from "lucide-react";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -379,6 +381,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             {currentUser?.role === "admin" && (
               <NavGroup label="Administration" color="emerald">
                 <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" accentColor="emerald" />
+                <NavItem active={tab === "content"} onClick={() => { setTab("content"); setSidebarOpen(false); }} icon={FileText} label="Content Editor" iconColor="text-emerald-400" accentColor="emerald" />
               </NavGroup>
             )}
           </nav>
@@ -436,6 +439,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "dfir" ? "neon-red text-red-300" :
                   tab === "rnd" ? "neon-violet text-violet-300" :
                   tab === "users" ? "neon-emerald text-emerald-300" :
+                  tab === "content" ? "neon-emerald text-emerald-300" :
                   "neon-amber text-amber-300"
                 }`}>
                   {tab === "dashboard" ? "Command Overview" :
@@ -451,6 +455,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "scraper" ? "Web Scraping Audit Engine" :
                    tab === "dfir" ? "DFIR Command Center" :
                    tab === "users" ? "User Management" :
+                   tab === "content" ? "Content Editor" :
                    "Advanced Security Platform"}
                 </h1>
               </div>
@@ -500,6 +505,8 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   <AdvancedPanel />
                 ) : tab === "users" ? (
                   <UserManagementPanel />
+                ) : tab === "content" ? (
+                  <ContentEditor />
                 ) : (
               <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
                 <section>
