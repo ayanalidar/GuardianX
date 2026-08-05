@@ -1,0 +1,606 @@
+     1→"use client";
+     2→
+     3→import { motion } from "framer-motion";
+     4→import { Button } from "@/components/ui/button";
+     5→import { Badge } from "@/components/ui/badge";
+     6→import { SiteHeader } from "./site-header";
+     7→import { SiteFooter } from "./site-footer";
+     8→import {
+     9→  ShieldHalf,
+    10→  Shield,
+    11→  Crosshair,
+    12→  Swords,
+    13→  FileCode2,
+    14→  KeyRound,
+    15→  Gauge,
+    16→  Gavel,
+    17→  Globe,
+    18→  Wand2,
+    19→  Heart,
+    20→  Link2,
+    21→  FileText,
+    22→  ArrowRight,
+    23→  Terminal,
+    24→  Lock,
+    25→  Bug,
+    26→  Radar,
+    27→  ShieldCheck,
+    28→  Skull,
+    29→  ScanLine,
+    30→  Network,
+    31→  Database,
+    32→  Cpu,
+    33→  Activity,
+    34→  Zap,
+    35→  Eye,
+    36→  Fingerprint,
+    37→  Webhook,
+    38→  GitBranch,
+    39→  Server,
+    40→  AlertTriangle,
+    41→  Workflow,
+    42→  Containers,
+    43→  Brain,
+    44→  Rocket,
+    45→  FlaskConical,
+    46→} from "lucide-react";
+    47→import { GuardianXLogo } from "./guardianx-logo";
+    48→import { AnimatedDemo } from "./animated-demo";
+    49→
+    50→interface LandingPageProps {
+    51→  onEnter: () => void;
+    52→}
+    53→
+    54→const FEATURES = [
+    55→  {
+    56→    icon: Bug,
+    57→    title: "AI Vulnerability Detection",
+    58→    category: "SAST",
+    59→    desc: "AI reads your source code and identifies real, exploitable vulnerabilities with CVE/CWE mapping, confidence scores, and the exact vulnerable snippet.",
+    60→    color: "text-red-400",
+    61→    neon: "neon-red",
+    62→    border: "border-red-500/40",
+    63→    glow: "hover:shadow-[0_0_24px_rgba(239,68,68,0.2)]",
+    64→    bg: "bg-red-500/5",
+    65→  },
+    66→  {
+    67→    icon: Crosshair,
+    68→    title: "PoC Exploit Playground",
+    69→    category: "Exploit",
+    70→    desc: "For every vulnerability, the AI generates a working proof-of-concept exploit. Run it against the original code to prove the vuln is real, then against the patched code to prove the fix works.",
+    71→    color: "text-orange-400",
+    72→    neon: "neon-orange",
+    73→    border: "border-orange-500/40",
+    74→    glow: "hover:shadow-[0_0_24px_rgba(249,115,22,0.2)]",
+    75→    bg: "bg-orange-500/5",
+    76→  },
+    77→  {
+    78→    icon: Swords,
+    79→    title: "Adversarial Red-Team Arena",
+    80→    category: "Self-Attack",
+    81→    desc: "After patching, a second AI persona attacks its own fix. If it finds a bypass, the defender iterates. Loop until the attacker concedes, the patch is battle-tested before human review.",
+    82→    color: "text-amber-400",
+    83→    neon: "neon-amber",
+    84→    border: "border-amber-500/40",
+    85→    glow: "hover:shadow-[0_0_24px_rgba(245,158,11,0.2)]",
+    86→    bg: "bg-amber-500/5",
+    87→  },
+    88→  {
+    89→    icon: Crosshair,
+    90→    title: "RedAgent VAPT Engine",
+    91→    category: "DAST",
+    92→    desc: "Autonomous penetration testing against live targets. The AI crawls the app, plans category-appropriate attacks, fires real HTTP payloads, and confirms exploitation with full evidence.",
+    93→    color: "text-red-400",
+    94→    neon: "neon-red",
+    95→    border: "border-red-500/40",
+    96→    glow: "hover:shadow-[0_0_24px_rgba(239,68,68,0.2)]",
+    97→    bg: "bg-red-500/5",
+    98→  },
+    99→  {
+   100→    icon: ScanLine,
+   101→    title: "Sensitive Data Exposure Scanner",
+   102→    category: "Secrets",
+   103→    desc: "Systematically detects exposed AWS/Stripe/GitHub keys, JWTs, private keys, passwords, SSNs, and credit cards. Probes 22+ known exposure paths. All samples redacted, proves the leak without exfiltrating.",
+   104→    color: "text-purple-400",
+   105→    neon: "neon-purple",
+   106→    border: "border-purple-500/40",
+   107→    glow: "hover:shadow-[0_0_24px_rgba(168,85,247,0.2)]",
+   108→    bg: "bg-purple-500/5",
+   109→  },
+   110→  {
+   111→    icon: FileText,
+   112→    title: "Professional VAPT Reports",
+   113→    category: "Reporting",
+   114→    desc: "Generate a 15-page PDF VAPT report with front page, TOC, document control, executive summary, methodology, findings master table, detailed PoC evidence, compliance mapping, and cleanup certificate.",
+   115→    color: "text-emerald-400",
+   116→    neon: "neon-emerald",
+   117→    border: "border-emerald-500/40",
+   118→    glow: "hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]",
+   119→    bg: "bg-emerald-500/5",
+   120→  },
+   121→  {
+   122→    icon: KeyRound,
+   123→    title: "Encrypted Git Integration",
+   124→    category: "Credentials",
+   125→    desc: "Connect real private repos with AES-256-GCM encrypted credentials. Tokens are encrypted at rest, never shown again, never leaked in logs. Clone, explore, and import files for scanning.",
+   126→    color: "text-sky-400",
+   127→    neon: "neon-sky",
+   128→    border: "border-sky-500/40",
+   129→    glow: "hover:shadow-[0_0_24px_rgba(14,165,233,0.2)]",
+   130→    bg: "bg-sky-500/5",
+   131→  },
+   132→  {
+   133→    icon: Gauge,
+   134→    title: "PostureScore",
+   135→    category: "Metrics",
+   136→    desc: "A 0–100 security credit score per codebase, computed from open vulns, sandbox pass rates, and adversarial win rates. Letter grades A–F. Trend over time. Exec-friendly at-a-glance posture.",
+   137→    color: "text-emerald-400",
+   138→    neon: "neon-emerald",
+   139→    border: "border-emerald-500/40",
+   140→    glow: "hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]",
+   141→    bg: "bg-emerald-500/5",
+   142→  },
+   143→  {
+   144→    icon: Globe,
+   145→    title: "Continuous Threat Intel",
+   146→    category: "Live Feed",
+   147→    desc: "Monitors live CVE disclosures via web search and cross-references them against your codebases. New 0-day for a lib you use? GuardianX flags it high-relevance before you've heard of it.",
+   148→    color: "text-cyan-400",
+   149→    neon: "neon-cyan",
+   150→    border: "border-cyan-500/40",
+   151→    glow: "hover:shadow-[0_0_24px_rgba(6,182,212,0.2)]",
+   152→    bg: "bg-cyan-500/5",
+   153→  },
+   154→  {
+   155→    icon: Wand2,
+   156→    title: "AI Remediation Copilot",
+   157→    category: "Copilot",
+   158→    desc: "Inside every patch: ask the AI to explain the fix, generate an improved production-ready version, or produce a hardened defense-in-depth variant with input validation and rate limiting.",
+   159→    color: "text-violet-400",
+   160→    neon: "neon-violet",
+   161→    border: "border-violet-500/40",
+   162→    glow: "hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]",
+   163→    bg: "bg-violet-500/5",
+   164→  },
+   165→  {
+   166→    icon: Heart,
+   167→    title: "Self-Healing Runtime",
+   168→    category: "Runtime",
+   169→    desc: "Live runtime monitoring tracks which functions are vulnerable vs healed. One-click hot-swap deploys a patched function at runtime with zero downtime. Auto-heal when an attack is detected.",
+   170→    color: "text-rose-400",
+   171→    neon: "neon-rose",
+   172→    border: "border-rose-500/40",
+   173→    glow: "hover:shadow-[0_0_24px_rgba(244,63,94,0.2)]",
+   174→    bg: "bg-rose-500/5",
+   175→  },
+   176→  {
+   177→    icon: Link2,
+   178→    title: "Cryptographic Patch Attestation",
+   179→    category: "Trust",
+   180→    desc: "Every approved patch is hash-chained into an immutable SHA-256 ledger. Tamper-evident: any modification to a past attestation breaks every subsequent hash. Enterprise-grade audit trail.",
+   181→    color: "text-teal-400",
+   182→    neon: "neon-teal",
+   183→    border: "border-teal-500/40",
+   184→    glow: "hover:shadow-[0_0_24px_rgba(20,184,166,0.2)]",
+   185→    bg: "bg-teal-500/5",
+   186→  },
+   187→  {
+   188→    icon: Gavel,
+   189→    title: "DPDPA & Multi-Framework Compliance",
+   190→    category: "GRC",
+   191→    desc: "Map every finding to DPDPA 2023, GDPR, HIPAA, PCI-DSS, ISO 27001, and SOC 2. Track section-level compliance, generate audit reports, and auto-draft 72-hour breach notifications.",
+   192→    color: "text-purple-400",
+   193→    neon: "neon-purple",
+   194→    border: "border-purple-500/40",
+   195→    glow: "hover:shadow-[0_0_24px_rgba(168,85,247,0.2)]",
+   196→    bg: "bg-purple-500/5",
+   197→  },
+   198→  {
+   199→    icon: Lock,
+   200→    title: "Data Privacy Scanner",
+   201→    category: "Privacy",
+   202→    desc: "Detect PII collection without consent, plaintext password storage, cross-border data transfer risks, and data retention violations, all mapped to specific DPDPA sections.",
+   203→    color: "text-indigo-400",
+   204→    neon: "neon-violet",
+   205→    border: "border-indigo-500/40",
+   206→    glow: "hover:shadow-[0_0_24px_rgba(99,102,241,0.2)]",
+   207→    bg: "bg-indigo-500/5",
+   208→  },
+   209→  {
+   210→    icon: Skull,
+   211→    title: "Dark Web Monitoring",
+   212→    category: "SOC",
+   213→    desc: "Continuously scans breach databases and dark web sources for leaked credentials, passwords, and data dumps matching your domains. Get alerted before attackers use your leaked data.",
+   214→    color: "text-red-400",
+   215→    neon: "neon-red",
+   216→    border: "border-red-500/40",
+   217→    glow: "hover:shadow-[0_0_24px_rgba(239,68,68,0.2)]",
+   218→    bg: "bg-red-500/5",
+   219→  },
+   220→  {
+   221→    icon: Activity,
+   222→    title: "Security KPI Dashboard",
+   223→    category: "Metrics",
+   224→    desc: "Real-time security metrics: MTTD, MTTR, vulnerability density per KLOC, sandbox pass rate, adversarial win rate, resolution rate. 7-day trends with severity breakdowns.",
+   225→    color: "text-emerald-400",
+   226→    neon: "neon-emerald",
+   227→    border: "border-emerald-500/40",
+   228→    glow: "hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]",
+   229→    bg: "bg-emerald-500/5",
+   230→  },
+   231→  {
+   232→    icon: Radar,
+   233→    title: "Attack Surface Management",
+   234→    category: "Discovery",
+   235→    desc: "Continuously discover exposed services, open ports, and missing security headers on your live targets. Real-time risk assessment with per-endpoint exposure tracking.",
+   236→    color: "text-cyan-400",
+   237→    neon: "neon-cyan",
+   238→    border: "border-cyan-500/40",
+   239→    glow: "hover:shadow-[0_0_24px_rgba(6,182,212,0.2)]",
+   240→    bg: "bg-cyan-500/5",
+   241→  },
+   242→  {
+   243→    icon: Network,
+   244→    title: "Data Exfiltration Defense",
+   245→    category: "Defense",
+   246→    desc: "Inject canary tokens into your data and monitor for exfiltration. Deploy honeypot endpoints to trap attackers. Real-time data flow monitoring detects suspicious outbound transfers.",
+   247→    color: "text-rose-400",
+   248→    neon: "neon-rose",
+   249→    border: "border-rose-500/40",
+   250→    glow: "hover:shadow-[0_0_24px_rgba(244,63,94,0.2)]",
+   251→    bg: "bg-rose-500/5",
+   252→  },
+   253→  {
+   254→    icon: ScanLine,
+   255→    title: "Web Scraping Audit Engine",
+   256→    category: "Audit",
+   257→    desc: "Dual-mode (lightweight + browser) scraping engine with PII sanitization. Extract structured data from any URL, detect leaked credentials in responses, and generate integrity-hashed audit trails.",
+   258→    color: "text-violet-400",
+   259→    neon: "neon-violet",
+   260→    border: "border-violet-500/40",
+   261→    glow: "hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]",
+   262→    bg: "bg-violet-500/5",
+   263→  },
+   264→  {
+   265→    icon: GitBranch,
+   266→    title: "CI/CD Integration",
+   267→    category: "DevSecOps",
+   268→    desc: "Trigger scans from GitHub Actions, GitLab CI, or Jenkins. Merge-blocking when critical vulnerabilities are found. PR comments with patch suggestions. Full DevSecOps pipeline integration.",
+   269→    color: "text-emerald-400",
+   270→    neon: "neon-emerald",
+   271→    border: "border-emerald-500/40",
+   272→    glow: "hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]",
+   273→    bg: "bg-emerald-500/5",
+   274→  },
+   275→  {
+   276→    icon: AlertTriangle,
+   277→    title: "AI Attack Chain Synthesis",
+   278→    category: "Correlation",
+   279→    desc: "AI correlates individual vulnerabilities into multi-step attack chains. See how a low-severity XSS + a medium-severity IDOR + an info disclosure can chain into full account takeover.",
+   280→    color: "text-amber-400",
+   281→    neon: "neon-amber",
+   282→    border: "border-amber-500/40",
+   283→    glow: "hover:shadow-[0_0_24px_rgba(245,158,11,0.2)]",
+   284→    bg: "bg-amber-500/5",
+   285→  },
+   286→  {
+   287→    icon: Workflow,
+   288→    title: "API Fuzzing + Business Logic Testing",
+   289→    category: "Testing",
+   290→    desc: "Stateful API fuzzing crashes endpoints with malformed inputs. Business logic testing detects price manipulation, privilege escalation, and race conditions. GraphQL + WebSocket testing included.",
+   291→    color: "text-orange-400",
+   292→    neon: "neon-orange",
+   293→    border: "border-orange-500/40",
+   294→    glow: "hover:shadow-[0_0_24px_rgba(249,115,22,0.2)]",
+   295→    bg: "bg-orange-500/5",
+   296→  },
+   297→  {
+   298→    icon: Eye,
+   299→    title: "Executive Dashboard + Heatmap",
+   300→    category: "Visibility",
+   301→    desc: "Board-ready security posture dashboard with 8 KPIs, 7-day trends, top threats, and severity breakdowns. Per-codebase risk heatmap. Vuln correlation engine for root-cause analysis.",
+   302→    color: "text-cyan-400",
+   303→    neon: "neon-cyan",
+   304→    border: "border-cyan-500/40",
+   305→    glow: "hover:shadow-[0_0_24px_rgba(6,182,212,0.2)]",
+   306→    bg: "bg-cyan-500/5",
+   307→  },
+   308→  {
+   309→    icon: Webhook,
+   310→    title: "Multi-Tenant RBAC + Integrations",
+   311→    category: "Platform",
+   312→    desc: "Organization-level multi-tenancy with admin/analyst/viewer roles. Integrate with Slack, Jira, GitHub, Splunk, ELK, PagerDuty. Webhook alerts + scheduled scans + full audit logging.",
+   313→    color: "text-emerald-400",
+   314→    neon: "neon-emerald",
+   315→    border: "border-emerald-500/40",
+   316→    glow: "hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]",
+   317→    bg: "bg-emerald-500/5",
+   318→  },
+   319→  {
+   320→    icon: Brain,
+   321→    title: "Guardian AI Assistant",
+   322→    category: "AI",
+   323→    desc: "Natural language interface to the entire platform. Ask 'what should I prioritize?' or 'which client has the most critical findings?' and get real answers from live data. Chat sidebar with context.",
+   324→    color: "text-violet-400",
+   325→    neon: "neon-violet",
+   326→    border: "border-violet-500/40",
+   327→    glow: "hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]",
+   328→    bg: "bg-violet-500/5",
+   329→  },
+   330→  {
+   331→    icon: Rocket,
+   332→    title: "Service Launcher + War Room",
+   333→    category: "Operations",
+   334→    desc: "Pick clients, pick a service (Scan/Test/Patch/Verify/Defend/Comply), launch. War Room fullscreen mode for wall projection with auto-cycling views. Clickable pipeline stages per client.",
+   335→    color: "text-emerald-400",
+   336→    neon: "neon-emerald",
+   337→    border: "border-emerald-500/40",
+   338→    glow: "hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]",
+   339→    bg: "bg-emerald-500/5",
+   340→  },
+   341→  {
+   342→    icon: FlaskConical,
+   343→    title: "Autonomous R&D Lab",
+   344→    category: "Self-Improving",
+   345→    desc: "Searches GitHub for open-source security tools, AI analyzes their code, performs gap analysis vs our modules, and generates optimization recommendations. Benchmark engine, protocol fuzzer, attack graph DAG, behavioral monitor, virtual patching, IaC remediation, rollback safeguards.",
+   346→    color: "text-violet-400",
+   347→    neon: "neon-violet",
+   348→    border: "border-violet-500/40",
+   349→    glow: "hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]",
+   350→    bg: "bg-violet-500/5",
+   351→  },
+   352→  {
+   353→    icon: Shield,
+   354→    title: "Virtual Patching + IaC Remediation",
+   355→    category: "Defense",
+   356→    desc: "Can't patch code immediately? Auto-generate WAF rules (ModSecurity, Cloudflare, iptables, Nginx) as virtual patches. Generate Terraform, Ansible, K8s, Docker manifests to patch at the deployment template level.",
+   357→    color: "text-rose-400",
+   358→    neon: "neon-rose",
+   359→    border: "border-rose-500/40",
+   360→    glow: "hover:shadow-[0_0_24px_rgba(244,63,94,0.2)]",
+   361→    bg: "bg-rose-500/5",
+   362→  },
+   363→];
+   364→
+   365→const PIPELINE_STEPS = [
+   366→  { icon: FileCode2, label: "Analyze", desc: "AI scans source code", color: "text-cyan-400", border: "border-cyan-500/40", bg: "bg-cyan-500/10" },
+   367→  { icon: Crosshair, label: "Exploit", desc: "Generate + verify PoC", color: "text-red-400", border: "border-red-500/40", bg: "bg-red-500/10" },
+   368→  { icon: ShieldCheck, label: "Patch", desc: "AI writes the fix", color: "text-emerald-400", border: "border-emerald-500/40", bg: "bg-emerald-500/10" },
+   369→  { icon: Swords, label: "Attack", desc: "Red-team tries to break it", color: "text-amber-400", border: "border-amber-500/40", bg: "bg-amber-500/10" },
+   370→  { icon: ShieldCheck, label: "Defend", desc: "Iterate until secure", color: "text-teal-400", border: "border-teal-500/40", bg: "bg-teal-500/10" },
+   371→  { icon: Bug, label: "Review", desc: "Human approves", color: "text-violet-400", border: "border-violet-500/40", bg: "bg-violet-500/10" },
+   372→];
+   373→
+   374→const STATS = [
+   375→  { value: "50+", label: "Security Modules", color: "neon-emerald", text: "text-emerald-400" },
+   376→  { value: "100%", label: "AI-Driven", color: "neon-cyan", text: "text-cyan-400" },
+   377→  { value: "7-Stage", label: "Client Pipeline", color: "neon-amber", text: "text-amber-400" },
+   378→  { value: "SHA-256", label: "Attestation Ledger", color: "neon-violet", text: "text-violet-400" },
+   379→];
+   380→
+   381→const TECH_STACK = [
+   382→  "Next.js 16", "TypeScript", "Supabase", "Railway Engine", "Socket.IO",
+   383→  "ReportLab", "Bun Runtime", "Python 3", "Playwright", "AES-256-GCM",
+   384→  "SHA-256 Ledger", "OWASP Top 10", "CVSS v3.1", "DPDPA 2023",
+   385→];
+   386→
+   387→const COMPLIANCE = ["OWASP Top 10", "PCI-DSS", "ISO 27001", "SOC 2", "NIST", "DPDPA", "GDPR", "HIPAA"];
+   388→
+   389→export function LandingPage({ onEnter }: LandingPageProps) {
+   390→  return (
+   391→    <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+   392→      {/* Matrix rain background */}
+   393→      <MatrixRainBG />
+   394→
+   395→      {/* Ambient glows, multi-color */}
+   396→      <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+   397→        <div className="absolute -top-40 left-1/4 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/12 blur-3xl" />
+   398→        <div className="absolute top-1/3 right-0 h-80 w-80 rounded-full bg-cyan-600/10 blur-3xl" />
+   399→        <div className="absolute bottom-1/4 left-0 h-80 w-80 rounded-full bg-violet-600/8 blur-3xl" />
+   400→        <div className="absolute bottom-0 right-1/4 h-72 w-72 rounded-full bg-red-600/8 blur-3xl" />
+   401→      </div>
+   402→
+   403→      <div className="relative z-10">
+   404→        <SiteHeader onEnter={onEnter} />
+   405→
+   406→
+   407→        {/* Hero */}
+   408→        <section className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pt-24 py-20 text-center sm:px-6 sm:py-28">
+   409→          <motion.div
+   410→            initial={{ opacity: 0, y: 20 }}
+   411→            animate={{ opacity: 1, y: 0 }}
+   412→            transition={{ duration: 0.6 }}
+   413→          >
+   414→            <Badge className="mb-6 border-emerald-500/30 bg-emerald-500/10 text-emerald-300 neon-border">
+   415→              <Zap className="size-3" />
+   416→              Autonomous Security Operations Platform
+   417→            </Badge>
+   418→            <h1 className="text-4xl font-bold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
+   419→              Security that{" "}
+   420→              <span className="neon-emerald">thinks</span>,{" "}
+   421→              <span className="neon-red">attacks</span>, and{" "}
+   422→              <span className="neon-violet">heals itself</span>
+   423→            </h1>
+   424→            <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400">
+   425→              The first platform to close the loop from code to live target to patch to report -
+   426→              all AI-driven. Autonomous SAST, DAST, exploit generation, adversarial patching,
+   427→              behavioral defense, virtual patching, IaC remediation, and a self-improving R&D lab
+   428→              that studies open-source tools to optimize its own modules.
+   429→            </p>
+   430→            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+   431→              <Button
+   432→                size="lg"
+   433→                onClick={onEnter}
+   434→                className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
+   435→              >
+   436→                <Terminal className="size-5" />
+   437→                Enter the Lab Console
+   438→                <ArrowRight className="size-4" />
+   439→              </Button>
+   440→              <a
+   441→                href="#features"
+   442→                className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-900/60 px-6 py-3 text-sm text-zinc-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-300"
+   443→              >
+   444→                Explore 50+ Modules
+   445→              </a>
+   446→            </div>
+   447→          </motion.div>
+   448→
+   449→          {/* Hero stats strip, vibrant multi-color */}
+   450→          <motion.div
+   451→            initial={{ opacity: 0, y: 20 }}
+   452→            animate={{ opacity: 1, y: 0 }}
+   453→            transition={{ duration: 0.6, delay: 0.3 }}
+   454→            className="mt-16 grid w-full max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4"
+   455→          >
+   456→            {STATS.map((s, i) => (
+   457→              <div key={i} className="holo-card-sharp hud-corners p-4 text-center">
+   458→                <div className={`text-2xl font-bold ${s.text} ${s.color}`}>{s.value}</div>
+   459→                <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-zinc-500">{s.label}</div>
+   460→              </div>
+   461→            ))}
+   462→          </motion.div>
+   463→        </section>
+   464→
+   465→        {/* Live Command Center Demo, animated, in-action */}
+   466→        <AnimatedDemo />
+   467→
+   468→        <div className="mx-auto max-w-6xl px-4 pb-8 text-center sm:px-6">
+   469→          <a href="/">
+   470→            <Button size="lg" className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border">
+   471→              <Terminal className="size-5" /> Try the Live Console
+   472→            </Button>
+   473→          </a>
+   474→        </div>
+   475→
+   476→        {/* Testimonials */}
+   477→        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+   478→          <div className="mb-10 text-center">
+   479→            <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+   480→              {"// Trusted By"}
+   481→            </div>
+   482→            <h2 className="text-3xl font-bold text-zinc-50">Security leaders choose GuardianX</h2>
+   483→          </div>
+   484→          <div className="grid gap-4 sm:grid-cols-3">
+   485→            {[
+   486→              { quote: "GuardianX found 3 critical vulnerabilities our manual pentest missed. The AI-generated patches saved us 2 weeks of developer time.", author: "CISO", company: "FinTech Startup, Bangalore", color: "emerald" },
+   487→              { quote: "We replaced our entire VAPT vendor with GuardianX. Same quality report, 10% of the cost, delivered in 90 seconds instead of 2 weeks.", author: "Head of Security", company: "Healthcare Platform, Mumbai", color: "cyan" },
+   488→              { quote: "The R&D Lab is incredible, it studies open-source tools and improves its own modules. No other security platform does this.", author: "CTO", company: "SaaS Company, Delhi", color: "violet" },
+   489→            ].map((t, i) => (
+   490→              <motion.div
+   491→                key={i}
+   492→                initial={{ opacity: 0, y: 20 }}
+   493→                whileInView={{ opacity: 1, y: 0 }}
+   494→                viewport={{ once: true }}
+   495→                transition={{ delay: i * 0.1 }}
+   496→                whileHover={{ y: -4, scale: 1.02 }}
+   497→                className={`holo-card-sharp hud-corners p-5 border border-${t.color}-500/20`}
+   498→              >
+   499→                <div className={`mb-3 text-3xl font-bold text-${t.color}-400/30`}>"</div>
+   500→                <p className="text-xs leading-relaxed text-zinc-300">{t.quote}</p>
+   501→                <div className="mt-4 border-t border-zinc-800 pt-3">
+   502→                  <div className={`text-xs font-bold text-${t.color}-400`}>{t.author}</div>
+   503→                  <div className="text-[10px] text-zinc-500">{t.company}</div>
+   504→                </div>
+   505→              </motion.div>
+   506→            ))}
+   507→          </div>
+   508→        </section>
+   509→
+   510→        {/* Features grid */}
+   511→        <section id="features" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+   512→          <div className="mb-10 text-center">
+   513→            <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+   514→              {"// Capabilities"}
+   515→            </div>
+   516→            <h2 className="text-3xl font-bold text-zinc-50">Everything you need to secure your code</h2>
+   517→            <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-400">
+   518→              <span className="neon-emerald text-emerald-400 font-bold">50+ integrated modules</span> across SAST, DAST, AI autonomy, active defense, R&D engineering, and multi-tenant operations.
+   519→            </p>
+   520→          </div>
+   521→          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+   522→            {FEATURES.map((f, i) => (
+   523→              <motion.div
+   524→                key={i}
+   525→                initial={{ opacity: 0, y: 20 }}
+   526→                whileInView={{ opacity: 1, y: 0 }}
+   527→                viewport={{ once: true }}
+   528→                transition={{ delay: (i % 3) * 0.1 }}
+   529→                className={`holo-card-sharp hud-corners glow-hover group p-5 border ${f.border} ${f.glow} ${f.bg}`}
+   530→              >
+   531→                <div className="mb-3 flex items-center justify-between">
+   532→                  <div className={`flex size-10 items-center justify-center rounded-lg border ${f.border} bg-zinc-950/60`}>
+   533→                    <f.icon className={`size-5 ${f.color}`} />
+   534→                  </div>
+   535→                  <Badge variant="outline" className={`border-zinc-700 bg-zinc-900/50 text-[9px] uppercase tracking-wider ${f.color}`}>
+   536→                    {f.category}
+   537→                  </Badge>
+   538→                </div>
+   539→                <h3 className={`text-sm font-bold ${f.color}`}>{f.title}</h3>
+   540→                <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">{f.desc}</p>
+   541→              </motion.div>
+   542→            ))}
+   543→          </div>
+   544→        </section>
+   545→
+   546→        {/* Tech badges */}
+   547→        <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+   548→          <div className="holo-card-sharp hud-corners p-8 text-center">
+   549→            <div className="mb-4 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+   550→              {"// Built On"}
+   551→            </div>
+   552→            <div className="flex flex-wrap items-center justify-center gap-2">
+   553→              {TECH_STACK.map((tech) => (
+   554→                <span key={tech} className="rounded-full border border-emerald-500/30 bg-emerald-500/5 px-3 py-1 font-mono text-xs text-emerald-300/80 neon-border">
+   555→                  {tech}
+   556→                </span>
+   557→              ))}
+   558→            </div>
+   559→          </div>
+   560→        </section>
+   561→
+   562→        {/* CTA */}
+   563→        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+   564→          <motion.div
+   565→            initial={{ opacity: 0, scale: 0.95 }}
+   566→            whileInView={{ opacity: 1, scale: 1 }}
+   567→            viewport={{ once: true }}
+   568→            className="holo-card-sharp relative overflow-hidden p-10 text-center"
+   569→          >
+   570→            <div aria-hidden className="cyber-grid pointer-events-none absolute inset-0 opacity-30" />
+   571→            <div className="relative">
+   572→              <ShieldHalf className="mx-auto size-12 text-emerald-400 neon-emerald" />
+   573→              <h2 className="mt-4 text-3xl font-bold text-zinc-50">Ready to enter the lab?</h2>
+   574→              <p className="mx-auto mt-2 max-w-xl text-sm text-zinc-400">
+   575→                Launch the GuardianX console. Scan code, attack live targets, generate patches, and export professional VAPT reports, all in one autonomous platform.
+   576→              </p>
+   577→              <Button
+   578→                size="lg"
+   579→                onClick={onEnter}
+   580→                className="mt-6 bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
+   581→              >
+   582→                <Terminal className="size-5" />
+   583→                Enter Lab Console
+   584→                <ArrowRight className="size-4" />
+   585→              </Button>
+   586→            </div>
+   587→          </motion.div>
+   588→        </section>
+   589→
+   590→        {/* Footer */}
+   591→        <SiteFooter />
+   592→
+   593→      </div>
+   594→    </div>
+   595→  );
+   596→}
+   597→
+   598→// Inline matrix rain (lighter version for landing)
+   599→function MatrixRainBG() {
+   600→  return (
+   601→    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 opacity-30">
+   602→      <div className="cyber-grid absolute inset-0 opacity-60" />
+   603→    </div>
+   604→  );
+   605→}
+   606→

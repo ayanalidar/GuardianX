@@ -721,3 +721,90 @@
   .scan-bar { animation: none; }
   .term-line, .kpi-pop, .alert-slide { animation: none; opacity: 1; transform: none; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   Landing page — cinematic extras
+   - CTA glow halo on hover
+   - Feature card scan sweep
+   - Attack-map scanline
+   - Final-CTA animated gradient banner
+   - 3D tilt card preserve-3d
+   ════════════════════════════════════════════════════════════════════ */
+
+/* CTA glow halo: smoothly expand shadow on hover */
+.cta-glow {
+  position: relative;
+  transition: box-shadow 0.3s ease, transform 0.15s ease;
+  will-change: box-shadow, transform;
+}
+.cta-glow:hover {
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.6),
+    0 0 24px rgba(16, 185, 129, 0.35),
+    0 0 48px rgba(6, 182, 212, 0.25),
+    0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Feature card scan sweep — moves a highlight bar across the code window */
+@keyframes feature-sweep {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(120%); opacity: 0; }
+}
+
+/* Attack map vertical scanline */
+.attack-scan {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(16, 185, 129, 0.04) 48%,
+    rgba(16, 185, 129, 0.12) 50%,
+    rgba(16, 185, 129, 0.04) 52%,
+    transparent 100%
+  );
+  animation: attack-scan-move 6s linear infinite;
+}
+@keyframes attack-scan-move {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+/* Final CTA — animated gradient banner background */
+.final-cta-bg {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(16, 185, 129, 0.25), transparent 60%),
+    radial-gradient(ellipse at 80% 30%, rgba(6, 182, 212, 0.22), transparent 60%),
+    radial-gradient(ellipse at 50% 90%, rgba(139, 92, 246, 0.20), transparent 60%),
+    linear-gradient(135deg, rgba(24, 24, 27, 0.95) 0%, rgba(9, 9, 11, 0.98) 100%);
+  background-size: 200% 200%, 200% 200%, 200% 200%, 100% 100%;
+  animation: final-cta-shift 12s ease-in-out infinite;
+}
+@keyframes final-cta-shift {
+  0%, 100% { background-position: 0% 0%, 100% 0%, 50% 100%, 0 0; }
+  33%      { background-position: 100% 100%, 0% 100%, 80% 0%, 0 0; }
+  66%      { background-position: 50% 100%, 50% 0%, 0% 50%, 0 0; }
+}
+
+/* 3D tilt card — preserve-3d for children with translateZ */
+.tilt-card {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Custom scrollbar for terminal panels */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.25);
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-glow:hover { box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4); }
+  .attack-scan,
+  .final-cta-bg { animation: none; }
+}
