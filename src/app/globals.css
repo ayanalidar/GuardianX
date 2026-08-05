@@ -141,6 +141,50 @@
     /* Smooth theme transition when toggling next-themes */
     transition: background-color 0.2s ease, color 0.2s ease;
   }
+
+  /* ── Light theme override for marketing pages ──────────────────────────
+     When next-themes removes the .dark class (light mode), override the
+     hardcoded zinc-950/zinc-900 backgrounds and zinc-50/100 text colors
+     used in landing/header/footer components so they adapt to light. */
+  html:not(.dark) .scanlines,
+  html:not(.dark) .cyber-vignette {
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+  }
+  html:not(.dark) .scanlines::before,
+  html:not(.dark) .cyber-vignette::before,
+  html:not(.dark) .cyber-grid {
+    opacity: 0.05 !important;
+  }
+  /* Light mode: override hardcoded dark backgrounds on marketing pages */
+  html:not(.dark) .bg-zinc-950,
+  html:not(.dark) .bg-zinc-950\/90,
+  html:not(.dark) .bg-zinc-950\/95,
+  html:not(.dark) .bg-zinc-950\/40,
+  html:not(.dark) .bg-zinc-950\/60 {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+  }
+  html:not(.dark) .bg-zinc-900,
+  html:not(.dark) .bg-zinc-900\/40,
+  html:not(.dark) .bg-zinc-900\/50,
+  html:not(.dark) .bg-zinc-900\/60 {
+    background-color: rgba(241, 245, 249, 0.8) !important;
+  }
+  /* Light mode: override hardcoded light text to dark */
+  html:not(.dark) .text-zinc-50,
+  html:not(.dark) .text-zinc-100,
+  html:not(.dark) .text-zinc-200 {
+    color: #18181b !important;
+  }
+  html:not(.dark) .text-zinc-400,
+  html:not(.dark) .text-zinc-500 {
+    color: #52525b !important;
+  }
+  html:not(.dark) .border-zinc-800,
+  html:not(.dark) .border-zinc-800\/80,
+  html:not(.dark) .border-zinc-800\/60 {
+    border-color: rgba(228, 228, 231, 0.8) !important;
+  }
 }
 
 /* Custom scrollbar for the SentinelPatch dashboard dark surfaces */

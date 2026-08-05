@@ -58,7 +58,7 @@ const COMPLIANCE = ["OWASP Top 10", "PCI-DSS", "ISO 27001", "SOC 2", "NIST", "DP
  */
 export function LandingPage({ onEnter }: LandingPageProps) {
   return (
-    <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+    <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-background text-foreground">
       {/* Ambient color glows, multi-color */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 left-1/4 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/12 blur-3xl" />
