@@ -578,51 +578,9 @@
   }
 }
 
-/* Shine overlay (the diagonal streak) */
-.gx-shine-overlay {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  border-radius: 0;
-}
-.gx-shine-overlay::before {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: 0;
-  width: 40%;
-  height: 200%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0) 40%,
-    rgba(167, 243, 208, 0.7) 50%,
-    rgba(255, 255, 255, 0) 60%,
-    transparent 100%
-  );
-  animation: gx-shine 3s ease-in-out infinite;
-}
-
-/* Sparkles — 4 orbiting twinkles positioned around the logo */
-.gx-sparkle {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #a7f3d0 0%, rgba(16, 185, 129, 0.8) 40%, transparent 70%);
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.9), 0 0 12px rgba(6, 182, 212, 0.6);
-  pointer-events: none;
-  animation: gx-sparkle 2s ease-in-out infinite;
-}
-.gx-sparkle-1 { top: 5%;   left: 15%;  animation-delay: 0s; }
-.gx-sparkle-2 { top: 20%;  right: 5%;  animation-delay: 0.5s; }
-.gx-sparkle-3 { bottom: 10%; right: 15%; animation-delay: 1s; }
-.gx-sparkle-4 { bottom: 20%; left: 5%;  animation-delay: 1.5s; }
-
-/* Small variants scale sparkles down */
-.gx-logo-wrap[data-size="sm"] .gx-sparkle { width: 3px; height: 3px; }
-.gx-logo-wrap[data-size="lg"] .gx-sparkle { width: 8px; height: 8px; }
+/* Hide the shine overlay + sparkles — logo should just rotate on its axis */
+.gx-shine-overlay { display: none; }
+.gx-sparkle { display: none; }
 
 /* ════════════════════════════════════════════════════════════════════
    Animated Landing Demo — live, in-action cards
