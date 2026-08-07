@@ -93,7 +93,7 @@ export function SiteHeader({ onEnter }: { onEnter?: () => void }) {
         <nav className="hidden items-center gap-1 text-sm text-zinc-400 lg:flex">
           {NAV_ITEMS.map((item) => (
             <div
-              key={item.href}
+              key={item.href + item.label}
               className="relative"
               onMouseEnter={() => item.children && setOpenDropdown(item.href)}
               onMouseLeave={() => setOpenDropdown(null)}
@@ -114,7 +114,7 @@ export function SiteHeader({ onEnter }: { onEnter?: () => void }) {
                   <div className="w-72 overflow-hidden rounded-lg border border-emerald-500/20 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl">
                     {item.children.map((child) => (
                       <a
-                        key={child.href}
+                        key={child.href + child.label}
                         href={child.href}
                         className="block rounded-md p-3 transition-colors hover:bg-emerald-500/10"
                       >
@@ -184,7 +184,7 @@ export function SiteHeader({ onEnter }: { onEnter?: () => void }) {
         <nav className="border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-xl lg:hidden">
           <div className="flex flex-col gap-1 px-4 py-3">
             {NAV_ITEMS.map((item) => (
-              <div key={item.href}>
+              <div key={item.href + item.label}>
                 <a
                   href={item.href}
                   onClick={() => item.children && setOpenDropdown(openDropdown === item.href ? null : item.href)}
@@ -200,7 +200,7 @@ export function SiteHeader({ onEnter }: { onEnter?: () => void }) {
                   <div className="ml-3 mt-1 flex flex-col gap-0.5 border-l border-zinc-800 pl-3">
                     {item.children.map((child) => (
                       <a
-                        key={child.href}
+                        key={child.href + child.label}
                         href={child.href}
                         onClick={() => setMobileOpen(false)}
                         className="rounded-lg px-3 py-2 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-800/50 hover:text-emerald-400"

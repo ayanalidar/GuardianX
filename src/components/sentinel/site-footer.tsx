@@ -43,7 +43,6 @@ const FOOTER_SECTIONS = [
     links: [
       { label: "About GuardianX", href: "/company" },
       { label: "Contact", href: "/contact" },
-      { label: "Request Demo", href: "/contact" },
       { label: "System Status", href: "/status" },
       { label: "Privacy Policy", href: "/privacy" },
     ],
@@ -114,7 +113,7 @@ export function SiteFooter() {
               <div className="space-y-2">
                 {section.links.map((link) => (
                   <a
-                    key={link.href}
+                    key={link.label + link.href}
                     href={link.href}
                     className="group flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-emerald-400"
                   >
