@@ -427,3 +427,24 @@ model Playbook {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 }
+
+// Contributors — people who help build GuardianX (developers, researchers,
+// testers, designers, advisors, interns). Can be manually added by admins
+// or auto-synced from GitHub.
+model Contributor {
+  id                   String   @id @default(cuid())
+  name                 String
+  email                String?
+  role                 String   @default("contributor")
+  title                String?
+  bio                  String?
+  avatarUrl            String?
+  githubUrl            String?
+  linkedinUrl          String?
+  twitterUrl           String?
+  contributions        Int      @default(0)
+  contributionSummary  String?
+  status               String   @default("active")
+  joinedAt             DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}

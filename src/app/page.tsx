@@ -27,6 +27,7 @@ import { AdvancedPanel } from "@/components/sentinel/advanced-panel";
 import { AuthPage } from "@/components/sentinel/auth-page";
 import { UserManagementPanel } from "@/components/sentinel/user-management-panel";
 import { ContentEditor } from "@/components/sentinel/content-editor";
+import { ContributorsPanel } from "@/components/sentinel/contributors-panel";
 import { DfirPanel } from "@/components/sentinel/dfir-panel";
 import { ClientsDashboard } from "@/components/sentinel/clients-dashboard";
 import { ClientDetail } from "@/components/sentinel/client-detail";
@@ -75,7 +76,7 @@ import {
   FileText,
 } from "lucide-react";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -402,6 +403,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <NavGroup label="Administration" color="emerald">
                 <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" accentColor="emerald" />
                 <NavItem active={tab === "content"} onClick={() => { setTab("content"); setSidebarOpen(false); }} icon={FileText} label="Content Editor" iconColor="text-emerald-400" accentColor="emerald" />
+                <NavItem active={tab === "contributors"} onClick={() => { setTab("contributors"); setSidebarOpen(false); }} icon={Users} label="Contributions" iconColor="text-emerald-400" accentColor="emerald" />
               </NavGroup>
             )}
           </nav>
@@ -460,6 +462,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "rnd" ? "neon-violet text-violet-300" :
                   tab === "users" ? "neon-emerald text-emerald-300" :
                   tab === "content" ? "neon-emerald text-emerald-300" :
+                  tab === "contributors" ? "neon-emerald text-emerald-300" :
                   "neon-amber text-amber-300"
                 }`}>
                   {tab === "dashboard" ? "Command Overview" :
@@ -476,6 +479,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "dfir" ? "DFIR Command Center" :
                    tab === "users" ? "User Management" :
                    tab === "content" ? "Content Editor" :
+                   tab === "contributors" ? "Contributions" :
                    "Advanced Security Platform"}
                 </h1>
               </div>
@@ -527,6 +531,8 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   <UserManagementPanel />
                 ) : tab === "content" ? (
                   <ContentEditor />
+                ) : tab === "contributors" ? (
+                  <ContributorsPanel currentUser={currentUser} />
                 ) : (
               <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
                 <section>
