@@ -180,9 +180,10 @@ export function TerminalTyping() {
 }
 
 function timeForLine(i: number): string {
-  const base = new Date();
-  base.setSeconds(base.getSeconds() - (SCENARIO.length - i) * 3);
-  return base.toLocaleTimeString("en-US", { hour12: false });
+  // Use static timestamps to avoid hydration mismatch (new Date() produces
+  // different values on server vs client). These are display-only anyway.
+  const times = ["14:32:01", "14:32:03", "14:32:04", "14:32:06", "14:32:08", "14:32:10", "14:32:12"];
+  return times[i] || "14:32:00";
 }
 
 function sleep(ms: number) {

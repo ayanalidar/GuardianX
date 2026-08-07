@@ -160,7 +160,7 @@ export function SiteFooter() {
           <div className="flex items-center gap-2">
             <ShieldHalf className="size-4 text-emerald-400/50" />
             <span className="text-[11px] text-zinc-600">
-              © {new Date().getFullYear()} GuardianX. All rights reserved. Built for autonomous security.
+              © 2026 GuardianX. All rights reserved. Built for autonomous security.
             </span>
           </div>
           <div className="flex items-center gap-4 text-[10px] text-zinc-700">
