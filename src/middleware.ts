@@ -12,6 +12,10 @@ const PUBLIC_ROUTES = [
   "/api/auth/login",
   "/api/auth/signup",
   "/api/auth/session",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/auth/verify-email",
+  "/api/auth/2fa/login",
   "/api/client-portal-auth",
   "/api/db-init",
   "/api/migrate-dfir",
@@ -19,6 +23,12 @@ const PUBLIC_ROUTES = [
   "/api/cron/",
   "/api/siem/ingest",
   "/api/siem/agent",
+  "/api/openapi.json",
+  "/api/contributors",
+  "/api/contributors/github",
+  "/api/billing/webhook",
+  "/api/demo/access",
+  "/api/site-content",
 ];
 
 // In-memory rate limit store (per Edge function instance)
