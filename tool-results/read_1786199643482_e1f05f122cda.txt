@@ -1,0 +1,1907 @@
+     1→# 1. Remove node_modules from git tracking (keep files locally)
+     2→git rm -r --cached node_modules
+     3→
+     4→# 2. Create .gitignore
+     5→echo "node_modules/" > .gitignore
+     6→echo ".env" >> .gitignore
+     7→echo "logs/" >> .gitignore
+     8→
+     9→# 3. Commit the cleanup
+    10→git add .gitignore
+    11→git commit -m "remove node_modules, add .gitignore"
+    12→
+    13→# 4. Rename branch from master to main
+    14→git branch -M main
+    15→
+    16→# 5. Push to GitHub
+    17→git push -u origin main
+    18→rm 'node_modules/.bin/z-ai-generate.bunx'
+    19→rm 'node_modules/.bin/z-ai-generate.exe'
+    20→rm 'node_modules/.bin/z-ai.bunx'
+    21→rm 'node_modules/.bin/z-ai.exe'
+    22→rm 'node_modules/@socket.io/component-emitter/LICENSE'
+    23→rm 'node_modules/@socket.io/component-emitter/Readme.md'
+    24→rm 'node_modules/@socket.io/component-emitter/lib/cjs/index.d.ts'
+    25→rm 'node_modules/@socket.io/component-emitter/lib/cjs/index.js'
+    26→rm 'node_modules/@socket.io/component-emitter/lib/cjs/package.json'
+    27→rm 'node_modules/@socket.io/component-emitter/lib/esm/index.d.ts'
+    28→rm 'node_modules/@socket.io/component-emitter/lib/esm/index.js'
+    29→rm 'node_modules/@socket.io/component-emitter/lib/esm/package.json'
+    30→rm 'node_modules/@socket.io/component-emitter/package.json'
+    31→rm 'node_modules/@supabase/auth-js/AGENTS.md'
+    32→rm 'node_modules/@supabase/auth-js/LICENSE'
+    33→rm 'node_modules/@supabase/auth-js/README.md'
+    34→rm 'node_modules/@supabase/auth-js/dist/main/AuthAdminApi.d.ts'
+    35→rm 'node_modules/@supabase/auth-js/dist/main/AuthAdminApi.d.ts.map'
+    36→rm 'node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js'
+    37→rm 'node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js.map'
+    38→rm 'node_modules/@supabase/auth-js/dist/main/AuthClient.d.ts'
+    39→rm 'node_modules/@supabase/auth-js/dist/main/AuthClient.d.ts.map'
+    40→rm 'node_modules/@supabase/auth-js/dist/main/AuthClient.js'
+    41→rm 'node_modules/@supabase/auth-js/dist/main/AuthClient.js.map'
+    42→rm 'node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.d.ts'
+    43→rm 'node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.d.ts.map'
+    44→rm 'node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js'
+    45→rm 'node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js.map'
+    46→rm 'node_modules/@supabase/auth-js/dist/main/GoTrueClient.d.ts'
+    47→rm 'node_modules/@supabase/auth-js/dist/main/GoTrueClient.d.ts.map'
+    48→rm 'node_modules/@supabase/auth-js/dist/main/GoTrueClient.js'
+    49→rm 'node_modules/@supabase/auth-js/dist/main/GoTrueClient.js.map'
+    50→rm 'node_modules/@supabase/auth-js/dist/main/index.d.ts'
+    51→rm 'node_modules/@supabase/auth-js/dist/main/index.d.ts.map'
+    52→rm 'node_modules/@supabase/auth-js/dist/main/index.js'
+    53→rm 'node_modules/@supabase/auth-js/dist/main/index.js.map'
+    54→rm 'node_modules/@supabase/auth-js/dist/main/lib/base64url.d.ts'
+    55→rm 'node_modules/@supabase/auth-js/dist/main/lib/base64url.d.ts.map'
+    56→rm 'node_modules/@supabase/auth-js/dist/main/lib/base64url.js'
+    57→rm 'node_modules/@supabase/auth-js/dist/main/lib/base64url.js.map'
+    58→rm 'node_modules/@supabase/auth-js/dist/main/lib/constants.d.ts'
+    59→rm 'node_modules/@supabase/auth-js/dist/main/lib/constants.d.ts.map'
+    60→rm 'node_modules/@supabase/auth-js/dist/main/lib/constants.js'
+    61→rm 'node_modules/@supabase/auth-js/dist/main/lib/constants.js.map'
+    62→rm 'node_modules/@supabase/auth-js/dist/main/lib/error-codes.d.ts'
+    63→rm 'node_modules/@supabase/auth-js/dist/main/lib/error-codes.d.ts.map'
+    64→rm 'node_modules/@supabase/auth-js/dist/main/lib/error-codes.js'
+    65→rm 'node_modules/@supabase/auth-js/dist/main/lib/error-codes.js.map'
+    66→rm 'node_modules/@supabase/auth-js/dist/main/lib/errors.d.ts'
+    67→rm 'node_modules/@supabase/auth-js/dist/main/lib/errors.d.ts.map'
+    68→rm 'node_modules/@supabase/auth-js/dist/main/lib/errors.js'
+    69→rm 'node_modules/@supabase/auth-js/dist/main/lib/errors.js.map'
+    70→rm 'node_modules/@supabase/auth-js/dist/main/lib/fetch.d.ts'
+    71→rm 'node_modules/@supabase/auth-js/dist/main/lib/fetch.d.ts.map'
+    72→rm 'node_modules/@supabase/auth-js/dist/main/lib/fetch.js'
+    73→rm 'node_modules/@supabase/auth-js/dist/main/lib/fetch.js.map'
+    74→rm 'node_modules/@supabase/auth-js/dist/main/lib/helpers.d.ts'
+    75→rm 'node_modules/@supabase/auth-js/dist/main/lib/helpers.d.ts.map'
+    76→rm 'node_modules/@supabase/auth-js/dist/main/lib/helpers.js'
+    77→rm 'node_modules/@supabase/auth-js/dist/main/lib/helpers.js.map'
+    78→rm 'node_modules/@supabase/auth-js/dist/main/lib/local-storage.d.ts'
+    79→rm 'node_modules/@supabase/auth-js/dist/main/lib/local-storage.d.ts.map'
+    80→rm 'node_modules/@supabase/auth-js/dist/main/lib/local-storage.js'
+    81→rm 'node_modules/@supabase/auth-js/dist/main/lib/local-storage.js.map'
+    82→rm 'node_modules/@supabase/auth-js/dist/main/lib/locks.d.ts'
+    83→rm 'node_modules/@supabase/auth-js/dist/main/lib/locks.d.ts.map'
+    84→rm 'node_modules/@supabase/auth-js/dist/main/lib/locks.js'
+    85→rm 'node_modules/@supabase/auth-js/dist/main/lib/locks.js.map'
+    86→rm 'node_modules/@supabase/auth-js/dist/main/lib/polyfills.d.ts'
+    87→rm 'node_modules/@supabase/auth-js/dist/main/lib/polyfills.d.ts.map'
+    88→rm 'node_modules/@supabase/auth-js/dist/main/lib/polyfills.js'
+    89→rm 'node_modules/@supabase/auth-js/dist/main/lib/polyfills.js.map'
+    90→rm 'node_modules/@supabase/auth-js/dist/main/lib/types.d.ts'
+    91→rm 'node_modules/@supabase/auth-js/dist/main/lib/types.d.ts.map'
+    92→rm 'node_modules/@supabase/auth-js/dist/main/lib/types.js'
+    93→rm 'node_modules/@supabase/auth-js/dist/main/lib/types.js.map'
+    94→rm 'node_modules/@supabase/auth-js/dist/main/lib/version.d.ts'
+    95→rm 'node_modules/@supabase/auth-js/dist/main/lib/version.d.ts.map'
+    96→rm 'node_modules/@supabase/auth-js/dist/main/lib/version.js'
+    97→rm 'node_modules/@supabase/auth-js/dist/main/lib/version.js.map'
+    98→rm 'node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.d.ts'
+    99→rm 'node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.d.ts.map'
+   100→rm 'node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js'
+   101→rm 'node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js.map'
+   102→rm 'node_modules/@supabase/auth-js/dist/main/lib/web3/solana.d.ts'
+   103→rm 'node_modules/@supabase/auth-js/dist/main/lib/web3/solana.d.ts.map'
+   104→rm 'node_modules/@supabase/auth-js/dist/main/lib/web3/solana.js'
+   105→rm 'node_modules/@supabase/auth-js/dist/main/lib/web3/solana.js.map'
+   106→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.d.ts'
+   107→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.d.ts.map'
+   108→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.d.ts'
+   109→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.d.ts.map'
+   110→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.js'
+   111→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.js.map'
+   112→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.d.ts'
+   113→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.d.ts.map'
+   114→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js'
+   115→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js.map'
+   116→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.js'
+   117→rm 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.js.map'
+   118→rm 'node_modules/@supabase/auth-js/dist/module/AuthAdminApi.d.ts'
+   119→rm 'node_modules/@supabase/auth-js/dist/module/AuthAdminApi.d.ts.map'
+   120→rm 'node_modules/@supabase/auth-js/dist/module/AuthAdminApi.js'
+   121→rm 'node_modules/@supabase/auth-js/dist/module/AuthAdminApi.js.map'
+   122→rm 'node_modules/@supabase/auth-js/dist/module/AuthClient.d.ts'
+   123→rm 'node_modules/@supabase/auth-js/dist/module/AuthClient.d.ts.map'
+   124→rm 'node_modules/@supabase/auth-js/dist/module/AuthClient.js'
+   125→rm 'node_modules/@supabase/auth-js/dist/module/AuthClient.js.map'
+   126→rm 'node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.d.ts'
+   127→rm 'node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.d.ts.map'
+   128→rm 'node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.js'
+   129→rm 'node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.js.map'
+   130→rm 'node_modules/@supabase/auth-js/dist/module/GoTrueClient.d.ts'
+   131→rm 'node_modules/@supabase/auth-js/dist/module/GoTrueClient.d.ts.map'
+   132→rm 'node_modules/@supabase/auth-js/dist/module/GoTrueClient.js'
+   133→rm 'node_modules/@supabase/auth-js/dist/module/GoTrueClient.js.map'
+   134→rm 'node_modules/@supabase/auth-js/dist/module/index.d.ts'
+   135→rm 'node_modules/@supabase/auth-js/dist/module/index.d.ts.map'
+   136→rm 'node_modules/@supabase/auth-js/dist/module/index.js'
+   137→rm 'node_modules/@supabase/auth-js/dist/module/index.js.map'
+   138→rm 'node_modules/@supabase/auth-js/dist/module/lib/base64url.d.ts'
+   139→rm 'node_modules/@supabase/auth-js/dist/module/lib/base64url.d.ts.map'
+   140→rm 'node_modules/@supabase/auth-js/dist/module/lib/base64url.js'
+   141→rm 'node_modules/@supabase/auth-js/dist/module/lib/base64url.js.map'
+   142→rm 'node_modules/@supabase/auth-js/dist/module/lib/constants.d.ts'
+   143→rm 'node_modules/@supabase/auth-js/dist/module/lib/constants.d.ts.map'
+   144→rm 'node_modules/@supabase/auth-js/dist/module/lib/constants.js'
+   145→rm 'node_modules/@supabase/auth-js/dist/module/lib/constants.js.map'
+   146→rm 'node_modules/@supabase/auth-js/dist/module/lib/error-codes.d.ts'
+   147→rm 'node_modules/@supabase/auth-js/dist/module/lib/error-codes.d.ts.map'
+   148→rm 'node_modules/@supabase/auth-js/dist/module/lib/error-codes.js'
+   149→rm 'node_modules/@supabase/auth-js/dist/module/lib/error-codes.js.map'
+   150→rm 'node_modules/@supabase/auth-js/dist/module/lib/errors.d.ts'
+   151→rm 'node_modules/@supabase/auth-js/dist/module/lib/errors.d.ts.map'
+   152→rm 'node_modules/@supabase/auth-js/dist/module/lib/errors.js'
+   153→rm 'node_modules/@supabase/auth-js/dist/module/lib/errors.js.map'
+   154→rm 'node_modules/@supabase/auth-js/dist/module/lib/fetch.d.ts'
+   155→rm 'node_modules/@supabase/auth-js/dist/module/lib/fetch.d.ts.map'
+   156→rm 'node_modules/@supabase/auth-js/dist/module/lib/fetch.js'
+   157→rm 'node_modules/@supabase/auth-js/dist/module/lib/fetch.js.map'
+   158→rm 'node_modules/@supabase/auth-js/dist/module/lib/helpers.d.ts'
+   159→rm 'node_modules/@supabase/auth-js/dist/module/lib/helpers.d.ts.map'
+   160→rm 'node_modules/@supabase/auth-js/dist/module/lib/helpers.js'
+   161→rm 'node_modules/@supabase/auth-js/dist/module/lib/helpers.js.map'
+   162→rm 'node_modules/@supabase/auth-js/dist/module/lib/local-storage.d.ts'
+   163→rm 'node_modules/@supabase/auth-js/dist/module/lib/local-storage.d.ts.map'
+   164→rm 'node_modules/@supabase/auth-js/dist/module/lib/local-storage.js'
+   165→rm 'node_modules/@supabase/auth-js/dist/module/lib/local-storage.js.map'
+   166→rm 'node_modules/@supabase/auth-js/dist/module/lib/locks.d.ts'
+   167→rm 'node_modules/@supabase/auth-js/dist/module/lib/locks.d.ts.map'
+   168→rm 'node_modules/@supabase/auth-js/dist/module/lib/locks.js'
+   169→rm 'node_modules/@supabase/auth-js/dist/module/lib/locks.js.map'
+   170→rm 'node_modules/@supabase/auth-js/dist/module/lib/polyfills.d.ts'
+   171→rm 'node_modules/@supabase/auth-js/dist/module/lib/polyfills.d.ts.map'
+   172→rm 'node_modules/@supabase/auth-js/dist/module/lib/polyfills.js'
+   173→rm 'node_modules/@supabase/auth-js/dist/module/lib/polyfills.js.map'
+   174→rm 'node_modules/@supabase/auth-js/dist/module/lib/types.d.ts'
+   175→rm 'node_modules/@supabase/auth-js/dist/module/lib/types.d.ts.map'
+   176→rm 'node_modules/@supabase/auth-js/dist/module/lib/types.js'
+   177→rm 'node_modules/@supabase/auth-js/dist/module/lib/types.js.map'
+   178→rm 'node_modules/@supabase/auth-js/dist/module/lib/version.d.ts'
+   179→rm 'node_modules/@supabase/auth-js/dist/module/lib/version.d.ts.map'
+   180→rm 'node_modules/@supabase/auth-js/dist/module/lib/version.js'
+   181→rm 'node_modules/@supabase/auth-js/dist/module/lib/version.js.map'
+   182→rm 'node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.d.ts'
+   183→rm 'node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.d.ts.map'
+   184→rm 'node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.js'
+   185→rm 'node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.js.map'
+   186→rm 'node_modules/@supabase/auth-js/dist/module/lib/web3/solana.d.ts'
+   187→rm 'node_modules/@supabase/auth-js/dist/module/lib/web3/solana.d.ts.map'
+   188→rm 'node_modules/@supabase/auth-js/dist/module/lib/web3/solana.js'
+   189→rm 'node_modules/@supabase/auth-js/dist/module/lib/web3/solana.js.map'
+   190→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.d.ts'
+   191→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.d.ts.map'
+   192→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.d.ts'
+   193→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.d.ts.map'
+   194→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.js'
+   195→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.js.map'
+   196→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.d.ts'
+   197→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.d.ts.map'
+   198→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.js'
+   199→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.js.map'
+   200→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.js'
+   201→rm 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.js.map'
+   202→rm 'node_modules/@supabase/auth-js/dist/tsconfig.module.tsbuildinfo'
+   203→rm 'node_modules/@supabase/auth-js/dist/tsconfig.tsbuildinfo'
+   204→rm 'node_modules/@supabase/auth-js/migrations/README.md'
+   205→rm 'node_modules/@supabase/auth-js/migrations/lockless-coordination.md'
+   206→rm 'node_modules/@supabase/auth-js/package.json'
+   207→rm 'node_modules/@supabase/auth-js/src/AuthAdminApi.ts'
+   208→rm 'node_modules/@supabase/auth-js/src/AuthClient.ts'
+   209→rm 'node_modules/@supabase/auth-js/src/GoTrueAdminApi.ts'
+   210→rm 'node_modules/@supabase/auth-js/src/GoTrueClient.ts'
+   211→rm 'node_modules/@supabase/auth-js/src/index.ts'
+   212→rm 'node_modules/@supabase/auth-js/src/lib/base64url.ts'
+   213→rm 'node_modules/@supabase/auth-js/src/lib/constants.ts'
+   214→rm 'node_modules/@supabase/auth-js/src/lib/error-codes.ts'
+   215→rm 'node_modules/@supabase/auth-js/src/lib/errors.ts'
+   216→rm 'node_modules/@supabase/auth-js/src/lib/fetch.ts'
+   217→rm 'node_modules/@supabase/auth-js/src/lib/helpers.ts'
+   218→rm 'node_modules/@supabase/auth-js/src/lib/local-storage.ts'
+   219→rm 'node_modules/@supabase/auth-js/src/lib/locks.ts'
+   220→rm 'node_modules/@supabase/auth-js/src/lib/polyfills.ts'
+   221→rm 'node_modules/@supabase/auth-js/src/lib/types.ts'
+   222→rm 'node_modules/@supabase/auth-js/src/lib/version.ts'
+   223→rm 'node_modules/@supabase/auth-js/src/lib/web3/ethereum.ts'
+   224→rm 'node_modules/@supabase/auth-js/src/lib/web3/solana.ts'
+   225→rm 'node_modules/@supabase/auth-js/src/lib/webauthn.dom.ts'
+   226→rm 'node_modules/@supabase/auth-js/src/lib/webauthn.errors.ts'
+   227→rm 'node_modules/@supabase/auth-js/src/lib/webauthn.ts'
+   228→rm 'node_modules/@supabase/functions-js/AGENTS.md'
+   229→rm 'node_modules/@supabase/functions-js/LICENSE'
+   230→rm 'node_modules/@supabase/functions-js/README.md'
+   231→rm 'node_modules/@supabase/functions-js/dist/main/FunctionsClient.d.ts'
+   232→rm 'node_modules/@supabase/functions-js/dist/main/FunctionsClient.d.ts.map'
+   233→rm 'node_modules/@supabase/functions-js/dist/main/FunctionsClient.js'
+   234→rm 'node_modules/@supabase/functions-js/dist/main/FunctionsClient.js.map'
+   235→rm 'node_modules/@supabase/functions-js/dist/main/helper.d.ts'
+   236→rm 'node_modules/@supabase/functions-js/dist/main/helper.d.ts.map'
+   237→rm 'node_modules/@supabase/functions-js/dist/main/helper.js'
+   238→rm 'node_modules/@supabase/functions-js/dist/main/helper.js.map'
+   239→rm 'node_modules/@supabase/functions-js/dist/main/index.d.ts'
+   240→rm 'node_modules/@supabase/functions-js/dist/main/index.d.ts.map'
+   241→rm 'node_modules/@supabase/functions-js/dist/main/index.js'
+   242→rm 'node_modules/@supabase/functions-js/dist/main/index.js.map'
+   243→rm 'node_modules/@supabase/functions-js/dist/main/types.d.ts'
+   244→rm 'node_modules/@supabase/functions-js/dist/main/types.d.ts.map'
+   245→rm 'node_modules/@supabase/functions-js/dist/main/types.js'
+   246→rm 'node_modules/@supabase/functions-js/dist/main/types.js.map'
+   247→rm 'node_modules/@supabase/functions-js/dist/main/version.d.ts'
+   248→rm 'node_modules/@supabase/functions-js/dist/main/version.d.ts.map'
+   249→rm 'node_modules/@supabase/functions-js/dist/main/version.js'
+   250→rm 'node_modules/@supabase/functions-js/dist/main/version.js.map'
+   251→rm 'node_modules/@supabase/functions-js/dist/module/FunctionsClient.d.ts'
+   252→rm 'node_modules/@supabase/functions-js/dist/module/FunctionsClient.d.ts.map'
+   253→rm 'node_modules/@supabase/functions-js/dist/module/FunctionsClient.js'
+   254→rm 'node_modules/@supabase/functions-js/dist/module/FunctionsClient.js.map'
+   255→rm 'node_modules/@supabase/functions-js/dist/module/helper.d.ts'
+   256→rm 'node_modules/@supabase/functions-js/dist/module/helper.d.ts.map'
+   257→rm 'node_modules/@supabase/functions-js/dist/module/helper.js'
+   258→rm 'node_modules/@supabase/functions-js/dist/module/helper.js.map'
+   259→rm 'node_modules/@supabase/functions-js/dist/module/index.d.ts'
+   260→rm 'node_modules/@supabase/functions-js/dist/module/index.d.ts.map'
+   261→rm 'node_modules/@supabase/functions-js/dist/module/index.js'
+   262→rm 'node_modules/@supabase/functions-js/dist/module/index.js.map'
+   263→rm 'node_modules/@supabase/functions-js/dist/module/types.d.ts'
+   264→rm 'node_modules/@supabase/functions-js/dist/module/types.d.ts.map'
+   265→rm 'node_modules/@supabase/functions-js/dist/module/types.js'
+   266→rm 'node_modules/@supabase/functions-js/dist/module/types.js.map'
+   267→rm 'node_modules/@supabase/functions-js/dist/module/version.d.ts'
+   268→rm 'node_modules/@supabase/functions-js/dist/module/version.d.ts.map'
+   269→rm 'node_modules/@supabase/functions-js/dist/module/version.js'
+   270→rm 'node_modules/@supabase/functions-js/dist/module/version.js.map'
+   271→rm 'node_modules/@supabase/functions-js/dist/tsconfig.module.tsbuildinfo'
+   272→rm 'node_modules/@supabase/functions-js/dist/tsconfig.tsbuildinfo'
+   273→rm 'node_modules/@supabase/functions-js/migrations/README.md'
+   274→rm 'node_modules/@supabase/functions-js/package.json'
+   275→rm 'node_modules/@supabase/functions-js/src/FunctionsClient.ts'
+   276→rm 'node_modules/@supabase/functions-js/src/edge-runtime.d.ts'
+   277→rm 'node_modules/@supabase/functions-js/src/helper.ts'
+   278→rm 'node_modules/@supabase/functions-js/src/index.ts'
+   279→rm 'node_modules/@supabase/functions-js/src/types.ts'
+   280→rm 'node_modules/@supabase/functions-js/src/version.ts'
+   281→rm 'node_modules/@supabase/phoenix/LICENSE.md'
+   282→rm 'node_modules/@supabase/phoenix/README.md'
+   283→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/ajax.js'
+   284→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/channel.js'
+   285→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/constants.js'
+   286→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/index.js'
+   287→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/longpoll.js'
+   288→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/presence.js'
+   289→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/push.js'
+   290→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/serializer.js'
+   291→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/socket.js'
+   292→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/timer.js'
+   293→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/types.js'
+   294→rm 'node_modules/@supabase/phoenix/assets/js/phoenix/utils.js'
+   295→rm 'node_modules/@supabase/phoenix/package.json'
+   296→rm 'node_modules/@supabase/phoenix/priv/static/favicon.ico'
+   297→rm 'node_modules/@supabase/phoenix/priv/static/phoenix-orange.png'
+   298→rm 'node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js'
+   299→rm 'node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js.map'
+   300→rm 'node_modules/@supabase/phoenix/priv/static/phoenix.js'
+   301→rm 'node_modules/@supabase/phoenix/priv/static/phoenix.min.js'
+   302→rm 'node_modules/@supabase/phoenix/priv/static/phoenix.mjs'
+   303→rm 'node_modules/@supabase/phoenix/priv/static/phoenix.mjs.map'
+   304→rm 'node_modules/@supabase/phoenix/priv/static/phoenix.png'
+   305→rm 'node_modules/@supabase/phoenix/priv/static/types/ajax.d.ts'
+   306→rm 'node_modules/@supabase/phoenix/priv/static/types/ajax.d.ts.map'
+   307→rm 'node_modules/@supabase/phoenix/priv/static/types/channel.d.ts'
+   308→rm 'node_modules/@supabase/phoenix/priv/static/types/channel.d.ts.map'
+   309→rm 'node_modules/@supabase/phoenix/priv/static/types/constants.d.ts'
+   310→rm 'node_modules/@supabase/phoenix/priv/static/types/constants.d.ts.map'
+   311→rm 'node_modules/@supabase/phoenix/priv/static/types/index.d.ts'
+   312→rm 'node_modules/@supabase/phoenix/priv/static/types/index.d.ts.map'
+   313→rm 'node_modules/@supabase/phoenix/priv/static/types/longpoll.d.ts'
+   314→rm 'node_modules/@supabase/phoenix/priv/static/types/longpoll.d.ts.map'
+   315→rm 'node_modules/@supabase/phoenix/priv/static/types/presence.d.ts'
+   316→rm 'node_modules/@supabase/phoenix/priv/static/types/presence.d.ts.map'
+   317→rm 'node_modules/@supabase/phoenix/priv/static/types/push.d.ts'
+   318→rm 'node_modules/@supabase/phoenix/priv/static/types/push.d.ts.map'
+   319→rm 'node_modules/@supabase/phoenix/priv/static/types/serializer.d.ts'
+   320→rm 'node_modules/@supabase/phoenix/priv/static/types/serializer.d.ts.map'
+   321→rm 'node_modules/@supabase/phoenix/priv/static/types/socket.d.ts'
+   322→rm 'node_modules/@supabase/phoenix/priv/static/types/socket.d.ts.map'
+   323→rm 'node_modules/@supabase/phoenix/priv/static/types/timer.d.ts'
+   324→rm 'node_modules/@supabase/phoenix/priv/static/types/timer.d.ts.map'
+   325→rm 'node_modules/@supabase/phoenix/priv/static/types/types.d.ts'
+   326→rm 'node_modules/@supabase/phoenix/priv/static/types/types.d.ts.map'
+   327→rm 'node_modules/@supabase/phoenix/priv/static/types/utils.d.ts'
+   328→rm 'node_modules/@supabase/phoenix/priv/static/types/utils.d.ts.map'
+   329→rm 'node_modules/@supabase/phoenix/tsconfig.json'
+   330→rm 'node_modules/@supabase/postgrest-js/AGENTS.md'
+   331→rm 'node_modules/@supabase/postgrest-js/LICENSE'
+   332→rm 'node_modules/@supabase/postgrest-js/README.md'
+   333→rm 'node_modules/@supabase/postgrest-js/dist/index.cjs'
+   334→rm 'node_modules/@supabase/postgrest-js/dist/index.cjs.map'
+   335→rm 'node_modules/@supabase/postgrest-js/dist/index.d.cts'
+   336→rm 'node_modules/@supabase/postgrest-js/dist/index.d.cts.map'
+   337→rm 'node_modules/@supabase/postgrest-js/dist/index.d.mts'
+   338→rm 'node_modules/@supabase/postgrest-js/dist/index.d.mts.map'
+   339→rm 'node_modules/@supabase/postgrest-js/dist/index.mjs'
+   340→rm 'node_modules/@supabase/postgrest-js/dist/index.mjs.map'
+   341→rm 'node_modules/@supabase/postgrest-js/migrations/README.md'
+   342→rm 'node_modules/@supabase/postgrest-js/package.json'
+   343→rm 'node_modules/@supabase/postgrest-js/src/PostgrestBuilder.ts'
+   344→rm 'node_modules/@supabase/postgrest-js/src/PostgrestClient.ts'
+   345→rm 'node_modules/@supabase/postgrest-js/src/PostgrestError.ts'
+   346→rm 'node_modules/@supabase/postgrest-js/src/PostgrestFilterBuilder.ts'
+   347→rm 'node_modules/@supabase/postgrest-js/src/PostgrestQueryBuilder.ts'
+   348→rm 'node_modules/@supabase/postgrest-js/src/PostgrestTransformBuilder.ts'
+   349→rm 'node_modules/@supabase/postgrest-js/src/constants.ts'
+   350→rm 'node_modules/@supabase/postgrest-js/src/index.ts'
+   351→rm 'node_modules/@supabase/postgrest-js/src/select-query-parser/parser.ts'
+   352→rm 'node_modules/@supabase/postgrest-js/src/select-query-parser/result.ts'
+   353→rm 'node_modules/@supabase/postgrest-js/src/select-query-parser/types.ts'
+   354→rm 'node_modules/@supabase/postgrest-js/src/select-query-parser/utils.ts'
+   355→rm 'node_modules/@supabase/postgrest-js/src/types/common/common.ts'
+   356→rm 'node_modules/@supabase/postgrest-js/src/types/common/rpc.ts'
+   357→rm 'node_modules/@supabase/postgrest-js/src/types/feature-flags.ts'
+   358→rm 'node_modules/@supabase/postgrest-js/src/types/types.ts'
+   359→rm 'node_modules/@supabase/postgrest-js/src/version.ts'
+   360→rm 'node_modules/@supabase/realtime-js/AGENTS.md'
+   361→rm 'node_modules/@supabase/realtime-js/LICENSE'
+   362→rm 'node_modules/@supabase/realtime-js/README.md'
+   363→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.d.ts'
+   364→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.d.ts.map'
+   365→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js'
+   366→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js.map'
+   367→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimeClient.d.ts'
+   368→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimeClient.d.ts.map'
+   369→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js'
+   370→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js.map'
+   371→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.d.ts'
+   372→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.d.ts.map'
+   373→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js'
+   374→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js.map'
+   375→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimePresence.d.ts'
+   376→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimePresence.d.ts.map'
+   377→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js'
+   378→rm 'node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js.map'
+   379→rm 'node_modules/@supabase/realtime-js/dist/main/index.d.ts'
+   380→rm 'node_modules/@supabase/realtime-js/dist/main/index.d.ts.map'
+   381→rm 'node_modules/@supabase/realtime-js/dist/main/index.js'
+   382→rm 'node_modules/@supabase/realtime-js/dist/main/index.js.map'
+   383→rm 'node_modules/@supabase/realtime-js/dist/main/lib/constants.d.ts'
+   384→rm 'node_modules/@supabase/realtime-js/dist/main/lib/constants.d.ts.map'
+   385→rm 'node_modules/@supabase/realtime-js/dist/main/lib/constants.js'
+   386→rm 'node_modules/@supabase/realtime-js/dist/main/lib/constants.js.map'
+   387→rm 'node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.d.ts'
+   388→rm 'node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.d.ts.map'
+   389→rm 'node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js'
+   390→rm 'node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js.map'
+   391→rm 'node_modules/@supabase/realtime-js/dist/main/lib/serializer.d.ts'
+   392→rm 'node_modules/@supabase/realtime-js/dist/main/lib/serializer.d.ts.map'
+   393→rm 'node_modules/@supabase/realtime-js/dist/main/lib/serializer.js'
+   394→rm 'node_modules/@supabase/realtime-js/dist/main/lib/serializer.js.map'
+   395→rm 'node_modules/@supabase/realtime-js/dist/main/lib/transformers.d.ts'
+   396→rm 'node_modules/@supabase/realtime-js/dist/main/lib/transformers.d.ts.map'
+   397→rm 'node_modules/@supabase/realtime-js/dist/main/lib/transformers.js'
+   398→rm 'node_modules/@supabase/realtime-js/dist/main/lib/transformers.js.map'
+   399→rm 'node_modules/@supabase/realtime-js/dist/main/lib/version.d.ts'
+   400→rm 'node_modules/@supabase/realtime-js/dist/main/lib/version.d.ts.map'
+   401→rm 'node_modules/@supabase/realtime-js/dist/main/lib/version.js'
+   402→rm 'node_modules/@supabase/realtime-js/dist/main/lib/version.js.map'
+   403→rm 'node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.d.ts'
+   404→rm 'node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.d.ts.map'
+   405→rm 'node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js'
+   406→rm 'node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js.map'
+   407→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.d.ts'
+   408→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.d.ts.map'
+   409→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js'
+   410→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js.map'
+   411→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.d.ts'
+   412→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.d.ts.map'
+   413→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js'
+   414→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js.map'
+   415→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.d.ts'
+   416→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.d.ts.map'
+   417→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js'
+   418→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js.map'
+   419→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/types.d.ts'
+   420→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/types.d.ts.map'
+   421→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/types.js'
+   422→rm 'node_modules/@supabase/realtime-js/dist/main/phoenix/types.js.map'
+   423→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.d.ts'
+   424→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.d.ts.map'
+   425→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.js'
+   426→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.js.map'
+   427→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimeClient.d.ts'
+   428→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimeClient.d.ts.map'
+   429→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js'
+   430→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js.map'
+   431→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.d.ts'
+   432→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.d.ts.map'
+   433→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.js'
+   434→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.js.map'
+   435→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimePresence.d.ts'
+   436→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimePresence.d.ts.map'
+   437→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimePresence.js'
+   438→rm 'node_modules/@supabase/realtime-js/dist/module/RealtimePresence.js.map'
+   439→rm 'node_modules/@supabase/realtime-js/dist/module/index.d.ts'
+   440→rm 'node_modules/@supabase/realtime-js/dist/module/index.d.ts.map'
+   441→rm 'node_modules/@supabase/realtime-js/dist/module/index.js'
+   442→rm 'node_modules/@supabase/realtime-js/dist/module/index.js.map'
+   443→rm 'node_modules/@supabase/realtime-js/dist/module/lib/constants.d.ts'
+   444→rm 'node_modules/@supabase/realtime-js/dist/module/lib/constants.d.ts.map'
+   445→rm 'node_modules/@supabase/realtime-js/dist/module/lib/constants.js'
+   446→rm 'node_modules/@supabase/realtime-js/dist/module/lib/constants.js.map'
+   447→rm 'node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.d.ts'
+   448→rm 'node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.d.ts.map'
+   449→rm 'node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.js'
+   450→rm 'node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.js.map'
+   451→rm 'node_modules/@supabase/realtime-js/dist/module/lib/serializer.d.ts'
+   452→rm 'node_modules/@supabase/realtime-js/dist/module/lib/serializer.d.ts.map'
+   453→rm 'node_modules/@supabase/realtime-js/dist/module/lib/serializer.js'
+   454→rm 'node_modules/@supabase/realtime-js/dist/module/lib/serializer.js.map'
+   455→rm 'node_modules/@supabase/realtime-js/dist/module/lib/transformers.d.ts'
+   456→rm 'node_modules/@supabase/realtime-js/dist/module/lib/transformers.d.ts.map'
+   457→rm 'node_modules/@supabase/realtime-js/dist/module/lib/transformers.js'
+   458→rm 'node_modules/@supabase/realtime-js/dist/module/lib/transformers.js.map'
+   459→rm 'node_modules/@supabase/realtime-js/dist/module/lib/version.d.ts'
+   460→rm 'node_modules/@supabase/realtime-js/dist/module/lib/version.d.ts.map'
+   461→rm 'node_modules/@supabase/realtime-js/dist/module/lib/version.js'
+   462→rm 'node_modules/@supabase/realtime-js/dist/module/lib/version.js.map'
+   463→rm 'node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.d.ts'
+   464→rm 'node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.d.ts.map'
+   465→rm 'node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js'
+   466→rm 'node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js.map'
+   467→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.d.ts'
+   468→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.d.ts.map'
+   469→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.js'
+   470→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.js.map'
+   471→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.d.ts'
+   472→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.d.ts.map'
+   473→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.js'
+   474→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.js.map'
+   475→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.d.ts'
+   476→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.d.ts.map'
+   477→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.js'
+   478→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.js.map'
+   479→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/types.d.ts'
+   480→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/types.d.ts.map'
+   481→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/types.js'
+   482→rm 'node_modules/@supabase/realtime-js/dist/module/phoenix/types.js.map'
+   483→rm 'node_modules/@supabase/realtime-js/dist/tsconfig.module.tsbuildinfo'
+   484→rm 'node_modules/@supabase/realtime-js/dist/tsconfig.tsbuildinfo'
+   485→rm 'node_modules/@supabase/realtime-js/migrations/README.md'
+   486→rm 'node_modules/@supabase/realtime-js/migrations/httpsend-server-version.md'
+   487→rm 'node_modules/@supabase/realtime-js/package.json'
+   488→rm 'node_modules/@supabase/realtime-js/src/RealtimeChannel.ts'
+   489→rm 'node_modules/@supabase/realtime-js/src/RealtimeClient.ts'
+   490→rm 'node_modules/@supabase/realtime-js/src/RealtimePostgresFilterBuilder.ts'
+   491→rm 'node_modules/@supabase/realtime-js/src/RealtimePresence.ts'
+   492→rm 'node_modules/@supabase/realtime-js/src/index.ts'
+   493→rm 'node_modules/@supabase/realtime-js/src/lib/constants.ts'
+   494→rm 'node_modules/@supabase/realtime-js/src/lib/normalizeChannelError.ts'
+   495→rm 'node_modules/@supabase/realtime-js/src/lib/serializer.ts'
+   496→rm 'node_modules/@supabase/realtime-js/src/lib/transformers.ts'
+   497→rm 'node_modules/@supabase/realtime-js/src/lib/version.ts'
+   498→rm 'node_modules/@supabase/realtime-js/src/lib/websocket-factory.ts'
+   499→rm 'node_modules/@supabase/realtime-js/src/phoenix/channelAdapter.ts'
+   500→rm 'node_modules/@supabase/realtime-js/src/phoenix/presenceAdapter.ts'
+   501→rm 'node_modules/@supabase/realtime-js/src/phoenix/socketAdapter.ts'
+   502→rm 'node_modules/@supabase/realtime-js/src/phoenix/types.ts'
+   503→rm 'node_modules/@supabase/storage-js/AGENTS.md'
+   504→rm 'node_modules/@supabase/storage-js/LICENSE'
+   505→rm 'node_modules/@supabase/storage-js/README.md'
+   506→rm 'node_modules/@supabase/storage-js/dist/index.cjs'
+   507→rm 'node_modules/@supabase/storage-js/dist/index.cjs.map'
+   508→rm 'node_modules/@supabase/storage-js/dist/index.d.cts'
+   509→rm 'node_modules/@supabase/storage-js/dist/index.d.cts.map'
+   510→rm 'node_modules/@supabase/storage-js/dist/index.d.mts'
+   511→rm 'node_modules/@supabase/storage-js/dist/index.d.mts.map'
+   512→rm 'node_modules/@supabase/storage-js/dist/index.mjs'
+   513→rm 'node_modules/@supabase/storage-js/dist/index.mjs.map'
+   514→rm 'node_modules/@supabase/storage-js/dist/umd/supabase.js'
+   515→rm 'node_modules/@supabase/storage-js/migrations/README.md'
+   516→rm 'node_modules/@supabase/storage-js/package.json'
+   517→rm 'node_modules/@supabase/storage-js/src/StorageClient.ts'
+   518→rm 'node_modules/@supabase/storage-js/src/index.ts'
+   519→rm 'node_modules/@supabase/storage-js/src/lib/common/BaseApiClient.ts'
+   520→rm 'node_modules/@supabase/storage-js/src/lib/common/errors.ts'
+   521→rm 'node_modules/@supabase/storage-js/src/lib/common/fetch.ts'
+   522→rm 'node_modules/@supabase/storage-js/src/lib/common/headers.ts'
+   523→rm 'node_modules/@supabase/storage-js/src/lib/common/helpers.ts'
+   524→rm 'node_modules/@supabase/storage-js/src/lib/constants.ts'
+   525→rm 'node_modules/@supabase/storage-js/src/lib/types.ts'
+   526→rm 'node_modules/@supabase/storage-js/src/lib/version.ts'
+   527→rm 'node_modules/@supabase/storage-js/src/packages/BlobDownloadBuilder.ts'
+   528→rm 'node_modules/@supabase/storage-js/src/packages/StorageAnalyticsClient.ts'
+   529→rm 'node_modules/@supabase/storage-js/src/packages/StorageBucketApi.ts'
+   530→rm 'node_modules/@supabase/storage-js/src/packages/StorageFileApi.ts'
+   531→rm 'node_modules/@supabase/storage-js/src/packages/StorageVectorsClient.ts'
+   532→rm 'node_modules/@supabase/storage-js/src/packages/StreamDownloadBuilder.ts'
+   533→rm 'node_modules/@supabase/storage-js/src/packages/VectorBucketApi.ts'
+   534→rm 'node_modules/@supabase/storage-js/src/packages/VectorDataApi.ts'
+   535→rm 'node_modules/@supabase/storage-js/src/packages/VectorIndexApi.ts'
+   536→rm 'node_modules/@supabase/supabase-js/AGENTS.md'
+   537→rm 'node_modules/@supabase/supabase-js/LICENSE'
+   538→rm 'node_modules/@supabase/supabase-js/README.md'
+   539→rm 'node_modules/@supabase/supabase-js/dist/cors.cjs'
+   540→rm 'node_modules/@supabase/supabase-js/dist/cors.cjs.map'
+   541→rm 'node_modules/@supabase/supabase-js/dist/cors.d.cts'
+   542→rm 'node_modules/@supabase/supabase-js/dist/cors.d.cts.map'
+   543→rm 'node_modules/@supabase/supabase-js/dist/cors.d.mts'
+   544→rm 'node_modules/@supabase/supabase-js/dist/cors.d.mts.map'
+   545→rm 'node_modules/@supabase/supabase-js/dist/cors.mjs'
+   546→rm 'node_modules/@supabase/supabase-js/dist/cors.mjs.map'
+   547→rm 'node_modules/@supabase/supabase-js/dist/index.cjs'
+   548→rm 'node_modules/@supabase/supabase-js/dist/index.cjs.map'
+   549→rm 'node_modules/@supabase/supabase-js/dist/index.d.cts'
+   550→rm 'node_modules/@supabase/supabase-js/dist/index.d.cts.map'
+   551→rm 'node_modules/@supabase/supabase-js/dist/index.d.mts'
+   552→rm 'node_modules/@supabase/supabase-js/dist/index.d.mts.map'
+   553→rm 'node_modules/@supabase/supabase-js/dist/index.mjs'
+   554→rm 'node_modules/@supabase/supabase-js/dist/index.mjs.map'
+   555→rm 'node_modules/@supabase/supabase-js/dist/umd/supabase.js'
+   556→rm 'node_modules/@supabase/supabase-js/migrations/README.md'
+   557→rm 'node_modules/@supabase/supabase-js/package.json'
+   558→rm 'node_modules/@supabase/supabase-js/src/SupabaseClient.ts'
+   559→rm 'node_modules/@supabase/supabase-js/src/cors.ts'
+   560→rm 'node_modules/@supabase/supabase-js/src/index.ts'
+   561→rm 'node_modules/@supabase/supabase-js/src/lib/SupabaseAuthClient.ts'
+   562→rm 'node_modules/@supabase/supabase-js/src/lib/constants.ts'
+   563→rm 'node_modules/@supabase/supabase-js/src/lib/fetch.ts'
+   564→rm 'node_modules/@supabase/supabase-js/src/lib/helpers.ts'
+   565→rm 'node_modules/@supabase/supabase-js/src/lib/rest/types/common/common.ts'
+   566→rm 'node_modules/@supabase/supabase-js/src/lib/rest/types/common/rpc.ts'
+   567→rm 'node_modules/@supabase/supabase-js/src/lib/types.ts'
+   568→rm 'node_modules/@supabase/supabase-js/src/lib/version.ts'
+   569→rm 'node_modules/@types/cors/LICENSE'
+   570→rm 'node_modules/@types/cors/README.md'
+   571→rm 'node_modules/@types/cors/index.d.ts'
+   572→rm 'node_modules/@types/cors/package.json'
+   573→rm 'node_modules/@types/node/LICENSE'
+   574→rm 'node_modules/@types/node/README.md'
+   575→rm 'node_modules/@types/node/assert.d.ts'
+   576→rm 'node_modules/@types/node/assert/strict.d.ts'
+   577→rm 'node_modules/@types/node/async_hooks.d.ts'
+   578→rm 'node_modules/@types/node/buffer.buffer.d.ts'
+   579→rm 'node_modules/@types/node/buffer.d.ts'
+   580→rm 'node_modules/@types/node/child_process.d.ts'
+   581→rm 'node_modules/@types/node/cluster.d.ts'
+   582→rm 'node_modules/@types/node/console.d.ts'
+   583→rm 'node_modules/@types/node/constants.d.ts'
+   584→rm 'node_modules/@types/node/crypto.d.ts'
+   585→rm 'node_modules/@types/node/dgram.d.ts'
+   586→rm 'node_modules/@types/node/diagnostics_channel.d.ts'
+   587→rm 'node_modules/@types/node/dns.d.ts'
+   588→rm 'node_modules/@types/node/dns/promises.d.ts'
+   589→rm 'node_modules/@types/node/domain.d.ts'
+   590→rm 'node_modules/@types/node/events.d.ts'
+   591→rm 'node_modules/@types/node/ffi.d.ts'
+   592→rm 'node_modules/@types/node/fs.d.ts'
+   593→rm 'node_modules/@types/node/fs/promises.d.ts'
+   594→rm 'node_modules/@types/node/globals.d.ts'
+   595→rm 'node_modules/@types/node/globals.typedarray.d.ts'
+   596→rm 'node_modules/@types/node/http.d.ts'
+   597→rm 'node_modules/@types/node/http2.d.ts'
+   598→rm 'node_modules/@types/node/https.d.ts'
+   599→rm 'node_modules/@types/node/index.d.ts'
+   600→rm 'node_modules/@types/node/inspector.d.ts'
+   601→rm 'node_modules/@types/node/inspector.generated.d.ts'
+   602→rm 'node_modules/@types/node/inspector/promises.d.ts'
+   603→rm 'node_modules/@types/node/module.d.ts'
+   604→rm 'node_modules/@types/node/net.d.ts'
+   605→rm 'node_modules/@types/node/os.d.ts'
+   606→rm 'node_modules/@types/node/package.json'
+   607→rm 'node_modules/@types/node/path.d.ts'
+   608→rm 'node_modules/@types/node/path/posix.d.ts'
+   609→rm 'node_modules/@types/node/path/win32.d.ts'
+   610→rm 'node_modules/@types/node/perf_hooks.d.ts'
+   611→rm 'node_modules/@types/node/process.d.ts'
+   612→rm 'node_modules/@types/node/punycode.d.ts'
+   613→rm 'node_modules/@types/node/querystring.d.ts'
+   614→rm 'node_modules/@types/node/quic.d.ts'
+   615→rm 'node_modules/@types/node/readline.d.ts'
+   616→rm 'node_modules/@types/node/readline/promises.d.ts'
+   617→rm 'node_modules/@types/node/repl.d.ts'
+   618→rm 'node_modules/@types/node/sea.d.ts'
+   619→rm 'node_modules/@types/node/sqlite.d.ts'
+   620→rm 'node_modules/@types/node/stream.d.ts'
+   621→rm 'node_modules/@types/node/stream/consumers.d.ts'
+   622→rm 'node_modules/@types/node/stream/iter.d.ts'
+   623→rm 'node_modules/@types/node/stream/promises.d.ts'
+   624→rm 'node_modules/@types/node/stream/web.d.ts'
+   625→rm 'node_modules/@types/node/string_decoder.d.ts'
+   626→rm 'node_modules/@types/node/test.d.ts'
+   627→rm 'node_modules/@types/node/test/reporters.d.ts'
+   628→rm 'node_modules/@types/node/timers.d.ts'
+   629→rm 'node_modules/@types/node/timers/promises.d.ts'
+   630→rm 'node_modules/@types/node/tls.d.ts'
+   631→rm 'node_modules/@types/node/trace_events.d.ts'
+   632→rm 'node_modules/@types/node/ts5.6/buffer.buffer.d.ts'
+   633→rm 'node_modules/@types/node/ts5.6/compatibility/float16array.d.ts'
+   634→rm 'node_modules/@types/node/ts5.6/globals.typedarray.d.ts'
+   635→rm 'node_modules/@types/node/ts5.6/index.d.ts'
+   636→rm 'node_modules/@types/node/ts5.7/compatibility/float16array.d.ts'
+   637→rm 'node_modules/@types/node/ts5.7/index.d.ts'
+   638→rm 'node_modules/@types/node/tty.d.ts'
+   639→rm 'node_modules/@types/node/url.d.ts'
+   640→rm 'node_modules/@types/node/util.d.ts'
+   641→rm 'node_modules/@types/node/util/types.d.ts'
+   642→rm 'node_modules/@types/node/v8.d.ts'
+   643→rm 'node_modules/@types/node/vm.d.ts'
+   644→rm 'node_modules/@types/node/wasi.d.ts'
+   645→rm 'node_modules/@types/node/web-globals/abortcontroller.d.ts'
+   646→rm 'node_modules/@types/node/web-globals/blob.d.ts'
+   647→rm 'node_modules/@types/node/web-globals/console.d.ts'
+   648→rm 'node_modules/@types/node/web-globals/crypto.d.ts'
+   649→rm 'node_modules/@types/node/web-globals/domexception.d.ts'
+   650→rm 'node_modules/@types/node/web-globals/encoding.d.ts'
+   651→rm 'node_modules/@types/node/web-globals/events.d.ts'
+   652→rm 'node_modules/@types/node/web-globals/fetch.d.ts'
+   653→rm 'node_modules/@types/node/web-globals/importmeta.d.ts'
+   654→rm 'node_modules/@types/node/web-globals/messaging.d.ts'
+   655→rm 'node_modules/@types/node/web-globals/navigator.d.ts'
+   656→rm 'node_modules/@types/node/web-globals/performance.d.ts'
+   657→rm 'node_modules/@types/node/web-globals/storage.d.ts'
+   658→rm 'node_modules/@types/node/web-globals/streams.d.ts'
+   659→rm 'node_modules/@types/node/web-globals/timers.d.ts'
+   660→rm 'node_modules/@types/node/web-globals/url.d.ts'
+   661→rm 'node_modules/@types/node/worker_threads.d.ts'
+   662→rm 'node_modules/@types/node/zlib.d.ts'
+   663→rm 'node_modules/@types/node/zlib/iter.d.ts'
+   664→rm 'node_modules/@types/ws/LICENSE'
+   665→rm 'node_modules/@types/ws/README.md'
+   666→rm 'node_modules/@types/ws/index.d.mts'
+   667→rm 'node_modules/@types/ws/index.d.ts'
+   668→rm 'node_modules/@types/ws/package.json'
+   669→rm 'node_modules/accepts/HISTORY.md'
+   670→rm 'node_modules/accepts/LICENSE'
+   671→rm 'node_modules/accepts/README.md'
+   672→rm 'node_modules/accepts/index.js'
+   673→rm 'node_modules/accepts/package.json'
+   674→rm 'node_modules/base64id/CHANGELOG.md'
+   675→rm 'node_modules/base64id/LICENSE'
+   676→rm 'node_modules/base64id/README.md'
+   677→rm 'node_modules/base64id/lib/base64id.js'
+   678→rm 'node_modules/base64id/package.json'
+   679→rm 'node_modules/cookie/LICENSE'
+   680→rm 'node_modules/cookie/README.md'
+   681→rm 'node_modules/cookie/SECURITY.md'
+   682→rm 'node_modules/cookie/index.js'
+   683→rm 'node_modules/cookie/package.json'
+   684→rm 'node_modules/cors/LICENSE'
+   685→rm 'node_modules/cors/README.md'
+   686→rm 'node_modules/cors/lib/index.js'
+   687→rm 'node_modules/cors/package.json'
+   688→rm 'node_modules/debug/LICENSE'
+   689→rm 'node_modules/debug/README.md'
+   690→rm 'node_modules/debug/package.json'
+   691→rm 'node_modules/debug/src/browser.js'
+   692→rm 'node_modules/debug/src/common.js'
+   693→rm 'node_modules/debug/src/index.js'
+   694→rm 'node_modules/debug/src/node.js'
+   695→rm 'node_modules/engine.io-parser/LICENSE'
+   696→rm 'node_modules/engine.io-parser/Readme.md'
+   697→rm 'node_modules/engine.io-parser/build/cjs/commons.d.ts'
+   698→rm 'node_modules/engine.io-parser/build/cjs/commons.js'
+   699→rm 'node_modules/engine.io-parser/build/cjs/contrib/base64-arraybuffer.d.ts'
+   700→rm 'node_modules/engine.io-parser/build/cjs/contrib/base64-arraybuffer.js'
+   701→rm 'node_modules/engine.io-parser/build/cjs/decodePacket.browser.d.ts'
+   702→rm 'node_modules/engine.io-parser/build/cjs/decodePacket.browser.js'
+   703→rm 'node_modules/engine.io-parser/build/cjs/decodePacket.d.ts'
+   704→rm 'node_modules/engine.io-parser/build/cjs/decodePacket.js'
+   705→rm 'node_modules/engine.io-parser/build/cjs/encodePacket.browser.d.ts'
+   706→rm 'node_modules/engine.io-parser/build/cjs/encodePacket.browser.js'
+   707→rm 'node_modules/engine.io-parser/build/cjs/encodePacket.d.ts'
+   708→rm 'node_modules/engine.io-parser/build/cjs/encodePacket.js'
+   709→rm 'node_modules/engine.io-parser/build/cjs/index.d.ts'
+   710→rm 'node_modules/engine.io-parser/build/cjs/index.js'
+   711→rm 'node_modules/engine.io-parser/build/cjs/package.json'
+   712→rm 'node_modules/engine.io-parser/build/esm/commons.d.ts'
+   713→rm 'node_modules/engine.io-parser/build/esm/commons.js'
+   714→rm 'node_modules/engine.io-parser/build/esm/contrib/base64-arraybuffer.d.ts'
+   715→rm 'node_modules/engine.io-parser/build/esm/contrib/base64-arraybuffer.js'
+   716→rm 'node_modules/engine.io-parser/build/esm/decodePacket.browser.d.ts'
+   717→rm 'node_modules/engine.io-parser/build/esm/decodePacket.browser.js'
+   718→rm 'node_modules/engine.io-parser/build/esm/decodePacket.d.ts'
+   719→rm 'node_modules/engine.io-parser/build/esm/decodePacket.js'
+   720→rm 'node_modules/engine.io-parser/build/esm/encodePacket.browser.d.ts'
+   721→rm 'node_modules/engine.io-parser/build/esm/encodePacket.browser.js'
+   722→rm 'node_modules/engine.io-parser/build/esm/encodePacket.d.ts'
+   723→rm 'node_modules/engine.io-parser/build/esm/encodePacket.js'
+   724→rm 'node_modules/engine.io-parser/build/esm/index.d.ts'
+   725→rm 'node_modules/engine.io-parser/build/esm/index.js'
+   726→rm 'node_modules/engine.io-parser/build/esm/package.json'
+   727→rm 'node_modules/engine.io-parser/package.json'
+   728→rm 'node_modules/engine.io/LICENSE'
+   729→rm 'node_modules/engine.io/README.md'
+   730→rm 'node_modules/engine.io/build/contrib/types.cookie.d.ts'
+   731→rm 'node_modules/engine.io/build/contrib/types.cookie.js'
+   732→rm 'node_modules/engine.io/build/engine.io.d.ts'
+   733→rm 'node_modules/engine.io/build/engine.io.js'
+   734→rm 'node_modules/engine.io/build/parser-v3/index.d.ts'
+   735→rm 'node_modules/engine.io/build/parser-v3/index.js'
+   736→rm 'node_modules/engine.io/build/parser-v3/utf8.d.ts'
+   737→rm 'node_modules/engine.io/build/parser-v3/utf8.js'
+   738→rm 'node_modules/engine.io/build/server.d.ts'
+   739→rm 'node_modules/engine.io/build/server.js'
+   740→rm 'node_modules/engine.io/build/socket.d.ts'
+   741→rm 'node_modules/engine.io/build/socket.js'
+   742→rm 'node_modules/engine.io/build/transport.d.ts'
+   743→rm 'node_modules/engine.io/build/transport.js'
+   744→rm 'node_modules/engine.io/build/transports-uws/index.d.ts'
+   745→rm 'node_modules/engine.io/build/transports-uws/index.js'
+   746→rm 'node_modules/engine.io/build/transports-uws/polling.d.ts'
+   747→rm 'node_modules/engine.io/build/transports-uws/polling.js'
+   748→rm 'node_modules/engine.io/build/transports-uws/websocket.d.ts'
+   749→rm 'node_modules/engine.io/build/transports-uws/websocket.js'
+   750→rm 'node_modules/engine.io/build/transports/index.d.ts'
+   751→rm 'node_modules/engine.io/build/transports/index.js'
+   752→rm 'node_modules/engine.io/build/transports/polling-jsonp.d.ts'
+   753→rm 'node_modules/engine.io/build/transports/polling-jsonp.js'
+   754→rm 'node_modules/engine.io/build/transports/polling.d.ts'
+   755→rm 'node_modules/engine.io/build/transports/polling.js'
+   756→rm 'node_modules/engine.io/build/transports/websocket.d.ts'
+   757→rm 'node_modules/engine.io/build/transports/websocket.js'
+   758→rm 'node_modules/engine.io/build/transports/webtransport.d.ts'
+   759→rm 'node_modules/engine.io/build/transports/webtransport.js'
+   760→rm 'node_modules/engine.io/build/userver.d.ts'
+   761→rm 'node_modules/engine.io/build/userver.js'
+   762→rm 'node_modules/engine.io/package.json'
+   763→rm 'node_modules/engine.io/wrapper.mjs'
+   764→rm 'node_modules/iceberg-js/LICENSE'
+   765→rm 'node_modules/iceberg-js/README.md'
+   766→rm 'node_modules/iceberg-js/dist/index.cjs'
+   767→rm 'node_modules/iceberg-js/dist/index.cjs.map'
+   768→rm 'node_modules/iceberg-js/dist/index.d.cts'
+   769→rm 'node_modules/iceberg-js/dist/index.d.ts'
+   770→rm 'node_modules/iceberg-js/dist/index.mjs'
+   771→rm 'node_modules/iceberg-js/dist/index.mjs.map'
+   772→rm 'node_modules/iceberg-js/package.json'
+   773→rm 'node_modules/mime-db/HISTORY.md'
+   774→rm 'node_modules/mime-db/LICENSE'
+   775→rm 'node_modules/mime-db/README.md'
+   776→rm 'node_modules/mime-db/db.json'
+   777→rm 'node_modules/mime-db/index.js'
+   778→rm 'node_modules/mime-db/package.json'
+   779→rm 'node_modules/mime-types/HISTORY.md'
+   780→rm 'node_modules/mime-types/LICENSE'
+   781→rm 'node_modules/mime-types/README.md'
+   782→rm 'node_modules/mime-types/index.js'
+   783→rm 'node_modules/mime-types/package.json'
+   784→rm 'node_modules/ms/index.js'
+   785→rm 'node_modules/ms/license.md'
+   786→rm 'node_modules/ms/package.json'
+   787→rm 'node_modules/ms/readme.md'
+   788→rm 'node_modules/negotiator/HISTORY.md'
+   789→rm 'node_modules/negotiator/LICENSE'
+   790→rm 'node_modules/negotiator/README.md'
+   791→rm 'node_modules/negotiator/index.js'
+   792→rm 'node_modules/negotiator/lib/charset.js'
+   793→rm 'node_modules/negotiator/lib/encoding.js'
+   794→rm 'node_modules/negotiator/lib/language.js'
+   795→rm 'node_modules/negotiator/lib/mediaType.js'
+   796→rm 'node_modules/negotiator/package.json'
+   797→rm 'node_modules/object-assign/index.js'
+   798→rm 'node_modules/object-assign/license'
+   799→rm 'node_modules/object-assign/package.json'
+   800→rm 'node_modules/object-assign/readme.md'
+   801→rm 'node_modules/socket.io-adapter/LICENSE'
+   802→rm 'node_modules/socket.io-adapter/Readme.md'
+   803→rm 'node_modules/socket.io-adapter/dist/cluster-adapter.d.ts'
+   804→rm 'node_modules/socket.io-adapter/dist/cluster-adapter.js'
+   805→rm 'node_modules/socket.io-adapter/dist/contrib/yeast.d.ts'
+   806→rm 'node_modules/socket.io-adapter/dist/contrib/yeast.js'
+   807→rm 'node_modules/socket.io-adapter/dist/in-memory-adapter.d.ts'
+   808→rm 'node_modules/socket.io-adapter/dist/in-memory-adapter.js'
+   809→rm 'node_modules/socket.io-adapter/dist/index.d.ts'
+   810→rm 'node_modules/socket.io-adapter/dist/index.js'
+   811→rm 'node_modules/socket.io-adapter/package.json'
+   812→rm 'node_modules/socket.io-parser/LICENSE'
+   813→rm 'node_modules/socket.io-parser/Readme.md'
+   814→rm 'node_modules/socket.io-parser/build/cjs/binary.d.ts'
+   815→rm 'node_modules/socket.io-parser/build/cjs/binary.js'
+   816→rm 'node_modules/socket.io-parser/build/cjs/index.d.ts'
+   817→rm 'node_modules/socket.io-parser/build/cjs/index.js'
+   818→rm 'node_modules/socket.io-parser/build/cjs/is-binary.d.ts'
+   819→rm 'node_modules/socket.io-parser/build/cjs/is-binary.js'
+   820→rm 'node_modules/socket.io-parser/build/cjs/package.json'
+   821→rm 'node_modules/socket.io-parser/build/esm-debug/binary.d.ts'
+   822→rm 'node_modules/socket.io-parser/build/esm-debug/binary.js'
+   823→rm 'node_modules/socket.io-parser/build/esm-debug/index.d.ts'
+   824→rm 'node_modules/socket.io-parser/build/esm-debug/index.js'
+   825→rm 'node_modules/socket.io-parser/build/esm-debug/is-binary.d.ts'
+   826→rm 'node_modules/socket.io-parser/build/esm-debug/is-binary.js'
+   827→rm 'node_modules/socket.io-parser/build/esm-debug/package.json'
+   828→rm 'node_modules/socket.io-parser/build/esm/binary.d.ts'
+   829→rm 'node_modules/socket.io-parser/build/esm/binary.js'
+   830→rm 'node_modules/socket.io-parser/build/esm/index.d.ts'
+   831→rm 'node_modules/socket.io-parser/build/esm/index.js'
+   832→rm 'node_modules/socket.io-parser/build/esm/is-binary.d.ts'
+   833→rm 'node_modules/socket.io-parser/build/esm/is-binary.js'
+   834→rm 'node_modules/socket.io-parser/build/esm/package.json'
+   835→rm 'node_modules/socket.io-parser/package.json'
+   836→rm 'node_modules/socket.io/LICENSE'
+   837→rm 'node_modules/socket.io/Readme.md'
+   838→rm 'node_modules/socket.io/client-dist/socket.io.esm.min.js'
+   839→rm 'node_modules/socket.io/client-dist/socket.io.esm.min.js.map'
+   840→rm 'node_modules/socket.io/client-dist/socket.io.js'
+   841→rm 'node_modules/socket.io/client-dist/socket.io.js.map'
+   842→rm 'node_modules/socket.io/client-dist/socket.io.min.js'
+   843→rm 'node_modules/socket.io/client-dist/socket.io.min.js.map'
+   844→rm 'node_modules/socket.io/client-dist/socket.io.msgpack.min.js'
+   845→rm 'node_modules/socket.io/client-dist/socket.io.msgpack.min.js.map'
+   846→rm 'node_modules/socket.io/dist/broadcast-operator.d.ts'
+   847→rm 'node_modules/socket.io/dist/broadcast-operator.js'
+   848→rm 'node_modules/socket.io/dist/client.d.ts'
+   849→rm 'node_modules/socket.io/dist/client.js'
+   850→rm 'node_modules/socket.io/dist/index.d.ts'
+   851→rm 'node_modules/socket.io/dist/index.js'
+   852→rm 'node_modules/socket.io/dist/namespace.d.ts'
+   853→rm 'node_modules/socket.io/dist/namespace.js'
+   854→rm 'node_modules/socket.io/dist/parent-namespace.d.ts'
+   855→rm 'node_modules/socket.io/dist/parent-namespace.js'
+   856→rm 'node_modules/socket.io/dist/socket-types.d.ts'
+   857→rm 'node_modules/socket.io/dist/socket-types.js'
+   858→rm 'node_modules/socket.io/dist/socket.d.ts'
+   859→rm 'node_modules/socket.io/dist/socket.js'
+   860→rm 'node_modules/socket.io/dist/typed-events.d.ts'
+   861→rm 'node_modules/socket.io/dist/typed-events.js'
+   862→rm 'node_modules/socket.io/dist/uws.d.ts'
+   863→rm 'node_modules/socket.io/dist/uws.js'
+   864→rm 'node_modules/socket.io/package.json'
+   865→rm 'node_modules/socket.io/wrapper.mjs'
+   866→rm 'node_modules/tslib/CopyrightNotice.txt'
+   867→rm 'node_modules/tslib/LICENSE.txt'
+   868→rm 'node_modules/tslib/README.md'
+   869→rm 'node_modules/tslib/SECURITY.md'
+   870→rm 'node_modules/tslib/modules/index.d.ts'
+   871→rm 'node_modules/tslib/modules/index.js'
+   872→rm 'node_modules/tslib/modules/package.json'
+   873→rm 'node_modules/tslib/package.json'
+   874→rm 'node_modules/tslib/tslib.d.ts'
+   875→rm 'node_modules/tslib/tslib.es6.html'
+   876→rm 'node_modules/tslib/tslib.es6.js'
+   877→rm 'node_modules/tslib/tslib.es6.mjs'
+   878→rm 'node_modules/tslib/tslib.html'
+   879→rm 'node_modules/tslib/tslib.js'
+   880→rm 'node_modules/undici-types/LICENSE'
+   881→rm 'node_modules/undici-types/README.md'
+   882→rm 'node_modules/undici-types/agent.d.ts'
+   883→rm 'node_modules/undici-types/api.d.ts'
+   884→rm 'node_modules/undici-types/balanced-pool.d.ts'
+   885→rm 'node_modules/undici-types/cache-interceptor.d.ts'
+   886→rm 'node_modules/undici-types/cache.d.ts'
+   887→rm 'node_modules/undici-types/client-stats.d.ts'
+   888→rm 'node_modules/undici-types/client.d.ts'
+   889→rm 'node_modules/undici-types/connector.d.ts'
+   890→rm 'node_modules/undici-types/content-type.d.ts'
+   891→rm 'node_modules/undici-types/cookies.d.ts'
+   892→rm 'node_modules/undici-types/diagnostics-channel.d.ts'
+   893→rm 'node_modules/undici-types/dispatcher.d.ts'
+   894→rm 'node_modules/undici-types/dispatcher1-wrapper.d.ts'
+   895→rm 'node_modules/undici-types/env-http-proxy-agent.d.ts'
+   896→rm 'node_modules/undici-types/errors.d.ts'
+   897→rm 'node_modules/undici-types/eventsource.d.ts'
+   898→rm 'node_modules/undici-types/fetch.d.ts'
+   899→rm 'node_modules/undici-types/formdata.d.ts'
+   900→rm 'node_modules/undici-types/global-dispatcher.d.ts'
+   901→rm 'node_modules/undici-types/global-origin.d.ts'
+   902→rm 'node_modules/undici-types/h2c-client.d.ts'
+   903→rm 'node_modules/undici-types/handlers.d.ts'
+   904→rm 'node_modules/undici-types/header.d.ts'
+   905→rm 'node_modules/undici-types/index.d.ts'
+   906→rm 'node_modules/undici-types/interceptors.d.ts'
+   907→rm 'node_modules/undici-types/mock-agent.d.ts'
+   908→rm 'node_modules/undici-types/mock-call-history.d.ts'
+   909→rm 'node_modules/undici-types/mock-client.d.ts'
+   910→rm 'node_modules/undici-types/mock-errors.d.ts'
+   911→rm 'node_modules/undici-types/mock-interceptor.d.ts'
+   912→rm 'node_modules/undici-types/mock-pool.d.ts'
+   913→rm 'node_modules/undici-types/package.json'
+   914→rm 'node_modules/undici-types/patch.d.ts'
+   915→rm 'node_modules/undici-types/pool-stats.d.ts'
+   916→rm 'node_modules/undici-types/pool.d.ts'
+   917→rm 'node_modules/undici-types/proxy-agent.d.ts'
+   918→rm 'node_modules/undici-types/readable.d.ts'
+   919→rm 'node_modules/undici-types/retry-agent.d.ts'
+   920→rm 'node_modules/undici-types/retry-handler.d.ts'
+   921→rm 'node_modules/undici-types/round-robin-pool.d.ts'
+   922→rm 'node_modules/undici-types/snapshot-agent.d.ts'
+   923→rm 'node_modules/undici-types/socks5-proxy-agent.d.ts'
+   924→rm 'node_modules/undici-types/util.d.ts'
+   925→rm 'node_modules/undici-types/utility.d.ts'
+   926→rm 'node_modules/undici-types/webidl.d.ts'
+   927→rm 'node_modules/undici-types/websocket.d.ts'
+   928→rm 'node_modules/vary/HISTORY.md'
+   929→rm 'node_modules/vary/LICENSE'
+   930→rm 'node_modules/vary/README.md'
+   931→rm 'node_modules/vary/index.js'
+   932→rm 'node_modules/vary/package.json'
+   933→rm 'node_modules/ws/LICENSE'
+   934→rm 'node_modules/ws/README.md'
+   935→rm 'node_modules/ws/browser.js'
+   936→rm 'node_modules/ws/index.js'
+   937→rm 'node_modules/ws/lib/buffer-util.js'
+   938→rm 'node_modules/ws/lib/constants.js'
+   939→rm 'node_modules/ws/lib/event-target.js'
+   940→rm 'node_modules/ws/lib/extension.js'
+   941→rm 'node_modules/ws/lib/limiter.js'
+   942→rm 'node_modules/ws/lib/permessage-deflate.js'
+   943→rm 'node_modules/ws/lib/receiver.js'
+   944→rm 'node_modules/ws/lib/sender.js'
+   945→rm 'node_modules/ws/lib/stream.js'
+   946→rm 'node_modules/ws/lib/subprotocol.js'
+   947→rm 'node_modules/ws/lib/validation.js'
+   948→rm 'node_modules/ws/lib/websocket-server.js'
+   949→rm 'node_modules/ws/lib/websocket.js'
+   950→rm 'node_modules/ws/package.json'
+   951→rm 'node_modules/ws/wrapper.mjs'
+   952→rm 'node_modules/z-ai-web-dev-sdk/README.md'
+   953→rm 'node_modules/z-ai-web-dev-sdk/dist/cli.d.ts'
+   954→rm 'node_modules/z-ai-web-dev-sdk/dist/cli.js'
+   955→rm 'node_modules/z-ai-web-dev-sdk/dist/index.d.ts'
+   956→rm 'node_modules/z-ai-web-dev-sdk/dist/index.js'
+   957→rm 'node_modules/z-ai-web-dev-sdk/package.json'
+   958→warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+   959→[master edde6b9] remove node_modules, add .gitignore
+   960→ 941 files changed, 3 insertions(+), 238934 deletions(-)
+   961→ create mode 100644 .gitignore
+   962→ delete mode 100644 node_modules/.bin/z-ai-generate.bunx
+   963→ delete mode 100644 node_modules/.bin/z-ai-generate.exe
+   964→ delete mode 100644 node_modules/.bin/z-ai.bunx
+   965→ delete mode 100644 node_modules/.bin/z-ai.exe
+   966→ delete mode 100644 node_modules/@socket.io/component-emitter/LICENSE
+   967→ delete mode 100644 node_modules/@socket.io/component-emitter/Readme.md
+   968→ delete mode 100644 node_modules/@socket.io/component-emitter/lib/cjs/index.d.ts
+   969→ delete mode 100644 node_modules/@socket.io/component-emitter/lib/cjs/index.js
+   970→ delete mode 100644 node_modules/@socket.io/component-emitter/lib/cjs/package.json
+   971→ delete mode 100644 node_modules/@socket.io/component-emitter/lib/esm/index.d.ts
+   972→ delete mode 100644 node_modules/@socket.io/component-emitter/lib/esm/index.js
+   973→ delete mode 100644 node_modules/@socket.io/component-emitter/lib/esm/package.json
+   974→ delete mode 100644 node_modules/@socket.io/component-emitter/package.json
+   975→ delete mode 100644 node_modules/@supabase/auth-js/AGENTS.md
+   976→ delete mode 100644 node_modules/@supabase/auth-js/LICENSE
+   977→ delete mode 100644 node_modules/@supabase/auth-js/README.md
+   978→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/AuthAdminApi.d.ts
+   979→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/AuthAdminApi.d.ts.map
+   980→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js
+   981→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js.map
+   982→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/AuthClient.d.ts
+   983→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/AuthClient.d.ts.map
+   984→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/AuthClient.js
+   985→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/AuthClient.js.map
+   986→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.d.ts
+   987→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.d.ts.map
+   988→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js
+   989→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js.map
+   990→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueClient.d.ts
+   991→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueClient.d.ts.map
+   992→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueClient.js
+   993→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueClient.js.map
+   994→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/index.d.ts
+   995→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/index.d.ts.map
+   996→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/index.js
+   997→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/index.js.map
+   998→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/base64url.d.ts
+   999→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/base64url.d.ts.map
+  1000→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/base64url.js
+  1001→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/base64url.js.map
+  1002→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/constants.d.ts
+  1003→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/constants.d.ts.map
+  1004→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/constants.js
+  1005→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/constants.js.map
+  1006→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/error-codes.d.ts
+  1007→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/error-codes.d.ts.map
+  1008→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/error-codes.js
+  1009→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/error-codes.js.map
+  1010→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/errors.d.ts
+  1011→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/errors.d.ts.map
+  1012→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/errors.js
+  1013→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/errors.js.map
+  1014→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/fetch.d.ts
+  1015→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/fetch.d.ts.map
+  1016→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/fetch.js
+  1017→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/fetch.js.map
+  1018→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/helpers.d.ts
+  1019→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/helpers.d.ts.map
+  1020→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/helpers.js
+  1021→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/helpers.js.map
+  1022→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/local-storage.d.ts
+  1023→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/local-storage.d.ts.map
+  1024→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/local-storage.js
+  1025→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/local-storage.js.map
+  1026→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/locks.d.ts
+  1027→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/locks.d.ts.map
+  1028→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/locks.js
+  1029→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/locks.js.map
+  1030→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/polyfills.d.ts
+  1031→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/polyfills.d.ts.map
+  1032→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/polyfills.js
+  1033→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/polyfills.js.map
+  1034→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/types.d.ts
+  1035→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/types.d.ts.map
+  1036→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/types.js
+  1037→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/types.js.map
+  1038→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/version.d.ts
+  1039→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/version.d.ts.map
+  1040→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/version.js
+  1041→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/version.js.map
+  1042→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.d.ts
+  1043→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.d.ts.map
+  1044→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js
+  1045→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js.map
+  1046→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/solana.d.ts
+  1047→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/solana.d.ts.map
+  1048→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/solana.js
+  1049→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/solana.js.map
+  1050→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.d.ts
+  1051→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.d.ts.map
+  1052→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.d.ts
+  1053→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.d.ts.map
+  1054→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.js
+  1055→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.js.map
+  1056→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.d.ts
+  1057→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.d.ts.map
+  1058→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js
+  1059→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js.map
+  1060→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.js
+  1061→ delete mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.js.map
+  1062→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/AuthAdminApi.d.ts
+  1063→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/AuthAdminApi.d.ts.map
+  1064→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/AuthAdminApi.js
+  1065→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/AuthAdminApi.js.map
+  1066→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/AuthClient.d.ts
+  1067→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/AuthClient.d.ts.map
+  1068→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/AuthClient.js
+  1069→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/AuthClient.js.map
+  1070→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.d.ts
+  1071→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.d.ts.map
+  1072→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.js
+  1073→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.js.map
+  1074→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueClient.d.ts
+  1075→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueClient.d.ts.map
+  1076→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueClient.js
+  1077→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueClient.js.map
+  1078→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/index.d.ts
+  1079→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/index.d.ts.map
+  1080→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/index.js
+  1081→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/index.js.map
+  1082→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/base64url.d.ts
+  1083→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/base64url.d.ts.map
+  1084→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/base64url.js
+  1085→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/base64url.js.map
+  1086→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/constants.d.ts
+  1087→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/constants.d.ts.map
+  1088→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/constants.js
+  1089→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/constants.js.map
+  1090→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/error-codes.d.ts
+  1091→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/error-codes.d.ts.map
+  1092→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/error-codes.js
+  1093→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/error-codes.js.map
+  1094→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/errors.d.ts
+  1095→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/errors.d.ts.map
+  1096→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/errors.js
+  1097→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/errors.js.map
+  1098→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/fetch.d.ts
+  1099→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/fetch.d.ts.map
+  1100→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/fetch.js
+  1101→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/fetch.js.map
+  1102→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/helpers.d.ts
+  1103→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/helpers.d.ts.map
+  1104→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/helpers.js
+  1105→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/helpers.js.map
+  1106→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/local-storage.d.ts
+  1107→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/local-storage.d.ts.map
+  1108→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/local-storage.js
+  1109→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/local-storage.js.map
+  1110→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/locks.d.ts
+  1111→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/locks.d.ts.map
+  1112→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/locks.js
+  1113→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/locks.js.map
+  1114→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/polyfills.d.ts
+  1115→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/polyfills.d.ts.map
+  1116→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/polyfills.js
+  1117→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/polyfills.js.map
+  1118→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/types.d.ts
+  1119→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/types.d.ts.map
+  1120→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/types.js
+  1121→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/types.js.map
+  1122→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/version.d.ts
+  1123→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/version.d.ts.map
+  1124→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/version.js
+  1125→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/version.js.map
+  1126→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.d.ts
+  1127→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.d.ts.map
+  1128→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.js
+  1129→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.js.map
+  1130→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/solana.d.ts
+  1131→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/solana.d.ts.map
+  1132→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/solana.js
+  1133→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/solana.js.map
+  1134→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.d.ts
+  1135→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.d.ts.map
+  1136→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.d.ts
+  1137→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.d.ts.map
+  1138→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.js
+  1139→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.js.map
+  1140→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.d.ts
+  1141→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.d.ts.map
+  1142→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.js
+  1143→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.js.map
+  1144→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.js
+  1145→ delete mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.js.map
+  1146→ delete mode 100644 node_modules/@supabase/auth-js/dist/tsconfig.module.tsbuildinfo
+  1147→ delete mode 100644 node_modules/@supabase/auth-js/dist/tsconfig.tsbuildinfo
+  1148→ delete mode 100644 node_modules/@supabase/auth-js/migrations/README.md
+  1149→ delete mode 100644 node_modules/@supabase/auth-js/migrations/lockless-coordination.md
+  1150→ delete mode 100644 node_modules/@supabase/auth-js/package.json
+  1151→ delete mode 100644 node_modules/@supabase/auth-js/src/AuthAdminApi.ts
+  1152→ delete mode 100644 node_modules/@supabase/auth-js/src/AuthClient.ts
+  1153→ delete mode 100644 node_modules/@supabase/auth-js/src/GoTrueAdminApi.ts
+  1154→ delete mode 100644 node_modules/@supabase/auth-js/src/GoTrueClient.ts
+  1155→ delete mode 100644 node_modules/@supabase/auth-js/src/index.ts
+  1156→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/base64url.ts
+  1157→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/constants.ts
+  1158→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/error-codes.ts
+  1159→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/errors.ts
+  1160→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/fetch.ts
+  1161→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/helpers.ts
+  1162→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/local-storage.ts
+  1163→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/locks.ts
+  1164→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/polyfills.ts
+  1165→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/types.ts
+  1166→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/version.ts
+  1167→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/web3/ethereum.ts
+  1168→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/web3/solana.ts
+  1169→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/webauthn.dom.ts
+  1170→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/webauthn.errors.ts
+  1171→ delete mode 100644 node_modules/@supabase/auth-js/src/lib/webauthn.ts
+  1172→ delete mode 100644 node_modules/@supabase/functions-js/AGENTS.md
+  1173→ delete mode 100644 node_modules/@supabase/functions-js/LICENSE
+  1174→ delete mode 100644 node_modules/@supabase/functions-js/README.md
+  1175→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/FunctionsClient.d.ts
+  1176→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/FunctionsClient.d.ts.map
+  1177→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/FunctionsClient.js
+  1178→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/FunctionsClient.js.map
+  1179→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/helper.d.ts
+  1180→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/helper.d.ts.map
+  1181→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/helper.js
+  1182→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/helper.js.map
+  1183→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/index.d.ts
+  1184→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/index.d.ts.map
+  1185→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/index.js
+  1186→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/index.js.map
+  1187→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/types.d.ts
+  1188→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/types.d.ts.map
+  1189→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/types.js
+  1190→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/types.js.map
+  1191→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/version.d.ts
+  1192→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/version.d.ts.map
+  1193→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/version.js
+  1194→ delete mode 100644 node_modules/@supabase/functions-js/dist/main/version.js.map
+  1195→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/FunctionsClient.d.ts
+  1196→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/FunctionsClient.d.ts.map
+  1197→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/FunctionsClient.js
+  1198→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/FunctionsClient.js.map
+  1199→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/helper.d.ts
+  1200→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/helper.d.ts.map
+  1201→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/helper.js
+  1202→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/helper.js.map
+  1203→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/index.d.ts
+  1204→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/index.d.ts.map
+  1205→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/index.js
+  1206→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/index.js.map
+  1207→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/types.d.ts
+  1208→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/types.d.ts.map
+  1209→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/types.js
+  1210→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/types.js.map
+  1211→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/version.d.ts
+  1212→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/version.d.ts.map
+  1213→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/version.js
+  1214→ delete mode 100644 node_modules/@supabase/functions-js/dist/module/version.js.map
+  1215→ delete mode 100644 node_modules/@supabase/functions-js/dist/tsconfig.module.tsbuildinfo
+  1216→ delete mode 100644 node_modules/@supabase/functions-js/dist/tsconfig.tsbuildinfo
+  1217→ delete mode 100644 node_modules/@supabase/functions-js/migrations/README.md
+  1218→ delete mode 100644 node_modules/@supabase/functions-js/package.json
+  1219→ delete mode 100644 node_modules/@supabase/functions-js/src/FunctionsClient.ts
+  1220→ delete mode 100644 node_modules/@supabase/functions-js/src/edge-runtime.d.ts
+  1221→ delete mode 100644 node_modules/@supabase/functions-js/src/helper.ts
+  1222→ delete mode 100644 node_modules/@supabase/functions-js/src/index.ts
+  1223→ delete mode 100644 node_modules/@supabase/functions-js/src/types.ts
+  1224→ delete mode 100644 node_modules/@supabase/functions-js/src/version.ts
+  1225→ delete mode 100644 node_modules/@supabase/phoenix/LICENSE.md
+  1226→ delete mode 100644 node_modules/@supabase/phoenix/README.md
+  1227→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/ajax.js
+  1228→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/channel.js
+  1229→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/constants.js
+  1230→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/index.js
+  1231→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/longpoll.js
+  1232→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/presence.js
+  1233→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/push.js
+  1234→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/serializer.js
+  1235→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/socket.js
+  1236→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/timer.js
+  1237→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/types.js
+  1238→ delete mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/utils.js
+  1239→ delete mode 100644 node_modules/@supabase/phoenix/package.json
+  1240→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/favicon.ico
+  1241→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix-orange.png
+  1242→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js
+  1243→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js.map
+  1244→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.js
+  1245→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.min.js
+  1246→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.mjs
+  1247→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.mjs.map
+  1248→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.png
+  1249→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/ajax.d.ts
+  1250→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/ajax.d.ts.map
+  1251→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/channel.d.ts
+  1252→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/channel.d.ts.map
+  1253→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/constants.d.ts
+  1254→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/constants.d.ts.map
+  1255→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/index.d.ts
+  1256→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/index.d.ts.map
+  1257→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/longpoll.d.ts
+  1258→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/longpoll.d.ts.map
+  1259→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/presence.d.ts
+  1260→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/presence.d.ts.map
+  1261→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/push.d.ts
+  1262→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/push.d.ts.map
+  1263→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/serializer.d.ts
+  1264→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/serializer.d.ts.map
+  1265→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/socket.d.ts
+  1266→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/socket.d.ts.map
+  1267→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/timer.d.ts
+  1268→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/timer.d.ts.map
+  1269→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/types.d.ts
+  1270→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/types.d.ts.map
+  1271→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/utils.d.ts
+  1272→ delete mode 100644 node_modules/@supabase/phoenix/priv/static/types/utils.d.ts.map
+  1273→ delete mode 100644 node_modules/@supabase/phoenix/tsconfig.json
+  1274→ delete mode 100644 node_modules/@supabase/postgrest-js/AGENTS.md
+  1275→ delete mode 100644 node_modules/@supabase/postgrest-js/LICENSE
+  1276→ delete mode 100644 node_modules/@supabase/postgrest-js/README.md
+  1277→ delete mode 100644 node_modules/@supabase/postgrest-js/dist/index.cjs
+  1278→ delete mode 100644 node_modules/@supabase/postgrest-js/dist/index.cjs.map
+  1279→ delete mode 100644 node_modules/@supabase/postgrest-js/dist/index.d.cts
+  1280→ delete mode 100644 node_modules/@supabase/postgrest-js/dist/index.d.cts.map
+  1281→ delete mode 100644 node_modules/@supabase/postgrest-js/dist/index.d.mts
+  1282→ delete mode 100644 node_modules/@supabase/postgrest-js/dist/index.d.mts.map
+  1283→ delete mode 100644 node_modules/@supabase/postgrest-js/dist/index.mjs
+  1284→ delete mode 100644 node_modules/@supabase/postgrest-js/dist/index.mjs.map
+  1285→ delete mode 100644 node_modules/@supabase/postgrest-js/migrations/README.md
+  1286→ delete mode 100644 node_modules/@supabase/postgrest-js/package.json
+  1287→ delete mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestBuilder.ts
+  1288→ delete mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestClient.ts
+  1289→ delete mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestError.ts
+  1290→ delete mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestFilterBuilder.ts
+  1291→ delete mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestQueryBuilder.ts
+  1292→ delete mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestTransformBuilder.ts
+  1293→ delete mode 100644 node_modules/@supabase/postgrest-js/src/constants.ts
+  1294→ delete mode 100644 node_modules/@supabase/postgrest-js/src/index.ts
+  1295→ delete mode 100644 node_modules/@supabase/postgrest-js/src/select-query-parser/parser.ts
+  1296→ delete mode 100644 node_modules/@supabase/postgrest-js/src/select-query-parser/result.ts
+  1297→ delete mode 100644 node_modules/@supabase/postgrest-js/src/select-query-parser/types.ts
+  1298→ delete mode 100644 node_modules/@supabase/postgrest-js/src/select-query-parser/utils.ts
+  1299→ delete mode 100644 node_modules/@supabase/postgrest-js/src/types/common/common.ts
+  1300→ delete mode 100644 node_modules/@supabase/postgrest-js/src/types/common/rpc.ts
+  1301→ delete mode 100644 node_modules/@supabase/postgrest-js/src/types/feature-flags.ts
+  1302→ delete mode 100644 node_modules/@supabase/postgrest-js/src/types/types.ts
+  1303→ delete mode 100644 node_modules/@supabase/postgrest-js/src/version.ts
+  1304→ delete mode 100644 node_modules/@supabase/realtime-js/AGENTS.md
+  1305→ delete mode 100644 node_modules/@supabase/realtime-js/LICENSE
+  1306→ delete mode 100644 node_modules/@supabase/realtime-js/README.md
+  1307→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.d.ts
+  1308→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.d.ts.map
+  1309→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js
+  1310→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js.map
+  1311→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeClient.d.ts
+  1312→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeClient.d.ts.map
+  1313→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+  1314→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js.map
+  1315→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.d.ts
+  1316→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.d.ts.map
+  1317→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js
+  1318→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js.map
+  1319→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePresence.d.ts
+  1320→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePresence.d.ts.map
+  1321→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js
+  1322→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js.map
+  1323→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/index.d.ts
+  1324→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/index.d.ts.map
+  1325→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/index.js
+  1326→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/index.js.map
+  1327→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/constants.d.ts
+  1328→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/constants.d.ts.map
+  1329→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/constants.js
+  1330→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/constants.js.map
+  1331→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.d.ts
+  1332→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.d.ts.map
+  1333→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js
+  1334→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js.map
+  1335→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/serializer.d.ts
+  1336→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/serializer.d.ts.map
+  1337→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/serializer.js
+  1338→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/serializer.js.map
+  1339→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/transformers.d.ts
+  1340→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/transformers.d.ts.map
+  1341→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/transformers.js
+  1342→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/transformers.js.map
+  1343→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/version.d.ts
+  1344→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/version.d.ts.map
+  1345→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/version.js
+  1346→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/version.js.map
+  1347→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.d.ts
+  1348→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.d.ts.map
+  1349→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js
+  1350→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js.map
+  1351→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.d.ts
+  1352→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.d.ts.map
+  1353→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js
+  1354→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js.map
+  1355→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.d.ts
+  1356→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.d.ts.map
+  1357→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js
+  1358→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js.map
+  1359→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.d.ts
+  1360→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.d.ts.map
+  1361→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js
+  1362→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js.map
+  1363→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/types.d.ts
+  1364→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/types.d.ts.map
+  1365→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/types.js
+  1366→ delete mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/types.js.map
+  1367→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.d.ts
+  1368→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.d.ts.map
+  1369→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.js
+  1370→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.js.map
+  1371→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeClient.d.ts
+  1372→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeClient.d.ts.map
+  1373→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js
+  1374→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js.map
+  1375→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.d.ts
+  1376→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.d.ts.map
+  1377→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.js
+  1378→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.js.map
+  1379→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePresence.d.ts
+  1380→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePresence.d.ts.map
+  1381→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePresence.js
+  1382→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePresence.js.map
+  1383→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/index.d.ts
+  1384→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/index.d.ts.map
+  1385→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/index.js
+  1386→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/index.js.map
+  1387→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/constants.d.ts
+  1388→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/constants.d.ts.map
+  1389→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/constants.js
+  1390→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/constants.js.map
+  1391→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.d.ts
+  1392→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.d.ts.map
+  1393→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.js
+  1394→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.js.map
+  1395→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/serializer.d.ts
+  1396→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/serializer.d.ts.map
+  1397→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/serializer.js
+  1398→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/serializer.js.map
+  1399→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/transformers.d.ts
+  1400→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/transformers.d.ts.map
+  1401→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/transformers.js
+  1402→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/transformers.js.map
+  1403→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/version.d.ts
+  1404→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/version.d.ts.map
+  1405→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/version.js
+  1406→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/version.js.map
+  1407→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.d.ts
+  1408→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.d.ts.map
+  1409→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+  1410→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js.map
+  1411→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.d.ts
+  1412→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.d.ts.map
+  1413→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.js
+  1414→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.js.map
+  1415→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.d.ts
+  1416→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.d.ts.map
+  1417→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.js
+  1418→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.js.map
+  1419→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.d.ts
+  1420→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.d.ts.map
+  1421→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.js
+  1422→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.js.map
+  1423→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/types.d.ts
+  1424→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/types.d.ts.map
+  1425→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/types.js
+  1426→ delete mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/types.js.map
+  1427→ delete mode 100644 node_modules/@supabase/realtime-js/dist/tsconfig.module.tsbuildinfo
+  1428→ delete mode 100644 node_modules/@supabase/realtime-js/dist/tsconfig.tsbuildinfo
+  1429→ delete mode 100644 node_modules/@supabase/realtime-js/migrations/README.md
+  1430→ delete mode 100644 node_modules/@supabase/realtime-js/migrations/httpsend-server-version.md
+  1431→ delete mode 100644 node_modules/@supabase/realtime-js/package.json
+  1432→ delete mode 100644 node_modules/@supabase/realtime-js/src/RealtimeChannel.ts
+  1433→ delete mode 100644 node_modules/@supabase/realtime-js/src/RealtimeClient.ts
+  1434→ delete mode 100644 node_modules/@supabase/realtime-js/src/RealtimePostgresFilterBuilder.ts
+  1435→ delete mode 100644 node_modules/@supabase/realtime-js/src/RealtimePresence.ts
+  1436→ delete mode 100644 node_modules/@supabase/realtime-js/src/index.ts
+  1437→ delete mode 100644 node_modules/@supabase/realtime-js/src/lib/constants.ts
+  1438→ delete mode 100644 node_modules/@supabase/realtime-js/src/lib/normalizeChannelError.ts
+  1439→ delete mode 100644 node_modules/@supabase/realtime-js/src/lib/serializer.ts
+  1440→ delete mode 100644 node_modules/@supabase/realtime-js/src/lib/transformers.ts
+  1441→ delete mode 100644 node_modules/@supabase/realtime-js/src/lib/version.ts
+  1442→ delete mode 100644 node_modules/@supabase/realtime-js/src/lib/websocket-factory.ts
+  1443→ delete mode 100644 node_modules/@supabase/realtime-js/src/phoenix/channelAdapter.ts
+  1444→ delete mode 100644 node_modules/@supabase/realtime-js/src/phoenix/presenceAdapter.ts
+  1445→ delete mode 100644 node_modules/@supabase/realtime-js/src/phoenix/socketAdapter.ts
+  1446→ delete mode 100644 node_modules/@supabase/realtime-js/src/phoenix/types.ts
+  1447→ delete mode 100644 node_modules/@supabase/storage-js/AGENTS.md
+  1448→ delete mode 100644 node_modules/@supabase/storage-js/LICENSE
+  1449→ delete mode 100644 node_modules/@supabase/storage-js/README.md
+  1450→ delete mode 100644 node_modules/@supabase/storage-js/dist/index.cjs
+  1451→ delete mode 100644 node_modules/@supabase/storage-js/dist/index.cjs.map
+  1452→ delete mode 100644 node_modules/@supabase/storage-js/dist/index.d.cts
+  1453→ delete mode 100644 node_modules/@supabase/storage-js/dist/index.d.cts.map
+  1454→ delete mode 100644 node_modules/@supabase/storage-js/dist/index.d.mts
+  1455→ delete mode 100644 node_modules/@supabase/storage-js/dist/index.d.mts.map
+  1456→ delete mode 100644 node_modules/@supabase/storage-js/dist/index.mjs
+  1457→ delete mode 100644 node_modules/@supabase/storage-js/dist/index.mjs.map
+  1458→ delete mode 100644 node_modules/@supabase/storage-js/dist/umd/supabase.js
+  1459→ delete mode 100644 node_modules/@supabase/storage-js/migrations/README.md
+  1460→ delete mode 100644 node_modules/@supabase/storage-js/package.json
+  1461→ delete mode 100644 node_modules/@supabase/storage-js/src/StorageClient.ts
+  1462→ delete mode 100644 node_modules/@supabase/storage-js/src/index.ts
+  1463→ delete mode 100644 node_modules/@supabase/storage-js/src/lib/common/BaseApiClient.ts
+  1464→ delete mode 100644 node_modules/@supabase/storage-js/src/lib/common/errors.ts
+  1465→ delete mode 100644 node_modules/@supabase/storage-js/src/lib/common/fetch.ts
+  1466→ delete mode 100644 node_modules/@supabase/storage-js/src/lib/common/headers.ts
+  1467→ delete mode 100644 node_modules/@supabase/storage-js/src/lib/common/helpers.ts
+  1468→ delete mode 100644 node_modules/@supabase/storage-js/src/lib/constants.ts
+  1469→ delete mode 100644 node_modules/@supabase/storage-js/src/lib/types.ts
+  1470→ delete mode 100644 node_modules/@supabase/storage-js/src/lib/version.ts
+  1471→ delete mode 100644 node_modules/@supabase/storage-js/src/packages/BlobDownloadBuilder.ts
+  1472→ delete mode 100644 node_modules/@supabase/storage-js/src/packages/StorageAnalyticsClient.ts
+  1473→ delete mode 100644 node_modules/@supabase/storage-js/src/packages/StorageBucketApi.ts
+  1474→ delete mode 100644 node_modules/@supabase/storage-js/src/packages/StorageFileApi.ts
+  1475→ delete mode 100644 node_modules/@supabase/storage-js/src/packages/StorageVectorsClient.ts
+  1476→ delete mode 100644 node_modules/@supabase/storage-js/src/packages/StreamDownloadBuilder.ts
+  1477→ delete mode 100644 node_modules/@supabase/storage-js/src/packages/VectorBucketApi.ts
+  1478→ delete mode 100644 node_modules/@supabase/storage-js/src/packages/VectorDataApi.ts
+  1479→ delete mode 100644 node_modules/@supabase/storage-js/src/packages/VectorIndexApi.ts
+  1480→ delete mode 100644 node_modules/@supabase/supabase-js/AGENTS.md
+  1481→ delete mode 100644 node_modules/@supabase/supabase-js/LICENSE
+  1482→ delete mode 100644 node_modules/@supabase/supabase-js/README.md
+  1483→ delete mode 100644 node_modules/@supabase/supabase-js/dist/cors.cjs
+  1484→ delete mode 100644 node_modules/@supabase/supabase-js/dist/cors.cjs.map
+  1485→ delete mode 100644 node_modules/@supabase/supabase-js/dist/cors.d.cts
+  1486→ delete mode 100644 node_modules/@supabase/supabase-js/dist/cors.d.cts.map
+  1487→ delete mode 100644 node_modules/@supabase/supabase-js/dist/cors.d.mts
+  1488→ delete mode 100644 node_modules/@supabase/supabase-js/dist/cors.d.mts.map
+  1489→ delete mode 100644 node_modules/@supabase/supabase-js/dist/cors.mjs
+  1490→ delete mode 100644 node_modules/@supabase/supabase-js/dist/cors.mjs.map
+  1491→ delete mode 100644 node_modules/@supabase/supabase-js/dist/index.cjs
+  1492→ delete mode 100644 node_modules/@supabase/supabase-js/dist/index.cjs.map
+  1493→ delete mode 100644 node_modules/@supabase/supabase-js/dist/index.d.cts
+  1494→ delete mode 100644 node_modules/@supabase/supabase-js/dist/index.d.cts.map
+  1495→ delete mode 100644 node_modules/@supabase/supabase-js/dist/index.d.mts
+  1496→ delete mode 100644 node_modules/@supabase/supabase-js/dist/index.d.mts.map
+  1497→ delete mode 100644 node_modules/@supabase/supabase-js/dist/index.mjs
+  1498→ delete mode 100644 node_modules/@supabase/supabase-js/dist/index.mjs.map
+  1499→ delete mode 100644 node_modules/@supabase/supabase-js/dist/umd/supabase.js
+  1500→ delete mode 100644 node_modules/@supabase/supabase-js/migrations/README.md
+  1501→ delete mode 100644 node_modules/@supabase/supabase-js/package.json
+  1502→ delete mode 100644 node_modules/@supabase/supabase-js/src/SupabaseClient.ts
+  1503→ delete mode 100644 node_modules/@supabase/supabase-js/src/cors.ts
+  1504→ delete mode 100644 node_modules/@supabase/supabase-js/src/index.ts
+  1505→ delete mode 100644 node_modules/@supabase/supabase-js/src/lib/SupabaseAuthClient.ts
+  1506→ delete mode 100644 node_modules/@supabase/supabase-js/src/lib/constants.ts
+  1507→ delete mode 100644 node_modules/@supabase/supabase-js/src/lib/fetch.ts
+  1508→ delete mode 100644 node_modules/@supabase/supabase-js/src/lib/helpers.ts
+  1509→ delete mode 100644 node_modules/@supabase/supabase-js/src/lib/rest/types/common/common.ts
+  1510→ delete mode 100644 node_modules/@supabase/supabase-js/src/lib/rest/types/common/rpc.ts
+  1511→ delete mode 100644 node_modules/@supabase/supabase-js/src/lib/types.ts
+  1512→ delete mode 100644 node_modules/@supabase/supabase-js/src/lib/version.ts
+  1513→ delete mode 100644 node_modules/@types/cors/LICENSE
+  1514→ delete mode 100644 node_modules/@types/cors/README.md
+  1515→ delete mode 100644 node_modules/@types/cors/index.d.ts
+  1516→ delete mode 100644 node_modules/@types/cors/package.json
+  1517→ delete mode 100644 node_modules/@types/node/LICENSE
+  1518→ delete mode 100644 node_modules/@types/node/README.md
+  1519→ delete mode 100644 node_modules/@types/node/assert.d.ts
+  1520→ delete mode 100644 node_modules/@types/node/assert/strict.d.ts
+  1521→ delete mode 100644 node_modules/@types/node/async_hooks.d.ts
+  1522→ delete mode 100644 node_modules/@types/node/buffer.buffer.d.ts
+  1523→ delete mode 100644 node_modules/@types/node/buffer.d.ts
+  1524→ delete mode 100644 node_modules/@types/node/child_process.d.ts
+  1525→ delete mode 100644 node_modules/@types/node/cluster.d.ts
+  1526→ delete mode 100644 node_modules/@types/node/console.d.ts
+  1527→ delete mode 100644 node_modules/@types/node/constants.d.ts
+  1528→ delete mode 100644 node_modules/@types/node/crypto.d.ts
+  1529→ delete mode 100644 node_modules/@types/node/dgram.d.ts
+  1530→ delete mode 100644 node_modules/@types/node/diagnostics_channel.d.ts
+  1531→ delete mode 100644 node_modules/@types/node/dns.d.ts
+  1532→ delete mode 100644 node_modules/@types/node/dns/promises.d.ts
+  1533→ delete mode 100644 node_modules/@types/node/domain.d.ts
+  1534→ delete mode 100644 node_modules/@types/node/events.d.ts
+  1535→ delete mode 100644 node_modules/@types/node/ffi.d.ts
+  1536→ delete mode 100644 node_modules/@types/node/fs.d.ts
+  1537→ delete mode 100644 node_modules/@types/node/fs/promises.d.ts
+  1538→ delete mode 100644 node_modules/@types/node/globals.d.ts
+  1539→ delete mode 100644 node_modules/@types/node/globals.typedarray.d.ts
+  1540→ delete mode 100644 node_modules/@types/node/http.d.ts
+  1541→ delete mode 100644 node_modules/@types/node/http2.d.ts
+  1542→ delete mode 100644 node_modules/@types/node/https.d.ts
+  1543→ delete mode 100644 node_modules/@types/node/index.d.ts
+  1544→ delete mode 100644 node_modules/@types/node/inspector.d.ts
+  1545→ delete mode 100644 node_modules/@types/node/inspector.generated.d.ts
+  1546→ delete mode 100644 node_modules/@types/node/inspector/promises.d.ts
+  1547→ delete mode 100644 node_modules/@types/node/module.d.ts
+  1548→ delete mode 100644 node_modules/@types/node/net.d.ts
+  1549→ delete mode 100644 node_modules/@types/node/os.d.ts
+  1550→ delete mode 100644 node_modules/@types/node/package.json
+  1551→ delete mode 100644 node_modules/@types/node/path.d.ts
+  1552→ delete mode 100644 node_modules/@types/node/path/posix.d.ts
+  1553→ delete mode 100644 node_modules/@types/node/path/win32.d.ts
+  1554→ delete mode 100644 node_modules/@types/node/perf_hooks.d.ts
+  1555→ delete mode 100644 node_modules/@types/node/process.d.ts
+  1556→ delete mode 100644 node_modules/@types/node/punycode.d.ts
+  1557→ delete mode 100644 node_modules/@types/node/querystring.d.ts
+  1558→ delete mode 100644 node_modules/@types/node/quic.d.ts
+  1559→ delete mode 100644 node_modules/@types/node/readline.d.ts
+  1560→ delete mode 100644 node_modules/@types/node/readline/promises.d.ts
+  1561→ delete mode 100644 node_modules/@types/node/repl.d.ts
+  1562→ delete mode 100644 node_modules/@types/node/sea.d.ts
+  1563→ delete mode 100644 node_modules/@types/node/sqlite.d.ts
+  1564→ delete mode 100644 node_modules/@types/node/stream.d.ts
+  1565→ delete mode 100644 node_modules/@types/node/stream/consumers.d.ts
+  1566→ delete mode 100644 node_modules/@types/node/stream/iter.d.ts
+  1567→ delete mode 100644 node_modules/@types/node/stream/promises.d.ts
+  1568→ delete mode 100644 node_modules/@types/node/stream/web.d.ts
+  1569→ delete mode 100644 node_modules/@types/node/string_decoder.d.ts
+  1570→ delete mode 100644 node_modules/@types/node/test.d.ts
+  1571→ delete mode 100644 node_modules/@types/node/test/reporters.d.ts
+  1572→ delete mode 100644 node_modules/@types/node/timers.d.ts
+  1573→ delete mode 100644 node_modules/@types/node/timers/promises.d.ts
+  1574→ delete mode 100644 node_modules/@types/node/tls.d.ts
+  1575→ delete mode 100644 node_modules/@types/node/trace_events.d.ts
+  1576→ delete mode 100644 node_modules/@types/node/ts5.6/buffer.buffer.d.ts
+  1577→ delete mode 100644 node_modules/@types/node/ts5.6/compatibility/float16array.d.ts
+  1578→ delete mode 100644 node_modules/@types/node/ts5.6/globals.typedarray.d.ts
+  1579→ delete mode 100644 node_modules/@types/node/ts5.6/index.d.ts
+  1580→ delete mode 100644 node_modules/@types/node/ts5.7/compatibility/float16array.d.ts
+  1581→ delete mode 100644 node_modules/@types/node/ts5.7/index.d.ts
+  1582→ delete mode 100644 node_modules/@types/node/tty.d.ts
+  1583→ delete mode 100644 node_modules/@types/node/url.d.ts
+  1584→ delete mode 100644 node_modules/@types/node/util.d.ts
+  1585→ delete mode 100644 node_modules/@types/node/util/types.d.ts
+  1586→ delete mode 100644 node_modules/@types/node/v8.d.ts
+  1587→ delete mode 100644 node_modules/@types/node/vm.d.ts
+  1588→ delete mode 100644 node_modules/@types/node/wasi.d.ts
+  1589→ delete mode 100644 node_modules/@types/node/web-globals/abortcontroller.d.ts
+  1590→ delete mode 100644 node_modules/@types/node/web-globals/blob.d.ts
+  1591→ delete mode 100644 node_modules/@types/node/web-globals/console.d.ts
+  1592→ delete mode 100644 node_modules/@types/node/web-globals/crypto.d.ts
+  1593→ delete mode 100644 node_modules/@types/node/web-globals/domexception.d.ts
+  1594→ delete mode 100644 node_modules/@types/node/web-globals/encoding.d.ts
+  1595→ delete mode 100644 node_modules/@types/node/web-globals/events.d.ts
+  1596→ delete mode 100644 node_modules/@types/node/web-globals/fetch.d.ts
+  1597→ delete mode 100644 node_modules/@types/node/web-globals/importmeta.d.ts
+  1598→ delete mode 100644 node_modules/@types/node/web-globals/messaging.d.ts
+  1599→ delete mode 100644 node_modules/@types/node/web-globals/navigator.d.ts
+  1600→ delete mode 100644 node_modules/@types/node/web-globals/performance.d.ts
+  1601→ delete mode 100644 node_modules/@types/node/web-globals/storage.d.ts
+  1602→ delete mode 100644 node_modules/@types/node/web-globals/streams.d.ts
+  1603→ delete mode 100644 node_modules/@types/node/web-globals/timers.d.ts
+  1604→ delete mode 100644 node_modules/@types/node/web-globals/url.d.ts
+  1605→ delete mode 100644 node_modules/@types/node/worker_threads.d.ts
+  1606→ delete mode 100644 node_modules/@types/node/zlib.d.ts
+  1607→ delete mode 100644 node_modules/@types/node/zlib/iter.d.ts
+  1608→ delete mode 100644 node_modules/@types/ws/LICENSE
+  1609→ delete mode 100644 node_modules/@types/ws/README.md
+  1610→ delete mode 100644 node_modules/@types/ws/index.d.mts
+  1611→ delete mode 100644 node_modules/@types/ws/index.d.ts
+  1612→ delete mode 100644 node_modules/@types/ws/package.json
+  1613→ delete mode 100644 node_modules/accepts/HISTORY.md
+  1614→ delete mode 100644 node_modules/accepts/LICENSE
+  1615→ delete mode 100644 node_modules/accepts/README.md
+  1616→ delete mode 100644 node_modules/accepts/index.js
+  1617→ delete mode 100644 node_modules/accepts/package.json
+  1618→ delete mode 100644 node_modules/base64id/CHANGELOG.md
+  1619→ delete mode 100644 node_modules/base64id/LICENSE
+  1620→ delete mode 100644 node_modules/base64id/README.md
+  1621→ delete mode 100644 node_modules/base64id/lib/base64id.js
+  1622→ delete mode 100644 node_modules/base64id/package.json
+  1623→ delete mode 100644 node_modules/cookie/LICENSE
+  1624→ delete mode 100644 node_modules/cookie/README.md
+  1625→ delete mode 100644 node_modules/cookie/SECURITY.md
+  1626→ delete mode 100644 node_modules/cookie/index.js
+  1627→ delete mode 100644 node_modules/cookie/package.json
+  1628→ delete mode 100644 node_modules/cors/LICENSE
+  1629→ delete mode 100644 node_modules/cors/README.md
+  1630→ delete mode 100644 node_modules/cors/lib/index.js
+  1631→ delete mode 100644 node_modules/cors/package.json
+  1632→ delete mode 100644 node_modules/debug/LICENSE
+  1633→ delete mode 100644 node_modules/debug/README.md
+  1634→ delete mode 100644 node_modules/debug/package.json
+  1635→ delete mode 100644 node_modules/debug/src/browser.js
+  1636→ delete mode 100644 node_modules/debug/src/common.js
+  1637→ delete mode 100644 node_modules/debug/src/index.js
+  1638→ delete mode 100644 node_modules/debug/src/node.js
+  1639→ delete mode 100644 node_modules/engine.io-parser/LICENSE
+  1640→ delete mode 100644 node_modules/engine.io-parser/Readme.md
+  1641→ delete mode 100644 node_modules/engine.io-parser/build/cjs/commons.d.ts
+  1642→ delete mode 100644 node_modules/engine.io-parser/build/cjs/commons.js
+  1643→ delete mode 100644 node_modules/engine.io-parser/build/cjs/contrib/base64-arraybuffer.d.ts
+  1644→ delete mode 100644 node_modules/engine.io-parser/build/cjs/contrib/base64-arraybuffer.js
+  1645→ delete mode 100644 node_modules/engine.io-parser/build/cjs/decodePacket.browser.d.ts
+  1646→ delete mode 100644 node_modules/engine.io-parser/build/cjs/decodePacket.browser.js
+  1647→ delete mode 100644 node_modules/engine.io-parser/build/cjs/decodePacket.d.ts
+  1648→ delete mode 100644 node_modules/engine.io-parser/build/cjs/decodePacket.js
+  1649→ delete mode 100644 node_modules/engine.io-parser/build/cjs/encodePacket.browser.d.ts
+  1650→ delete mode 100644 node_modules/engine.io-parser/build/cjs/encodePacket.browser.js
+  1651→ delete mode 100644 node_modules/engine.io-parser/build/cjs/encodePacket.d.ts
+  1652→ delete mode 100644 node_modules/engine.io-parser/build/cjs/encodePacket.js
+  1653→ delete mode 100644 node_modules/engine.io-parser/build/cjs/index.d.ts
+  1654→ delete mode 100644 node_modules/engine.io-parser/build/cjs/index.js
+  1655→ delete mode 100644 node_modules/engine.io-parser/build/cjs/package.json
+  1656→ delete mode 100644 node_modules/engine.io-parser/build/esm/commons.d.ts
+  1657→ delete mode 100644 node_modules/engine.io-parser/build/esm/commons.js
+  1658→ delete mode 100644 node_modules/engine.io-parser/build/esm/contrib/base64-arraybuffer.d.ts
+  1659→ delete mode 100644 node_modules/engine.io-parser/build/esm/contrib/base64-arraybuffer.js
+  1660→ delete mode 100644 node_modules/engine.io-parser/build/esm/decodePacket.browser.d.ts
+  1661→ delete mode 100644 node_modules/engine.io-parser/build/esm/decodePacket.browser.js
+  1662→ delete mode 100644 node_modules/engine.io-parser/build/esm/decodePacket.d.ts
+  1663→ delete mode 100644 node_modules/engine.io-parser/build/esm/decodePacket.js
+  1664→ delete mode 100644 node_modules/engine.io-parser/build/esm/encodePacket.browser.d.ts
+  1665→ delete mode 100644 node_modules/engine.io-parser/build/esm/encodePacket.browser.js
+  1666→ delete mode 100644 node_modules/engine.io-parser/build/esm/encodePacket.d.ts
+  1667→ delete mode 100644 node_modules/engine.io-parser/build/esm/encodePacket.js
+  1668→ delete mode 100644 node_modules/engine.io-parser/build/esm/index.d.ts
+  1669→ delete mode 100644 node_modules/engine.io-parser/build/esm/index.js
+  1670→ delete mode 100644 node_modules/engine.io-parser/build/esm/package.json
+  1671→ delete mode 100644 node_modules/engine.io-parser/package.json
+  1672→ delete mode 100644 node_modules/engine.io/LICENSE
+  1673→ delete mode 100644 node_modules/engine.io/README.md
+  1674→ delete mode 100644 node_modules/engine.io/build/contrib/types.cookie.d.ts
+  1675→ delete mode 100644 node_modules/engine.io/build/contrib/types.cookie.js
+  1676→ delete mode 100644 node_modules/engine.io/build/engine.io.d.ts
+  1677→ delete mode 100644 node_modules/engine.io/build/engine.io.js
+  1678→ delete mode 100644 node_modules/engine.io/build/parser-v3/index.d.ts
+  1679→ delete mode 100644 node_modules/engine.io/build/parser-v3/index.js
+  1680→ delete mode 100644 node_modules/engine.io/build/parser-v3/utf8.d.ts
+  1681→ delete mode 100644 node_modules/engine.io/build/parser-v3/utf8.js
+  1682→ delete mode 100644 node_modules/engine.io/build/server.d.ts
+  1683→ delete mode 100644 node_modules/engine.io/build/server.js
+  1684→ delete mode 100644 node_modules/engine.io/build/socket.d.ts
+  1685→ delete mode 100644 node_modules/engine.io/build/socket.js
+  1686→ delete mode 100644 node_modules/engine.io/build/transport.d.ts
+  1687→ delete mode 100644 node_modules/engine.io/build/transport.js
+  1688→ delete mode 100644 node_modules/engine.io/build/transports-uws/index.d.ts
+  1689→ delete mode 100644 node_modules/engine.io/build/transports-uws/index.js
+  1690→ delete mode 100644 node_modules/engine.io/build/transports-uws/polling.d.ts
+  1691→ delete mode 100644 node_modules/engine.io/build/transports-uws/polling.js
+  1692→ delete mode 100644 node_modules/engine.io/build/transports-uws/websocket.d.ts
+  1693→ delete mode 100644 node_modules/engine.io/build/transports-uws/websocket.js
+  1694→ delete mode 100644 node_modules/engine.io/build/transports/index.d.ts
+  1695→ delete mode 100644 node_modules/engine.io/build/transports/index.js
+  1696→ delete mode 100644 node_modules/engine.io/build/transports/polling-jsonp.d.ts
+  1697→ delete mode 100644 node_modules/engine.io/build/transports/polling-jsonp.js
+  1698→ delete mode 100644 node_modules/engine.io/build/transports/polling.d.ts
+  1699→ delete mode 100644 node_modules/engine.io/build/transports/polling.js
+  1700→ delete mode 100644 node_modules/engine.io/build/transports/websocket.d.ts
+  1701→ delete mode 100644 node_modules/engine.io/build/transports/websocket.js
+  1702→ delete mode 100644 node_modules/engine.io/build/transports/webtransport.d.ts
+  1703→ delete mode 100644 node_modules/engine.io/build/transports/webtransport.js
+  1704→ delete mode 100644 node_modules/engine.io/build/userver.d.ts
+  1705→ delete mode 100644 node_modules/engine.io/build/userver.js
+  1706→ delete mode 100644 node_modules/engine.io/package.json
+  1707→ delete mode 100644 node_modules/engine.io/wrapper.mjs
+  1708→ delete mode 100644 node_modules/iceberg-js/LICENSE
+  1709→ delete mode 100644 node_modules/iceberg-js/README.md
+  1710→ delete mode 100644 node_modules/iceberg-js/dist/index.cjs
+  1711→ delete mode 100644 node_modules/iceberg-js/dist/index.cjs.map
+  1712→ delete mode 100644 node_modules/iceberg-js/dist/index.d.cts
+  1713→ delete mode 100644 node_modules/iceberg-js/dist/index.d.ts
+  1714→ delete mode 100644 node_modules/iceberg-js/dist/index.mjs
+  1715→ delete mode 100644 node_modules/iceberg-js/dist/index.mjs.map
+  1716→ delete mode 100644 node_modules/iceberg-js/package.json
+  1717→ delete mode 100644 node_modules/mime-db/HISTORY.md
+  1718→ delete mode 100644 node_modules/mime-db/LICENSE
+  1719→ delete mode 100644 node_modules/mime-db/README.md
+  1720→ delete mode 100644 node_modules/mime-db/db.json
+  1721→ delete mode 100644 node_modules/mime-db/index.js
+  1722→ delete mode 100644 node_modules/mime-db/package.json
+  1723→ delete mode 100644 node_modules/mime-types/HISTORY.md
+  1724→ delete mode 100644 node_modules/mime-types/LICENSE
+  1725→ delete mode 100644 node_modules/mime-types/README.md
+  1726→ delete mode 100644 node_modules/mime-types/index.js
+  1727→ delete mode 100644 node_modules/mime-types/package.json
+  1728→ delete mode 100644 node_modules/ms/index.js
+  1729→ delete mode 100644 node_modules/ms/license.md
+  1730→ delete mode 100644 node_modules/ms/package.json
+  1731→ delete mode 100644 node_modules/ms/readme.md
+  1732→ delete mode 100644 node_modules/negotiator/HISTORY.md
+  1733→ delete mode 100644 node_modules/negotiator/LICENSE
+  1734→ delete mode 100644 node_modules/negotiator/README.md
+  1735→ delete mode 100644 node_modules/negotiator/index.js
+  1736→ delete mode 100644 node_modules/negotiator/lib/charset.js
+  1737→ delete mode 100644 node_modules/negotiator/lib/encoding.js
+  1738→ delete mode 100644 node_modules/negotiator/lib/language.js
+  1739→ delete mode 100644 node_modules/negotiator/lib/mediaType.js
+  1740→ delete mode 100644 node_modules/negotiator/package.json
+  1741→ delete mode 100644 node_modules/object-assign/index.js
+  1742→ delete mode 100644 node_modules/object-assign/license
+  1743→ delete mode 100644 node_modules/object-assign/package.json
+  1744→ delete mode 100644 node_modules/object-assign/readme.md
+  1745→ delete mode 100644 node_modules/socket.io-adapter/LICENSE
+  1746→ delete mode 100644 node_modules/socket.io-adapter/Readme.md
+  1747→ delete mode 100644 node_modules/socket.io-adapter/dist/cluster-adapter.d.ts
+  1748→ delete mode 100644 node_modules/socket.io-adapter/dist/cluster-adapter.js
+  1749→ delete mode 100644 node_modules/socket.io-adapter/dist/contrib/yeast.d.ts
+  1750→ delete mode 100644 node_modules/socket.io-adapter/dist/contrib/yeast.js
+  1751→ delete mode 100644 node_modules/socket.io-adapter/dist/in-memory-adapter.d.ts
+  1752→ delete mode 100644 node_modules/socket.io-adapter/dist/in-memory-adapter.js
+  1753→ delete mode 100644 node_modules/socket.io-adapter/dist/index.d.ts
+  1754→ delete mode 100644 node_modules/socket.io-adapter/dist/index.js
+  1755→ delete mode 100644 node_modules/socket.io-adapter/package.json
+  1756→ delete mode 100644 node_modules/socket.io-parser/LICENSE
+  1757→ delete mode 100644 node_modules/socket.io-parser/Readme.md
+  1758→ delete mode 100644 node_modules/socket.io-parser/build/cjs/binary.d.ts
+  1759→ delete mode 100644 node_modules/socket.io-parser/build/cjs/binary.js
+  1760→ delete mode 100644 node_modules/socket.io-parser/build/cjs/index.d.ts
+  1761→ delete mode 100644 node_modules/socket.io-parser/build/cjs/index.js
+  1762→ delete mode 100644 node_modules/socket.io-parser/build/cjs/is-binary.d.ts
+  1763→ delete mode 100644 node_modules/socket.io-parser/build/cjs/is-binary.js
+  1764→ delete mode 100644 node_modules/socket.io-parser/build/cjs/package.json
+  1765→ delete mode 100644 node_modules/socket.io-parser/build/esm-debug/binary.d.ts
+  1766→ delete mode 100644 node_modules/socket.io-parser/build/esm-debug/binary.js
+  1767→ delete mode 100644 node_modules/socket.io-parser/build/esm-debug/index.d.ts
+  1768→ delete mode 100644 node_modules/socket.io-parser/build/esm-debug/index.js
+  1769→ delete mode 100644 node_modules/socket.io-parser/build/esm-debug/is-binary.d.ts
+  1770→ delete mode 100644 node_modules/socket.io-parser/build/esm-debug/is-binary.js
+  1771→ delete mode 100644 node_modules/socket.io-parser/build/esm-debug/package.json
+  1772→ delete mode 100644 node_modules/socket.io-parser/build/esm/binary.d.ts
+  1773→ delete mode 100644 node_modules/socket.io-parser/build/esm/binary.js
+  1774→ delete mode 100644 node_modules/socket.io-parser/build/esm/index.d.ts
+  1775→ delete mode 100644 node_modules/socket.io-parser/build/esm/index.js
+  1776→ delete mode 100644 node_modules/socket.io-parser/build/esm/is-binary.d.ts
+  1777→ delete mode 100644 node_modules/socket.io-parser/build/esm/is-binary.js
+  1778→ delete mode 100644 node_modules/socket.io-parser/build/esm/package.json
+  1779→ delete mode 100644 node_modules/socket.io-parser/package.json
+  1780→ delete mode 100644 node_modules/socket.io/LICENSE
+  1781→ delete mode 100644 node_modules/socket.io/Readme.md
+  1782→ delete mode 100644 node_modules/socket.io/client-dist/socket.io.esm.min.js
+  1783→ delete mode 100644 node_modules/socket.io/client-dist/socket.io.esm.min.js.map
+  1784→ delete mode 100644 node_modules/socket.io/client-dist/socket.io.js
+  1785→ delete mode 100644 node_modules/socket.io/client-dist/socket.io.js.map
+  1786→ delete mode 100644 node_modules/socket.io/client-dist/socket.io.min.js
+  1787→ delete mode 100644 node_modules/socket.io/client-dist/socket.io.min.js.map
+  1788→ delete mode 100644 node_modules/socket.io/client-dist/socket.io.msgpack.min.js
+  1789→ delete mode 100644 node_modules/socket.io/client-dist/socket.io.msgpack.min.js.map
+  1790→ delete mode 100644 node_modules/socket.io/dist/broadcast-operator.d.ts
+  1791→ delete mode 100644 node_modules/socket.io/dist/broadcast-operator.js
+  1792→ delete mode 100644 node_modules/socket.io/dist/client.d.ts
+  1793→ delete mode 100644 node_modules/socket.io/dist/client.js
+  1794→ delete mode 100644 node_modules/socket.io/dist/index.d.ts
+  1795→ delete mode 100644 node_modules/socket.io/dist/index.js
+  1796→ delete mode 100644 node_modules/socket.io/dist/namespace.d.ts
+  1797→ delete mode 100644 node_modules/socket.io/dist/namespace.js
+  1798→ delete mode 100644 node_modules/socket.io/dist/parent-namespace.d.ts
+  1799→ delete mode 100644 node_modules/socket.io/dist/parent-namespace.js
+  1800→ delete mode 100644 node_modules/socket.io/dist/socket-types.d.ts
+  1801→ delete mode 100644 node_modules/socket.io/dist/socket-types.js
+  1802→ delete mode 100644 node_modules/socket.io/dist/socket.d.ts
+  1803→ delete mode 100644 node_modules/socket.io/dist/socket.js
+  1804→ delete mode 100644 node_modules/socket.io/dist/typed-events.d.ts
+  1805→ delete mode 100644 node_modules/socket.io/dist/typed-events.js
+  1806→ delete mode 100644 node_modules/socket.io/dist/uws.d.ts
+  1807→ delete mode 100644 node_modules/socket.io/dist/uws.js
+  1808→ delete mode 100644 node_modules/socket.io/package.json
+  1809→ delete mode 100644 node_modules/socket.io/wrapper.mjs
+  1810→ delete mode 100644 node_modules/tslib/CopyrightNotice.txt
+  1811→ delete mode 100644 node_modules/tslib/LICENSE.txt
+  1812→ delete mode 100644 node_modules/tslib/README.md
+  1813→ delete mode 100644 node_modules/tslib/SECURITY.md
+  1814→ delete mode 100644 node_modules/tslib/modules/index.d.ts
+  1815→ delete mode 100644 node_modules/tslib/modules/index.js
+  1816→ delete mode 100644 node_modules/tslib/modules/package.json
+  1817→ delete mode 100644 node_modules/tslib/package.json
+  1818→ delete mode 100644 node_modules/tslib/tslib.d.ts
+  1819→ delete mode 100644 node_modules/tslib/tslib.es6.html
+  1820→ delete mode 100644 node_modules/tslib/tslib.es6.js
+  1821→ delete mode 100644 node_modules/tslib/tslib.es6.mjs
+  1822→ delete mode 100644 node_modules/tslib/tslib.html
+  1823→ delete mode 100644 node_modules/tslib/tslib.js
+  1824→ delete mode 100644 node_modules/undici-types/LICENSE
+  1825→ delete mode 100644 node_modules/undici-types/README.md
+  1826→ delete mode 100644 node_modules/undici-types/agent.d.ts
+  1827→ delete mode 100644 node_modules/undici-types/api.d.ts
+  1828→ delete mode 100644 node_modules/undici-types/balanced-pool.d.ts
+  1829→ delete mode 100644 node_modules/undici-types/cache-interceptor.d.ts
+  1830→ delete mode 100644 node_modules/undici-types/cache.d.ts
+  1831→ delete mode 100644 node_modules/undici-types/client-stats.d.ts
+  1832→ delete mode 100644 node_modules/undici-types/client.d.ts
+  1833→ delete mode 100644 node_modules/undici-types/connector.d.ts
+  1834→ delete mode 100644 node_modules/undici-types/content-type.d.ts
+  1835→ delete mode 100644 node_modules/undici-types/cookies.d.ts
+  1836→ delete mode 100644 node_modules/undici-types/diagnostics-channel.d.ts
+  1837→ delete mode 100644 node_modules/undici-types/dispatcher.d.ts
+  1838→ delete mode 100644 node_modules/undici-types/dispatcher1-wrapper.d.ts
+  1839→ delete mode 100644 node_modules/undici-types/env-http-proxy-agent.d.ts
+  1840→ delete mode 100644 node_modules/undici-types/errors.d.ts
+  1841→ delete mode 100644 node_modules/undici-types/eventsource.d.ts
+  1842→ delete mode 100644 node_modules/undici-types/fetch.d.ts
+  1843→ delete mode 100644 node_modules/undici-types/formdata.d.ts
+  1844→ delete mode 100644 node_modules/undici-types/global-dispatcher.d.ts
+  1845→ delete mode 100644 node_modules/undici-types/global-origin.d.ts
+  1846→ delete mode 100644 node_modules/undici-types/h2c-client.d.ts
+  1847→ delete mode 100644 node_modules/undici-types/handlers.d.ts
+  1848→ delete mode 100644 node_modules/undici-types/header.d.ts
+  1849→ delete mode 100644 node_modules/undici-types/index.d.ts
+  1850→ delete mode 100644 node_modules/undici-types/interceptors.d.ts
+  1851→ delete mode 100644 node_modules/undici-types/mock-agent.d.ts
+  1852→ delete mode 100644 node_modules/undici-types/mock-call-history.d.ts
+  1853→ delete mode 100644 node_modules/undici-types/mock-client.d.ts
+  1854→ delete mode 100644 node_modules/undici-types/mock-errors.d.ts
+  1855→ delete mode 100644 node_modules/undici-types/mock-interceptor.d.ts
+  1856→ delete mode 100644 node_modules/undici-types/mock-pool.d.ts
+  1857→ delete mode 100644 node_modules/undici-types/package.json
+  1858→ delete mode 100644 node_modules/undici-types/patch.d.ts
+  1859→ delete mode 100644 node_modules/undici-types/pool-stats.d.ts
+  1860→ delete mode 100644 node_modules/undici-types/pool.d.ts
+  1861→ delete mode 100644 node_modules/undici-types/proxy-agent.d.ts
+  1862→ delete mode 100644 node_modules/undici-types/readable.d.ts
+  1863→ delete mode 100644 node_modules/undici-types/retry-agent.d.ts
+  1864→ delete mode 100644 node_modules/undici-types/retry-handler.d.ts
+  1865→ delete mode 100644 node_modules/undici-types/round-robin-pool.d.ts
+  1866→ delete mode 100644 node_modules/undici-types/snapshot-agent.d.ts
+  1867→ delete mode 100644 node_modules/undici-types/socks5-proxy-agent.d.ts
+  1868→ delete mode 100644 node_modules/undici-types/util.d.ts
+  1869→ delete mode 100644 node_modules/undici-types/utility.d.ts
+  1870→ delete mode 100644 node_modules/undici-types/webidl.d.ts
+  1871→ delete mode 100644 node_modules/undici-types/websocket.d.ts
+  1872→ delete mode 100644 node_modules/vary/HISTORY.md
+  1873→ delete mode 100644 node_modules/vary/LICENSE
+  1874→ delete mode 100644 node_modules/vary/README.md
+  1875→ delete mode 100644 node_modules/vary/index.js
+  1876→ delete mode 100644 node_modules/vary/package.json
+  1877→ delete mode 100644 node_modules/ws/LICENSE
+  1878→ delete mode 100644 node_modules/ws/README.md
+  1879→ delete mode 100644 node_modules/ws/browser.js
+  1880→ delete mode 100644 node_modules/ws/index.js
+  1881→ delete mode 100644 node_modules/ws/lib/buffer-util.js
+  1882→ delete mode 100644 node_modules/ws/lib/constants.js
+  1883→ delete mode 100644 node_modules/ws/lib/event-target.js
+  1884→ delete mode 100644 node_modules/ws/lib/extension.js
+  1885→ delete mode 100644 node_modules/ws/lib/limiter.js
+  1886→ delete mode 100644 node_modules/ws/lib/permessage-deflate.js
+  1887→ delete mode 100644 node_modules/ws/lib/receiver.js
+  1888→ delete mode 100644 node_modules/ws/lib/sender.js
+  1889→ delete mode 100644 node_modules/ws/lib/stream.js
+  1890→ delete mode 100644 node_modules/ws/lib/subprotocol.js
+  1891→ delete mode 100644 node_modules/ws/lib/validation.js
+  1892→ delete mode 100644 node_modules/ws/lib/websocket-server.js
+  1893→ delete mode 100644 node_modules/ws/lib/websocket.js
+  1894→ delete mode 100644 node_modules/ws/package.json
+  1895→ delete mode 100644 node_modules/ws/wrapper.mjs
+  1896→ delete mode 100644 node_modules/z-ai-web-dev-sdk/README.md
+  1897→ delete mode 100644 node_modules/z-ai-web-dev-sdk/dist/cli.d.ts
+  1898→ delete mode 100644 node_modules/z-ai-web-dev-sdk/dist/cli.js
+  1899→ delete mode 100644 node_modules/z-ai-web-dev-sdk/dist/index.d.ts
+  1900→ delete mode 100644 node_modules/z-ai-web-dev-sdk/dist/index.js
+  1901→ delete mode 100644 node_modules/z-ai-web-dev-sdk/package.json
+  1902→remote: Repository not found.
+  1903→fatal: repository 'https://github.com/ayanalidar/GuardianX-engine.git/' not found
+  1904→
+  1905→ayana@CYBERSHIELD MINGW64 /d/GuardianX/mini-services/sentinel-engine (main)
+  1906→$
+  1907→
