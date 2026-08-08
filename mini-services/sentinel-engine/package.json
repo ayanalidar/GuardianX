@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --hot index.ts",
-    "start": "sh start.sh"
+    "start": "bun index.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

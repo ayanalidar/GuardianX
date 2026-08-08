@@ -29,6 +29,69 @@ import { db } from "./src/lib/db";
 const PORT = parseInt(process.env.PORT || "3003", 10);
 const ENGINE_INTERNAL_KEY = process.env.ENGINE_INTERNAL_KEY || "";
 
+// ── Generate z-ai config file on startup ──────────────────────────────────
+// The z-ai SDK reads /etc/.z-ai-config or ~/.z-ai-config. On Railway, the
+// start.sh script may not run (Railway uses `bun index.ts` directly), so we
+// generate the config file here in the entry point.
+async function ensureZaiConfig() {
+  const fs = await import("node:fs/promises");
+  const os = await import("node:os");
+  const path = await import("node:path");
+
+  const configPaths = [
+    "/etc/.z-ai-config",
+    path.join(os.homedir(), ".z-ai-config"),
+    ".z-ai-config",
+  ];
+
+  // Check if any config already exists
+  for (const p of configPaths) {
+    try {
+      await fs.access(p);
+      console.log(`[z-ai] config found at ${p}`);
+      return;
+    } catch {
+      // doesn't exist, continue
+    }
+  }
+
+  // Generate from ZAI_CONFIG env var
+  if (process.env.ZAI_CONFIG) {
+    const config = process.env.ZAI_CONFIG;
+    for (const p of configPaths) {
+      try {
+        await fs.writeFile(p, config, "utf-8");
+        console.log(`[z-ai] wrote config to ${p} from ZAI_CONFIG env var`);
+        return;
+      } catch {
+        // might not have permission (e.g. /etc/), try next
+      }
+    }
+  }
+
+  // Generate from individual env vars
+  if (process.env.ZAI_API_KEY) {
+    const config = JSON.stringify({
+      baseUrl: process.env.ZAI_BASE_URL || "https://internal-api.z.ai/v1",
+      apiKey: process.env.ZAI_API_KEY,
+    });
+    for (const p of configPaths) {
+      try {
+        await fs.writeFile(p, config, "utf-8");
+        console.log(`[z-ai] wrote config to ${p} from ZAI_API_KEY env var`);
+        return;
+      } catch {
+        // try next
+      }
+    }
+  }
+
+  console.warn("[z-ai] WARNING: No config found and ZAI_CONFIG/ZAI_API_KEY not set — AI features will fail");
+}
+
+// Run config generation before starting the server
+await ensureZaiConfig();
+
 // ── HTTP server ─────────────────────────────────────────────────────────────
 const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
   const url = new URL(req.url || "/", `http://localhost:${PORT}`);
