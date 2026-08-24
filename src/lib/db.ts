@@ -59,6 +59,8 @@ const MODEL_TO_TABLE: Record<string, string> = {
   ioc: "IOC",
   evidence: "Evidence",
   playbook: "Playbook",
+  supportTicket: "SupportTicket",
+  subscription: "Subscription",
 };
 
 // ── Relation metadata: model → { relationName: { table, fk, isList, localFk? } } ─

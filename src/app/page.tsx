@@ -39,6 +39,14 @@ import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
 import { PipelineView } from "@/components/sentinel/pipeline-view";
 import { GuardianXLogo } from "@/components/sentinel/guardianx-logo";
+import { SupportChat } from "@/components/sentinel/support-chat";
+import { AnalystOnboarding } from "@/components/sentinel/analyst-onboarding";
+import { BillingPanel } from "@/components/sentinel/billing-panel";
+import { OrgSwitcher } from "@/components/sentinel/org-switcher";
+import { UserActivityMonitor } from "@/components/sentinel/user-activity-monitor";
+import { AdminTwoFactorBanner } from "@/components/sentinel/admin-2fa-banner";
+import { AnalystBanner } from "@/components/sentinel/analyst-banner";
+import { SettingsPanel } from "@/components/sentinel/settings-panel";
 import { usePipelineSocket } from "@/lib/sentinel/use-pipeline-socket";
 import {
   sentinelApi,
@@ -52,6 +60,7 @@ import {
   Activity,
   Boxes,
   Building2,
+  CreditCard,
   Crosshair,
   FlaskConical,
   Gavel,
@@ -66,17 +75,19 @@ import {
   RefreshCw,
   Search,
   ScanSearch,
+  Settings,
   Shield,
   ShieldAlert,
   ShieldCheck,
   ShieldHalf,
   Sparkles,
   Users,
+  UserCog,
   Zap,
   FileText,
 } from "lucide-react";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -379,6 +390,10 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <div className="font-mono text-[9px] uppercase tracking-widest text-emerald-500/50">SOC Lab</div>
             </div>
           </button>
+          {/* Org / workspace switcher */}
+          <div className="border-b border-emerald-500/15 px-3 py-2" data-onboarding="clients">
+            <OrgSwitcher currentUser={currentUser} />
+          </div>
           <nav className="custom-scrollbar flex-1 overflow-y-auto p-2">
             <NavGroup label="Dashboard" color="emerald">
               <NavItem active={tab === "dashboard"} onClick={() => { setTab("dashboard"); setSelectedClientId(null); setSidebarOpen(false); }} icon={LayoutDashboard} label="Overview" accentColor="emerald" iconColor="text-emerald-400" />
@@ -398,10 +413,13 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             <NavGroup label="Advanced" color="amber">
               <NavItem active={tab === "rnd"} onClick={() => { setTab("rnd"); setSidebarOpen(false); }} icon={FlaskConical} label="R&D Lab" iconColor="text-violet-400" accentColor="violet" />
               <NavItem active={tab === "advanced"} onClick={() => { setTab("advanced"); setSidebarOpen(false); }} icon={Sparkles} label="Advanced Platform" iconColor="text-amber-400" accentColor="amber" />
+              <NavItem active={tab === "billing"} onClick={() => { setTab("billing"); setSidebarOpen(false); }} icon={CreditCard} label="Billing" iconColor="text-emerald-400" accentColor="emerald" />
+              <NavItem active={tab === "settings"} onClick={() => { setTab("settings"); setSidebarOpen(false); }} icon={Settings} label="Settings" iconColor="text-zinc-300" accentColor="emerald" />
             </NavGroup>
             {currentUser?.role === "admin" && (
               <NavGroup label="Administration" color="emerald">
                 <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" accentColor="emerald" />
+                <NavItem active={tab === "user-activity"} onClick={() => { setTab("user-activity"); setSidebarOpen(false); }} icon={UserCog} label="User Activity" iconColor="text-emerald-400" accentColor="emerald" />
                 <NavItem active={tab === "content"} onClick={() => { setTab("content"); setSidebarOpen(false); }} icon={FileText} label="Content Editor" iconColor="text-emerald-400" accentColor="emerald" />
                 <NavItem active={tab === "contributors"} onClick={() => { setTab("contributors"); setSidebarOpen(false); }} icon={Users} label="Contributions" iconColor="text-emerald-400" accentColor="emerald" />
               </NavGroup>
@@ -460,6 +478,9 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "scraper" ? "neon-violet text-violet-300" :
                   tab === "dfir" ? "neon-red text-red-300" :
                   tab === "rnd" ? "neon-violet text-violet-300" :
+                  tab === "billing" ? "neon-emerald text-emerald-300" :
+                  tab === "settings" ? "neon-emerald text-emerald-300" :
+                  tab === "user-activity" ? "neon-emerald text-emerald-300" :
                   tab === "users" ? "neon-emerald text-emerald-300" :
                   tab === "content" ? "neon-emerald text-emerald-300" :
                   tab === "contributors" ? "neon-emerald text-emerald-300" :
@@ -477,6 +498,9 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "exfil" ? "Data Exfiltration Defense" :
                    tab === "scraper" ? "Web Scraping Audit Engine" :
                    tab === "dfir" ? "DFIR Command Center" :
+                   tab === "billing" ? "Billing & Subscription" :
+                   tab === "settings" ? "Settings" :
+                   tab === "user-activity" ? "User Activity Monitor" :
                    tab === "users" ? "User Management" :
                    tab === "content" ? "Content Editor" :
                    tab === "contributors" ? "Contributions" :
@@ -490,6 +514,16 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             </div>
           </header>
           <main className="flex-1 p-4 sm:p-6">
+            {/* Admin 2FA banner (only shows for admins without 2FA enabled) */}
+            <AdminTwoFactorBanner
+              currentUser={currentUser}
+              onOpenSettings={() => setTab("settings")}
+            />
+            {/* Analyst banner (only shows for viewers) */}
+            <AnalystBanner
+              currentUser={currentUser}
+              onNavigate={(t) => setTab(t)}
+            />
             {tab === "dashboard" ? (
               <CommandCenter
                 onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }}
@@ -527,6 +561,12 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   <DfirPanel />
                 ) : tab === "advanced" ? (
                   <AdvancedPanel />
+                ) : tab === "billing" ? (
+                  <BillingPanel currentUser={currentUser} />
+                ) : tab === "user-activity" ? (
+                  <UserActivityMonitor />
+                ) : tab === "settings" ? (
+                  <SettingsPanel currentUser={currentUser} />
                 ) : tab === "users" ? (
                   <UserManagementPanel />
                 ) : tab === "content" ? (
@@ -646,6 +686,13 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
         onOpenChange={setCredsOpen}
         onChanged={() => loadAll({ silent: true })}
       />
+
+      {/* Floating UI: onboarding tour (viewers, first login) + support chat (everyone) */}
+      <AnalystOnboarding
+        role={currentUser?.role}
+        onNavigate={(t) => setTab(t)}
+      />
+      <SupportChat currentUser={currentUser} bottomOffset={64} />
     </div>
   );
 }
