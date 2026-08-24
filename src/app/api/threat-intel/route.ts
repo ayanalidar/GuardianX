@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -12,7 +13,9 @@ async function sdk() {
 }
 
 // GET /api/threat-intel, fetch latest CVEs via web search + cross-reference codebases.
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const z = await sdk();
     const results = await z.functions.invoke("web_search", {

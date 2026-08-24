@@ -46,11 +46,25 @@ export const metadata: Metadata = {
       "AI-driven SAST, DAST, exploit generation, adversarial patching, and VAPT reporting.",
     siteName: "GuardianX",
     type: "website",
+    url: "https://guardianx.cloud",
+    images: [
+      {
+        url: "https://guardianx.cloud/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "GuardianX — Autonomous Security Operations Platform",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "GuardianX",
     description: "Autonomous security operations platform.",
+    site: "@guardianxcloud",
+  },
+  metadataBase: new URL("https://guardianx.cloud"),
+  alternates: {
+    canonical: "https://guardianx.cloud",
   },
 };
 

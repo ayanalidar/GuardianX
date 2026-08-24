@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +12,10 @@ export const dynamic = "force-dynamic";
 // the root patch, then returns the chain in chronological order with the
 // bypass reason for each supersession (extracted from the adversarial
 // transcript of the prior patch).
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(req: Request,
+  { params }: { params: Promise<{ id: string }> }) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { id } = await params;
 
   // Resolve the patch (by human-readable patchId OR internal id).

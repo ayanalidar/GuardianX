@@ -101,7 +101,7 @@ DATABASE_URL="your-supabase-url" bun run scripts/seed.ts
 
 ## Step 6: Add Custom Domain (Optional)
 1. In Vercel: Project Settings → Domains
-2. Add `guardianx.in` (or your domain)
+2. Add `guardianx.cloud` (or your domain)
 3. Add the DNS record Vercel shows you
 4. SSL is automatic
 

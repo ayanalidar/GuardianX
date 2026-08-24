@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/breach-notification, auto-draft a DPDPA §8(6) breach notification
 // for any confirmed data exposure findings.
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const exposureFindings = await db.finding.findMany({
       where: {

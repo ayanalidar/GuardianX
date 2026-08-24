@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/sparklines, returns 7-day time series for KPI sparklines
 // Generates daily counts for: scans, patches, findings, critical findings
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const now = new Date();
     const days: { date: string; label: string; scans: number; patches: number; findings: number; critical: number }[] = [];

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +8,9 @@ export const dynamic = "force-dynamic";
 // Metrics: MTTD (mean time to detect), MTTR (mean time to resolve),
 // vulnerability density, patch latency, sandbox pass rate, adversarial win rate.
 
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const patches = await db.patch.findMany({
     select: {
       severity: true,

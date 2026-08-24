@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -8,6 +9,8 @@ export const maxDuration = 30;
 // POST /api/guardian-chat, natural language interface to the entire platform
 // Body: { message: string, history?: {role, content}[] }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { message, history = [] } = await req.json().catch(() => ({}));
 
   if (!message) {

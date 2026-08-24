@@ -129,9 +129,9 @@ export function SiteFooter() {
           <div>
             <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">Contact</div>
             <div className="space-y-2.5">
-              <a href="https://www.guardianx.in" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-2 text-xs text-zinc-400 transition-colors hover:text-emerald-400">
+              <a href="https://www.guardianx.cloud" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-2 text-xs text-zinc-400 transition-colors hover:text-emerald-400">
                 <Globe className="size-3.5 text-emerald-400/60 group-hover:text-emerald-400" />
-                www.guardianx.in
+                www.guardianx.cloud
               </a>
               <a href="mailto:hello@guardianx.in" className="group flex items-center gap-2 text-xs text-zinc-400 transition-colors hover:text-emerald-400">
                 <Mail className="size-3.5 text-emerald-400/60 group-hover:text-emerald-400" />

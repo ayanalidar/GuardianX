@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { engineCall } from "@/lib/sentinel/engine-proxy";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -9,6 +10,8 @@ export const maxDuration = 60;
 // Proxies to the Railway engine, which spawns python3 + httpx/BeautifulSoup.
 // Returns: the structured audit result payload.
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const config = await req.json().catch(() => ({}));
 
   if (!config.target_url) {
@@ -28,7 +31,9 @@ export async function POST(req: Request) {
 }
 
 // GET /api/audit-scraper, return the schema example
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   return NextResponse.json({
     description: "GuardianX Audit Scraper Engine, dual-mode web scraping for authorized audit tasks.",
     schema: {

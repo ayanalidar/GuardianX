@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 // Short timeout, we just create a DB record and fire-and-forget to the engine.
@@ -11,6 +12,8 @@ export const maxDuration = 30;
 // Returns 202 with { scanId } immediately; the Railway engine runs the
 // pipeline in the background and streams events via socket.io.
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const codebaseId = typeof body.codebaseId === "string" ? body.codebaseId : "";
 
@@ -61,7 +64,9 @@ export async function POST(req: Request) {
 }
 
 // GET /api/scans, list recent scans.
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const scans = await db.scan.findMany({
     orderBy: { startedAt: "desc" },
     take: 20,

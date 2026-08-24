@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 45;
@@ -38,6 +39,8 @@ function extractDependencies(source: string): string[] {
 
 // GET /api/sca-scan?codebaseId=xxx, scan dependencies for known CVEs
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const url = new URL(req.url);
   const codebaseId = url.searchParams.get("codebaseId");
 

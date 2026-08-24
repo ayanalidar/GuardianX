@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -9,6 +10,8 @@ export const maxDuration = 30;
 // tech stack, exposed files) and auto-creates codebases + targets for the client.
 // Body: { clientId: string }
 export async function POST(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const { clientId } = await req.json().catch(() => ({}));
   if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
 

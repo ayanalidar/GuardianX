@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -9,6 +10,8 @@ export const maxDuration = 30;
 // Instead of patching live servers, generates Terraform/Ansible PRs
 // Body: { patchId?, clientId?, target?: "terraform" | "ansible" | "k8s" | "docker" }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { patchId, clientId, target = "all" } = await req.json().catch(() => ({}));
 
   try {

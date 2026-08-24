@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { cloneRepoWithCredential, cleanupClone } from "@/lib/sentinel/git";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -10,6 +11,8 @@ export const maxDuration = 60;
 // Clones the repo (shallow), returns the list of scannable source files, then
 // cleans up the clone. The decrypted token never leaves the server.
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const credentialId =
     typeof body.credentialId === "string" ? body.credentialId : "";

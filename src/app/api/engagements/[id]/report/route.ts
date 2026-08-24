@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { engineCall } from "@/lib/sentinel/engine-proxy";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // GET /api/engagements/[id]/report, generate + stream a professional VAPT PDF report.
 // Proxies to the Railway engine, which spawns python3 + ReportLab.
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(req: Request,
+  { params }: { params: Promise<{ id: string }> }) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { id } = await params;
 
   const result = await engineCall("/api/generate-pdf", { engagementId: id });

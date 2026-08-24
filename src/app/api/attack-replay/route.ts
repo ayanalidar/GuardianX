@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineCall } from "@/lib/sentinel/engine-proxy";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -9,6 +10,8 @@ export const maxDuration = 30;
 // to verify the fix still holds after code changes
 // Body: { patchId: string }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { patchId } = await req.json().catch(() => ({}));
   if (!patchId) return NextResponse.json({ error: "patchId required" }, { status: 400 });
 

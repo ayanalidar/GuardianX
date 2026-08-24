@@ -287,7 +287,7 @@ The compliance dashboard shows per-framework compliance score, section-level sta
         {/* Footer */}
         <div className="border-t border-zinc-800 pt-6 text-center text-xs text-zinc-600">
           <p>© {new Date().getFullYear()} GuardianX. All rights reserved.</p>
-          <p className="mt-1">www.guardianx.in · hello@guardianx.in · +91 70067 12347</p>
+          <p className="mt-1">www.guardianx.cloud · hello@guardianx.in · +91 70067 12347</p>
         </div>
       </div>
     </div>

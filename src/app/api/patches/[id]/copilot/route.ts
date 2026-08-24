@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -14,10 +15,10 @@ async function sdk() {
 // POST /api/patches/[id]/copilot, AI remediation copilot.
 // Body: { action: "generate-fix" | "explain" | "hardened-fix", instruction?: string }
 // Returns: { code?, explanation, suggestions }
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: Request,
+  { params }: { params: Promise<{ id: string }> }) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
   const action = body?.action === "generate-fix" || body?.action === "explain" || body?.action === "hardened-fix"
@@ -33,7 +34,7 @@ export async function POST(
   const z = await sdk();
 
   let system: string;
-  let user: string;
+  let userPrompt: string;
 
   if (action === "generate-fix" || action === "hardened-fix") {
     system = [
@@ -44,7 +45,7 @@ export async function POST(
         : "Focus on correctness, minimal changes, and clarity.",
       "Respond with STRICT JSON only.",
     ].join(" ");
-    user = [
+    userPrompt = [
       `File: ${patch.codebase.name}`,
       `Vulnerability: ${patch.title} (${patch.severity})`,
       "",
@@ -68,7 +69,7 @@ export async function POST(
   } else { // explain
     // explain
     system = "You are GuardianX's Remediation Copilot. Explain security patches clearly to developers. Respond with STRICT JSON.";
-    user = [
+    userPrompt = [
       `File: ${patch.codebase.name}`,
       `Vulnerability: ${patch.title} (${patch.severity})`,
       "",
@@ -91,7 +92,7 @@ export async function POST(
   const completion = await z.chat.completions.create({
     messages: [
       { role: "assistant", content: system },
-      { role: "user", content: user },
+      { role: "user", content: userPrompt },
     ],
     thinking: { type: "disabled" },
   });

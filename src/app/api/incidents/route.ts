@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/incidents — list all incidents with event count + evidence count
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const url = new URL(req.url);
     const status = url.searchParams.get("status");
@@ -64,6 +67,8 @@ export async function GET(req: Request) {
 
 // POST /api/incidents — create a new incident
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const body = await req.json().catch(() => ({}));
     const {

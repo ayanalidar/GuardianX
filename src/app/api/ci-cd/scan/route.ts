@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -9,6 +10,8 @@ export const maxDuration = 30;
 // Body: { codebaseId, commitSha, branch, prId }
 // Returns: { scanId, status, blockMerge }, blockMerge=true if critical vulns found.
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const { codebaseId, commitSha, branch, prId } = body;
 
@@ -45,6 +48,8 @@ export async function POST(req: Request) {
 
 // GET /api/ci-cd/scan?scanId=xxx, check if a CI/CD scan blocks merge.
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const url = new URL(req.url);
   const scanId = url.searchParams.get("scanId");
   if (!scanId) return NextResponse.json({ error: "scanId required" }, { status: 400 });

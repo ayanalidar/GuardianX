@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { encryptSecret } from "@/lib/sentinel/crypto";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/credentials, list all credentials (metadata only, NEVER secrets).
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const creds = await db.credential.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -29,6 +32,8 @@ export async function GET() {
 
 // POST /api/credentials, add a credential (encrypts the token at rest).
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const label = typeof body.label === "string" ? body.label.trim() : "";
   const kind =

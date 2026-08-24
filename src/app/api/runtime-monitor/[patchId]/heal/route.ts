@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -7,10 +8,10 @@ export const maxDuration = 30;
 // POST /api/runtime-monitor/[patchId]/heal, hot-swap a vulnerable function
 // at runtime with its patched version. Simulates the self-healing action:
 // approve + deploy the patch to the live runtime without restart.
-export async function POST(
-  _req: Request,
-  { params }: { params: Promise<{ patchId: string }> }
-) {
+export async function POST(req: Request,
+  { params }: { params: Promise<{ patchId: string }> }) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { patchId } = await params;
 
   const patch = await db.patch.findFirst({

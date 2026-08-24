@@ -288,7 +288,7 @@ export function AuthPage({ onAuth }: AuthPageProps) {
 
         {/* Footer */}
         <div className="mt-6 text-center text-[10px] text-zinc-600">
-          www.guardianx.in · hello@guardianx.in · +91 70067 12347
+          www.guardianx.cloud · hello@guardianx.in · +91 70067 12347
         </div>
       </motion.div>
     </div>

@@ -4,7 +4,14 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
-const JWT_SECRET = process.env.JWT_SECRET || "guardianx-dev-secret-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("[FATAL] JWT_SECRET environment variable is required in production.");
+  }
+  console.warn("[WARN] JWT_SECRET not set — using dev-only secret. DO NOT use in production.");
+}
+const SECRET = JWT_SECRET || "dev-only-secret-not-for-production-use";
 const JWT_EXPIRES_IN = "7d";
 
 export interface JWTPayload {
@@ -23,7 +30,7 @@ export interface JWTPayload {
  * Create a signed JWT token for a user.
  */
 export function createToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 /**
@@ -31,7 +38,7 @@ export function createToken(payload: JWTPayload): string {
  */
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, SECRET) as JWTPayload;
     return decoded;
   } catch {
     return null;

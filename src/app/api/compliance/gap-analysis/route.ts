@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
 import {
   DPDPA_FRAMEWORK,
   ISO27001_FRAMEWORK,
@@ -28,6 +29,8 @@ function isValidFramework(id: string | null): id is FrameworkId {
 // Returns prioritised gaps for the selected framework.
 // Sort order: impact (high first), then effort (low first = quick wins).
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const url = new URL(req.url);
   const requested = url.searchParams.get("framework");
   const frameworkId: FrameworkId = isValidFramework(requested) ? requested : "DPDPA";

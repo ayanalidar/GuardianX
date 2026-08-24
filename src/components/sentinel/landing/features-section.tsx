@@ -170,7 +170,7 @@ const FEATURE_SNIPPETS: Record<string, { code: string[]; badge: string; lang: st
     lang: "breach-alert.json",
     code: [
       '{ "source": "darkweb",',
-      '  "domain": "guardianx.in",',
+      '  "domain": "guardianx.cloud",',
       '  "leaked": "admin@...",',
       '  "password": "hashed",',
       '  "found": "2026-08-04" }',

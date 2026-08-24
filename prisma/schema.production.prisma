@@ -45,14 +45,19 @@ model Codebase {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("viewer")
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  role          String   @default("viewer")
+  avatar        String?
+  twofaSecret   String?
+  twofaEnabled  Boolean  @default(false)
+  backupCodes   String?
+  approved      Boolean  @default(false)
+  tokenVersion  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Scan {

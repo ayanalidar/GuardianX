@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/service-status, returns all currently running services
 // Shows live status chips for the Command Center
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const running: { id: string; type: string; client: string; target: string; status: string; stage: string | null; started: string; duration: string }[] = [];
 

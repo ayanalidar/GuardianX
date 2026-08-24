@@ -297,11 +297,11 @@ export default function CompanyPage() {
           <div className="holo-card-sharp hud-corners p-6">
             <div className="mb-4 font-mono text-[10px] uppercase tracking-widest text-cyan-500/60">{"// Get In Touch"}</div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <a href="https://www.guardianx.in" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg border border-zinc-700 p-4 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/5">
+              <a href="https://www.guardianx.cloud" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg border border-zinc-700 p-4 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/5">
                 <Globe className="size-5 text-emerald-400" />
                 <div>
                   <div className="text-xs font-medium text-zinc-300">Website</div>
-                  <div className="text-[11px] text-zinc-500">www.guardianx.in</div>
+                  <div className="text-[11px] text-zinc-500">www.guardianx.cloud</div>
                 </div>
               </a>
               <a href="mailto:hello@guardianx.in" className="flex items-center gap-3 rounded-lg border border-zinc-700 p-4 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/5">

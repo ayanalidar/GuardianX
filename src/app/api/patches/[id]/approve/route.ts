@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createHash } from "node:crypto";
+import { getUserFromRequest } from "@/lib/auth";
 import {
   GENESIS_PREV_HASH,
   computeAttestationHash,
@@ -14,10 +15,10 @@ export const dynamic = "force-dynamic";
 //   SHA-256(prevHash + patch.id + patchedCodeHash + approvedAtIso)
 // This matches the canonical verifier in src/lib/sentinel/attestation.ts so
 // every issued attestation verifies without re-issuance.
-export async function POST(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: Request,
+  { params }: { params: Promise<{ id: string }> }) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { id } = await params;
 
   const patch = await db.patch.findFirst({

@@ -607,7 +607,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                 <span>GuardianX · Autonomous Security Operations Platform</span>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-                <a href="https://www.guardianx.in" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-emerald-400">www.guardianx.in</a>
+                <a href="https://www.guardianx.cloud" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-emerald-400">www.guardianx.cloud</a>
                 <a href="mailto:hello@guardianx.in" className="transition-colors hover:text-emerald-400">hello@guardianx.in</a>
                 <a href="tel:+917006712347" className="transition-colors hover:text-emerald-400">+91 70067 12347</a>
               </div>

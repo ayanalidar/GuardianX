@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/audit-log, list audit log entries (system-wide activity trail)
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const url = new URL(req.url);
   const limit = parseInt(url.searchParams.get("limit") || "50");
   const action = url.searchParams.get("action");

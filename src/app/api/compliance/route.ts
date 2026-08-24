@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 import {
   DPDPA_FRAMEWORK,
   ISO27001_FRAMEWORK,
@@ -308,6 +309,8 @@ async function buildLegacyFrameworks() {
 // the selected framework (default DPDPA) with per-section evidence +
 // the transparent score breakdown.
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const url = new URL(req.url);
   const requested = url.searchParams.get("framework");
   const frameworkId: FrameworkId = isValidFramework(requested) ? requested : "DPDPA";

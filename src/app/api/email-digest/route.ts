@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/email-digest, generates a daily/weekly security summary email per client
 // Query: ?clientId=xxx&period=daily|weekly
 export async function GET(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const url = new URL(req.url);
   const clientId = url.searchParams.get("clientId");
   const period = url.searchParams.get("period") || "daily";

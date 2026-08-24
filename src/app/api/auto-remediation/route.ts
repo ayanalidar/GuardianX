@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -9,6 +10,8 @@ export const maxDuration = 30;
 // Body: { findingId?: string, clientId?: string }
 // For each finding, AI generates the specific remediation code
 export async function POST(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const { findingId, clientId } = await req.json().catch(() => ({}));
 
   try {

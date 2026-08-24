@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -6,6 +7,8 @@ export const dynamic = "force-dynamic";
 // Establishes baselines and flags deviations (web server executing shells, etc.)
 // Body: { action: "baseline" | "check", targetUrl?, processes? }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { action, targetUrl, processes } = await req.json().catch(() => ({}));
 
   try {
@@ -99,7 +102,9 @@ export async function POST(req: Request) {
 }
 
 // GET /api/behavioral-monitor, returns monitoring rules
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   return NextResponse.json({
     rules: [
       { id: 1, name: "WEB_SERVER_SPAWNED_SHELL", severity: "critical", desc: "Web server process spawning shell with network commands" },

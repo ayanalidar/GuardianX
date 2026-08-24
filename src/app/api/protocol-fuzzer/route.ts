@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -9,6 +10,8 @@ export const maxDuration = 30;
 // Injects malformed data structures to reveal edge-case faults
 // Body: { targetUrl, protocol: "http" | "graphql" | "websocket" | "rest", maxMutations?: number }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { targetUrl, protocol = "http", maxMutations = 20 } = await req.json().catch(() => ({}));
 
   if (!targetUrl) return NextResponse.json({ error: "targetUrl required" }, { status: 400 });

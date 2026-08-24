@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/data-flow/honeypot, record a honeypot endpoint hit
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const endpoint = typeof body.endpoint === "string" ? body.endpoint : "unknown";
   const ipAddress = typeof body.ipAddress === "string" ? body.ipAddress : "unknown";

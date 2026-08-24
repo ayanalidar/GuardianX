@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 import {
   verifyAttestationChain,
   parseAttestationData,
@@ -13,7 +14,9 @@ export const dynamic = "force-dynamic";
 // formula used by /api/patches/[id]/approve: SHA-256(prevHash + patchId +
 // patchedCodeHash + approvedAt). The previous implementation used `createdAt`
 // instead of `approvedAt`, which caused false negatives — this is now fixed.
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const rows = (await db.attestation.findMany({
     orderBy: { createdAt: "asc" },
     include: { patch: { select: { patchId: true, title: true, severity: true } } },

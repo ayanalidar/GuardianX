@@ -1,17 +1,22 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/scheduled-scans, list all scheduled scans
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const schedules = await db.scheduledScan.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json(schedules);
 }
 
 // POST /api/scheduled-scans, create a scheduled scan
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const { name, scanType, targetId, codebaseId, cronExpr } = body;
   if (!name || !scanType || !cronExpr) return NextResponse.json({ error: "name, scanType, cronExpr required" }, { status: 400 });
@@ -25,7 +30,9 @@ export async function POST(req: Request) {
 }
 
 // POST /api/scheduled-scans/execute, check & run due scans (called by internal timer)
-export async function PATCH() {
+export async function PATCH(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const due = await db.scheduledScan.findMany({ where: { isActive: true, nextRunAt: { lte: new Date() } } });
   let executed = 0;
   for (const scan of due) {
@@ -43,6 +50,8 @@ export async function PATCH() {
 
 // DELETE /api/scheduled-scans?id=xxx
 export async function DELETE(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });

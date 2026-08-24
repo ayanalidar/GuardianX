@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 import {
   cloneRepoWithCredential,
   readFileFromClone,
@@ -13,6 +14,8 @@ export const maxDuration = 60;
 // Body: { credentialId, repoUrl, filePath, name? }
 // Clones the repo, reads the chosen file, creates a Codebase from it, cleans up.
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const credentialId =
     typeof body.credentialId === "string" ? body.credentialId : "";

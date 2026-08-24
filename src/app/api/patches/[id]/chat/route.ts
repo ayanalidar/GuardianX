@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { chatAboutPatch } from "@/lib/sentinel/engine/ai";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 // POST /api/patches/[id]/chat, talk to the AI about this patch.
 // Body: { message: string }
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: Request,
+  { params }: { params: Promise<{ id: string }> }) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
   const message = typeof body.message === "string" ? body.message.trim() : "";

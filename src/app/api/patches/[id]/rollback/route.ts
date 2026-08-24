@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/patches/[id]/rollback, revert an approved patch.
 // Restores the original (vulnerable) code to the codebase, marks the patch
 // as "rolled-back", and records the rollback timestamp + reason.
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: Request,
+  { params }: { params: Promise<{ id: string }> }) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
   const reason = typeof body?.reason === "string" ? body.reason.slice(0, 500) : "Manual rollback";

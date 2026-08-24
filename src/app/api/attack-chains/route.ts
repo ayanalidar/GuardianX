@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 45;
@@ -9,7 +10,9 @@ let zaiPromise: Promise<ZAI> | null = null;
 async function sdk() { if (!zaiPromise) zaiPromise = ZAI.create(); return zaiPromise; }
 
 // GET /api/attack-chains, list all synthesized attack chains
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const chains = await db.attackChain.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json((chains || []).map((c: Record<string, unknown>) => {
     let steps: unknown = [];
@@ -45,7 +48,9 @@ export async function GET() {
 }
 
 // POST /api/attack-chains, AI-synthesize attack chains from current findings
-export async function POST() {
+export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const patches = await db.patch.findMany({ where: { status: "pending" }, select: { patchId: true, title: true, severity: true, cve: true, affectedFile: true, aiExplanation: true } });
   const findings = await db.finding.findMany({ select: { id: true, title: true, severity: true, category: true, endpoint: true, description: true } });
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 import {
   verifyAttestationChain,
   GENESIS_PREV_HASH,
@@ -19,7 +20,9 @@ export const dynamic = "force-dynamic";
 //
 // Returns Content-Disposition: attachment; filename="guardianx-attestations-<ts>.json"
 
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const rows = (await db.attestation.findMany({
     orderBy: { createdAt: "asc" },
     include: {

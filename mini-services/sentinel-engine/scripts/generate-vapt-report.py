@@ -185,7 +185,7 @@ def draw_body_bg(canv, doc):
     canv.line(MARGIN, 12 * mm, PAGE_W - MARGIN, 12 * mm)
     canv.setFont("Helvetica", 7.5)
     canv.setFillColor(C_MUTED)
-    canv.drawString(MARGIN, 8 * mm, "www.guardianx.in  ·  hello@guardianx.in  ·  +91 70067 12347")
+    canv.drawString(MARGIN, 8 * mm, "www.guardianx.cloud  ·  hello@guardianx.in  ·  +91 70067 12347")
     canv.drawRightString(PAGE_W - MARGIN, 8 * mm, f"Page {doc.page}")
     canv.restoreState()
 
@@ -929,7 +929,7 @@ def build_appendices(data, story):
     story.append(Paragraph(
         '<font color="#6b7280" size="8">'
         '— End of Report —<br/>'
-        'GuardianX · www.guardianx.in · hello@guardianx.in · +91 70067 12347'
+        'GuardianX · www.guardianx.cloud · hello@guardianx.in · +91 70067 12347'
         '</font>', end_style))
 
 

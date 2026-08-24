@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { execSql } from "@/lib/db";
 import fs from "fs";
 import path from "path";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/migrate-dfir — creates DFIR tables (Incident, IncidentEvent, IOC, Evidence, Playbook)
 // Public endpoint (no auth) for one-time migration. Safe to call multiple times (uses IF NOT EXISTS).
-export async function POST() {
+export async function POST(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   try {
     const sqlPath = path.join(process.cwd(), "supabase", "migrations", "0006_dfir_tables.sql");
     const sql = fs.readFileSync(sqlPath, "utf8");

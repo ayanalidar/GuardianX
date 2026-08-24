@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/webhooks, list all webhook configs
-export async function GET() {
+export async function GET(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   try {
     const webhooks = await db.webhookConfig.findMany({
       orderBy: { createdAt: "desc" },
@@ -26,6 +29,8 @@ export async function GET() {
 // POST /api/webhooks, create a webhook config
 // Body: { name, url, events: string[] }
 export async function POST(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const { name, url, events } = await req.json().catch(() => ({}));
   if (!name || !url) return NextResponse.json({ error: "name and url required" }, { status: 400 });
 
@@ -47,6 +52,8 @@ export async function POST(req: Request) {
 
 // DELETE /api/webhooks?id=xxx
 export async function DELETE(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });

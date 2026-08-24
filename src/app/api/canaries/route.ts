@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,9 @@ const CANARY_DATA = [
 ];
 
 // GET /api/canaries, list all canary records + their detection status
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   // Sync canary records with the known canary data
   for (const c of CANARY_DATA) {
     const existing = await db.canary.findFirst({ where: { canaryValue: c.canaryValue } });
@@ -50,6 +53,8 @@ export async function GET() {
 
 // POST /api/canaries, manually add a new canary
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const label = typeof body.label === "string" ? body.label : "Custom Canary";
   const canaryType = typeof body.canaryType === "string" ? body.canaryType : "custom";

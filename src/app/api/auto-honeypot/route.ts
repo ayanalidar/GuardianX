@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/auto-honeypot, auto-deploys honeypot endpoints + canary tokens for a target
 // Body: { targetId: string }
 export async function POST(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const { targetId } = await req.json().catch(() => ({}));
   if (!targetId) return NextResponse.json({ error: "targetId required" }, { status: 400 });
 

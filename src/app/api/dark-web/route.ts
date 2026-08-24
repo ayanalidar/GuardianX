@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -13,7 +14,9 @@ async function sdk() {
 
 // GET /api/dark-web, search for leaked credentials and data breaches
 // matching the user's codebase names + common breach databases.
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const z = await sdk();
     const codebases = await db.codebase.findMany({ select: { name: true } });

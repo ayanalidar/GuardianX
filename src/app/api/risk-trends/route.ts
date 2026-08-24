@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/risk-trends?clientId=xxx&days=30, returns risk score + finding count trends
 // Generates a time series showing how risk has changed over time
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const url = new URL(req.url);
   const clientId = url.searchParams.get("clientId");
   const days = parseInt(url.searchParams.get("days") || "30");

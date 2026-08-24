@@ -279,7 +279,7 @@ class AuditScraperEngine:
 
         # Default headers
         default_headers = {
-            "User-Agent": "GuardianX-Audit-Scraper/1.0 (+https://www.guardianx.in)",
+            "User-Agent": "GuardianX-Audit-Scraper/1.0 (+https://www.guardianx.cloud)",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
         }
@@ -364,7 +364,7 @@ class AuditScraperEngine:
             context = await browser.new_context(
                 user_agent=self.config.headers.get(
                     "User-Agent",
-                    "GuardianX-Audit-Scraper/1.0 (+https://www.guardianx.in)"
+                    "GuardianX-Audit-Scraper/1.0 (+https://www.guardianx.cloud)"
                 ),
                 ignore_https_errors=not self.config.verify_ssl,
             )

@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/targets, list all targets.
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const targets = await db.target.findMany({
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { engagements: true } } },
@@ -25,6 +28,8 @@ export async function GET() {
 
 // POST /api/targets, add a target. MUST set authorized=true explicitly.
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const baseUrl = typeof body.baseUrl === "string" ? body.baseUrl.trim() : "";

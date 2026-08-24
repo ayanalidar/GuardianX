@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -6,6 +7,8 @@ export const maxDuration = 30;
 // POST /api/k8s-scan, scan Kubernetes manifests for security misconfigurations.
 // Body: { manifest }, YAML/JSON k8s manifest string
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const manifest = body.manifest || "";
   const manifestLower = manifest.toLowerCase();
@@ -39,7 +42,9 @@ export async function POST(req: Request) {
 }
 
 // GET /api/k8s-scan, return example manifest for testing
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   return NextResponse.json({
     example_manifest: `apiVersion: apps/v1
 kind: Deployment

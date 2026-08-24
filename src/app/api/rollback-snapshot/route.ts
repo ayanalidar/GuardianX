@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/rollback-snapshot, pre-patch state capture + auto-rollback
 // Body: { action: "snapshot" | "rollback" | "health_check", patchId?, snapshotId? }
 export async function POST(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const { action, patchId, snapshotId } = await req.json().catch(() => ({}));
 
   try {

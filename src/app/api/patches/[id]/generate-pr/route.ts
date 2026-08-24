@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, writeFile, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { getUserFromRequest } from "@/lib/auth";
 import {
   decryptSecret,
   buildAuthedCloneUrl,
@@ -33,10 +34,10 @@ async function runGit(args: string[], cwd: string, env?: Record<string, string>)
 // If the codebase was imported from Git (has a credential), clones the repo,
 // creates a branch, applies the patch, commits, and pushes.
 // If no Git credential is linked, generates a downloadable patch file + commit message.
-export async function POST(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: Request,
+  { params }: { params: Promise<{ id: string }> }) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { id } = await params;
 
   const patch = await db.patch.findFirst({

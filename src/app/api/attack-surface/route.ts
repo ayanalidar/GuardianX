@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { fetchUrl } from "@/lib/sentinel/engine/http-attacker";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -41,6 +42,8 @@ const COMMON_PORTS = [
 
 // GET /api/attack-surface?targetId=xxx, discover the attack surface of a target.
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const url = new URL(req.url);
   const targetId = url.searchParams.get("targetId");
 

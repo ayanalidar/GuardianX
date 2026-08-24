@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +8,9 @@ export const dynamic = "force-dynamic";
 // Checks: PII collection without consent indicators, data retention issues,
 // cross-border transfer risks (DPDPA §16), sensitive data in responses.
 
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   // Get all VAPT findings to analyze for privacy risks
   const findings = await db.finding.findMany({
     include: { engagement: { include: { target: { select: { name: true, baseUrl: true } } } } },

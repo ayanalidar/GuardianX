@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ const SLA_HOURS: Record<string, number> = {
 
 // GET /api/sla-tracking?clientId=xxx, tracks SLA compliance per client
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const url = new URL(req.url);
   const clientId = url.searchParams.get("clientId");
 

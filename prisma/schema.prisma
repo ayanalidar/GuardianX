@@ -46,14 +46,24 @@ model Codebase {
 
 // ── Authentication & User Management ────────────────────────────────────────
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("viewer")
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  role          String   @default("viewer")
+  avatar        String?
+  // 2FA (migration 0004)
+  twofaSecret   String?
+  twofaEnabled  Boolean  @default(false)
+  backupCodes   String?
+  // Approval workflow (migration 0005)
+  approved      Boolean  @default(false)
+  // Global session-revocation counter (migration 0008). Bumped on password
+  // reset / break-glass / account-deletion; embedded in the JWT at login
+  // so the auth layer can reject any token whose version is stale.
+  tokenVersion  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Scan {

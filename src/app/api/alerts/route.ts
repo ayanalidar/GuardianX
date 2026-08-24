@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/alerts, list alert rules
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const rules = await db.alertRule.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json(rules.map(r => ({ ...r, channelConfig: r.channelConfig ? JSON.parse(r.channelConfig as string) : null })));
 }
 
 // POST /api/alerts, create an alert rule
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const { name, condition, channel, channelConfig } = body;
   if (!name || !condition || !channel) return NextResponse.json({ error: "name, condition, channel required" }, { status: 400 });
@@ -20,6 +25,8 @@ export async function POST(req: Request) {
 
 // POST /api/alerts/trigger, internally triggered by other APIs
 export async function PATCH(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const { event, data } = body;
   const rules = await db.alertRule.findMany({ where: { isActive: true } });

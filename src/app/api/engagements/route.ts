@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -10,6 +11,8 @@ export const maxDuration = 30;
 // Returns 202 with { engagementId } immediately; the Railway engine runs
 // the DAST pipeline and streams events via socket.io.
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const targetId = typeof body.targetId === "string" ? body.targetId : "";
 
@@ -60,7 +63,9 @@ export async function POST(req: Request) {
 }
 
 // GET /api/engagements, list recent engagements.
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const engagements = await db.engagement.findMany({
     orderBy: { startedAt: "desc" },
     take: 20,

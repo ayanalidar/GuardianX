@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 import {
   DPDPA_FRAMEWORK,
   ISO27001_FRAMEWORK,
@@ -331,6 +332,8 @@ function renderHtmlReport(opts: {
 // GET /api/compliance/export?framework=DPDPA&format=html|json
 // Returns a complete audit-ready compliance report.
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const url = new URL(req.url);
   const requested = url.searchParams.get("framework");
   const format = (url.searchParams.get("format") || "html").toLowerCase();

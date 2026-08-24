@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -8,6 +9,8 @@ export const maxDuration = 60;
 // POST /api/benchmark, runs a benchmark comparing GuardianX module vs baseline
 // Body: { module: string, targetUrl?: string, iterations?: number }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { module, targetUrl, iterations = 3 } = await req.json().catch(() => ({}));
 
   if (!module) return NextResponse.json({ error: "module required" }, { status: 400 });
@@ -112,7 +115,9 @@ export async function POST(req: Request) {
 }
 
 // GET /api/benchmark, returns benchmark history
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const logs = await db.auditLog.findMany({
       where: { action: "benchmark_run" },

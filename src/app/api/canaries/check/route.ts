@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 45;
@@ -13,7 +14,9 @@ async function sdk() {
 
 // POST /api/canaries/check, search the web for any canary values appearing externally.
 // If a canary value is found on a site that isn't the target, it's confirmed exfiltration.
-export async function POST() {
+export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const canaries = await db.canary.findMany({ where: { isActive: true, detected: false } });
 
   if (canaries.length === 0) {

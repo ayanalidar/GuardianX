@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchUrl } from "@/lib/sentinel/engine/http-attacker";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -7,6 +8,8 @@ export const maxDuration = 30;
 // POST /api/ws-test, WebSocket security testing
 // Body: { targetUrl }, ws:// or http:// URL
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const base = body.targetUrl || "http://localhost:3004";
   const wsUrl = base.replace("http://", "ws://").replace("https://", "wss://");

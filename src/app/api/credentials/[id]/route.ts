@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // DELETE /api/credentials/[id], permanently delete a credential + wipe ciphertext.
-export async function DELETE(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(req: Request,
+  { params }: { params: Promise<{ id: string }> }) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { id } = await params;
   const cred = await db.credential.findUnique({ where: { id } });
   if (!cred) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -25,10 +26,10 @@ export async function DELETE(
 }
 
 // GET /api/credentials/[id], metadata + audit history (NEVER the secret).
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(req: Request,
+  { params }: { params: Promise<{ id: string }> }) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { id } = await params;
   const cred = await db.credential.findUnique({
     where: { id },

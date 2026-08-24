@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/slack, configure Slack/Teams webhook + send test alert
 // Body: { action: "test" | "configure", webhookUrl?: string, channel?: string }
 export async function POST(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const body = await req.json().catch(() => ({}));
   const { action, webhookUrl } = body;
 
@@ -91,7 +94,9 @@ export async function POST(req: Request) {
 }
 
 // GET /api/slack, return current integration config
-export async function GET() {
+export async function GET(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   try {
     const integrations = await db.integration.findMany({
       where: { type: "slack" },

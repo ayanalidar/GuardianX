@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 import {
   verifyAttestationChain,
   verifyAttestationForPatch,
@@ -23,6 +24,8 @@ export const dynamic = "force-dynamic";
 //   links: ChainLink[]
 // }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   let patchId: string | undefined;
   try {
     const body = await req.json();
@@ -81,7 +84,9 @@ export async function POST(req: Request) {
 }
 
 // GET — convenience: verify the entire chain (same as POST without body).
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const rows = (await db.attestation.findMany({
     orderBy: { createdAt: "asc" },
     include: { patch: { select: { patchId: true, title: true, severity: true } } },

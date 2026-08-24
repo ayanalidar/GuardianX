@@ -298,7 +298,7 @@ const template = [
   {
     label: "Help",
     submenu: [
-      { label: "GuardianX Website", click: () => shell.openExternal("https://www.guardianx.in") },
+      { label: "GuardianX Website", click: () => shell.openExternal("https://www.guardianx.cloud") },
       { label: "Contact Support", click: () => shell.openExternal("mailto:hello@guardianx.in") },
       { type: "separator" },
       {
@@ -308,7 +308,7 @@ const template = [
             type: "info",
             title: "About GuardianX",
             message: "GuardianX — Autonomous Security Operations Platform",
-            detail: "Version 1.0.0\\n\\nAI-driven SAST, DAST, exploit generation,\\nadversarial patching, and VAPT reporting.\\n\\n© 2026 GuardianX\\nwww.guardianx.in · hello@guardianx.in",
+            detail: "Version 1.0.0\\n\\nAI-driven SAST, DAST, exploit generation,\\nadversarial patching, and VAPT reporting.\\n\\n© 2026 GuardianX\\nwww.guardianx.cloud · hello@guardianx.in",
             icon: path.join(__dirname, "build", "icon.ico"),
           });
         },

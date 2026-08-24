@@ -639,7 +639,7 @@ export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               </div>
               <div>
                 <label className="text-xs text-zinc-400">Target URL *</label>
-                <input value={tgtUrl} onChange={(e) => setTgtUrl(e.target.value)} placeholder="https://www.guardianx.in"
+                <input value={tgtUrl} onChange={(e) => setTgtUrl(e.target.value)} placeholder="https://www.guardianx.cloud"
                   className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-red-500/50 focus:outline-none" />
               </div>
               <label className="flex items-center gap-2 text-xs text-zinc-400">

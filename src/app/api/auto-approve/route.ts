@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/auto-approve, auto-approves patches that passed sandbox + adversarial
 // Body: { maxSeverity?: "low" | "medium" }  (never auto-approve high/critical)
 export async function POST(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const { maxSeverity = "medium" } = await req.json().catch(() => ({}));
 
   const severityOrder = { low: 0, medium: 1, high: 2, critical: 3 };

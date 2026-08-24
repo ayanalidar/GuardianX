@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/data-flow/monitor, real-time API data flow monitor.
 // Shows per-endpoint, per-IP access patterns, scraping detection.
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   // Last 500 requests
   const logs = await db.apiAccessLog.findMany({
     orderBy: { timestamp: "desc" },

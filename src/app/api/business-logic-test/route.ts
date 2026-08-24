@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 45;
@@ -11,6 +12,8 @@ async function sdk() { if (!zaiPromise) zaiPromise = ZAI.create(); return zaiPro
 // POST /api/business-logic-test, AI generates business logic attack scenarios.
 // Body: { targetUrl, description? }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const { targetUrl } = body;
   const base = targetUrl || "http://localhost:3004";

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -7,6 +8,8 @@ export const maxDuration = 30;
 // Checks SSL/TLS, HTTP headers, DNS, security configuration
 // Body: { targetUrl: string }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { targetUrl } = await req.json().catch(() => ({}));
   if (!targetUrl) return NextResponse.json({ error: "targetUrl required" }, { status: 400 });
 

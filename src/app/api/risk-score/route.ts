@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,9 @@ export const dynamic = "force-dynamic";
 // - Scan recency (stale = higher risk)
 // - Authorization status (unauthorized = can't test = unknown risk)
 // - Historical breach indicators (canary triggers)
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const clients = await db.client.findMany({ select: { id: true, name: true, status: true, authorized: true } });
     const riskScores: { client: string; score: number; level: string; factors: string[] }[] = [];

@@ -233,7 +233,7 @@ Startups that bake DPDPA into their product from day one avoid painful retrofits
 
 ## Step 1: Create an Account and Log In
 
-Sign up at guardianx.in. You'll get an email to verify your account. After verification, log in and land on the Command Center dashboard.
+Sign up at guardianx.cloud. You'll get an email to verify your account. After verification, log in and land on the Command Center dashboard.
 
 ## Step 2: Add a Client (Optional)
 
@@ -609,7 +609,7 @@ jobs:
           fetch-depth: 0
       - name: Install GuardianX CLI
         run: |
-          curl -fsSL https://guardianx.in/install.sh | sh
+          curl -fsSL https://guardianx.cloud/install.sh | sh
       - name: Run SAST scan
         env:
           GUARDIANX_TOKEN: \${{ secrets.GUARDIANX_TOKEN }}
@@ -643,7 +643,7 @@ guardianx-sast:
   only:
     - merge_requests
   script:
-    - curl -fsSL https://guardianx.in/install.sh | sh
+    - curl -fsSL https://guardianx.cloud/install.sh | sh
     - guardianx scan sast --path . --format json --output findings.json --fail-on critical
     - guardianx comment gitlab --findings findings.json --mr $CI_MERGE_REQUEST_IID
   artifacts:
@@ -663,7 +663,7 @@ pipeline {
   stages {
     stage('GuardianX SAST') {
       steps {
-        sh 'curl -fsSL https://guardianx.in/install.sh | sh'
+        sh 'curl -fsSL https://guardianx.cloud/install.sh | sh'
         withCredentials([string(credentialsId: 'guardianx-token', variable: 'TOKEN')]) {
           sh '''
             guardianx scan sast \\

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/correlation, cross-module vulnerability correlation.
 // Connects findings across SAST + DAST + SCA + dark web + canary hits.
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const [patches, findings, canaries, honeypots, scaDeps] = await Promise.all([
     db.patch.findMany({ where: { status: "pending" }, select: { patchId: true, title: true, severity: true, cve: true, affectedFile: true, aiExplanation: true, codebaseId: true } }),
     db.finding.findMany({ select: { id: true, title: true, severity: true, category: true, endpoint: true, description: true, engagementId: true } }),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 import { randomUUID } from "node:crypto";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -13,6 +14,8 @@ export const maxDuration = 30;
 //   config?: { severity?, canaryTypes?, codebaseIds?, targetIds? }
 // }
 export async function POST(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const { service, clientIds, config = {} } = await req.json().catch(() => ({}));
 
   if (!service || !clientIds || !Array.isArray(clientIds) || clientIds.length === 0) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 import { randomUUID } from "node:crypto";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -10,6 +11,8 @@ export const maxDuration = 30;
 // Body: { clientId: string }
 // Does everything automatically, just needs a client with a targetUrl
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { clientId } = await req.json().catch(() => ({}));
   if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
 

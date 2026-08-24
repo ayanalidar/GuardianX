@@ -80,8 +80,8 @@ export default function ContactPage() {
               <div className="holo-card-sharp hud-corners p-5">
                 <h3 className="mb-3 text-xs font-mono uppercase tracking-widest text-emerald-500/60">Direct Contact</h3>
                 <div className="space-y-3">
-                  <a href="https://www.guardianx.in" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-zinc-300 hover:text-emerald-400">
-                    <Globe className="size-4 text-emerald-400" /> www.guardianx.in
+                  <a href="https://www.guardianx.cloud" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-zinc-300 hover:text-emerald-400">
+                    <Globe className="size-4 text-emerald-400" /> www.guardianx.cloud
                   </a>
                   <a href="mailto:hello@guardianx.in" className="flex items-center gap-2 text-sm text-zinc-300 hover:text-emerald-400">
                     <Mail className="size-4 text-emerald-400" /> hello@guardianx.in

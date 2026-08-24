@@ -1,6 +1,7 @@
 # GuardianX Production Caddyfile
 # Automatic HTTPS via Let's Encrypt
-# Replace guardianx.in with your actual domain
+# Domain: guardianx.cloud (web platform)
+# Note: SMTP mailbox remains on guardianx.in (Hostinger)
 
 {
     email hello@guardianx.in
@@ -9,7 +10,7 @@
 }
 
 # ── Main domain — Web App ──────────────────────────────────────────────────
-guardianx.in, www.guardianx.in {
+guardianx.cloud, www.guardianx.cloud {
     # Security headers
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
@@ -43,7 +44,7 @@ guardianx.in, www.guardianx.in {
 }
 
 # ── API subdomain — Engine + Socket.io ─────────────────────────────────────
-api.guardianx.in {
+api.guardianx.cloud {
     reverse_proxy sentinel-engine:3003 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
@@ -58,6 +59,6 @@ api.guardianx.in {
 }
 
 # ── Health check endpoint (no auth) ────────────────────────────────────────
-health.guardianx.in {
+health.guardianx.cloud {
     reverse_proxy guardianx:3000/api/health
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { fetchUrl } from "@/lib/sentinel/engine/http-attacker";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 45;
@@ -8,6 +9,8 @@ export const maxDuration = 45;
 // POST /api/fuzz, API fuzzing engine. Throws mutated inputs at endpoints.
 // Body: { targetUrl, endpoint, method, paramCount }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const { targetUrl, endpoint, method } = body;
   const base = targetUrl || "http://localhost:3004";

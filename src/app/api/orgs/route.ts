@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/orgs, list organizations + members
-export async function GET() {
+export async function GET(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const orgs = await db.organization.findMany({ include: { members: true } });
   return NextResponse.json(orgs.map(o => ({
     id: o.id, name: o.name, slug: o.slug,
@@ -15,6 +18,8 @@ export async function GET() {
 
 // POST /api/orgs, create organization
 export async function POST(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const body = await req.json().catch(() => ({}));
   const { name, slug } = body;
   if (!name || !slug) return NextResponse.json({ error: "name and slug required" }, { status: 400 });
@@ -24,6 +29,8 @@ export async function POST(req: Request) {
 
 // PATCH /api/orgs, invite member
 export async function PATCH(req: Request) {
+  const auth = requireAdmin(req);
+  if (!auth.ok) return auth.response;
   const body = await req.json().catch(() => ({}));
   const { orgId, email, role } = body;
   if (!orgId || !email) return NextResponse.json({ error: "orgId and email required" }, { status: 400 });

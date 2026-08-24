@@ -28,7 +28,7 @@ openssl rand -hex 32  # → BREAK_GLASS_KEY
 ```
 
 ### 4. Update Caddyfile.production
-Replace `guardianx.in` with your actual domain.
+Replace `guardianx.cloud` with your actual domain (default config targets `guardianx.cloud`).
 
 ### 5. Start everything
 ```bash

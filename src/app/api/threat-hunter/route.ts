@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -8,7 +9,9 @@ export const maxDuration = 30;
 // POST /api/threat-hunter, autonomous 24/7 agent that proactively scans
 // all authorized clients for new vulnerabilities.
 // In production, this would be called by a cron job every hour.
-export async function POST() {
+export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const triggered: { client: string; codebase: string; scanId: string }[] = [];
     const engagements: { client: string; target: string; engagementId: string }[] = [];
@@ -92,7 +95,9 @@ export async function POST() {
 }
 
 // GET /api/threat-hunter, returns what the hunter would do (dry run)
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
     const stale: { client: string; asset: string; type: string; lastScan: string | null }[] = [];
 

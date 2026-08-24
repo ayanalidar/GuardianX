@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
+import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -10,6 +11,8 @@ export const maxDuration = 60;
 //
 // Body: { action: "search" | "analyze" | "gap_analysis", query?, repoUrl?, module? }
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const { action, query, repoUrl, module } = await req.json().catch(() => ({}));
 
   try {
@@ -179,7 +182,9 @@ Be specific and technical. Format as bullet points.`;
 }
 
 // GET /api/research-agent, returns suggested search queries
-export async function GET() {
+export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   return NextResponse.json({
     suggested_queries: [
       "vulnerability scanner",
