@@ -21,6 +21,7 @@ import { GuardianChat } from "./guardian-chat";
 import { ServiceLauncher } from "./service-launcher";
 import { ServiceStatusChips } from "./service-status-chips";
 import { SignalBusProvider, ImmersiveView } from "./ai-visualizer";
+import { WarRoomOverlay } from "./war-room/war-room-overlay";
 
 interface ClientSummary {
   id: string;
@@ -582,17 +583,8 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
         </aside>
       </div>
 
-      {/* ═══ WAR ROOM MODE (fullscreen overlay) ═══ */}
-      {warRoom && (
-        <WarRoomMode
-          clients={clients}
-          feed={feed}
-          threatLevel={threatLevel}
-          clock={clock}
-          onClose={() => setWarRoom(false)}
-          onSelectClient={(id) => { setWarRoom(false); onSelectClient(id); }}
-        />
-      )}
+      {/* ═══ WAR ROOM MODE (fullscreen tri-modal overlay) ═══ */}
+      <WarRoomOverlay open={warRoom} onClose={() => setWarRoom(false)} />
 
       {/* ═══ SERVICE STATUS CHIPS (running services bar) ═══ */}
       <ServiceStatusChips />
@@ -645,156 +637,13 @@ function OpsButton({ label, icon: Icon, color, loading, disabled, onClick }: {
   );
 }
 
-// ── War Room Mode ───────────────────────────────────────────────────────────
-function WarRoomMode({ clients, feed, threatLevel, clock, onClose, onSelectClient }: {
-  clients: ClientSummary[];
-  feed: ActivityFeed | null;
-  threatLevel: number;
-  clock: Date;
-  onClose: () => void;
-  onSelectClient: (id: string) => void;
-}) {
-  const [viewIndex, setViewIndex] = useState(0);
-
-  // Auto-cycle through views every 10 seconds
-  useEffect(() => {
-    const id = setInterval(() => setViewIndex((i) => (i + 1) % 3), 10000);
-    return () => clearInterval(id);
-  }, []);
-
-  const threatColor = threatLevel >= 60 ? "red" : threatLevel >= 30 ? "amber" : "emerald";
-  const threatCfg = COLOR_MAP[threatColor];
-  const stats = {
-    clients: clients.length,
-    active: clients.filter((c) => c.status !== "onboarding" && c.status !== "compliant").length,
-    findings: clients.reduce((s, c) => s + c.stats.findings, 0),
-    critical: clients.reduce((s, c) => s + c.stats.critical_findings, 0),
-    patches: clients.reduce((s, c) => s + c.stats.patches, 0),
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-zinc-950/98 p-4 overflow-y-auto"
-    >
-      <div className="scanlines cyber-vignette absolute inset-0 pointer-events-none" />
-      <div className="relative">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <h1 className="text-4xl font-bold tracking-tight">
-              <span className="neon-emerald">WAR</span>{" "}
-              <span className="neon-red">ROOM</span>
-            </h1>
-            <div className={`rounded-lg border ${threatCfg.border} ${threatCfg.bg} px-4 py-2`}>
-              <span className={`font-mono text-2xl font-bold ${threatCfg.text}`}>
-                {threatLevel >= 60 ? "CRITICAL" : threatLevel >= 30 ? "ELEVATED" : "GUARDED"}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="font-mono text-3xl font-bold text-emerald-300 neon-emerald">
-                {clock.toLocaleTimeString("en-US", { hour12: false })}
-              </div>
-              <div className="font-mono text-xs text-zinc-500">{clock.toLocaleDateString()}</div>
-            </div>
-            <Button onClick={onClose} variant="outline" className="border-zinc-700 bg-zinc-900 text-zinc-300">
-              Exit War Room
-            </Button>
-          </div>
-        </div>
-
-        {/* Giant KPI row */}
-        <div className="grid grid-cols-5 gap-4 mb-6">
-          {[
-            { label: "CLIENTS", value: stats.clients, color: "emerald" },
-            { label: "ACTIVE", value: stats.active, color: "cyan" },
-            { label: "PATCHES", value: stats.patches, color: "violet" },
-            { label: "FINDINGS", value: stats.findings, color: "amber" },
-            { label: "CRITICAL", value: stats.critical, color: "red" },
-          ].map((kpi) => {
-            const cfg = COLOR_MAP[kpi.color];
-            return (
-              <div key={kpi.label} className={`holo-card-sharp hud-corners border ${cfg.border} p-6 text-center`}>
-                <div className={`text-5xl font-bold font-mono ${cfg.text}`}>{kpi.value}</div>
-                <div className="mt-2 text-sm font-mono uppercase tracking-widest text-zinc-500">{kpi.label}</div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Auto-cycling content */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          {viewIndex === 0 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-2">
-              <h2 className="mb-3 text-xl font-bold text-emerald-300">CLIENT PIPELINE STATUS</h2>
-              <div className="grid gap-2 md:grid-cols-2">
-                {clients.map((c) => (
-                  <div key={c.id} onClick={() => onSelectClient(c.id)} className="holo-card-sharp hud-corners cursor-pointer p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-zinc-100">{c.name}</span>
-                      <span className={`font-mono text-sm ${c.status === "compliant" ? "text-emerald-400" : "text-cyan-400"}`}>
-                        [{c.status.toUpperCase()}]
-                      </span>
-                    </div>
-                    <div className="mt-2 flex gap-3 text-sm">
-                      <span className="text-sky-400">{c.stats.codebases} repos</span>
-                      <span className="text-emerald-400">{c.stats.patches} patches</span>
-                      <span className="text-amber-400">{c.stats.findings} findings</span>
-                      {c.stats.critical_findings > 0 && <span className="text-red-400 font-bold">⚠ {c.stats.critical_findings} CRITICAL</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-          {viewIndex === 1 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-2">
-              <h2 className="mb-3 text-xl font-bold text-cyan-300">LIVE ACTIVITY FEED</h2>
-              <div className="holo-card-sharp hud-corners p-4 max-h-96 overflow-y-auto custom-scrollbar font-mono text-sm">
-                {feed?.events.slice(0, 20).map((evt) => {
-                  const cfg = COLOR_MAP[evt.severity === "error" ? "red" : evt.severity === "warning" ? "amber" : evt.severity === "success" ? "emerald" : "cyan"];
-                  return (
-                    <div key={evt.id} className="flex gap-2 py-1">
-                      <span className="text-zinc-600">{new Date(evt.ts).toLocaleTimeString("en-US", { hour12: false })}</span>
-                      <span className={`font-bold ${cfg.text}`}>{evt.severity === "error" ? "ERR" : evt.severity === "warning" ? "WRN" : evt.severity === "success" ? "OK" : "INF"}</span>
-                      <span className="text-zinc-500">[{evt.client}]</span>
-                      <span className="text-zinc-300">{evt.detail}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-          {viewIndex === 2 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-2">
-              <h2 className="mb-3 text-xl font-bold text-rose-300">THREAT LEVEL MONITOR</h2>
-              <div className="holo-card-sharp hud-corners p-8 text-center">
-                <div className={`text-9xl font-bold font-mono ${threatCfg.text} ${threatLevel >= 30 ? "animate-pulse" : ""}`}>
-                  {threatLevel}
-                </div>
-                <div className={`mt-4 text-3xl font-bold ${threatCfg.text}`}>
-                  {threatLevel >= 60 ? "CRITICAL THREAT" : threatLevel >= 30 ? "ELEVATED RISK" : "GUARDED STATUS"}
-                </div>
-                <div className="mt-4 flex justify-center gap-1">
-                  {[...Array(20)].map((_, i) => (
-                    <div key={i} className={`h-8 w-4 rounded ${i < Math.floor(threatLevel / 5) ? threatCfg.dot : "bg-zinc-800"}`} />
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        <div className="mt-4 text-center font-mono text-xs text-zinc-600">
-          Auto-cycling views every 10s · View {viewIndex + 1}/3 · Press ESC or click Exit to leave
-        </div>
-      </div>
-    </motion.div>
-  );
+// ── War Room Mode (legacy, superseded by <WarRoomOverlay>) ────────────────
+// The original auto-cycling fullscreen War Room is replaced by the
+// tri-modal (voice + gesture + mouse) overlay at ./war-room/war-room-overlay.tsx.
+// This stub is kept so any external imports of `WarRoomMode` still resolve;
+// it is no longer mounted by the Command Center.
+function _WarRoomModeLegacyStub() {
+  return null;
 }
 
 // ── Helper: determine stage status from client data ────────────────────────
