@@ -350,3 +350,188 @@ Next.js dashboard with no extra services.
 - The legacy `WarRoomMode` (auto-cycling 3-view) is gone from the UI
   but its 150-line body is replaced by a `_WarRoomModeLegacyStub` —
   remove the stub if you want a clean diff.
+
+
+
+---
+
+## 2026-09-01 — frontend-update: 8 missing UI components wired into the console
+
+**Task ID:** `frontend-update`
+**Scope:** Next.js web app at `/home/z/GuardianX-web`.
+
+The console had many features built (DFIR, SOC, compliance, war room,
+etc.) but several spec-listed UI features were missing entirely. This
+task creates all 8 missing components, the 7 API routes they depend on,
+one Supabase migration + two Prisma models, and wires everything into
+`src/app/page.tsx` + `src/app/layout.tsx`.
+
+### What landed
+
+**New components** (`src/components/sentinel/`):
+
+- `support-chat.tsx` — floating bottom-right chat widget. Round launcher
+  + spring-animated panel. Persists the conversation in localStorage,
+  fetches prior tickets via `GET /api/support/ticket`, files new
+  tickets via `POST /api/support/ticket`. Admin role auto-tags
+  priority=high and shows an amber "Priority: Admin" badge. Links to
+  `/features` (Docs) and `/architecture` (API Docs). Stacks above the
+  onboarding help button via `bottomOffset`.
+- `analyst-onboarding.tsx` — 4-step tour (Welcome → Create Client →
+  Upload Code → Run Scan). Auto-opens for viewers on first login
+  (localStorage-tracked). Spotlight effect via a `radial-gradient`
+  mask computed from the highlighted element's `getBoundingClientRect`.
+  Floating help button (bottom-right, above the support chat launcher)
+  replays the tour anytime.
+- `billing-panel.tsx` — three pricing cards (Free / Pro ₹5,000/mo /
+  Enterprise Custom). Current-plan banner with usage tiles. `Upgrade`
+  → `POST /api/billing/checkout`; `Manage Subscription` → `POST
+  /api/billing/portal`. Falls back to a "billing disabled" banner
+  when Stripe env vars aren't set.
+- `org-switcher.tsx` — sidebar header dropdown. Lists personal workspace
+  + every org from `GET /api/orgs`. Persists the active workspace in
+  localStorage and patches `globalThis.fetch` so every subsequent
+  GuardianX API request carries `x-guardianx-workspace: <id>`. Admin-
+  only "Create Organization" dialog with auto-slug generation.
+- `user-activity-monitor.tsx` — admin-only user activity table. Summary
+  tiles (total users / active today / 2FA enabled ratio / total
+  clients across users) + a table with avatar, name+email, role badge,
+  client count, last login, last activity, 2FA icon. Click to expand
+  and see that user's last 5 audit entries. Auto-refreshes every 30s.
+- `admin-2fa-banner.tsx` — amber banner for admins without 2FA. Polls
+  `POST /api/2fa {action:"status"}`. "Enable 2FA" button → caller
+  switches to the Settings → Security tab. Dismissible per-session
+  (sessionStorage).
+- `analyst-banner.tsx` — sky-blue banner for `role === "viewer"`.
+  "You are signed in as an Analyst. Upload your own clients for
+  testing." CTA navigates to the Clients tab. Dismissible per-session.
+- `cookie-banner.tsx` — GDPR/DPDPA bottom banner mounted in
+  `layout.tsx` after `<Toaster />`. Accept / Decline persist to
+  localStorage and dispatch a `guardianx:cookie-consent` CustomEvent.
+  SSR-safe via `mounted` guard.
+- `settings-panel.tsx` — new Settings route with three tabs:
+  - **Security** — full 2FA setup flow (QR scan → 6-digit verify →
+    backup codes reveal), disable button, login-history card.
+  - **Organization** — admin-only org manager (list, create, invite).
+  - **Email Delivery** — admin-only email log monitor (sent/failed/
+    pending/total stat tiles + scrollable mail log). Gracefully
+    handles the case where the `MailLog` table doesn't exist.
+
+**Backend API routes** (all new, all `requireAuth`-gated):
+
+- `src/app/api/support/ticket/route.ts` — `GET` (your tickets) + `POST`
+  (file a ticket). Validates message length 3–4000 chars; admins auto-
+  get priority `high`.
+- `src/app/api/billing/status/route.ts` — `GET` returns plan + live
+  usage (admins: real `db.client.count({})` / `db.scan.count({})`;
+  viewers: derived from `db.auditLog.findMany({actor: email})`).
+- `src/app/api/billing/checkout/route.ts` — `POST {plan}` returns
+  Stripe Checkout URL. Lazy-imports `stripe` so the route doesn't crash
+  at import time when Stripe env vars aren't set.
+- `src/app/api/billing/portal/route.ts` — `POST` opens the Stripe
+  Customer Portal. Falls back to `customers.list({email})` if no
+  cached customer ID.
+- `src/app/api/admin/user-activity/route.ts` — admin-only. Joins User
+  rows against the last 2000 AuditLog entries bucketed by actor email.
+  Returns summary + per-user last 5 audit entries.
+- `src/app/api/admin/login-history/route.ts` — auth-required. Defaults
+  to the caller's own events; admins can pass `?scope=all` to see
+  everyone. Filters to login/logout/2FA/password/approve actions.
+- `src/app/api/admin/email-delivery/route.ts` — admin-only. Reads the
+  `MailLog` table (returns `tableMissing: true` instead of erroring if
+  it doesn't exist) + sent/failed/pending/total summary.
+
+**Database changes**:
+
+- `prisma/schema.prisma` — added `SupportTicket` (id, userId, subject,
+  message, priority, status, reply, timestamps) and `Subscription` (id,
+  userId unique, plan, status, stripeCustomerId, stripeSubscriptionId,
+  currentPeriodEnd, cancelAtPeriodEnd, clientsUsed, scansUsed,
+  timestamps) models.
+- `supabase/migrations/0010_support_billing.sql` — creates both tables
+  with `TIMESTAMPTZ` defaults, indexes on `(userId, createdAt DESC)` +
+  `(status, createdAt DESC)`, grants `service_role` all + `anon/
+  authenticated` CRUD, disables RLS.
+- `src/lib/db.ts` — added `supportTicket: "SupportTicket"` and
+  `subscription: "Subscription"` to `MODEL_TO_TABLE` so the existing
+  Supabase-REST dispatcher routes them.
+
+**Wiring**:
+
+- `src/app/page.tsx`:
+  - Extended `Tab` union with `"billing" | "user-activity" | "settings"`.
+  - Added `<OrgSwitcher>` in the sidebar header.
+  - Added `<AdminTwoFactorBanner>` + `<AnalystBanner>` directly above
+    the command center content.
+  - Added `<AnalystOnboarding>` + `<SupportChat>` at the bottom of
+    ConsoleView (both `position: fixed`, stacking via `bottomOffset`).
+  - Added Billing / Settings NavItems in the Advanced group + User
+    Activity NavItem in the Administration group (admin-only).
+  - Added tab content cases + header title + neon color mappings for
+    the three new tabs.
+  - Added `data-onboarding="clients"` / `"codebases"` / `"patches"`
+    data attributes on the relevant sidebar slots so the onboarding
+    spotlight can find them.
+- `src/app/layout.tsx` — imported `<CookieBanner>` and rendered it
+  right after `<Toaster />` so it overlays every page on first visit.
+
+### Constraints honored
+
+- All 8 new components are `"use client"` + TypeScript.
+- Dark theme throughout — substrate `zinc-950`, accents emerald /
+  amber / sky / purple. No indigo or blue.
+- shadcn/ui components used exclusively: Button, Input, Textarea,
+  Card, Badge, Skeleton, Progress, Label, DropdownMenu, Dialog,
+  Tabs, Table.
+- `framer-motion` for all transitions (spring-based launches,
+  AnimatePresence for dismissals + spotlight mask).
+- Mobile-first responsive: sidebar collapses on mobile, chat panel is
+  `width: min(380px, calc(100vw - 2rem))`, cookie banner stacks
+  vertically on small screens.
+- Reuses the existing `useToast` hook + `holo-card` / `hud-corners` /
+  `pulse-dot` / `neon-emerald` design tokens so the new UI matches the
+  existing console.
+
+### Verification
+
+- `bun run lint` → **0 errors, 5 warnings** (all 5 pre-existing in
+  `contributors-panel.tsx` + `service-launcher.tsx`, untouched by this
+  task).
+- `bunx tsc --noEmit -p tsconfig.json` filtered to the touched files
+  → **0 errors** in the new components + new API routes + the
+  `db.ts` `MODEL_TO_TABLE` addition. (Pre-existing Supabase-REST
+  typing errors elsewhere are unrelated and tolerated by
+  `next.config.ts`'s `typescript.ignoreBuildErrors: true`.)
+- Installed `stripe@22.5.0` as a new dependency (needed for
+  `import("stripe")` dynamic imports in the checkout + portal routes).
+
+### Notes for the next session
+
+- **Stripe env vars** (when going live): set `STRIPE_SECRET_KEY`,
+  `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE`. Without them the
+  Billing panel shows a "billing disabled" banner — the rest of the
+  UI keeps working. The webhook route `/api/billing/webhook` is already
+  whitelisted in `src/middleware.ts`'s `PUBLIC_ROUTES`.
+- **`MailLog` table**: the Email Delivery tab gracefully handles its
+  absence. If you want email logging to actually populate, add a
+  `MailLog` table via Supabase migration and have `src/lib/email.ts`
+  insert rows on send.
+- **`x-guardianx-workspace` header** is set on every relative fetch by
+  `org-switcher.tsx`'s `globalThis.fetch` monkey-patch. Downstream API
+  routes can read `req.headers.get("x-guardianx-workspace")` to scope
+  queries per workspace — none do yet, but the plumbing is in place.
+- **Onboarding spotlight** depends on `[data-onboarding="..."]`
+  selectors being present on the sidebar NavItem wrappers. They're on
+  the "All Clients", "Codebases", and "Patch Queue" targets. If you
+  rename those slots, update the `STEPS` array's `spotlightSelector`
+  strings in `analyst-onboarding.tsx`.
+- **User activity "Clients" column** is approximate for viewers — the
+  `Client` table has no `ownerId`, so we attribute clients to users by
+  counting `AuditLog` rows where `action` contains "create" AND
+  `entity` contains "client". For admins we just show the global
+  total. If you want true per-user client ownership, add a `userId`
+  column to `Client` and update `/api/admin/user-activity` to read it.
+- **`Stripe` API version**: pinned to `2025-08-27.basil` (latest stable
+  as of stripe@22.5.0). Cast through `as never` to keep TS happy with
+  the version-string union.
+
