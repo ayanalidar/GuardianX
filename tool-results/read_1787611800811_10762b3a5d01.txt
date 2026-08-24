@@ -1,0 +1,868 @@
+     1→"use client";
+     2→
+     3→/**
+     4→ * CircuitBoard
+     5→ * ------------
+     6→ * A React + canvas port of jaredrhod's ai-visualizer "board" face.
+     7→ * Renders a full-bleed procedural circuit board: traces routed across a
+     8→ * grid, components (ICs, resistors, caps) sitting on top, and data
+     9→ * pulses that flow along the traces lighting up components as they hit.
+    10→ * A central chip "breathes" at idle and amps up under load.
+    11→ *
+    12→ * Visualizer states (from the SignalBus):
+    13→ *   idle      — calm crawl, occasional shimmer
+    14→ *   scanning  — pulses flowing outward, chip breathing steady
+    15→ *   analyzing — whole board amps up, fast traffic
+    16→ *   finding   — red wash + red pulses
+    17→ *   patching  — green flow, components flash green
+    18→ *
+    19→ * HUD: brand "GUARDIANX", status mode, clock, signal indicator.
+    20→ *
+    21→ * Performance: rAF loop is paused when the canvas is off-screen (via
+    22→ * IntersectionObserver) or when the tab is hidden. DPR is capped at 1.5.
+    23→ */
+    24→
+    25→import { useEffect, useRef, useState } from "react";
+    26→import { useSignalBus, type VisualizerState } from "./signal-bus";
+    27→
+    28→interface CircuitBoardProps {
+    29→  /** When true, renders HUD + decorative chrome. Default true. */
+    30→  showHud?: boolean;
+    31→  /** Opacity 0..1 for the whole canvas (used to dim on homepage). */
+    32→  opacity?: number;
+    33→  /** Override the bus state. If omitted, uses the SignalBus. */
+    34→  forcedState?: VisualizerState;
+    35→  /** Optional CSS class for the wrapping div. */
+    36→  className?: string;
+    37→}
+    38→
+    39→const COLORS = {
+    40→  green: "#3ddc84",
+    41→  greenHot: "#a6ffd0",
+    42→  amber: "#e7c368",
+    43→  amberHot: "#ffe9ae",
+    44→  red: "#ff4d5e",
+    45→  redHot: "#ffb0b8",
+    46→  ink: "#020705",
+    47→};
+    48→
+    49→// Deterministic RNG so the board looks identical every boot.
+    50→function mulberry32(seed: number) {
+    51→  let a = seed;
+    52→  return function () {
+    53→    a |= 0;
+    54→    a = (a + 0x6d2b79f5) | 0;
+    55→    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    56→    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    57→    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    58→  };
+    59→}
+    60→
+    61→interface Trace {
+    62→  pts: [number, number][];
+    63→  cum: number[];
+    64→  len: number;
+    65→  bb: [number, number, number, number];
+    66→  amber: boolean;
+    67→  chip: boolean;
+    68→  endComp: number;
+    69→  out: number[];
+    70→}
+    71→interface Comp {
+    72→  type: "ic" | "res" | "cap";
+    73→  gx: number; gy: number;
+    74→  x: number; y: number; w: number; h: number;
+    75→  wc: number; hc: number;
+    76→  glow: number;
+    77→  amber: boolean;
+    78→  flashCol: string | null;
+    79→}
+    80→interface Pulse {
+    81→  ti: number;
+    82→  d: number;
+    83→  sp: number;
+    84→  col: string | null;
+    85→  inward: boolean;
+    86→}
+    87→interface Board {
+    88→  cell: number;
+    89→  cols: number;
+    90→  rows: number;
+    91→  traces: Trace[];
+    92→  comps: Comp[];
+    93→  chip: { x: number; y: number; w: number; h: number; glow: number; glowIn: number };
+    94→}
+    95→
+    96→const DIRS: [number, number][] = [
+    97→  [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1],
+    98→];
+    99→
+   100→function buildBoard(W: number, H: number, seed = 7): Board {
+   101→  const rnd = mulberry32(seed);
+   102→  const cell = Math.max(16, Math.round(Math.min(W, H) / 56));
+   103→  const cols = Math.ceil(W / cell);
+   104→  const rows = Math.ceil(H / cell);
+   105→  const occ = new Set<string>();
+   106→  const traces: Trace[] = [];
+   107→  const comps: Comp[] = [];
+   108→  const key = (x: number, y: number) => `${x}_${y}`;
+   109→
+   110→  // Center chip
+   111→  const chW = Math.round(Math.min(W * 0.235, 620));
+   112→  const chH = Math.round(chW * 0.3);
+   113→  const chip = {
+   114→    x: W * 0.5 - chW / 2,
+   115→    y: H * 0.5 - chH / 2,
+   116→    w: chW,
+   117→    h: chH,
+   118→    glow: 0,
+   119→    glowIn: 0,
+   120→  };
+   121→  const cx0 = Math.floor(chip.x / cell) - 1;
+   122→  const cy0 = Math.floor(chip.y / cell) - 1;
+   123→  const cx1 = Math.ceil((chip.x + chW) / cell) + 1;
+   124→  const cy1 = Math.ceil((chip.y + chH) / cell) + 1;
+   125→  for (let gx = cx0; gx <= cx1; gx++) {
+   126→    for (let gy = cy0; gy <= cy1; gy++) occ.add(key(gx, gy));
+   127→  }
+   128→
+   129→  // Components
+   130→  const place = (wc: number, hc: number) => {
+   131→    for (let tr = 0; tr < 60; tr++) {
+   132→      const gx = 1 + Math.floor(rnd() * (cols - wc - 2));
+   133→      const gy = 1 + Math.floor(rnd() * (rows - hc - 2));
+   134→      let free = true;
+   135→      for (let a = gx - 1; a <= gx + wc && free; a++) {
+   136→        for (let b = gy - 1; b <= gy + hc && free; b++) {
+   137→          if (occ.has(key(a, b))) free = false;
+   138→        }
+   139→      }
+   140→      if (!free) continue;
+   141→      for (let a = gx; a < gx + wc; a++) {
+   142→        for (let b = gy; b < gy + hc; b++) occ.add(key(a, b));
+   143→      }
+   144→      return { gx, gy };
+   145→    }
+   146→    return null;
+   147→  };
+   148→  for (let i = 0; i < 34; i++) {
+   149→    const roll = rnd();
+   150→    const type: Comp["type"] = roll < 0.42 ? "ic" : roll < 0.78 ? "res" : "cap";
+   151→    const wc = type === "ic" ? 4 + Math.floor(rnd() * 3) : type === "res" ? 1 : 2;
+   152→    const hc = type === "ic" ? 3 + Math.floor(rnd() * 2) : type === "res" ? 3 + Math.floor(rnd() * 3) : 2;
+   153→    const spot = place(wc, hc);
+   154→    if (!spot) continue;
+   155→    comps.push({
+   156→      type,
+   157→      gx: spot.gx, gy: spot.gy, wc, hc,
+   158→      x: spot.gx * cell, y: spot.gy * cell, w: wc * cell, h: hc * cell,
+   159→      glow: 0,
+   160→      amber: rnd() < 0.18,
+   161→      flashCol: null,
+   162→    });
+   163→  }
+   164→
+   165→  // Trace router
+   166→  const route = (sx: number, sy: number, dir: number, maxLen?: number): Trace | null => {
+   167→    let x = sx, y = sy, d = dir;
+   168→    const pts: [number, number][] = [[x, y]];
+   169→    let run = 2 + Math.floor(rnd() * 5);
+   170→    let blocked = 0;
+   171→    const total = maxLen ?? 14 + Math.floor(rnd() * 30);
+   172→    for (let s = 0; s < total; s++) {
+   173→      const [dx, dy] = DIRS[d];
+   174→      const nx = x + dx, ny = y + dy;
+   175→      if (nx < 1 || ny < 1 || nx >= cols - 1 || ny >= rows - 1 || occ.has(key(nx, ny))) {
+   176→        d = (d + (rnd() < 0.5 ? 1 : 7)) % 8;
+   177→        if (++blocked > 2) break;
+   178→        continue;
+   179→      }
+   180→      blocked = 0;
+   181→      x = nx; y = ny;
+   182→      occ.add(key(x, y));
+   183→      pts.push([x, y]);
+   184→      if (--run <= 0) {
+   185→        if (rnd() < 0.7) d = (d + (rnd() < 0.5 ? 1 : 7)) % 8;
+   186→        run = 2 + Math.floor(rnd() * 6);
+   187→      }
+   188→    }
+   189→    if (pts.length < 5) return null;
+   190→    // Simplify collinear runs
+   191→    const keep: [number, number][] = [pts[0]];
+   192→    for (let i = 1; i < pts.length - 1; i++) {
+   193→      const a = keep[keep.length - 1];
+   194→      const b = pts[i];
+   195→      const c = pts[i + 1];
+   196→      if ((b[0] - a[0]) * (c[1] - b[1]) !== (b[1] - a[1]) * (c[0] - b[0])) keep.push(b);
+   197→    }
+   198→    keep.push(pts[pts.length - 1]);
+   199→    const px: [number, number][] = keep.map((p) => [p[0] * cell + cell / 2, p[1] * cell + cell / 2]);
+   200→    const cum = [0];
+   201→    for (let i = 1; i < px.length; i++) {
+   202→      cum.push(cum[i - 1] + Math.hypot(px[i][0] - px[i - 1][0], px[i][1] - px[i - 1][1]));
+   203→    }
+   204→    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+   205→    px.forEach((p) => {
+   206→      if (p[0] < x0) x0 = p[0];
+   207→      if (p[0] > x1) x1 = p[0];
+   208→      if (p[1] < y0) y0 = p[1];
+   209→      if (p[1] > y1) y1 = p[1];
+   210→    });
+   211→    return {
+   212→      pts: px, cum, len: cum[cum.length - 1],
+   213→      bb: [x0 - 8, y0 - 8, x1 + 8, y1 + 8],
+   214→      amber: rnd() < 0.18, chip: false, endComp: -1, out: [],
+   215→    };
+   216→  };
+   217→
+   218→  // Traces from the chip pins outward
+   219→  const pinsPerSide = Math.max(6, Math.round(chH / cell) + 2);
+   220→  const addPinTraces = (side: number) => {
+   221→    const n = side < 2 ? pinsPerSide : 6;
+   222→    for (let i = 0; i < n; i++) {
+   223→      let gx: number, gy: number, dir: number;
+   224→      if (side === 0) { gx = cx0; gy = cy0 + 2 + Math.floor(rnd() * (cy1 - cy0 - 3)); dir = 4; }
+   225→      else if (side === 1) { gx = cx1; gy = cy0 + 2 + Math.floor(rnd() * (cy1 - cy0 - 3)); dir = 0; }
+   226→      else if (side === 2) { gx = cx0 + 2 + Math.floor(rnd() * (cx1 - cx0 - 3)); gy = cy0; dir = 6; }
+   227→      else { gx = cx0 + 2 + Math.floor(rnd() * (cx1 - cx0 - 3)); gy = cy1; dir = 2; }
+   228→      const t = route(gx, gy, dir);
+   229→      if (t) { t.chip = true; traces.push(t); }
+   230→    }
+   231→  };
+   232→  addPinTraces(0); addPinTraces(1); addPinTraces(2); addPinTraces(3);
+   233→
+   234→  // Background traces
+   235→  for (let i = 0; i < 130; i++) {
+   236→    const gx = 1 + Math.floor(rnd() * (cols - 2));
+   237→    const gy = 1 + Math.floor(rnd() * (rows - 2));
+   238→    if (occ.has(key(gx, gy))) continue;
+   239→    occ.add(key(gx, gy));
+   240→    const t = route(gx, gy, [0, 2, 4, 6][Math.floor(rnd() * 4)]);
+   241→    if (t) traces.push(t);
+   242→  }
+   243→
+   244→  // Bind trace ends to nearby components
+   245→  traces.forEach((t) => {
+   246→    let best = -1, bd = 1e9;
+   247→    comps.forEach((c, ci) => {
+   248→      const dx = Math.max(c.gx - t.pts[t.pts.length - 1][0] / cell, 0, t.pts[t.pts.length - 1][0] / cell - (c.gx + c.wc - 1));
+   249→      const dy = Math.max(c.gy - t.pts[t.pts.length - 1][1] / cell, 0, t.pts[t.pts.length - 1][1] / cell - (c.gy + c.hc - 1));
+   250→      const d = dx * dx + dy * dy;
+   251→      if (d < bd) { bd = d; best = ci; }
+   252→    });
+   253→    t.endComp = bd <= 9 ? best : -1;
+   254→    comps.forEach((c, ci) => {
+   255→      const dx = Math.max(c.gx - t.pts[0][0] / cell, 0, t.pts[0][0] / cell - (c.gx + c.wc - 1));
+   256→      const dy = Math.max(c.gy - t.pts[0][1] / cell, 0, t.pts[0][1] / cell - (c.gy + c.hc - 1));
+   257→      if (dx * dx + dy * dy <= 9) t.out.push(ci);
+   258→    });
+   259→  });
+   260→
+   261→  return { cell, cols, rows, traces, comps, chip };
+   262→}
+   263→
+   264→function hex2rgb(h: string): [number, number, number] {
+   265→  const n = parseInt(h.slice(1), 16);
+   266→  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+   267→}
+   268→function rgba(h: string, a: number): string {
+   269→  const [r, g, b] = hex2rgb(h);
+   270→  return `rgba(${r},${g},${b},${a})`;
+   271→}
+   272→
+   273→function makeGlow(col: string, sz: number): HTMLCanvasElement {
+   274→  const c = document.createElement("canvas");
+   275→  c.width = c.height = sz;
+   276→  const g = c.getContext("2d")!;
+   277→  const grd = g.createRadialGradient(sz / 2, sz / 2, 0, sz / 2, sz / 2, sz / 2);
+   278→  const [r, gg, b] = hex2rgb(col);
+   279→  grd.addColorStop(0, `rgba(${r},${gg},${b},1)`);
+   280→  grd.addColorStop(0.25, `rgba(${r},${gg},${b},0.55)`);
+   281→  grd.addColorStop(1, "rgba(0,0,0,0)");
+   282→  g.fillStyle = grd;
+   283→  g.fillRect(0, 0, sz, sz);
+   284→  return c;
+   285→}
+   286→
+   287→function fmtClock(d: Date): string {
+   288→  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+   289→}
+   290→
+   291→const STATE_LABELS: Record<VisualizerState, string> = {
+   292→  idle: "IDLE",
+   293→  scanning: "SCANNING",
+   294→  analyzing: "ANALYZING",
+   295→  finding: "FINDING",
+   296→  patching: "PATCHING",
+   297→};
+   298→
+   299→export function CircuitBoard({
+   300→  showHud = true,
+   301→  opacity = 1,
+   302→  forcedState,
+   303→  className,
+   304→}: CircuitBoardProps) {
+   305→  const canvasRef = useRef<HTMLCanvasElement>(null);
+   306→  const { state: busState, connected } = useSignalBus();
+   307→  const state = forcedState ?? busState;
+   308→  const [clock, setClock] = useState(new Date());
+   309→
+   310→  // Live clock — cheap, runs at 1Hz so it doesn't drive rAF.
+   311→  useEffect(() => {
+   312→    const id = setInterval(() => setClock(new Date()), 1000);
+   313→    return () => clearInterval(id);
+   314→  }, []);
+   315→
+   316→  // External ref so the canvas rAF loop always reads the latest state
+   317→  // without re-mounting (which would tear down the board on every transition).
+   318→  const stateRef = useRef<VisualizerState>(state);
+   319→  stateRef.current = state;
+   320→  const connectedRef = useRef(connected);
+   321→  connectedRef.current = connected;
+   322→
+   323→  useEffect(() => {
+   324→    const canvas = canvasRef.current;
+   325→    if (!canvas) return;
+   326→    const ctx = canvas.getContext("2d");
+   327→    if (!ctx) return;
+   328→
+   329→    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+   330→
+   331→    let W = 0, H = 0, dpr = 1;
+   332→    // `board` is assigned in `resize()` before any drawing happens. We use a
+   333→    // non-null assertion at declaration to keep the helper functions below
+   334→    // from having to sprinkle `!` everywhere (TypeScript can't narrow `let`
+   335→    // variables through function declarations / nested callbacks).
+   336→    let board: Board = null as unknown as Board;
+   337→    let bgLayer: HTMLCanvasElement | null = null;
+   338→    const glowSprites: Record<string, HTMLCanvasElement> = {};
+   339→    let pulses: Pulse[] = [];
+   340→    let now = 0;
+   341→    let last = performance.now();
+   342→    let raf = 0;
+   343→    let inViewport = true;
+   344→    let docVisible = !document.hidden;
+   345→    let running = !reduced && inViewport && docVisible;
+   346→
+   347→    const ensureGlow = (col: string) => {
+   348→      if (!glowSprites[col]) glowSprites[col] = makeGlow(col, 64);
+   349→    };
+   350→    [COLORS.green, COLORS.amber, COLORS.red].forEach(ensureGlow);
+   351→
+   352→    const renderBG = () => {
+   353→      bgLayer = document.createElement("canvas");
+   354→      bgLayer.width = W;
+   355→      bgLayer.height = H;
+   356→      drawWorld(bgLayer.getContext("2d")!, [0, 0, W, H]);
+   357→    };
+   358→
+   359→    const drawWorld = (g: CanvasRenderingContext2D, v: [number, number, number, number]) => {
+   360→      if (!board) return;
+   361→      const [vx0, vy0, vx1, vy1] = v;
+   362→      const hit = (x0: number, y0: number, x1: number, y1: number) =>
+   363→        x1 >= vx0 && x0 <= vx1 && y1 >= vy0 && y0 <= vy1;
+   364→
+   365→      // Substrate
+   366→      const grd = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.72);
+   367→      grd.addColorStop(0, "#07160e");
+   368→      grd.addColorStop(0.55, "#04100a");
+   369→      grd.addColorStop(1, "#020705");
+   370→      g.fillStyle = grd;
+   371→      g.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0);
+   372→
+   373→      // FR4 weave
+   374→      g.save();
+   375→      g.globalCompositeOperation = "soft-light";
+   376→      const wv = Math.max(5, Math.round(board.cell * 0.3));
+   377→      g.strokeStyle = "rgba(190,255,220,.10)";
+   378→      g.lineWidth = 1;
+   379→      g.beginPath();
+   380→      for (let x = Math.floor(vx0 / wv) * wv; x <= vx1; x += wv) {
+   381→        g.moveTo(x, vy0); g.lineTo(x, vy1);
+   382→      }
+   383→      for (let y = Math.floor(vy0 / wv) * wv; y <= vy1; y += wv) {
+   384→        g.moveTo(vx0, y); g.lineTo(vx1, y);
+   385→      }
+   386→      g.stroke();
+   387→      g.restore();
+   388→
+   389→      // Traces
+   390→      g.lineCap = "round";
+   391→      g.lineJoin = "round";
+   392→      const tlw = Math.max(1.4, board.cell * 0.09);
+   393→      board.traces.forEach((t) => {
+   394→        if (!hit(t.bb[0], t.bb[1], t.bb[2], t.bb[3])) return;
+   395→        const path = () => {
+   396→          g.beginPath();
+   397→          g.moveTo(t.pts[0][0], t.pts[0][1]);
+   398→          for (let i = 1; i < t.pts.length; i++) g.lineTo(t.pts[i][0], t.pts[i][1]);
+   399→        };
+   400→        // Shadow
+   401→        g.save();
+   402→        g.translate(1.1, 1.4);
+   403→        path();
+   404→        g.strokeStyle = "rgba(0,0,0,.30)";
+   405→        g.lineWidth = tlw + 0.6;
+   406→        g.stroke();
+   407→        g.restore();
+   408→        // Copper
+   409→        path();
+   410→        g.strokeStyle = t.amber ? "rgba(231,195,104,.15)" : "rgba(61,220,132,.17)";
+   411→        g.lineWidth = tlw;
+   412→        g.stroke();
+   413→        // Vias
+   414→        [t.pts[0], t.pts[t.pts.length - 1]].forEach((p) => {
+   415→          const vR = Math.max(2.6, board.cell * 0.14);
+   416→          g.beginPath();
+   417→          g.arc(p[0], p[1], vR, 0, 6.29);
+   418→          g.strokeStyle = "rgba(120,220,170,.22)";
+   419→          g.lineWidth = 1.4;
+   420→          g.stroke();
+   421→          g.fillStyle = "rgba(1,4,3,.95)";
+   422→          g.beginPath();
+   423→          g.arc(p[0], p[1], Math.max(1.2, board.cell * 0.06), 0, 6.29);
+   424→          g.fill();
+   425→        });
+   426→      });
+   427→
+   428→      // Components
+   429→      board.comps.forEach((c) => {
+   430→        if (!hit(c.x - 8, c.y - 8, c.x + c.w + 16, c.y + c.h + 16)) return;
+   431→        const col = c.amber ? COLORS.amber : COLORS.green;
+   432→        if (c.type === "ic") {
+   433→          const bx = c.x + board.cell * 0.3, by = c.y + board.cell * 0.3;
+   434→          const bw = c.w - board.cell * 0.6, bh = c.h - board.cell * 0.6;
+   435→          g.save();
+   436→          g.shadowColor = "rgba(0,0,0,.55)";
+   437→          g.shadowBlur = 9;
+   438→          g.shadowOffsetX = 4.5;
+   439→          g.shadowOffsetY = 6.5;
+   440→          g.fillStyle = "#050c08";
+   441→          g.beginPath();
+   442→          g.roundRect(bx, by, bw, bh, 3);
+   443→          g.fill();
+   444→          g.restore();
+   445→          const bg2 = g.createLinearGradient(bx, by, bx + bw, by + bh);
+   446→          bg2.addColorStop(0, "rgba(14,26,19,.94)");
+   447→          bg2.addColorStop(0.45, "rgba(5,12,8,.94)");
+   448→          bg2.addColorStop(1, "rgba(2,6,4,.94)");
+   449→          g.fillStyle = bg2;
+   450→          g.beginPath();
+   451→          g.roundRect(bx, by, bw, bh, 3);
+   452→          g.fill();
+   453→          g.strokeStyle = rgba(col, 0.24);
+   454→          g.lineWidth = 1;
+   455→          g.beginPath();
+   456→          g.roundRect(bx, by, bw, bh, 3);
+   457→          g.stroke();
+   458→        } else if (c.type === "res") {
+   459→          for (let i = 0; i < c.hc; i++) {
+   460→            const rx = c.x + board.cell * 0.12;
+   461→            const ry = c.y + i * board.cell + board.cell * 0.22;
+   462→            const rw = c.w - board.cell * 0.24;
+   463→            const rh = board.cell * 0.56;
+   464→            g.fillStyle = "#040a06";
+   465→            g.beginPath();
+   466→            g.roundRect(rx, ry, rw, rh, 2);
+   467→            g.fill();
+   468→            g.strokeStyle = rgba(col, 0.22);
+   469→            g.lineWidth = 1;
+   470→            g.beginPath();
+   471→            g.roundRect(rx, ry, rw, rh, 2);
+   472→            g.stroke();
+   473→          }
+   474→        } else {
+   475→          const cxp = c.x + c.w / 2, cyp = c.y + c.h / 2, cr = c.w * 0.34;
+   476→          g.fillStyle = "#040a06";
+   477→          g.beginPath();
+   478→          g.arc(cxp, cyp, cr, 0, 6.29);
+   479→          g.fill();
+   480→          const dg = g.createRadialGradient(cxp - cr * 0.4, cyp - cr * 0.45, cr * 0.1, cxp, cyp, cr);
+   481→          dg.addColorStop(0, "rgba(58,96,73,.95)");
+   482→          dg.addColorStop(0.45, "rgba(14,28,19,.95)");
+   483→          dg.addColorStop(1, "rgba(2,6,4,.95)");
+   484→          g.fillStyle = dg;
+   485→          g.beginPath();
+   486→          g.arc(cxp, cyp, cr, 0, 6.29);
+   487→          g.fill();
+   488→          g.strokeStyle = rgba(col, 0.26);
+   489→          g.lineWidth = 1.4;
+   490→          g.beginPath();
+   491→          g.arc(cxp, cyp, cr, 0, 6.29);
+   492→          g.stroke();
+   493→        }
+   494→      });
+   495→    }
+   496→
+   497→    const drawChipBase = (g: CanvasRenderingContext2D) => {
+   498→      const { x, y, w, h } = board.chip;
+   499→      const npx = 12;
+   500→      for (let i = 0; i < npx; i++) {
+   501→        const px = x + w * 0.08 + w * 0.84 * (i / (npx - 1));
+   502→        g.fillStyle = "rgba(210,240,220,.40)";
+   503→        g.fillRect(px - 2, y - board.cell * 0.34, 4, board.cell * 0.3);
+   504→        g.fillStyle = "rgba(170,210,190,.34)";
+   505→        g.fillRect(px - 2, y + h + board.cell * 0.04, 4, board.cell * 0.3);
+   506→      }
+   507→      g.save();
+   508→      g.shadowColor = "rgba(0,0,0,.65)";
+   509→      g.shadowBlur = 30;
+   510→      g.shadowOffsetX = 12;
+   511→      g.shadowOffsetY = 16;
+   512→      g.fillStyle = "#040a07";
+   513→      g.beginPath();
+   514→      g.roundRect(x, y, w, h, 6);
+   515→      g.fill();
+   516→      g.restore();
+   517→      const tg = g.createLinearGradient(x, y, x + w, y + h);
+   518→      tg.addColorStop(0, "rgba(30,52,40,.5)");
+   519→      tg.addColorStop(0.45, "rgba(6,13,9,0)");
+   520→      tg.addColorStop(1, "rgba(0,0,0,.25)");
+   521→      g.fillStyle = tg;
+   522→      g.beginPath();
+   523→      g.roundRect(x, y, w, h, 6);
+   524→      g.fill();
+   525→      g.strokeStyle = "#1e3a2b";
+   526→      g.lineWidth = 2;
+   527→      g.beginPath();
+   528→      g.roundRect(x, y, w, h, 6);
+   529→      g.stroke();
+   530→      g.fillStyle = "rgba(61,220,132,.4)";
+   531→      g.beginPath();
+   532→      g.arc(x + 14, y + 14, 4, 0, 6.29);
+   533→      g.fill();
+   534→    }
+   535→
+   536→    const spawnPulse = (ti: number) => {
+   537→      const t = board.traces[ti];
+   538→      const st = stateRef.current;
+   539→      let col: string | null = null;
+   540→      if (st === "finding") col = COLORS.red;
+   541→      else if (st === "patching") col = COLORS.green;
+   542→      else if (st === "analyzing") col = COLORS.amber;
+   543→      else if (st === "scanning") col = t.amber ? COLORS.amber : COLORS.green;
+   544→      pulses.push({ ti, d: 0, sp: 0.18 * Math.min(W, H) / 1000, col, inward: false });
+   545→    }
+   546→
+   547→    const frame = (ts: number) => {
+   548→      if (!running || !bgLayer) {
+   549→        raf = requestAnimationFrame(frame);
+   550→        return;
+   551→      }
+   552→      const dt = Math.min(50, ts - last);
+   553→      last = ts;
+   554→      now += dt;
+   555→
+   556→      const st = stateRef.current;
+   557→      const E =
+   558→        st === "idle" ? 0.25 :
+   559→        st === "scanning" ? 0.55 :
+   560→        st === "analyzing" ? 1 :
+   561→        st === "finding" ? 0.85 :
+   562→        st === "patching" ? 0.7 : 0.25;
+   563→
+   564→      // Spawn pulses
+   565→      const cap = 6 + 80 * E;
+   566→      const tries = E > 0.6 ? 4 : 1;
+   567→      for (let i = 0; i < tries; i++) {
+   568→        if (pulses.length < cap && Math.random() < 0.05 + 0.85 * E) {
+   569→          const chipSide = Math.random() < 0.62;
+   570→          const pool: number[] = [];
+   571→          board.traces.forEach((t, idx) => {
+   572→            if (t.chip === chipSide) pool.push(idx);
+   573→          });
+   574→          if (pool.length) spawnPulse(pool[Math.floor(Math.random() * pool.length)]);
+   575→        }
+   576→      }
+   577→      // Idle life: components occasionally shimmer
+   578→      if (Math.random() < 0.005 + 0.05 * E) {
+   579→        const c = board.comps[Math.floor(Math.random() * board.comps.length)];
+   580→        if (c) c.glow = Math.max(c.glow, 0.3 + 0.3 * E);
+   581→      }
+   582→
+   583→      // Draw
+   584→      ctx.clearRect(0, 0, W, H);
+   585→      ctx.drawImage(bgLayer, 0, 0);
+   586→      ctx.globalCompositeOperation = "lighter";
+   587→
+   588→      // State wash
+   589→      if (st === "finding") {
+   590→        const pulse = 0.5 + 0.5 * Math.sin(now / 200);
+   591→        ctx.fillStyle = `rgba(255,77,94,${0.06 * pulse})`;
+   592→        ctx.fillRect(0, 0, W, H);
+   593→      } else if (st === "patching") {
+   594→        const g1 = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.5);
+   595→        g1.addColorStop(0, "rgba(61,220,132,.10)");
+   596→        g1.addColorStop(1, "rgba(0,0,0,0)");
+   597→        ctx.fillStyle = g1;
+   598→        ctx.fillRect(0, 0, W, H);
+   599→      } else if (st === "analyzing") {
+   600→        const g1 = ctx.createRadialGradient(W * 0.3, H * 0.34, 0, W * 0.3, H * 0.34, W * 0.42);
+   601→        g1.addColorStop(0, "rgba(231,195,104,.08)");
+   602→        g1.addColorStop(1, "rgba(0,0,0,0)");
+   603→        ctx.fillStyle = g1;
+   604→        ctx.fillRect(0, 0, W, H);
+   605→      }
+   606→
+   607→      // Pulses
+   608→      const tailLen = Math.min(W, H) * (0.1 + 0.13 * E);
+   609→      const speedK = 0.55 + 4.85 * E;
+   610→      pulses = pulses.filter((p) => {
+   611→        if (!board) return false;
+   612→        const t = board.traces[p.ti];
+   613→        p.d += p.sp * dt * speedK;
+   614→        const base = p.col || (t.amber ? COLORS.amber : COLORS.green);
+   615→        if (p.d >= t.len + tailLen) {
+   616→          if (t.endComp >= 0) {
+   617→            const c = board.comps[t.endComp];
+   618→            c.glow = 1;
+   619→            c.flashCol = base;
+   620→          }
+   621→          return false;
+   622→        }
+   623→        const col = p.col || (t.amber ? COLORS.amberHot : COLORS.greenHot);
+   624→        const head = Math.min(p.d, t.len);
+   625→        let i = 1;
+   626→        while (i < t.cum.length && t.cum[i] < p.d - tailLen) i++;
+   627→        for (; i < t.cum.length && t.cum[i - 1] < head; i++) {
+   628→          const s0 = Math.max(t.cum[i - 1], p.d - tailLen);
+   629→          const s1 = Math.min(t.cum[i], head);
+   630→          if (s1 <= s0) continue;
+   631→          const seg = t.cum[i] - t.cum[i - 1] || 1;
+   632→          const f0 = (s0 - t.cum[i - 1]) / seg;
+   633→          const f1 = (s1 - t.cum[i - 1]) / seg;
+   634→          const ax = t.pts[i - 1][0] + (t.pts[i][0] - t.pts[i - 1][0]) * f0;
+   635→          const ay = t.pts[i - 1][1] + (t.pts[i][1] - t.pts[i - 1][1]) * f0;
+   636→          const bx = t.pts[i - 1][0] + (t.pts[i][0] - t.pts[i - 1][0]) * f1;
+   637→          const by = t.pts[i - 1][1] + (t.pts[i][1] - t.pts[i - 1][1]) * f1;
+   638→          const mid = (s0 + s1) / 2;
+   639→          const back = (p.d - mid) / tailLen;
+   640→          const a = Math.pow(Math.max(0, 1 - back), 1.6) * (0.45 + 0.5 * E);
+   641→          ctx.strokeStyle = rgba(base, a);
+   642→          ctx.lineWidth = Math.max(1.6, board.cell * 0.11) * (1 + 0.5 * (1 - back));
+   643→          ctx.beginPath();
+   644→          ctx.moveTo(ax, ay);
+   645→          ctx.lineTo(bx, by);
+   646→          ctx.stroke();
+   647→        }
+   648→        // Head
+   649→        if (p.d <= t.len) {
+   650→          let j = 1;
+   651→          while (j < t.cum.length && t.cum[j] < p.d) j++;
+   652→          if (j < t.cum.length) {
+   653→            const seg = t.cum[j] - t.cum[j - 1] || 1;
+   654→            const f = (p.d - t.cum[j - 1]) / seg;
+   655→            const hx = t.pts[j - 1][0] + (t.pts[j][0] - t.pts[j - 1][0]) * f;
+   656→            const hy = t.pts[j - 1][1] + (t.pts[j][1] - t.pts[j - 1][1]) * f;
+   657→            const hs = 9 + 9 * E;
+   658→            ctx.globalAlpha = 0.75 + 0.25 * E;
+   659→            ctx.drawImage(glowSprites[base] || glowSprites[COLORS.green], hx - hs / 2, hy - hs / 2, hs, hs);
+   660→            ctx.globalAlpha = 1;
+   661→            ctx.fillStyle = col;
+   662→            ctx.beginPath();
+   663→            ctx.arc(hx, hy, Math.max(1.2, board.cell * 0.06), 0, 6.29);
+   664→            ctx.fill();
+   665→          }
+   666→        }
+   667→        return true;
+   668→      });
+   669→
+   670→      // Component flashes
+   671→      board.comps.forEach((c) => {
+   672→        if (c.glow <= 0.02) {
+   673→          c.glow = 0;
+   674→          c.flashCol = null;
+   675→          return;
+   676→        }
+   677→        const col = c.flashCol || (c.amber ? COLORS.amber : COLORS.green);
+   678→        ensureGlow(col);
+   679→        const gsp = glowSprites[col] || glowSprites[COLORS.green];
+   680→        const cxp = c.x + c.w / 2, cyp = c.y + c.h / 2;
+   681→        const s = Math.max(c.w, c.h) * (2.2 + 0.8 * E);
+   682→        ctx.globalAlpha = 0.45 * c.glow;
+   683→        ctx.drawImage(gsp, cxp - s / 2, cyp - s / 2, s, s);
+   684→        ctx.globalAlpha = 1;
+   685→        ctx.strokeStyle = rgba(col, 0.25 + 0.65 * c.glow);
+   686→        ctx.lineWidth = 1.6;
+   687→        if (c.type === "cap") {
+   688→          ctx.beginPath();
+   689→          ctx.arc(cxp, cyp, c.w * 0.34, 0, 6.29);
+   690→          ctx.stroke();
+   691→        } else {
+   692→          ctx.beginPath();
+   693→          ctx.roundRect(c.x + board.cell * 0.3, c.y + board.cell * 0.3, c.w - board.cell * 0.6, c.h - board.cell * 0.6, 3);
+   694→          ctx.stroke();
+   695→        }
+   696→        c.glow *= Math.exp(-dt / 480);
+   697→      });
+   698→
+   699→      // Chip
+   700→      {
+   701→        const { x, y, w, h } = board.chip;
+   702→        const breathe = 0.5 + 0.5 * Math.sin(now / 1100);
+   703→        const talk = st === "analyzing" || st === "scanning" ? 0.4 : 0;
+   704→        const scale = 1 + 0.012 * Math.sin(now / 620) + 0.05 * talk + 0.018 * E;
+   705→        const ccx = x + w / 2, ccy = y + h / 2;
+   706→        ctx.save();
+   707→        ctx.translate(ccx, ccy);
+   708→        ctx.scale(scale, scale);
+   709→        ctx.translate(-ccx, -ccy);
+   710→        // Heart glow
+   711→        const heartCol = st === "finding" ? COLORS.red : st === "patching" ? COLORS.green : COLORS.amber;
+   712→        ensureGlow(heartCol);
+   713→        const cg = Math.min(1, (0.22 + 0.55 * E) + 0.14 * breathe + 0.3 * talk);
+   714→        const s = w * (1.7 + 0.6 * E + 0.45 * talk);
+   715→        ctx.globalAlpha = cg;
+   716→        ctx.drawImage(glowSprites[heartCol], ccx - s / 2, ccy - (s * 0.62) / 2, s, s * 0.62);
+   717→        ctx.globalAlpha = 1;
+   718→        ctx.globalCompositeOperation = "source-over";
+   719→        drawChipBase(ctx);
+   720→        // Label
+   721→        const fs = Math.round(h * 0.26);
+   722→        ctx.font = `600 ${fs}px "SF Mono", Menlo, Consolas, monospace`;
+   723→        ctx.textAlign = "center";
+   724→        ctx.textBaseline = "middle";
+   725→        ctx.fillStyle = `rgba(${Math.min(255, 140 + 80 * E + 70 * talk) | 0},255,${Math.min(255, 190 + 30 * E + 40 * talk) | 0},0.9)`;
+   726→        ctx.shadowColor = rgba(heartCol, 0.6 + 0.3 * E);
+   727→        ctx.shadowBlur = 14 + 26 * E + 30 * talk;
+   728→        ctx.fillText("GUARDIANX", ccx, ccy);
+   729→        ctx.shadowBlur = 0;
+   730→        ctx.restore();
+   731→        ctx.globalCompositeOperation = "lighter";
+   732→      }
+   733→
+   734→      ctx.globalCompositeOperation = "source-over";
+   735→      raf = requestAnimationFrame(frame);
+   736→    }
+   737→
+   738→    const resize = () => {
+   739→      if (!canvas) return;
+   740→      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+   741→      W = canvas.clientWidth * dpr;
+   742→      H = canvas.clientHeight * dpr;
+   743→      canvas.width = W;
+   744→      canvas.height = H;
+   745→      ctx.setTransform(1, 0, 0, 1, 0, 0);
+   746→      board = buildBoard(W, H, 7);
+   747→      renderBG();
+   748→      pulses = [];
+   749→    }
+   750→
+   751→    const updateRunning = () => {
+   752→      const was = running;
+   753→      running = !reduced && inViewport && docVisible;
+   754→      if (running && !was) {
+   755→        last = performance.now();
+   756→        raf = requestAnimationFrame(frame);
+   757→      } else if (!running && was) {
+   758→        cancelAnimationFrame(raf);
+   759→        raf = 0;
+   760→      }
+   761→    };
+   762→
+   763→    const onVisibility = () => {
+   764→      docVisible = !document.hidden;
+   765→      updateRunning();
+   766→    };
+   767→    document.addEventListener("visibilitychange", onVisibility);
+   768→
+   769→    let io: IntersectionObserver | null = null;
+   770→    if (typeof IntersectionObserver !== "undefined") {
+   771→      io = new IntersectionObserver(
+   772→        (entries) => {
+   773→          const entry = entries[entries.length - 1];
+   774→          if (entry && entry.target === canvas) {
+   775→            inViewport = entry.isIntersecting;
+   776→            updateRunning();
+   777→          }
+   778→        },
+   779→        { threshold: 0 },
+   780→      );
+   781→      io.observe(canvas);
+   782→    }
+   783→
+   784→    resize();
+   785→    window.addEventListener("resize", resize);
+   786→
+   787→    if (reduced) {
+   788→      // Static: just blit the baked layer once.
+   789→      ctx.clearRect(0, 0, W, H);
+   790→      if (bgLayer) ctx.drawImage(bgLayer, 0, 0);
+   791→    } else if (running) {
+   792→      raf = requestAnimationFrame(frame);
+   793→    }
+   794→
+   795→    return () => {
+   796→      cancelAnimationFrame(raf);
+   797→      window.removeEventListener("resize", resize);
+   798→      document.removeEventListener("visibilitychange", onVisibility);
+   799→      io?.disconnect();
+   800→    };
+   801→    // We intentionally only set up once; `state` is read live via the
+   802→    // external stateRef. (Pushing state into deps would tear down the
+   803→    // canvas every state change, which kills the animation.)
+   804→  }, []);
+   805→
+   806→  const stateColor =
+   807→    state === "finding" ? "text-red-400" :
+   808→    state === "patching" ? "text-emerald-400" :
+   809→    state === "analyzing" ? "text-amber-400" :
+   810→    state === "scanning" ? "text-cyan-400" :
+   811→    "text-zinc-400";
+   812→
+   813→  return (
+   814→    <div className={`relative h-full w-full overflow-hidden ${className ?? ""}`} style={{ opacity }}>
+   815→      <canvas
+   816→        ref={canvasRef}
+   817→        aria-hidden
+   818→        className="pointer-events-none absolute inset-0 h-full w-full"
+   819→        data-state={state}
+   820→      />
+   821→      {showHud && (
+   822→        <div className="pointer-events-none absolute inset-0 z-10 select-none font-mono">
+   823→          {/* Corner brackets */}
+   824→          <div className="absolute left-4 top-4 size-7 border-l border-t border-emerald-500/40" />
+   825→          <div className="absolute right-4 top-4 size-7 border-r border-t border-emerald-500/40" />
+   826→          <div className="absolute bottom-4 left-4 size-7 border-l border-b border-emerald-500/40" />
+   827→          <div className="absolute bottom-4 right-4 size-7 border-r border-b border-emerald-500/40" />
+   828→
+   829→          {/* Brand */}
+   830→          <div className="absolute left-8 top-8">
+   831→            <div className="text-lg tracking-[0.62em] text-emerald-300" style={{ textShadow: "0 0 12px rgba(120,255,190,.4)" }}>
+   832→              GUARDIANX
+   833→            </div>
+   834→            <div className="mt-1 text-[10px] tracking-[0.34em] text-zinc-500">
+   835→              NEURAL LINK —{" "}
+   836→              <span className={connected ? "text-emerald-400" : "text-zinc-600"}>
+   837→                {connected ? "CONNECTED" : "OFFLINE"}
+   838→              </span>
+   839→            </div>
+   840→          </div>
+   841→
+   842→          {/* Status block */}
+   843→          <div className="absolute right-8 top-8 text-right">
+   844→            <div className={`text-base tracking-[0.5em] ${stateColor} ${state !== "idle" ? "animate-pulse" : ""}`}>
+   845→              {STATE_LABELS[state]}
+   846→            </div>
+   847→            <div className="mt-1 text-xs tracking-[0.3em] text-emerald-400/70">
+   848→              {fmtClock(clock)}
+   849→            </div>
+   850→            <div className="ml-auto mt-3 size-10 rounded-full border border-emerald-500/40 bg-emerald-500/10 shadow-[0_0_24px_rgba(61,220,132,.5)]" />
+   851→          </div>
+   852→
+   853→          {/* Signal bus indicator */}
+   854→          <div className="absolute bottom-8 left-8 text-[10px] tracking-[0.3em] text-zinc-500">
+   855→            SIGNAL BUS —{" "}
+   856→            <span className={connected ? "text-emerald-400" : "text-zinc-600"}>
+   857→              {connected ? "ONLINE" : "STANDBY"}
+   858→            </span>
+   859→          </div>
+   860→          <div className="absolute bottom-8 right-8 text-[10px] tracking-[0.3em] text-zinc-500">
+   861→            {"// REAL-TIME COGNITION //"}
+   862→          </div>
+   863→        </div>
+   864→      )}
+   865→    </div>
+   866→  );
+   867→}
+   868→
