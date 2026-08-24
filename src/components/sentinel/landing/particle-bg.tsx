@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { CircuitBoard } from "../ai-visualizer/circuit-board";
 
 /**
  * ParticleNetworkBackground
@@ -10,6 +11,10 @@ import { useEffect, useRef } from "react";
  * - Mouse acts as a soft "attractor" — nearby particles brighten + a halo
  * - Reduced-motion: render static grid only
  * - Pointer-events disabled, sits behind content (z-0)
+ *
+ * Pass `variant="circuit"` to swap in the AI visualizer CircuitBoard
+ * (subtle, low-opacity, breathes with engine state). Default keeps the
+ * classic particle network for the homepage hero.
  *
  * Performance:
  *  - rAF loop is paused via IntersectionObserver when the section is scrolled
@@ -23,7 +28,31 @@ import { useEffect, useRef } from "react";
  *  - The O(n²) connection pass is the hot path; we early-skip pairs whose
  *    dx or dy alone exceeds the link radius (cheaper than full hypot).
  */
-export function ParticleNetworkBackground({ density = 70 }: { density?: number }) {
+
+interface ParticleNetworkBackgroundProps {
+  density?: number;
+  /** "particles" (default) — classic network. "circuit" — AI visualizer board. */
+  variant?: "particles" | "circuit";
+}
+
+export function ParticleNetworkBackground({
+  density = 70,
+  variant = "particles",
+}: ParticleNetworkBackgroundProps) {
+  // Variant swap renders a different component tree entirely; we branch at
+  // the JSX level (not via early return) so the React hooks below stay
+  // unconditional. The `variant === "circuit"` branch is taken on the FIRST
+  // render, so the particle effect's useEffect returns early before touching
+  // any DOM — keeping the rules-of-hooks happy while still allowing the
+  // circuit board to fully own the canvas when chosen.
+  if (variant === "circuit") {
+    return <CircuitBoard opacity={0.35} showHud={false} />;
+  }
+
+  return <ParticleCanvas density={density} />;
+}
+
+function ParticleCanvas({ density }: { density: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {

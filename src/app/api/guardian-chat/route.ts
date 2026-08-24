@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import ZAI from "z-ai-web-dev-sdk";
 import { getUserFromRequest } from "@/lib/auth";
+import { buildContextForChat } from "@/lib/memory-vault/memory-context";
+import { onUserMessage, onAssistantReply } from "@/lib/memory-vault/memory-writer";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -16,6 +18,10 @@ export async function POST(req: Request) {
   if (!message) {
     return NextResponse.json({ error: "message required" }, { status: 400 });
   }
+
+  // Persist the user's message as a memory (fire-and-forget) so future
+  // sessions can recall what they asked.
+  onUserMessage(user.userId, message);
 
   try {
     // Gather platform state for context
@@ -59,8 +65,19 @@ export async function POST(req: Request) {
       clientData.push(`${c.name}: status=${c.status}, authorized=${c.authorized}, codebases=${codebases.length}, targets=${targets.length}, patches=${cp}(${pp} pending, ${crp} critical), critical_findings=${cf}`);
     }
 
+    // ── Memory Vault context ─────────────────────────────────────────────
+    // Pull the user's recent scan/finding/patch/conversation memories so the
+    // assistant can ground its answer in past activity ("Last time you
+    // scanned CyberShield…"). Best-effort: never blocks the reply.
+    let memoryContext = "";
+    try {
+      memoryContext = await buildContextForChat(user.userId);
+    } catch (err) {
+      console.warn("[guardian-chat] memory context build failed:", err instanceof Error ? err.message : err);
+    }
+
     // Build system prompt
-    const systemPrompt = `You are Guardian, the AI security assistant for the GuardianX platform. You have real-time access to the platform's data. Answer the user's question concisely and helpfully.
+    const systemPrompt = `You are Guardian, the AI security assistant for the GuardianX platform. You have real-time access to the platform's data and the user's memory vault. Answer the user's question concisely and helpfully.
 
 Current platform state:
 - Total clients: ${clients.length}
@@ -70,11 +87,14 @@ Current platform state:
 Client details:
 ${clientData.join("\n")}
 
+${memoryContext ? `Memory vault (recent activity you should reference when relevant):\n${memoryContext}` : "(memory vault is empty — this may be a new user)"}
+
 Rules:
 - Be concise (max 3-4 sentences unless asked for detail)
 - Use the real data above to answer questions
 - If asked "what should I prioritize", recommend the client with most critical findings/patches
 - If asked for a summary, give bullet points
+- When the memory vault shows relevant past activity (prior scans, findings, patches, user preferences), reference it naturally — e.g. "Last time you scanned this codebase, we found 3 SQL injections. 2 are still unpatched."
 - If you don't know something, say so`;
 
     const zai = await ZAI.create();
@@ -91,6 +111,10 @@ Rules:
 
     const reply = response.choices[0]?.message?.content || "I couldn't process that request.";
 
+    // Persist the assistant's reply as a memory so the next session can
+    // pick up the conversation where this one left off.
+    onAssistantReply(user.userId, reply);
+
     return NextResponse.json({
       reply,
       context: {
@@ -100,6 +124,7 @@ Rules:
         critical_patches: criticalPatches,
         total_findings: totalFindings,
         critical_findings: criticalFindings,
+        memory_context_length: memoryContext.length,
       },
     });
   } catch (err) {

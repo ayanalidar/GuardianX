@@ -20,6 +20,7 @@ import { LiveExploitTerminal } from "./live-exploit-terminal";
 import { GuardianChat } from "./guardian-chat";
 import { ServiceLauncher } from "./service-launcher";
 import { ServiceStatusChips } from "./service-status-chips";
+import { SignalBusProvider, ImmersiveView } from "./ai-visualizer";
 
 interface ClientSummary {
   id: string;
@@ -111,6 +112,7 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
   const [threatLevel, setThreatLevel] = useState(0);
   const [warRoom, setWarRoom] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [immersiveOpen, setImmersiveOpen] = useState(false);
   const [opsLoading, setOpsLoading] = useState<string | null>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]); // multi-select for parallel ops
   const [showClientSelector, setShowClientSelector] = useState(false);
@@ -193,6 +195,7 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
   const threatCfg = COLOR_MAP[threatColor];
 
   return (
+    <SignalBusProvider>
     <div className="space-y-4">
       {/* ═══ FUTURISTIC HEADER ═══ */}
       <div className="holo-card-sharp hud-corners relative overflow-hidden p-5">
@@ -263,6 +266,13 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
               className="border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 neon-border-cyan"
             >
               <Maximize2 className="size-4" /> <span className="hidden sm:inline">War Room</span>
+            </Button>
+            <Button
+              onClick={() => setImmersiveOpen(true)}
+              variant="outline"
+              className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 neon-border"
+            >
+              <Cpu className="size-4" /> <span className="hidden sm:inline">Immersive View</span>
             </Button>
             <Button
               onClick={() => { setLauncherClients(selectedClientIds); setLauncherOpen(true); }}
@@ -596,7 +606,11 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
         onClose={() => setLauncherOpen(false)}
         preselectedClientIds={launcherClients}
       />
+
+      {/* ═══ IMMERSIVE AI VISUALIZER (fullscreen overlay) ═══ */}
+      <ImmersiveView open={immersiveOpen} onClose={() => setImmersiveOpen(false)} />
     </div>
+    </SignalBusProvider>
   );
 }
 

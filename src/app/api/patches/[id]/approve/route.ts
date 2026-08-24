@@ -6,6 +6,7 @@ import {
   GENESIS_PREV_HASH,
   computeAttestationHash,
 } from "@/lib/sentinel/attestation";
+import { onPatchApproved } from "@/lib/memory-vault/memory-writer";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,18 @@ export async function POST(req: Request,
 
   const att = await db.attestation.create({
     data: { patchId: patch.id, prevHash, hash, data },
+  });
+
+  // ── Memory Vault: record the approval so Guardian AI can later say ─────
+  // "You patched SQL Injection in login.js last Tuesday." Fire-and-forget.
+  onPatchApproved(user.userId, {
+    id: patch.id as string,
+    patchId: patch.patchId as string,
+    title: patch.title as string,
+    severity: patch.severity as string,
+    affectedFile: patch.affectedFile as string | undefined,
+    status: "approved",
+    approvedAt: updated.approvedAt as Date,
   });
 
   return NextResponse.json({

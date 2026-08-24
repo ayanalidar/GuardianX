@@ -438,6 +438,22 @@ model Playbook {
   createdAt   DateTime @default(now())
 }
 
+// ── AI Memory Vault ───────────────────────────────────────────────────────
+// Stores structured memories (scan results, findings, patches, user
+// preferences, conversations, threat intel) so the Guardian AI assistant
+// can recall recent activity when composing chat replies. Mirrors the
+// `MemoryEntry` table created in supabase/migrations/0009_memory_vault.sql.
+model MemoryEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  category  String   // scan_result | finding | patch | user_preference | conversation | client_context | threat_intel
+  title     String
+  content   String
+  tags      String?  // comma-separated tags
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // Contributors — people who help build GuardianX (developers, researchers,
 // testers, designers, advisors, interns). Can be manually added by admins
 // or auto-synced from GitHub.

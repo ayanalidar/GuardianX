@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Bot, Send, Loader2, Sparkles, X } from "lucide-react";
+import { Bot, Send, Loader2, Sparkles, X, Brain } from "lucide-react";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -29,7 +29,22 @@ export function GuardianChat({ open, onClose }: GuardianChatProps) {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [memoryLength, setMemoryLength] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch the memory context length on open so the header can show a small
+  // "memory vault" indicator. The full context string is fetched inside
+  // /api/guardian-chat (server-side) and merged into the system prompt —
+  // this client fetch is just for the UI badge.
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/memory/context")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.length === "number") setMemoryLength(data.length);
+      })
+      .catch(() => null);
+  }, [open]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -56,6 +71,11 @@ export function GuardianChat({ open, onClose }: GuardianChatProps) {
       });
       const data = await res.json();
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+      // The server just wrote a user-memory + an assistant-reply memory;
+      // refresh the header badge so the vault-length stays in sync.
+      if (typeof data.context?.memory_context_length === "number") {
+        setMemoryLength(data.context.memory_context_length);
+      }
     } catch {
       setMessages((prev) => [...prev, { role: "assistant", content: "I'm having trouble connecting right now. Please try again." }]);
     } finally {
@@ -88,9 +108,18 @@ export function GuardianChat({ open, onClose }: GuardianChatProps) {
             <p className="font-mono text-[9px] uppercase tracking-wider text-violet-400/60">SECURITY ASSISTANT</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="size-8 text-zinc-500 hover:text-zinc-200">
-          <X className="size-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-2 py-1 font-mono text-[9px] uppercase tracking-wider text-emerald-400/80"
+            title="Memory vault — Guardian remembers recent scans, findings, patches, and conversations"
+          >
+            <Brain className="size-3" />
+            <span>{memoryLength > 0 ? `${memoryLength.toLocaleString()} chars` : "empty"}</span>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose} className="size-8 text-zinc-500 hover:text-zinc-200">
+            <X className="size-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}
