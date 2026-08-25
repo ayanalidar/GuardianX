@@ -746,3 +746,110 @@ directly in the DB so the credentials are known ahead of time.
 - **Cleanup:** the `scripts/hash-pwd.js` helper in the cloned web repo
   is a one-off — safe to delete. The actual password is not stored
   anywhere in plaintext (only the bcrypt hash is in the DB).
+
+---
+
+## 2026-08-25 — circuit-bg-command-center + mediapipe build fix
+
+**Task ID:** `circuit-bg-cc`
+**Scope:** Next.js web app at `/home/z/GuardianX-web`. Live deployment
+at https://guardianx-two.vercel.app.
+
+### Context
+
+User asked: "the circuit background is awesome can we use that in whole
+command center?" — referring to the `CircuitBoard` canvas visualizer
+that was previously only used in (a) the landing page at opacity 0.35
+and (b) the War Room fullscreen overlay at opacity 0.55.
+
+### What landed
+
+**1. CircuitBoard as Command Center background**
+(`src/components/sentinel/command-center.tsx`)
+
+- Imported `CircuitBoard` from `./ai-visualizer` (alongside the existing
+  `SignalBusProvider` + `ImmersiveView`).
+- Wrapped the dashboard's `<div className="space-y-4">` in a `relative`
+  container that owns a `pointer-events-none fixed inset-0 -z-10`
+  background layer mounting `<CircuitBoard opacity={0.55} showHud={false} />`.
+- A bottom-only gradient wash (`from-zinc-950/0 via-zinc-950/10
+  to-zinc-950/50`) keeps the lower dashboard cards legible on top of
+  the traces while leaving the header + KPI strip on full-bright circuit.
+- Final opacity chosen via 3 iterations: 0.18 → 0.35 → 0.55. The first
+  two were invisible to VLM analysis of a live screenshot because the
+  CircuitBoard substrate is `#020705` (very close to the page's
+  zinc-950 background), so traces at low opacity blend into the page
+  bg. 0.55 matches the War Room overlay's setting where traces
+  actually pop.
+
+**2. Pre-existing build break fix** (`src/components/sentinel/war-room/gesture-control.tsx`)
+
+- Discovered while pushing the circuit-bg change: Vercel build had been
+  silently broken since the warroom-voice-gesture task (sha 9f52cb3).
+  The previous "successful" deploy (7h before this task) used Vercel's
+  cached build artifacts — a fresh build from the same commit fails
+  with:
+  ```
+  The export Hands was not found in module
+  @mediapipe/hands/hands.js. The module has no exports at all.
+  ```
+- Root cause: `@mediapipe/hands` v0.4.1675469240 + `@mediapipe/camera_utils`
+  ship as IIFE-on-`window` rather than real ESM. The package.json
+  declares `"module": "hands.js"` but the file is a Closure-compiled
+  IIFE that calls `za("Hands", od)` to attach the class to `window`
+  at runtime. A static `import { Hands } from "@mediapipe/hands"`
+  therefore trips Turbopack's static-export checker (the module has
+  zero ESM exports, statically known).
+- Fix: replaced the named imports with:
+  - Type-only imports (`import { type NormalizedLandmark, type Results }
+    from "@mediapipe/hands"`) — erased at compile time.
+  - Two side-effect-only imports (`import "@mediapipe/hands"` +
+    `import "@mediapipe/camera_utils"`) — these execute the IIFE, which
+    attaches `Hands` / `HAND_CONNECTIONS` / `Camera` to `globalThis`.
+  - Module-level `const Hands = (globalThis as any).Hands as (typeof
+    import("@mediapipe/hands"))["Hands"]` to pull the symbols off
+    globalThis with a TS cast back to the original declared type.
+- All value usages of `Hands` / `HAND_CONNECTIONS` / `Camera` are inside
+  `useEffect` / `useCallback` (browser-only), so by the time they run,
+  the side-effect imports have fired and `globalThis.Hands` is defined.
+- Tried `transpilePackages: ["@mediapipe/hands", "@mediapipe/camera_utils"]`
+  in `next.config.ts` first — it did NOT fix the issue (transpilePackages
+  is for source-transpilation, not ESM/CJS interop). Reverted that
+  experiment; the side-effect-import approach is the clean fix.
+
+### Verification
+
+- Local `bun run build` now passes the Turbopack compile step (was
+  failing). It still fails at "Collecting page data" because the local
+  env doesn't have `JWT_SECRET`/`SUPABASE_URL` set — Vercel has them,
+  so Vercel builds successfully.
+- Vercel deployment `a380870c` reached `READY` in ~60s.
+- Live smoke test: `GET /` → 200, `GET /api/health` → operational,
+  `POST /api/auth/login` with admin creds → 200 + JWT.
+- VLM (glm-5v-turbo) analysis of a full-page screenshot:
+  > "Yes, there are visible thin glowing green lines and traces forming
+  > a circuit-board pattern in the dark background area between the
+  > dashboard cards. Yes, there are small glowing components, dots,
+  > and pulse animations visible in the background... Yes, the dashboard
+  > text content, including headers, KPI numbers, and chart labels,
+  > remains clearly readable."
+- DOM probe confirmed the CircuitBoard canvas is mounted at
+  `div.pointer-events-none.fixed.inset-0.-z-10` with parent class
+  `relative h-full w-full overflow-hidden` and dimensions 1280×577.
+
+### Notes for the next session
+
+- The CircuitBoard breathes more visibly when the sentinel-engine is
+  running scans — engine events drive `scanning` / `analyzing` /
+  `finding` / `patching` states via the SignalBusProvider, which
+  brightens the traces and spawns data pulses. At idle (engine
+  offline), the board still draws the static trace grid + the central
+  chip breathing animation, just dimmer.
+- If the circuit board feels too prominent on a particular screen,
+  drop `opacity={0.55}` to `0.40` in `command-center.tsx`. Don't go
+  below 0.35 or it becomes invisible against zinc-950.
+- The gesture-control fix is purely about module resolution; the
+  gesture vocabulary and runtime behavior are unchanged. If MediaPipe
+  ever ships a real ESM build (`@mediapipe/tasks-vision` is the newer
+  path), the side-effect imports can be reverted to named imports.
+
