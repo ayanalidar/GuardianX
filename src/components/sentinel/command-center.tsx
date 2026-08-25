@@ -20,7 +20,7 @@ import { LiveExploitTerminal } from "./live-exploit-terminal";
 import { GuardianChat } from "./guardian-chat";
 import { ServiceLauncher } from "./service-launcher";
 import { ServiceStatusChips } from "./service-status-chips";
-import { SignalBusProvider, ImmersiveView } from "./ai-visualizer";
+import { SignalBusProvider, ImmersiveView, CircuitBoard } from "./ai-visualizer";
 import { WarRoomOverlay } from "./war-room/war-room-overlay";
 
 interface ClientSummary {
@@ -197,6 +197,17 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
 
   return (
     <SignalBusProvider>
+    <div className="relative">
+      {/* ═══ CIRCUIT-BOARD BACKGROUND (covers whole Command Center) ═══ */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      >
+        <CircuitBoard opacity={0.18} showHud={false} />
+        {/* Vignette + gradient wash so foreground cards stay legible on top of the traces */}
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/40 via-zinc-950/60 to-zinc-950/80" />
+        <div className="absolute inset-0 cyber-vignette opacity-60" />
+      </div>
     <div className="space-y-4">
       {/* ═══ FUTURISTIC HEADER ═══ */}
       <div className="holo-card-sharp hud-corners relative overflow-hidden p-5">
@@ -601,6 +612,7 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
 
       {/* ═══ IMMERSIVE AI VISUALIZER (fullscreen overlay) ═══ */}
       <ImmersiveView open={immersiveOpen} onClose={() => setImmersiveOpen(false)} />
+    </div>
     </div>
     </SignalBusProvider>
   );
