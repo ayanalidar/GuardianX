@@ -242,7 +242,16 @@ export async function GET(req: Request) {
       description: f.description,
     }));
 
-    const forecast = await llmForecast(compact, scans.length);
+    // LLM is best-effort — if the Z.AI SDK isn't configured (e.g. on Vercel
+    // without ZAI_CONFIG env var) or the call fails for any reason, fall
+    // back to the heuristic scorer so the endpoint always returns data.
+    let forecast;
+    try {
+      forecast = await llmForecast(compact, scans.length);
+    } catch (llmErr) {
+      console.warn("[predictive-forecast] LLM unavailable, using heuristic:", llmErr instanceof Error ? llmErr.message : llmErr);
+      forecast = heuristicScores(compact);
+    }
 
     const data: ForecastResponse = {
       scores: forecast.scores,
