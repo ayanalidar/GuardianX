@@ -254,18 +254,22 @@ export async function GET(req: Request) {
     // without ZAI_CONFIG env var) or the call fails for any reason, fall
     // back to the heuristic scorer so the endpoint always returns data.
     let forecast;
+    let llmError: string | undefined;
     try {
       forecast = await llmForecast(compact, scans.length);
     } catch (llmErr) {
-      console.warn("[predictive-forecast] LLM unavailable, using heuristic:", llmErr instanceof Error ? llmErr.message : llmErr);
+      llmError = llmErr instanceof Error ? llmErr.message : String(llmErr);
+      console.warn("[predictive-forecast] LLM unavailable, using heuristic:", llmError);
       forecast = heuristicScores(compact);
     }
 
-    const data: ForecastResponse = {
+    const data: ForecastResponse & { llmError?: string; llmUsed?: boolean } = {
       scores: forecast.scores,
       top_3: forecast.top_3,
       confidence: forecast.confidence,
       generatedAt: new Date().toISOString(),
+      llmUsed: !llmError,
+      ...(llmError ? { llmError } : {}),
     };
 
     cached = { at: Date.now(), data };
