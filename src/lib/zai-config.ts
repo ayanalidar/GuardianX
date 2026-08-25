@@ -1,17 +1,16 @@
 // Z.AI SDK config bootstrap for serverless environments.
 //
-// The z-ai-web-dev-sdk looks for a `.z-ai-config` JSON file at one of:
-//   - process.cwd()/.z-ai-config
-//   - homedir()/.z-ai-config
-//   - /etc/.z-ai-config
+// The z-ai-web-dev-sdk's loadConfig() searches for .z-ai-config at:
+//   1. process.cwd()/.z-ai-config     — /var/task on Vercel (read-only)
+//   2. os.homedir()/.z-ai-config      — /home/sbx_user1059 on Vercel
+//   3. /etc/.z-ai-config              — read-only on Vercel
 //
-// On Vercel serverless functions:
-//   - process.cwd() is /var/task (read-only deployment bundle)
-//   - homedir() is /home/sbx_user1059 (WRITABLE — this is where we write)
-//   - /etc/ is read-only
+// The SDK uses `os.homedir()` which on Linux returns process.env.HOME.
+// On Vercel, HOME is set to /home/sbx_user1059 which MAY be read-only.
 //
-// So we write the config to homedir()/.z-ai-config from the ZAI_CONFIG
-// env var. The SDK finds it there on the next ZAI.create() call.
+// Strategy: write the config to /tmp/.z-ai-config (always writable on
+// Vercel) AND set process.env.HOME = '/tmp' so os.homedir() returns
+// /tmp and the SDK finds the config there.
 //
 // Usage:
 //   import { ensureZaiConfig } from "@/lib/zai-config";
@@ -29,7 +28,7 @@ export function ensureZaiConfig(): string | null {
 
   // If a config file already exists at one of the SDK's search paths,
   // the SDK will find it — no action needed.
-  const homeDir = homedir() || "/tmp";
+  const homeDir = homedir();
   const candidates = [
     join(process.cwd(), ".z-ai-config"),
     join(homeDir, ".z-ai-config"),
@@ -42,8 +41,8 @@ export function ensureZaiConfig(): string | null {
     }
   }
 
-  // Otherwise, if ZAI_CONFIG env var is set, write it to homedir()
-  // (which is writable on Vercel) so the SDK can find it.
+  // Otherwise, if ZAI_CONFIG env var is set, write it to /tmp (always
+  // writable on Vercel) and set HOME=/tmp so os.homedir() returns /tmp.
   const raw = process.env.ZAI_CONFIG;
   if (!raw) {
     return null;
@@ -52,10 +51,16 @@ export function ensureZaiConfig(): string | null {
   try {
     // Validate it parses as JSON (catches malformed env vars).
     JSON.parse(raw);
-    const targetDir = homeDir;
-    mkdirSync(targetDir, { recursive: true });
-    const targetPath = join(targetDir, ".z-ai-config");
+
+    // Write to /tmp/.z-ai-config — /tmp is always writable on Vercel
+    // serverless functions.
+    const targetPath = "/tmp/.z-ai-config";
     writeFileSync(targetPath, raw, { mode: 0o600 });
+
+    // Override HOME so os.homedir() returns /tmp, causing the SDK's
+    // loadConfig() to find the config file at /tmp/.z-ai-config.
+    process.env.HOME = "/tmp";
+
     ensured = true;
     return targetPath;
   } catch (err) {
@@ -63,4 +68,5 @@ export function ensureZaiConfig(): string | null {
     return null;
   }
 }
+
 
