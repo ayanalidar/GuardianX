@@ -1,0 +1,538 @@
+     1→# GuardianX Worklog
+     2→
+     3→A running record of agent-driven work on the GuardianX codebase.
+     4→The sentinel-engine lives at `/home/z/my-project`; the Next.js web app
+     5→lives at `/home/z/GuardianX-web`. Append new entries to the bottom.
+     6→
+     7→---
+     8→
+     9→## 2026-01 — jaredrhod-integration: AI Memory Vault + AI Visualizer
+    10→
+    11→**Task ID:** `jaredrhod-integration`
+    12→**Scope:** Next.js web app at `/home/z/GuardianX-web` (the Next.js half
+    13→of the project — the sentinel-engine repo at `/home/z/my-project` is
+    14→unaffected by this integration; both halves share this worklog).
+    15→
+    16→Ported two of `@jaredrhod`'s open-source agent projects into GuardianX:
+    17→
+    18→1. **ai-memory-vault** — markdown-style persistent memory for the
+    19→   Guardian AI chat assistant. Source patterns cribbed from
+    20→   `/tmp/ai-memory-vault/templates/` (VAULT-INDEX / MEMORY.md /
+    21→   DAILY-NOTE frontmatter conventions, the "fewer fuller notes" rule,
+    22→   "Recent Activity / Active Threats / User Preferences / Recent
+    23→   Conversation" section shape).
+    24→2. **ai-visualizer** — React + canvas port of the `board` face from
+    25→   `/tmp/ai-visualizer/faces/board/index.html` and the state-bus
+    26→   plumbing from `/tmp/ai-visualizer/core.js`.
+    27→
+    28→### What landed
+    29→
+    30→**AI Memory Vault** (`src/lib/memory-vault/` + `src/app/api/memory/`)
+    31→
+    32→- `src/lib/memory-vault/memory-store.ts` — Supabase-backed
+    33→  `MemoryEntry` table accessor (proxied via `db.memoryEntry.*` in
+    34→  `src/lib/db.ts`). `storeMemory`, `getMemories`, `searchMemories`,
+    35→  `getRecentContext`. Content capped at 500 chars. Categories:
+    36→  `scan_result | finding | patch | user_preference | conversation |
+    37→  client_context | threat_intel` (the 5 required + 2 extras for
+    38→  future scope).
+    39→- `src/lib/memory-vault/memory-context.ts` — `buildContextForChat(userId)`
+    40→  pulls the latest 5 scans / 10 findings / 8 patches / 5 prefs / 6
+    41→  conversations and shapes them into a markdown block (## Recent
+    42→  Activity / ## Active Threats / ## User Preferences / ## Recent
+    43→  Conversation) that gets injected into the Guardian chat system
+    44→  prompt. Open findings are surfaced as "Active Threats" via the
+    45→  `status:open` tag, and drop off once a matching `status:patched`
+    46→  memory is written.
+    47→- `src/lib/memory-vault/memory-writer.ts` — fire-and-forget event
+    48→  writers (`onScanComplete`, `onFindingFound`, `onPatchApproved`,
+    49→  `onUserMessage`, `onAssistantReply`, `onUserPreference`) that
+    50→  convert platform events into memories. Failures are swallowed
+    51→  (logged) so a memory write never blocks the user-facing flow.
+    52→- `src/app/api/memory/route.ts` — `GET /api/memory?category=&limit=`
+    53→  and `POST /api/memory { category, title, content, tags? }`,
+    54→  `requireAuth`-gated.
+    55→- `src/app/api/memory/context/route.ts` — `GET /api/memory/context`
+    56→  returns the built markdown string + char count (used by
+    57→  `guardian-chat.tsx` to badge the header with vault size).
+    58→- `src/app/api/memory/ingest/route.ts` — internal POST for the
+    59→  sentinel-engine to record off-band events (scan_complete /
+    60→  finding_found / patch_approved / user_preference) so the vault
+    61→  stays current without the chat route having to be in the loop.
+    62→- `supabase/migrations/0009_memory_vault.sql` — creates the
+    63→  `MemoryEntry` table with indexes on `(userId, createdAt DESC)` and
+    64→  `(userId, category, createdAt DESC)`, RLS disabled (the app uses
+    65→  service_role). Mirrored in `prisma/schema.prisma` as the
+    66→  `MemoryEntry` model.
+    67→- `src/components/sentinel/guardian-chat.tsx` — header now badges a
+    68→  `Brain` icon with the live vault size in chars; the actual context
+    69→  is fetched server-side by `/api/guardian-chat/route.ts`, merged
+    70→  into the system prompt as a `Memory vault (recent activity...)`
+    71→  block with a fallback "(memory vault is empty — this may be a new
+    72→  user)" string when fresh. After each turn the assistant reply
+    73→  length is echoed back so the badge updates without a refetch.
+    74→- `src/app/api/guardian-chat/route.ts` — `onUserMessage` is fired
+    75→  before the LLM call, `onAssistantReply` after, so the next turn
+    76→  already has the prior turn as context. Best-effort: a thrown
+    77→  memory write is caught and warned, never blocks the reply.
+    78→
+    79→**AI Visualizer** (`src/components/sentinel/ai-visualizer/`)
+    80→
+    81→- `src/components/sentinel/ai-visualizer/circuit-board.tsx` —
+    82→  canvas-based React port of the `board` face. Procedurally routes
+    83→  traces across a grid (mulberry32 RNG, seed 7 so the board looks
+    84→  identical every boot), places ~34 components (ICs / resistors /
+    85→  caps) on top, and spawns data pulses that flow along the traces
+    86→  lighting up components as they hit. A central chip "breathes" at
+    87→  idle and amps up under load. Pulses spawn from chip pins outward,
+    88→  ~62% biased to the chip side. Pulses use additive blending with a
+    89→  cached radial-gradient glow sprite (the same `makeGlow` trick from
+    90→  `core.js` `U.makeGlow`). rAF loop is paused when the canvas is
+    91→  off-screen (IntersectionObserver) or the tab is hidden, and DPR is
+    92→  capped at 1.5 — matches the perf rules in `core.js`. HUD: corner
+    93→  brackets, GUARDIANX brand, status mode label, live clock, signal
+    94→  indicator. `forcedState` prop lets callers pin a state without the
+    95→  bus (used by the landing particle-bg variant).
+    96→- `src/components/sentinel/ai-visualizer/signal-bus.tsx` — React
+    97→  Context provider that owns the single source of truth for the
+    98→  visualizer state. Connects to the sentinel-engine socket.io relay
+    99→  (via `ENGINE_SOCKET_URL` + `engineSocketOptions()` from
+   100→  `src/lib/sentinel/engine-socket.ts`) and listens for
+   101→  `pipeline:event` payloads. Each event is mapped (by message regex
+   102→  on stage/message/level) to one of five states:
+   103→  `idle | scanning | analyzing | finding | patching`. States
+   104→  auto-expire (scanning 30s, analyzing 20s, finding 4s, patching 6s)
+   105→  so a missed "scan_complete" doesn't strand the board in `scanning`
+   106→  forever. Keeps a 40-event ring buffer for the live feed. Also
+   107→  exposes `push()` so local UI actions (e.g. "user approved a patch")
+   108→  can drive the visualization without waiting for the engine to
+   109→  echo them back. `useSignalBus()` returns a no-op shim when used
+   110→  outside a provider, so leaf components (homepage particle bg)
+   111→  don't crash without a provider.
+   112→- `src/components/sentinel/ai-visualizer/neural-link.tsx` — bonus
+   113→  port of the `neural` face (constellation of brain-region clusters
+   114→  with traveling dots along bezier tendrils). Same state mapping,
+   115→  same color story (green / amber / red on the dark substrate).
+   116→- `src/components/sentinel/ai-visualizer/immersive-view.tsx` —
+   117→  fullscreen overlay (ESC to close, `V` to toggle circuit/neural)
+   118→  for wall-projection / SOC-monitoring use. Overlays scan progress,
+   119→  live findings feed (from the SignalBus event ring), and AI status
+   120→  prose per state.
+   121→- `src/components/sentinel/ai-visualizer/index.ts` — barrel export
+   122→  of the provider + hook + three views.
+   123→- `src/components/sentinel/command-center.tsx` — wraps the dashboard
+   124→  in `<SignalBusProvider>` and mounts `<ImmersiveView>` behind a
+   125→  button, so every page that uses the command center gets a live
+   126→  visualizer context.
+   127→- `src/components/sentinel/landing/particle-bg.tsx` — `variant="circuit"`
+   128→  swaps the homepage particle background for a dimmed (`opacity=0.35`,
+   129→  HUD-off) `CircuitBoard` instance.
+   130→
+   131→### Colors / states (per spec)
+   132→
+   133→States: `idle | scanning | analyzing | finding | patching`
+   134→(colors pulled from `core.js` :root):
+   135→- green `#3ddc84` (idle / scanning / patching base)
+   136→- amber `#e7c368` (analyzing / amber traces)
+   137→- red `#ff4d5e` (finding)
+   138→Plus a "hot" companion per color for the pulse head (`#a6ffd0`,
+   139→`#ffe9ae`, `#ffb0b8`).
+   140→
+   141→### Constraints honored
+   142→
+   143→- TypeScript throughout (`strict: true`, `noImplicitAny: true` in
+   144→  `tsconfig.json`; the ai-visualizer + memory-vault files type-check
+   145→  clean — `bunx tsc --noEmit` reports zero errors for them).
+   146→- `"use client"` on every component that touches the DOM, canvas,
+   147→  IntersectionObserver, socket.io, or React state.
+   148→- Dark theme — substrate `#020705`, emerald accent throughout, no
+   149→  light-mode branch.
+   150→- No external Python server. The reference `ai-visualizer/server.py`
+   151→  was replaced by direct socket.io-client → sentinel-engine
+   152→  connection (the engine already speaks socket.io for pipeline
+   153→  events). The `/state` and `/config` polling endpoints from
+   154→  `core.js` are unused — state is pushed in via `pipeline:event`.
+   155→
+   156→### Verification
+   157→
+   158→- `bun run lint` → **0 errors, 5 warnings** (all pre-existing in
+   159→  `contributors-panel.tsx` + `service-launcher.tsx`, unrelated to
+   160→  this work).
+   161→- `bunx tsc --noEmit -p tsconfig.json` filtered to the touched
+   162→  files → **0 errors**. (One TS narrowing issue in `neural-link.tsx`
+   163→  where the `splat()` closure call made TS widen the outer `let`
+   164→  canvas contexts back to `| null` / infer them as `never`; fixed by
+   165→  snapshotting the narrowed bindings into explicitly-typed local
+   166→  consts before the for-loop. `circuit-board.tsx` and `signal-bus.tsx`
+   167→  were clean from the start.)
+   168→- Build-time TS errors are tolerated by `next.config.ts`'s
+   169→  `typescript.ignoreBuildErrors: true`, but the new files don't lean
+   170→  on that — they're type-clean on their own.
+   171→
+   172→### Notes for the next session
+   173→
+   174→- The memory vault is wired into the chat route but the
+   175→  `/api/memory/ingest` endpoint isn't called by the sentinel-engine
+   176→  yet — the engine runs at `/home/z/my-project` (separate repo).
+   177→  When the engine is updated to call `/api/memory/ingest` on
+   178→  scan_complete / finding_found / patch_approved, the chat assistant
+   179→  will start surfacing "Last time you scanned CyberShield, we found
+   180→  3 SQL injections — 2 are still unpatched." automatically.
+   181→- `signal-bus.tsx` infers event type from message regex; if the
+   182→  engine's stage names change, update `deriveState()` and the
+   183→  `pipeline:event` listener in tandem.
+   184→- The `immersive-view.tsx` is reachable from the Command Center via
+   185→  an "Immersive View" button — easy to miss in the UI.
+   186→
+   187→
+   188→
+   189→---
+   190→
+   191→## 2026-08-24 — warroom-voice-gesture: backtalk + barehands → War Room
+   192→
+   193→**Task ID:** `warroom-voice-gesture`
+   194→**Scope:** Next.js web app at `/home/z/GuardianX-web`.
+   195→
+   196→Ported two of `@jaredrhod`'s open-source agent projects — `backtalk`
+   197→(voice) and `barehands` (gesture) — into the GuardianX War Room as
+   198→tri-modal (voice OR gesture OR mouse) input layers. Both reference
+   199→repos are Python/HTML; this work reimplements their interaction
+   200→vocabulary on pure browser APIs so they run inside the existing
+   201→Next.js dashboard with no extra services.
+   202→
+   203→### What landed
+   204→
+   205→**Voice Control** (`src/components/sentinel/war-room/voice-control.tsx`)
+   206→
+   207→- backtalk shape (push-to-talk, status ring, spoken reply) on the
+   208→  native Web Speech API. STT via `webkitSpeechRecognition` (Chrome/
+   209→  Edge), TTS via `SpeechSynthesisUtterance` (cross-browser). **No
+   210→  Python server, no API keys, no external deps.**
+   211→- Push-to-talk: hold SPACE, or click the mic. 24-bar waveform
+   212→  animation when listening. Status ring color: green (idle) / red
+   213→  (listening) / amber (speaking).
+   214→- Voice commands parsed locally by `parseVoiceCommand`:
+   215→  `scan <codebase>`, `show <tab>`, `search findings for <query>`,
+   216→  `approve patch <id>`, `what's the security posture?`, `stop`.
+   217→- Imperative handle (`VoiceControlHandle`) exposes `speak` /
+   218→  `stopSpeaking` / `startListening` / `stopListening` / `isSupported`
+   219→  so the parent overlay can drive TTS from gesture or AI events.
+   220→- Feature detection via `useSyncExternalStore` (no setState-in-effect,
+   221→  no hydration mismatch). Stale-closure bug on the `onend` transcript
+   222→  fixed with a `latestTranscriptRef` mirror so the React Compiler
+   223→  preserves the `useCallback` memoization.
+   224→
+   225→**Gesture Control** (`src/components/sentinel/war-room/gesture-control.tsx`)
+   226→
+   227→- barehands vocabulary on `@mediapipe/hands` + `@mediapipe/camera_utils`
+   228→  (npm packages, first-class TS types). WASM loaded from jsDelivr via
+   229→  `locateFile`.
+   230→- Gestures: **pinch** → synthetic click on element under cursor;
+   231→  **swipe** (wrist x > 0.32 in < 380ms) → tab nav;
+   232→  **open palm** → vertical scroll;
+   233→  **fist** → synthetic ESC + `onGesture({kind:"fist"})`;
+   234→  **two-hand pinch** → zoom (delta between two index tips).
+   235→- Spring-animated fixed cursor tracks the index fingertip. Small
+   236→  160×120 camera preview in the corner with hand-landmark skeleton
+   237→  overlay (toggleable).
+   238→- Graceful degradation: camera-permission / WebGL / model-load
+   239→  failures show an "OFFLINE" chip; the rest of the War Room keeps
+   240→  working with voice + mouse.
+   241→
+   242→**War Room Overlay** (`src/components/sentinel/war-room/war-room-overlay.tsx`)
+   243→
+   244→- Fullscreen (`fixed inset-0 z-[150]`) tri-modal overlay combining:
+   245→  - `CircuitBoard` visualizer as a 55%-opacity background.
+   246→  - Voice control card (toggle with `V`).
+   247→  - Gesture control card (toggle with `G`).
+   248→  - Tab strip: overview / clients / patches / findings / system
+   249→    (cycleable with `← →`, voice "show <tab>", or gesture swipe).
+   250→  - Live scan terminal (bottom-left, reads from `useSignalBus()`).
+   251→  - KPI tiles, client pipeline cards, pending-patch list with inline
+   252→    approve buttons, critical-findings feed with voice-driven filter,
+   253→    system-status grid.
+   254→- Closes on ESC, the Exit button, or a fist gesture (barehands'
+   255→  "close modal" idiom).
+   256→- Voice commands wired through `handleVoiceCommand`: `scan` looks up
+   257→  the codebase by name (case-insensitive substring) and POSTs
+   258→  `/api/scans`; `approve` POSTs `/api/patches/[id]/approve`; `search`
+   259→  filters the in-memory findings list; `status` reads `/api/posture-
+   260→  score` aloud; `navigate` switches the internal view + speaks the
+   261→  label. Gesture `swipe` cycles views, `fist` closes the overlay.
+   262→- Header shows live visualizer state, posture score, clock.
+   263→
+   264→**Voice Command API** (`src/app/api/voice-command/route.ts`)
+   265→
+   266→- POST, `requireAuth`-gated. Accepts pre-parsed command OR raw
+   267→  transcript (mirrors `parseVoiceCommand` server-side so external
+   268→  clients — mobile, CLI, agents — parse identically).
+   269→- Handlers:
+   270→  - `scan` → looks up codebase by name, prevents concurrent scans,
+   271→    creates a `Scan` row, fire-and-forgets to the engine.
+   272→  - `navigate` → no-op server-side (client handles view switch).
+   273→  - `search` → ILIKE-style contains query on `Finding.title|category|
+   274→    endpoint`, returns up to 25 matches.
+   275→  - `approve` → resolves patch by `patchId` OR `id`, applies patched
+   276→    source, appends to the tamper-evident attestation chain
+   277→    (`computeAttestationHash`), fires `onPatchApproved` memory writer.
+   278→  - `status` → computes posture score inline (same formula as
+   279→    `/api/posture-score`), returns `{overall, grade, message}`.
+   280→- Returns `{ok, action, message, ...payload}` per spec.
+   281→
+   282→**Command Center wiring** (`src/components/sentinel/command-center.tsx`)
+   283→
+   284→- Imported `WarRoomOverlay` and mounted it behind the existing
+   285→  "War Room" button (`<WarRoomOverlay open={warRoom} onClose={...} />`).
+   286→- The legacy `WarRoomMode` (auto-cycling 3-view fullscreen) is
+   287→  replaced by a `_WarRoomModeLegacyStub` (no-op) so any external
+   288→  imports still resolve; the War Room button now opens the tri-modal
+   289→  overlay. The "Immersive View" button (circuit board only) is
+   290→  unchanged.
+   291→
+   292→### Constraints honored
+   293→
+   294→- Voice uses **pure browser Web Speech API** — no Python server
+   295→  (backtalk's Whisper/Kokoro path is replaced by SpeechRecognition +
+   296→  SpeechSynthesis).
+   297→- Gesture uses **`@mediapipe/hands` + `@mediapipe/camera_utils`** (the
+   298→  task-specified legacy packages, not `tasks-vision` which barehands
+   299→  itself uses — these ship first-class TS types and a `Camera` rAF
+   300→  helper that fit the React lifecycle better).
+   301→- Both new components are **`"use client"`**.
+   302→- **Dark theme, emerald accents** throughout — no indigo/blue.
+   303→- Works in **fullscreen mode** (overlay is `fixed inset-0 z-[150]`,
+   304→  body scroll locked, ESC to exit).
+   305→- All three input modes reach the same actions — voice `show patches`
+   306→  and gesture `swipe right` both call `cycleView(1)`; voice `approve
+   307→  patch X` and mouse-clicking the Approve button both POST
+   308→  `/api/patches/[id]/approve`.
+   309→
+   310→### Verification
+   311→
+   312→- `bun run lint` → **0 errors, 5 warnings** (all pre-existing in
+   313→  `contributors-panel.tsx` + `service-launcher.tsx`, unrelated).
+   314→- `bunx tsc --noEmit -p tsconfig.json` filtered to the touched files
+   315→  → **0 errors**. (Two initial TS errors in `gesture-control.tsx`
+   316→  where `wristHistory` was typed `{x,t}` but palm-scroll pushed
+   317→  `{x,y,t}` — fixed by widening the type to `{x,y,t}`.)
+   318→- One React Compiler error in `voice-control.tsx` (`setState-in-
+   319→  effect` for the `supported` flag) fixed by switching to
+   320→  `useSyncExternalStore` for feature detection.
+   321→- One React Compiler error (`preserve-manual-memoization` on
+   322→  `startListening` because the closure captured `interim` state but
+   323→  deps only listed `dispatchCommand`) fixed by mirroring the latest
+   324→  transcript into a `latestTranscriptRef` so `onend` reads the ref
+   325→  instead of the stale state closure.
+   326→
+   327→### Notes for the next session
+   328→
+   329→- The `WarRoomOverlay` inherits `SignalBusProvider` from
+   330→  `command-center.tsx`'s wrapper, so `useSignalBus()` returns real
+   331→  engine events. If the overlay is ever mounted outside the command
+   332→  center (e.g. on a dedicated `/war-room` route), wrap it in
+   333→  `<SignalBusProvider>` or the live terminal will be empty.
+   334→- The voice parser (`parseVoiceCommand` in `voice-control.tsx`) and
+   335→  the server-side parser (`parseTranscript` in `voice-command/route.ts`)
+   336→  are intentionally duplicated to keep the client zero-network for
+   337→  navigation/search/stop commands. If you add a new voice command,
+   338→  update BOTH parsers.
+   339→- The MediaPipe Hands WASM is loaded from
+   340→  `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/<file>`.
+   341→  If the sandbox has no outbound CDN access, gesture init will fail
+   342→  gracefully (the "OFFLINE" chip shows). Self-hosting the WASM under
+   343→  `/public/mediapipe/` and pointing `locateFile` at the local path is
+   344→  the fix if offline operation matters.
+   345→- `barehands` itself uses the newer `@mediapipe/tasks-vision`
+   346→  HandLandmarker (stage.html loads
+   347→  `vision_bundle.mjs@0.10.14`); we stayed on the older
+   348→  `@mediapipe/hands` because the task explicitly named those packages
+   349→  and they ship TypeScript types. The gesture vocabulary is identical.
+   350→- The legacy `WarRoomMode` (auto-cycling 3-view) is gone from the UI
+   351→  but its 150-line body is replaced by a `_WarRoomModeLegacyStub` —
+   352→  remove the stub if you want a clean diff.
+   353→
+   354→
+   355→
+   356→---
+   357→
+   358→## 2026-09-01 — frontend-update: 8 missing UI components wired into the console
+   359→
+   360→**Task ID:** `frontend-update`
+   361→**Scope:** Next.js web app at `/home/z/GuardianX-web`.
+   362→
+   363→The console had many features built (DFIR, SOC, compliance, war room,
+   364→etc.) but several spec-listed UI features were missing entirely. This
+   365→task creates all 8 missing components, the 7 API routes they depend on,
+   366→one Supabase migration + two Prisma models, and wires everything into
+   367→`src/app/page.tsx` + `src/app/layout.tsx`.
+   368→
+   369→### What landed
+   370→
+   371→**New components** (`src/components/sentinel/`):
+   372→
+   373→- `support-chat.tsx` — floating bottom-right chat widget. Round launcher
+   374→  + spring-animated panel. Persists the conversation in localStorage,
+   375→  fetches prior tickets via `GET /api/support/ticket`, files new
+   376→  tickets via `POST /api/support/ticket`. Admin role auto-tags
+   377→  priority=high and shows an amber "Priority: Admin" badge. Links to
+   378→  `/features` (Docs) and `/architecture` (API Docs). Stacks above the
+   379→  onboarding help button via `bottomOffset`.
+   380→- `analyst-onboarding.tsx` — 4-step tour (Welcome → Create Client →
+   381→  Upload Code → Run Scan). Auto-opens for viewers on first login
+   382→  (localStorage-tracked). Spotlight effect via a `radial-gradient`
+   383→  mask computed from the highlighted element's `getBoundingClientRect`.
+   384→  Floating help button (bottom-right, above the support chat launcher)
+   385→  replays the tour anytime.
+   386→- `billing-panel.tsx` — three pricing cards (Free / Pro ₹5,000/mo /
+   387→  Enterprise Custom). Current-plan banner with usage tiles. `Upgrade`
+   388→  → `POST /api/billing/checkout`; `Manage Subscription` → `POST
+   389→  /api/billing/portal`. Falls back to a "billing disabled" banner
+   390→  when Stripe env vars aren't set.
+   391→- `org-switcher.tsx` — sidebar header dropdown. Lists personal workspace
+   392→  + every org from `GET /api/orgs`. Persists the active workspace in
+   393→  localStorage and patches `globalThis.fetch` so every subsequent
+   394→  GuardianX API request carries `x-guardianx-workspace: <id>`. Admin-
+   395→  only "Create Organization" dialog with auto-slug generation.
+   396→- `user-activity-monitor.tsx` — admin-only user activity table. Summary
+   397→  tiles (total users / active today / 2FA enabled ratio / total
+   398→  clients across users) + a table with avatar, name+email, role badge,
+   399→  client count, last login, last activity, 2FA icon. Click to expand
+   400→  and see that user's last 5 audit entries. Auto-refreshes every 30s.
+   401→- `admin-2fa-banner.tsx` — amber banner for admins without 2FA. Polls
+   402→  `POST /api/2fa {action:"status"}`. "Enable 2FA" button → caller
+   403→  switches to the Settings → Security tab. Dismissible per-session
+   404→  (sessionStorage).
+   405→- `analyst-banner.tsx` — sky-blue banner for `role === "viewer"`.
+   406→  "You are signed in as an Analyst. Upload your own clients for
+   407→  testing." CTA navigates to the Clients tab. Dismissible per-session.
+   408→- `cookie-banner.tsx` — GDPR/DPDPA bottom banner mounted in
+   409→  `layout.tsx` after `<Toaster />`. Accept / Decline persist to
+   410→  localStorage and dispatch a `guardianx:cookie-consent` CustomEvent.
+   411→  SSR-safe via `mounted` guard.
+   412→- `settings-panel.tsx` — new Settings route with three tabs:
+   413→  - **Security** — full 2FA setup flow (QR scan → 6-digit verify →
+   414→    backup codes reveal), disable button, login-history card.
+   415→  - **Organization** — admin-only org manager (list, create, invite).
+   416→  - **Email Delivery** — admin-only email log monitor (sent/failed/
+   417→    pending/total stat tiles + scrollable mail log). Gracefully
+   418→    handles the case where the `MailLog` table doesn't exist.
+   419→
+   420→**Backend API routes** (all new, all `requireAuth`-gated):
+   421→
+   422→- `src/app/api/support/ticket/route.ts` — `GET` (your tickets) + `POST`
+   423→  (file a ticket). Validates message length 3–4000 chars; admins auto-
+   424→  get priority `high`.
+   425→- `src/app/api/billing/status/route.ts` — `GET` returns plan + live
+   426→  usage (admins: real `db.client.count({})` / `db.scan.count({})`;
+   427→  viewers: derived from `db.auditLog.findMany({actor: email})`).
+   428→- `src/app/api/billing/checkout/route.ts` — `POST {plan}` returns
+   429→  Stripe Checkout URL. Lazy-imports `stripe` so the route doesn't crash
+   430→  at import time when Stripe env vars aren't set.
+   431→- `src/app/api/billing/portal/route.ts` — `POST` opens the Stripe
+   432→  Customer Portal. Falls back to `customers.list({email})` if no
+   433→  cached customer ID.
+   434→- `src/app/api/admin/user-activity/route.ts` — admin-only. Joins User
+   435→  rows against the last 2000 AuditLog entries bucketed by actor email.
+   436→  Returns summary + per-user last 5 audit entries.
+   437→- `src/app/api/admin/login-history/route.ts` — auth-required. Defaults
+   438→  to the caller's own events; admins can pass `?scope=all` to see
+   439→  everyone. Filters to login/logout/2FA/password/approve actions.
+   440→- `src/app/api/admin/email-delivery/route.ts` — admin-only. Reads the
+   441→  `MailLog` table (returns `tableMissing: true` instead of erroring if
+   442→  it doesn't exist) + sent/failed/pending/total summary.
+   443→
+   444→**Database changes**:
+   445→
+   446→- `prisma/schema.prisma` — added `SupportTicket` (id, userId, subject,
+   447→  message, priority, status, reply, timestamps) and `Subscription` (id,
+   448→  userId unique, plan, status, stripeCustomerId, stripeSubscriptionId,
+   449→  currentPeriodEnd, cancelAtPeriodEnd, clientsUsed, scansUsed,
+   450→  timestamps) models.
+   451→- `supabase/migrations/0010_support_billing.sql` — creates both tables
+   452→  with `TIMESTAMPTZ` defaults, indexes on `(userId, createdAt DESC)` +
+   453→  `(status, createdAt DESC)`, grants `service_role` all + `anon/
+   454→  authenticated` CRUD, disables RLS.
+   455→- `src/lib/db.ts` — added `supportTicket: "SupportTicket"` and
+   456→  `subscription: "Subscription"` to `MODEL_TO_TABLE` so the existing
+   457→  Supabase-REST dispatcher routes them.
+   458→
+   459→**Wiring**:
+   460→
+   461→- `src/app/page.tsx`:
+   462→  - Extended `Tab` union with `"billing" | "user-activity" | "settings"`.
+   463→  - Added `<OrgSwitcher>` in the sidebar header.
+   464→  - Added `<AdminTwoFactorBanner>` + `<AnalystBanner>` directly above
+   465→    the command center content.
+   466→  - Added `<AnalystOnboarding>` + `<SupportChat>` at the bottom of
+   467→    ConsoleView (both `position: fixed`, stacking via `bottomOffset`).
+   468→  - Added Billing / Settings NavItems in the Advanced group + User
+   469→    Activity NavItem in the Administration group (admin-only).
+   470→  - Added tab content cases + header title + neon color mappings for
+   471→    the three new tabs.
+   472→  - Added `data-onboarding="clients"` / `"codebases"` / `"patches"`
+   473→    data attributes on the relevant sidebar slots so the onboarding
+   474→    spotlight can find them.
+   475→- `src/app/layout.tsx` — imported `<CookieBanner>` and rendered it
+   476→  right after `<Toaster />` so it overlays every page on first visit.
+   477→
+   478→### Constraints honored
+   479→
+   480→- All 8 new components are `"use client"` + TypeScript.
+   481→- Dark theme throughout — substrate `zinc-950`, accents emerald /
+   482→  amber / sky / purple. No indigo or blue.
+   483→- shadcn/ui components used exclusively: Button, Input, Textarea,
+   484→  Card, Badge, Skeleton, Progress, Label, DropdownMenu, Dialog,
+   485→  Tabs, Table.
+   486→- `framer-motion` for all transitions (spring-based launches,
+   487→  AnimatePresence for dismissals + spotlight mask).
+   488→- Mobile-first responsive: sidebar collapses on mobile, chat panel is
+   489→  `width: min(380px, calc(100vw - 2rem))`, cookie banner stacks
+   490→  vertically on small screens.
+   491→- Reuses the existing `useToast` hook + `holo-card` / `hud-corners` /
+   492→  `pulse-dot` / `neon-emerald` design tokens so the new UI matches the
+   493→  existing console.
+   494→
+   495→### Verification
+   496→
+   497→- `bun run lint` → **0 errors, 5 warnings** (all 5 pre-existing in
+   498→  `contributors-panel.tsx` + `service-launcher.tsx`, untouched by this
+   499→  task).
+   500→- `bunx tsc --noEmit -p tsconfig.json` filtered to the touched files
+   501→  → **0 errors** in the new components + new API routes + the
+   502→  `db.ts` `MODEL_TO_TABLE` addition. (Pre-existing Supabase-REST
+   503→  typing errors elsewhere are unrelated and tolerated by
+   504→  `next.config.ts`'s `typescript.ignoreBuildErrors: true`.)
+   505→- Installed `stripe@22.5.0` as a new dependency (needed for
+   506→  `import("stripe")` dynamic imports in the checkout + portal routes).
+   507→
+   508→### Notes for the next session
+   509→
+   510→- **Stripe env vars** (when going live): set `STRIPE_SECRET_KEY`,
+   511→  `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE`. Without them the
+   512→  Billing panel shows a "billing disabled" banner — the rest of the
+   513→  UI keeps working. The webhook route `/api/billing/webhook` is already
+   514→  whitelisted in `src/middleware.ts`'s `PUBLIC_ROUTES`.
+   515→- **`MailLog` table**: the Email Delivery tab gracefully handles its
+   516→  absence. If you want email logging to actually populate, add a
+   517→  `MailLog` table via Supabase migration and have `src/lib/email.ts`
+   518→  insert rows on send.
+   519→- **`x-guardianx-workspace` header** is set on every relative fetch by
+   520→  `org-switcher.tsx`'s `globalThis.fetch` monkey-patch. Downstream API
+   521→  routes can read `req.headers.get("x-guardianx-workspace")` to scope
+   522→  queries per workspace — none do yet, but the plumbing is in place.
+   523→- **Onboarding spotlight** depends on `[data-onboarding="..."]`
+   524→  selectors being present on the sidebar NavItem wrappers. They're on
+   525→  the "All Clients", "Codebases", and "Patch Queue" targets. If you
+   526→  rename those slots, update the `STEPS` array's `spotlightSelector`
+   527→  strings in `analyst-onboarding.tsx`.
+   528→- **User activity "Clients" column** is approximate for viewers — the
+   529→  `Client` table has no `ownerId`, so we attribute clients to users by
+   530→  counting `AuditLog` rows where `action` contains "create" AND
+   531→  `entity` contains "client". For admins we just show the global
+   532→  total. If you want true per-user client ownership, add a `userId`
+   533→  column to `Client` and update `/api/admin/user-activity` to read it.
+   534→- **`Stripe` API version**: pinned to `2025-08-27.basil` (latest stable
+   535→  as of stripe@22.5.0). Cast through `as never` to keep TS happy with
+   536→  the version-string union.
+   537→
+   538→

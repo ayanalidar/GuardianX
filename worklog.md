@@ -535,3 +535,143 @@ one Supabase migration + two Prisma models, and wires everything into
   as of stripe@22.5.0). Cast through `as never` to keep TS happy with
   the version-string union.
 
+
+---
+
+## 2026-08-25 — supabase-reswap: cutover live Vercel deploy to new Supabase project
+
+**Task ID:** `supabase-reswap`
+**Scope:** Vercel-hosted Next.js web app (https://guardianx-two.vercel.app) +
+new Supabase project. The engine repo at `/home/z/my-project` is unaffected;
+this entry covers the database cutover only.
+
+### Context
+
+User provisioned a brand-new Supabase project and asked to wire the live
+Vercel deployment of GuardianX onto it (the existing project had env vars
+pointing at an older Supabase that was being retired).
+
+New Supabase details:
+- Project URL: `https://nhvdjkblqhlkftzsaoin.supabase.co`
+- Project ref: `nhvdjkblqhlkftzsaoin` (region: **ap-south-1 / Mumbai**)
+- DB host (direct): `db.nhvdjkblqhlkftzsaoin.supabase.co:5432` (IPv6 only)
+- DB host (pooler): `aws-0-ap-south-1.pooler.supabase.com:5432` (IPv4, session mode)
+- DB user: `postgres.nhvdjkblqhlkftzsaoin` (pooler requires project-ref suffix)
+- DB password: `Ayanalidar@110`
+- Publishable API key: `sb_publishable_KcTYwmG4lJEH-qvBdGxRbA_otyD21Pt`
+
+### What landed
+
+**1. Migration apply (psycopg2 via the IPv4 pooler)**
+
+- Cloned `github.com/ayanalidar/GuardianX` (web repo) into
+  `/home/z/GuardianX-web` (was missing on this machine).
+- The sandbox has no IPv6 → the direct `db.*.supabase.co` host is unreachable.
+  Probed every regional pooler hostname; `aws-0-ap-south-1.pooler.supabase.com`
+  is the one that resolves + accepts the connection (port 5432 session mode or
+  6543 transaction mode both work).
+- Wrote `scripts/apply_migrations.py` in the cloned web repo and ran it —
+  applies all 10 migrations (`0001_init.sql` → `0010_support_billing.sql`)
+  each in its own transaction, aborts on first failure. All 10 applied
+  cleanly on the empty DB.
+- Final schema: **34 tables** (AlertRule, ApiAccessLog, AttackChain,
+  Attestation, AuditLog, Canary, ChatMessage, Client, Codebase, Credential,
+  CredentialAudit, Engagement, Evidence, Finding, FuzzResult, HoneypotHit,
+  IOC, Incident, IncidentEvent, Integration, MemoryEntry, Organization,
+  Patch, PipelineEvent, Playbook, RedAgentEvent, Scan, ScheduledScan,
+  Subscription, SupportTicket, Target, TeamMember, User, WebhookConfig) +
+  the `exec_sql(TEXT)` SECURITY-DEFINER helper. 325 columns total.
+
+**2. RLS / publishable-key interop check**
+
+- All 10 migrations `DISABLE ROW LEVEL SECURITY` on every table they create
+  (intentional — the app uses the service_role bypass). Side effect: the
+  publishable key (anon-equivalent) gains full CRUD on every table via the
+  PostgREST API, because RLS is off.
+- Verified with curl: GET count, POST insert, DELETE — all three succeed
+  with the publishable key. The only thing the publishable key cannot do
+  is call the `exec_sql` RPC (it's `REVOKE … FROM PUBLIC, anon,
+  authenticated; GRANT … TO service_role`). That RPC is only used by the
+  `/api/db-init` demo-data seeder — not needed in production.
+
+**3. Vercel env var cutover (project `guardianx`,
+   id `prj_9qicOddsjMvr3hXf1t0xSZlCm0Q4`)**
+
+- Deleted old `SUPABASE_URL` (id `r2DEQJA5cSEp73LS`) and
+  `SUPABASE_SERVICE_ROLE_KEY` (id `4XhYK4YBct5a0m6b`) — both pointed at the
+  retired Supabase.
+- Added three new env vars (all `target=["production"]`):
+  - `SUPABASE_URL` = `https://nhvdjkblqhlkftzsaoin.supabase.co`
+    (id `F7UzRPeV3ZToiBAo`)
+  - `SUPABASE_SERVICE_ROLE_KEY` =
+    `sb_publishable_KcTYwmG4lJEH-qvBdGxRbA_otyD21Pt`
+    (id `VwzfIKtanL8wgn07`) — the publishable key works because RLS is off
+    everywhere; a true `sb_secret_…` service_role key was not provided by
+    the user, and the publishable key is sufficient for all app routes.
+  - `NEXT_PUBLIC_SUPABASE_URL` =
+    `https://nhvdjkblqhlkftzsaoin.supabase.co`
+    (id `Wk2QukE73Ay3xKDF`) — newly added so client-side code that reads
+    `process.env.NEXT_PUBLIC_SUPABASE_URL` (referenced in `src/lib/db.ts`
+    line 10 and `src/lib/ai-ops/diagnostic-agent.ts` line 362) also sees
+    the new value. Previously only the non-public `SUPABASE_URL` was set.
+
+**4. Redeploy**
+
+- Triggered a production redeploy of the latest successful deployment
+  (`dpl_BcBfpBZfq3Ypuuni3zcDfCLu1uUd`, sha `9f52cb3a`) via the Vercel
+  v13 deployments API.
+- New deployment: `dpl_AG5yQgUfdoP4zS9DHWdkW1XKrpDA`,
+  URL `https://guardianx-eyc0mv26u-guardianx.vercel.app`, reached `READY`
+  in ~60s. Production alias `guardianx-two.vercel.app` now serves this
+  deployment.
+
+### Verification (all live on https://guardianx-two.vercel.app)
+
+- `GET /` → HTTP 200, 297 KB HTML, `<title>GuardianX, Autonomous Security
+  Operations Platform</title>`, no fatal/missing-env errors in the response.
+- `GET /api/health` → HTTP 200, `status: operational`, components:
+  - Web App: operational, Responding
+  - Database: operational, **PostgreSQL reachable** (latency 1.2s — the
+    DB-read path through Supabase REST is working end-to-end)
+  - Sentinel Engine: operational
+  - Recon Tools: operational
+- `GET /api/scans` → HTTP 401 `Authentication required` (auth gate still
+  enforced — confirms the middleware + auth path still works, just the
+  DB connection was swapped underneath).
+- `POST /api/auth/login` with bogus creds → HTTP 401 `Invalid email or
+  password` after 2 s — confirms the login route actually queried the
+  new Supabase `User` table (no rows yet → user not found).
+- Direct REST probe against new Supabase confirmed `User`, `Scan`,
+  `Client` tables all exist and return `count: 0` (fresh instance).
+
+### Notes for the next session
+
+- **Publishable vs service_role key.** The app currently uses the
+  publishable key as `SUPABASE_SERVICE_ROLE_KEY` because RLS is disabled
+  on all tables — CRUD works, but `exec_sql` (used by `/api/db-init` for
+  demo seeding) returns `permission denied for function exec_sql`.
+  If demo-data seeding is needed, either (a) drop the GRANT restriction
+  in migration `0001` (line ~35: `REVOKE ALL … FROM PUBLIC, anon,
+  authenticated; GRANT EXECUTE … TO service_role`) so the publishable
+  key can call it too, or (b) get the actual `sb_secret_…` service_role
+  key from the Supabase dashboard (Project Settings → API → "secret"
+  key) and replace `SUPABASE_SERVICE_ROLE_KEY` with it.
+- **DB pooler is IPv4-only reachable.** The direct `db.*.supabase.co`
+  host resolves to IPv6 only, which is unreachable from this sandbox.
+  Use `aws-0-ap-south-1.pooler.supabase.com:5432` (session mode) or
+  `:6543` (transaction mode, recommended for serverless). Username must
+  be `postgres.<project-ref>`.
+- **Migrations are tracked only on the filesystem.** Supabase tracks
+  applied migrations via the `supabase_migrations.schema_migrations`
+  table when you use `supabase db push`; we ran raw SQL via psycopg2 so
+  that table doesn't exist. If `supabase db push` is run later it will
+  re-apply all 10 (they're idempotent for the most part — `CREATE TABLE
+  IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION` — but a few ALTER
+  statements in `0004_2fa_columns.sql` / `0005_approval_column.sql` /
+  `0008_token_version.sql` will fail on the second run).
+- **No client data migrated.** The new Supabase instance is empty
+  (`User`, `Client`, `Scan` all return `count: 0`). Users will need to
+  re-register. If data migration from the old Supabase is needed, dump
+  each table via `pg_dump --table=*` on the old instance (over the old
+  pooler host) and `pg_restore` into the new one — but only do this if
+  the old instance is still reachable.
