@@ -1,0 +1,692 @@
+     1→"use client";
+     2→
+     3→/**
+     4→ * VoiceControl
+     5→ * ------------
+     6→ * backtalk-inspired voice interface for the GuardianX War Room.
+     7→ *
+     8→ * backtalk (github.com/jaredrhod/backtalk) uses Whisper STT + Kokoro TTS
+     9→ * via a local Python server with VAD endpointing and push-to-talk. We
+    10→ * can't ship a Python runtime to the browser, so this component ports
+    11→ * the *shape* of backtalk — hold-to-talk capture, a spoken reply,
+    12→ * status ring that breathes while idle / pulses while listening — onto
+    13→ * the native Web Speech API:
+    14→ *
+    15→ *   - SpeechRecognition  (STT)  — Chrome's webkitSpeechRecognition
+    16→ *   - SpeechSynthesis    (TTS)  — W3C SpeechSynthesis API
+    17→ *
+    18→ * No external dependencies. No Python server. No API keys. Everything
+    19→ * happens in the browser, which means it only works in Chrome/Edge and
+    20→ * any other browser that ships Web Speech. We gracefully degrade to a
+    21→ * "Voice unsupported" chip on Firefox/Safari.
+    22→ *
+    23→ * Voice commands (parsed locally, executed via onCommand callback OR
+    24→ * POSTed to /api/voice-command for backend actions):
+    25→ *
+    26→ *   "scan <codebase>"             → { action: "scan", target }
+    27→ *   "show <tab>"                  → { action: "navigate", target }
+    28→ *   "search findings for <query>" → { action: "search", target }
+    29→ *   "approve patch <id>"           → { action: "approve", target }
+    30→ *   "what's the security posture" → { action: "status" }
+    31→ *   "stop"                         → cancels TTS playback
+    32→ *
+    33→ * The component exposes an imperative handle (`useRef<VoiceControlHandle>`)
+    34→ * so the War Room overlay can call `speak(...)` to read AI responses and
+    35→ * critical findings aloud, and `startListening()` / `stopListening()`
+    36→ * from a gesture (fist = stop) or hot-key.
+    37→ */
+    38→
+    39→import {
+    40→  forwardRef,
+    41→  useCallback,
+    42→  useEffect,
+    43→  useImperativeHandle,
+    44→  useMemo,
+    45→  useRef,
+    46→  useState,
+    47→  useSyncExternalStore,
+    48→} from "react";
+    49→import { motion, AnimatePresence } from "framer-motion";
+    50→import { Mic, MicOff, Volume2, VolumeX, Radio, Activity } from "lucide-react";
+    51→
+    52→// ── Minimal Web Speech API ambient types ─────────────────────────────────
+    53→// SpeechRecognition isn't in the TS DOM lib (only EventTarget bits are).
+    54→// Declare just enough to type the surface we use. We deliberately keep
+    55→// these loose — the API is non-standard (`webkitSpeechRecognition`) and
+    56→// only Chrome/Edge/Safari ship it.
+    57→interface SpeechRecognitionAlternativeLike {
+    58→  readonly transcript: string;
+    59→  readonly confidence: number;
+    60→}
+    61→interface SpeechRecognitionResultLike {
+    62→  readonly length: number;
+    63→  item(index: number): SpeechRecognitionAlternativeLike;
+    64→  readonly isFinal: boolean;
+    65→  [index: number]: SpeechRecognitionAlternativeLike;
+    66→}
+    67→interface SpeechRecognitionResultListLike {
+    68→  readonly length: number;
+    69→  item(index: number): SpeechRecognitionResultLike;
+    70→  [index: number]: SpeechRecognitionResultLike;
+    71→}
+    72→interface SpeechRecognitionEventLike extends Event {
+    73→  readonly resultIndex: number;
+    74→  readonly results: SpeechRecognitionResultListLike;
+    75→}
+    76→interface SpeechRecognitionErrorEventLike extends Event {
+    77→  readonly error: string;
+    78→  readonly message: string;
+    79→}
+    80→interface SpeechRecognitionLike extends EventTarget {
+    81→  lang: string;
+    82→  continuous: boolean;
+    83→  interimResults: boolean;
+    84→  maxAlternatives: number;
+    85→  start(): void;
+    86→  stop(): void;
+    87→  abort(): void;
+    88→  onresult: ((ev: SpeechRecognitionEventLike) => void) | null;
+    89→  onerror: ((ev: SpeechRecognitionErrorEventLike) => void) | null;
+    90→  onend: (() => void) | null;
+    91→  onstart: (() => void) | null;
+    92→}
+    93→type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+    94→
+    95→function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
+    96→  if (typeof window === "undefined") return null;
+    97→  const w = window as unknown as {
+    98→    SpeechRecognition?: SpeechRecognitionCtor;
+    99→    webkitSpeechRecognition?: SpeechRecognitionCtor;
+   100→  };
+   101→  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
+   102→}
+   103→
+   104→// ── Parsed voice command shape ────────────────────────────────────────────
+   105→export type VoiceCommand =
+   106→  | { action: "scan"; target: string }
+   107→  | { action: "navigate"; target: string }
+   108→  | { action: "search"; target: string }
+   109→  | { action: "approve"; target: string }
+   110→  | { action: "status" }
+   111→  | { action: "stop" }
+   112→  | { action: "unknown"; raw: string };
+   113→
+   114→export interface VoiceControlHandle {
+   115→  /** Speak a string aloud (queues behind any in-flight utterance). */
+   116→  speak(text: string, opts?: { interrupt?: boolean }): void;
+   117→  /** Stop any in-flight TTS playback immediately. */
+   118→  stopSpeaking(): void;
+   119→  /** Begin a single push-to-talk capture session. */
+   120→  startListening(): void;
+   121→  /** Abort a capture in flight. */
+   122→  stopListening(): void;
+   123→  /** Whether the browser exposes SpeechRecognition at all. */
+   124→  isSupported(): boolean;
+   125→}
+   126→
+   127→export interface VoiceControlProps {
+   128→  /** Called with a parsed command. If omitted, the component POSTs the
+   129→   *  raw transcript to `/api/voice-command` and reads the response aloud. */
+   130→  onCommand?: (cmd: VoiceCommand) => void;
+   131→  /** Auto-read the result of /api/voice-command aloud. Default true. */
+   132→  speakResponses?: boolean;
+   133→  /** Compact variant for the corner of the War Room. */
+   134→  compact?: boolean;
+   135→  /** Optional CSS class. */
+   136→  className?: string;
+   137→}
+   138→
+   139→// ── Command parser ────────────────────────────────────────────────────────
+   140→// Matches the six documented command shapes. Runs case-insensitively on
+   141→// the trimmed final transcript. Returns `unknown` for anything we don't
+   142→// recognize so the UI can echo it back without dropping it.
+   143→export function parseVoiceCommand(raw: string): VoiceCommand {
+   144→  const text = raw.trim().replace(/\s+/g, " ").toLowerCase();
+   145→  if (!text) return { action: "unknown", raw };
+   146→
+   147→  // "stop" — cancel TTS. Single-word intent.
+   148→  if (/^(stop|quiet|silence|shut up|cancel reading)$/.test(text)) {
+   149→    return { action: "stop" };
+   150→  }
+   151→
+   152→  // "what's the security posture" / "status report" / "posture"
+   153→  if (/(security|security posture|posture|status report|threat level|how are we doing)/.test(text)) {
+   154→    return { action: "status" };
+   155→  }
+   156→
+   157→  // "scan <codebase>"
+   158→  let m = text.match(/^scan\s+(.+)$/);
+   159→  if (m && m[1]) return { action: "scan", target: m[1] };
+   160→
+   161→  // "show <tab>"
+   162→  m = text.match(/^(show|go to|open|switch to|view)\s+(.+)$/);
+   163→  if (m && m[2]) return { action: "navigate", target: m[2] };
+   164→
+   165→  // "search findings for <query>" / "search for ..."
+   166→  m = text.match(/^(?:search|find)\s+(?:findings?\s+(?:for|containing|matching)\s+|for\s+)?(.+)$/);
+   167→  if (m && m[1] && /^(search|find)\b/.test(text)) {
+   168→    return { action: "search", target: m[1] };
+   169→  }
+   170→
+   171→  // "approve patch <id>"
+   172→  m = text.match(/^approve\s+patch\s+(.+)$/);
+   173→  if (m && m[1]) return { action: "approve", target: m[1] };
+   174→
+   175→  return { action: "unknown", raw };
+   176→}
+   177→
+   178→// ── Component ──────────────────────────────────────────────────────────────
+   179→export const VoiceControl = forwardRef<VoiceControlHandle, VoiceControlProps>(
+   180→  function VoiceControl(
+   181→    { onCommand, speakResponses = true, compact = false, className },
+   182→    ref,
+   183→  ) {
+   184→    const ctorRef = useRef<SpeechRecognitionCtor | null>(null);
+   185→    const recRef = useRef<SpeechRecognitionLike | null>(null);
+   186→    const ttsVoicesRef = useRef<SpeechSynthesisVoice[]>([]);
+   187→    // Latest transcript captured during a recognition session — kept in
+   188→    // a ref so the `onend` closure (created once at startListening time)
+   189→    // can read the freshest partial without re-subscribing on every interim.
+   190→    const latestTranscriptRef = useRef("");
+   191→
+   192→    // Feature detection via useSyncExternalStore: returns false during SSR,
+   193→    // the real value post-hydration. Avoids setState-in-effect.
+   194→    const supported = useSyncExternalStore(
+   195→      () => () => {},
+   196→      () => !!getSpeechRecognitionCtor(),
+   197→      () => false,
+   198→    );
+   199→    const [listening, setListening] = useState(false);
+   200→    const [speaking, setSpeaking] = useState(false);
+   201→    const [interim, setInterim] = useState("");
+   202→    const [lastHeard, setLastHeard] = useState("");
+   203→    const [lastReply, setLastReply] = useState("");
+   204→    const [error, setError] = useState<string | null>(null);
+   205→
+   206→    // ── Initialize on mount: warm TTS voices ────────────────────────────
+   207→    useEffect(() => {
+   208→      // Set the ctor ref (used by startListening) on the client.
+   209→      ctorRef.current = getSpeechRecognitionCtor();
+   210→
+   211→      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+   212→        const loadVoices = () => {
+   213→          ttsVoicesRef.current = window.speechSynthesis.getVoices();
+   214→        };
+   215→        loadVoices();
+   216→        window.speechSynthesis.onvoiceschanged = loadVoices;
+   217→        return () => {
+   218→          window.speechSynthesis.onvoiceschanged = null;
+   219→        };
+   220→      }
+   221→      return;
+   222→    }, []);
+   223→
+   224→    // ── Cleanup on unmount ───────────────────────────────────────────────
+   225→    useEffect(() => {
+   226→      return () => {
+   227→        try {
+   228→          recRef.current?.abort();
+   229→        } catch {
+   230→          /* noop */
+   231→        }
+   232→        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+   233→          window.speechSynthesis.cancel();
+   234→        }
+   235→      };
+   236→    }, []);
+   237→
+   238→    // ── TTS ──────────────────────────────────────────────────────────────
+   239→    const speak = useCallback(
+   240→      (text: string, opts?: { interrupt?: boolean }) => {
+   241→        if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+   242→        if (!text.trim()) return;
+   243→        const synth = window.speechSynthesis;
+   244→        if (opts?.interrupt) synth.cancel();
+   245→
+   246→        // Pick a voice that sounds vaguely like a SOC analyst — prefer
+   247→        // an English voice, ideally one named "Google US English" or
+   248→        // similar. Falls back to the first available voice.
+   249→        const voices = ttsVoicesRef.current.length
+   250→          ? ttsVoicesRef.current
+   251→          : synth.getVoices();
+   252→        const preferred =
+   253→          voices.find((v) => /en[-_]US/i.test(v.lang) && /google|samantha|jenny/i.test(v.name)) ||
+   254→          voices.find((v) => /^en/i.test(v.lang)) ||
+   255→          voices[0];
+   256→
+   257→        const u = new SpeechSynthesisUtterance(text);
+   258→        if (preferred) u.voice = preferred;
+   259→        u.rate = 1.05;
+   260→        u.pitch = 0.95;
+   261→        u.volume = 1;
+   262→        u.onstart = () => setSpeaking(true);
+   263→        u.onend = () => setSpeaking(false);
+   264→        u.onerror = () => setSpeaking(false);
+   265→        synth.speak(u);
+   266→        setLastReply(text);
+   267→      },
+   268→      [],
+   269→    );
+   270→
+   271→    const stopSpeaking = useCallback(() => {
+   272→      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+   273→      window.speechSynthesis.cancel();
+   274→      setSpeaking(false);
+   275→    }, []);
+   276→
+   277→    // ── Dispatch a parsed command ────────────────────────────────────────
+   278→    // If the parent passed an `onCommand`, hand it over. Otherwise POST
+   279→    // to /api/voice-command and read the response back aloud (when
+   280→    // speakResponses is on).
+   281→    const dispatchCommand = useCallback(
+   282→      async (cmd: VoiceCommand) => {
+   283→        // "stop" always cancels TTS locally — never round-trips.
+   284→        if (cmd.action === "stop") {
+   285→          stopSpeaking();
+   286→          return;
+   287→        }
+   288→        if (onCommand) {
+   289→          onCommand(cmd);
+   290→          return;
+   291→        }
+   292→        try {
+   293→          const res = await fetch("/api/voice-command", {
+   294→            method: "POST",
+   295→            headers: { "Content-Type": "application/json" },
+   296→            body: JSON.stringify({ command: cmd }),
+   297→          });
+   298→          const data = (await res.json()) as { ok?: boolean; message?: string; action?: string };
+   299→          if (speakResponses && data?.message) {
+   300→            speak(data.message, { interrupt: true });
+   301→          }
+   302→        } catch {
+   303→          /* swallow — the UI already shows the transcript */
+   304→        }
+   305→      },
+   306→      [onCommand, speak, speakResponses, stopSpeaking],
+   307→    );
+   308→
+   309→    // ── Push-to-talk: start a single-shot capture ───────────────────────
+   310→    const startListening = useCallback(() => {
+   311→      const ctor = ctorRef.current;
+   312→      if (!ctor) return;
+   313→      // Abort any prior session — reentrancy safety.
+   314→      try {
+   315→        recRef.current?.abort();
+   316→      } catch {
+   317→        /* noop */
+   318→      }
+   319→      const rec = new ctor();
+   320→      rec.lang = "en-US";
+   321→      rec.continuous = false;
+   322→      rec.interimResults = true;
+   323→      rec.maxAlternatives = 1;
+   324→
+   325→      let finalText = "";
+   326→
+   327→      rec.onstart = () => {
+   328→        setListening(true);
+   329→        setInterim("");
+   330→        latestTranscriptRef.current = "";
+   331→        setError(null);
+   332→      };
+   333→      rec.onresult = (ev: SpeechRecognitionEventLike) => {
+   334→        let interimText = "";
+   335→        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+   336→          const r = ev.results[i];
+   337→          const alt = r[0];
+   338→          if (r.isFinal) {
+   339→            finalText += alt.transcript;
+   340→          } else {
+   341→            interimText += alt.transcript;
+   342→          }
+   343→        }
+   344→        const current = finalText || interimText;
+   345→        latestTranscriptRef.current = current;
+   346→        setInterim(current);
+   347→      };
+   348→      rec.onerror = (ev: SpeechRecognitionErrorEventLike) => {
+   349→        setError(ev.error || "speech_error");
+   350→        setListening(false);
+   351→      };
+   352→      rec.onend = () => {
+   353→        setListening(false);
+   354→        // Read the freshest transcript from the ref — the `interim`
+   355→        // state captured at startListening time would be stale.
+   356→        const transcript = (finalText || latestTranscriptRef.current).trim();
+   357→        setInterim("");
+   358→        latestTranscriptRef.current = "";
+   359→        if (!transcript) return;
+   360→        setLastHeard(transcript);
+   361→        const cmd = parseVoiceCommand(transcript);
+   362→        void dispatchCommand(cmd);
+   363→      };
+   364→
+   365→      recRef.current = rec;
+   366→      try {
+   367→        rec.start();
+   368→      } catch {
+   369→        // start() throws if called twice in a row without end — swallow.
+   370→        setListening(false);
+   371→      }
+   372→    }, [dispatchCommand]);
+   373→
+   374→    const stopListening = useCallback(() => {
+   375→      try {
+   376→        recRef.current?.stop();
+   377→      } catch {
+   378→        /* noop */
+   379→      }
+   380→      setListening(false);
+   381→    }, []);
+   382→
+   383→    // ── Hold-space push-to-talk + ESC to cancel ──────────────────────────
+   384→    useEffect(() => {
+   385→      const onKeyDown = (e: KeyboardEvent) => {
+   386→        if (e.code === "Space" && !e.repeat) {
+   387→          // Don't steal space from inputs/textareas.
+   388→          const t = e.target as HTMLElement | null;
+   389→          if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) {
+   390→            return;
+   391→          }
+   392→          e.preventDefault();
+   393→          if (!listening) startListening();
+   394→        }
+   395→        if (e.key === "Escape" && listening) {
+   396→          stopListening();
+   397→        }
+   398→      };
+   399→      const onKeyUp = (e: KeyboardEvent) => {
+   400→        if (e.code === "Space" && listening) {
+   401→          const t = e.target as HTMLElement | null;
+   402→          if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) {
+   403→            return;
+   404→          }
+   405→          e.preventDefault();
+   406→          stopListening();
+   407→        }
+   408→      };
+   409→      window.addEventListener("keydown", onKeyDown);
+   410→      window.addEventListener("keyup", onKeyUp);
+   411→      return () => {
+   412→        window.removeEventListener("keydown", onKeyDown);
+   413→        window.removeEventListener("keyup", onKeyUp);
+   414→      };
+   415→    }, [listening, startListening, stopListening]);
+   416→
+   417→    // ── Imperative handle ───────────────────────────────────────────────
+   418→    useImperativeHandle(
+   419→      ref,
+   420→      (): VoiceControlHandle => ({
+   421→        speak,
+   422→        stopSpeaking,
+   423→        startListening,
+   424→        stopListening,
+   425→        isSupported: () => supported,
+   426→      }),
+   427→      [speak, stopSpeaking, startListening, stopListening, supported],
+   428→    );
+   429→
+   430→    // ── Status ring color ───────────────────────────────────────────────
+   431→    const ringColor = listening
+   432→      ? "#ff4d5e"
+   433→      : speaking
+   434→        ? "#e7c368"
+   435→        : supported
+   436→          ? "#3ddc84"
+   437→          : "#71717a";
+   438→
+   439→    const statusLabel = !supported
+   440→      ? "VOICE UNSUPPORTED"
+   441→      : listening
+   442→        ? "LISTENING"
+   443→        : speaking
+   444→          ? "SPEAKING"
+   445→          : "VOICE IDLE";
+   446→
+   447→    // ── Waveform bars (animated when listening) ──────────────────────────
+   448→    const bars = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+   449→
+   450→    if (compact) {
+   451→      return (
+   452→        <div className={`flex items-center gap-2 ${className ?? ""}`}>
+   453→          <button
+   454→            type="button"
+   455→            disabled={!supported}
+   456→            onClick={() => (listening ? stopListening() : startListening())}
+   457→            aria-label={listening ? "Stop listening" : "Start voice command"}
+   458→            className={`relative flex size-10 items-center justify-center rounded-full border transition-all ${
+   459→              listening
+   460→                ? "border-red-500/60 bg-red-500/20"
+   461→                : supported
+   462→                  ? "border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20"
+   463→                  : "border-zinc-700 bg-zinc-900 opacity-50"
+   464→            }`}
+   465→          >
+   466→            {listening ? (
+   467→              <MicOff className="size-4 text-red-300" />
+   468→            ) : (
+   469→              <Mic className="size-4 text-emerald-300" />
+   470→            )}
+   471→            {listening && (
+   472→              <span
+   473→                className="absolute inset-0 animate-ping rounded-full border border-red-500/40"
+   474→                style={{ animationDuration: "1s" }}
+   475→              />
+   476→            )}
+   477→          </button>
+   478→          {speaking && (
+   479→            <button
+   480→              type="button"
+   481→              onClick={stopSpeaking}
+   482→              aria-label="Stop speaking"
+   483→              className="flex size-10 items-center justify-center rounded-full border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
+   484→            >
+   485→              <VolumeX className="size-4 text-amber-300" />
+   486→            </button>
+   487→          )}
+   488→          <div className="font-mono text-[9px] uppercase tracking-wider text-zinc-500">
+   489→            {statusLabel}
+   490→          </div>
+   491→        </div>
+   492→      );
+   493→    }
+   494→
+   495→    return (
+   496→      <div
+   497→        className={`flex flex-col gap-3 rounded-xl border border-emerald-500/30 bg-zinc-950/80 p-4 backdrop-blur-xl ${className ?? ""}`}
+   498→      >
+   499→        {/* Header */}
+   500→        <div className="flex items-center justify-between">
+   501→          <div className="flex items-center gap-2">
+   502→            <Radio className="size-4 text-emerald-400" />
+   503→            <span className="font-mono text-xs uppercase tracking-widest text-emerald-400/80">
+   504→              Voice Control
+   505→            </span>
+   506→          </div>
+   507→          <div className="flex items-center gap-1.5">
+   508→            <span
+   509→              className="size-1.5 rounded-full"
+   510→              style={{ backgroundColor: ringColor }}
+   511→            />
+   512→            <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-500">
+   513→              {statusLabel}
+   514→            </span>
+   515→          </div>
+   516→        </div>
+   517→
+   518→        {/* Mic + waveform */}
+   519→        <div className="flex items-center gap-3">
+   520→          <button
+   521→            type="button"
+   522→            disabled={!supported}
+   523→            onClick={() => (listening ? stopListening() : startListening())}
+   524→            aria-label={listening ? "Stop listening" : "Start voice command"}
+   525→            title={supported ? "Click or hold SPACE to talk" : "SpeechRecognition not available in this browser"}
+   526→            className={`relative flex size-14 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+   527→              listening
+   528→                ? "border-red-500/60 bg-red-500/20"
+   529→                : supported
+   530→                  ? "border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/20"
+   531→                  : "border-zinc-700 bg-zinc-900 opacity-50"
+   532→            }`}
+   533→          >
+   534→            {listening ? (
+   535→              <MicOff className="size-5 text-red-300" />
+   536→            ) : (
+   537→              <Mic className="size-5 text-emerald-300" />
+   538→            )}
+   539→            {listening && (
+   540→              <motion.span
+   541→                initial={{ scale: 1, opacity: 0.6 }}
+   542→                animate={{ scale: 1.4, opacity: 0 }}
+   543→                transition={{ duration: 1, repeat: Infinity, ease: "easeOut" }}
+   544→                className="absolute inset-0 rounded-full border-2 border-red-500/40"
+   545→              />
+   546→            )}
+   547→          </button>
+   548→
+   549→          {/* Waveform */}
+   550→          <div className="flex h-12 flex-1 items-center gap-0.5 overflow-hidden rounded-lg border border-zinc-800 bg-black/40 px-2">
+   551→            {supported ? (
+   552→              bars.map((i) => (
+   553→                <motion.div
+   554→                  key={i}
+   555→                  className="flex-1 rounded-sm"
+   556→                  style={{
+   557→                    backgroundColor: listening ? "#ff4d5e" : "#3ddc84",
+   558→                    opacity: listening ? 0.85 : 0.25,
+   559→                  }}
+   560→                  animate={
+   561→                    listening
+   562→                      ? { height: [4, 8 + Math.abs(Math.sin(i * 0.7)) * 28, 4] }
+   563→                      : { height: 3 }
+   564→                  }
+   565→                  transition={
+   566→                    listening
+   567→                      ? {
+   568→                          duration: 0.6 + (i % 5) * 0.08,
+   569→                          repeat: Infinity,
+   570→                          ease: "easeInOut",
+   571→                          delay: i * 0.02,
+   572→                        }
+   573→                      : { duration: 0.3 }
+   574→                  }
+   575→                />
+   576→              ))
+   577→            ) : (
+   578→              <div className="flex items-center gap-2 px-2 text-xs text-zinc-500">
+   579→                <VolumeX className="size-4" />
+   580→                <span>Web Speech API unavailable. Try Chrome.</span>
+   581→              </div>
+   582→            )}
+   583→          </div>
+   584→
+   585→          {/* TTS toggle */}
+   586→          <button
+   587→            type="button"
+   588→            onClick={() => (speaking ? stopSpeaking() : speak("Voice interface online."))}
+   589→            aria-label={speaking ? "Stop speaking" : "Test voice"}
+   590→            title={speaking ? "Stop speaking" : "Test voice"}
+   591→            className={`flex size-10 shrink-0 items-center justify-center rounded-full border transition-all ${
+   592→              speaking
+   593→                ? "border-amber-500/50 bg-amber-500/15"
+   594→                : "border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+   595→            }`}
+   596→          >
+   597→            {speaking ? (
+   598→              <VolumeX className="size-4 text-amber-300" />
+   599→            ) : (
+   600→              <Volume2 className="size-4 text-zinc-300" />
+   601→            )}
+   602→          </button>
+   603→        </div>
+   604→
+   605→        {/* Transcript / status panel */}
+   606→        <div className="min-h-[3.5rem] rounded-lg border border-zinc-800 bg-black/40 p-2.5 font-mono text-xs">
+   607→          <AnimatePresence mode="wait">
+   608→            {error ? (
+   609→              <motion.div
+   610→                key="error"
+   611→                initial={{ opacity: 0 }}
+   612→                animate={{ opacity: 1 }}
+   613→                exit={{ opacity: 0 }}
+   614→                className="flex items-center gap-2 text-red-400"
+   615→              >
+   616→                <Activity className="size-3" />
+   617→                <span>ERR: {error}</span>
+   618→              </motion.div>
+   619→            ) : listening && interim ? (
+   620→              <motion.div
+   621→                key="interim"
+   622→                initial={{ opacity: 0 }}
+   623→                animate={{ opacity: 1 }}
+   624→                exit={{ opacity: 0 }}
+   625→                className="flex items-center gap-2 text-cyan-300"
+   626→              >
+   627→                <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
+   628→                <span className="italic">{interim}…</span>
+   629→              </motion.div>
+   630→            ) : lastReply ? (
+   631→              <motion.div
+   632→                key="reply"
+   633→                initial={{ opacity: 0 }}
+   634→                animate={{ opacity: 1 }}
+   635→                exit={{ opacity: 0 }}
+   636→                className="flex items-start gap-2 text-amber-300"
+   637→              >
+   638→                <Volume2 className="mt-0.5 size-3 shrink-0" />
+   639→                <span className="leading-relaxed">{lastReply}</span>
+   640→              </motion.div>
+   641→            ) : lastHeard ? (
+   642→              <motion.div
+   643→                key="heard"
+   644→                initial={{ opacity: 0 }}
+   645→                animate={{ opacity: 1 }}
+   646→                exit={{ opacity: 0 }}
+   647→                className="flex items-start gap-2 text-emerald-300"
+   648→              >
+   649→                <Mic className="mt-0.5 size-3 shrink-0" />
+   650→                <span className="leading-relaxed">&ldquo;{lastHeard}&rdquo;</span>
+   651→              </motion.div>
+   652→            ) : (
+   653→              <motion.div
+   654→                key="idle"
+   655→                initial={{ opacity: 0 }}
+   656→                animate={{ opacity: 1 }}
+   657→                exit={{ opacity: 0 }}
+   658→                className="flex items-center gap-2 text-zinc-600"
+   659→              >
+   660→                <Mic className="size-3" />
+   661→                <span>
+   662→                  {supported
+   663→                    ? "Hold SPACE or click the mic, then say a command."
+   664→                    : "Voice control unavailable in this browser."}
+   665→                </span>
+   666→              </motion.div>
+   667→            )}
+   668→          </AnimatePresence>
+   669→        </div>
+   670→
+   671→        {/* Command cheatsheet */}
+   672→        <div className="grid grid-cols-2 gap-1 font-mono text-[10px] text-zinc-500">
+   673→          <CmdExample cmd="scan &lt;codebase&gt;" />
+   674→          <CmdExample cmd="show &lt;tab&gt;" />
+   675→          <CmdExample cmd="search findings for &lt;query&gt;" />
+   676→          <CmdExample cmd="approve patch &lt;id&gt;" />
+   677→          <CmdExample cmd="what&apos;s the security posture" />
+   678→          <CmdExample cmd="stop" />
+   679→        </div>
+   680→      </div>
+   681→    );
+   682→  },
+   683→);
+   684→
+   685→function CmdExample({ cmd }: { cmd: string }) {
+   686→  return (
+   687→    <div className="truncate rounded border border-zinc-800 bg-zinc-950/60 px-1.5 py-0.5 text-zinc-500">
+   688→      <span className="text-emerald-400/60">›</span> {cmd}
+   689→    </div>
+   690→  );
+   691→}
+   692→

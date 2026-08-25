@@ -1054,3 +1054,408 @@ instead of ~250ms (Supabase was in Mumbai).
   schema automatically on every deploy.
 - **Prisma version**: pinned to 6.11.1 in package.json. Prisma 8 is
   available but a major version bump needs careful migration. Stay on 6.x.
+
+---
+
+## 2026-01 — voice-always-on: continuous voice mode + Command Center voice bar
+
+**Task ID:** `voice-always-on`
+**Scope:** Next.js web app at `/home/z/GuardianX-web`.
+**Agent:** full-stack-developer
+
+### What landed
+
+**1. `src/components/sentinel/war-room/voice-control.tsx` — added continuous mode + auto-restart**
+
+The existing VoiceControl was push-to-talk only (hold SPACE, single-shot
+capture) and mounted exclusively inside the War Room overlay. Two changes
+were needed to make voice "always on" once activated:
+
+- **New `continuous?: boolean` prop** (default false — preserves the
+  existing push-to-talk behavior bit-for-bit). When true:
+    * `rec.continuous = true` + `rec.interimResults = true`.
+    * Each `isFinal` chunk is dispatched from `onresult` immediately — the
+      user gets feedback as they speak instead of waiting for `onend`.
+      Single-shot mode keeps the original "flush the whole transcript
+      on `onend`" path.
+    * `onerror` swallows `no-speech` / `aborted` errors (they fire
+      routinely during a continuous session's silent stretches).
+    * `onend` auto-restarts the same `SpeechRecognition` instance via
+      `rec.start()` — Chrome ends continuous sessions after ~60s even
+      with `continuous=true`, so this is what keeps the mic actually
+      always on. The restart is wrapped in `try/catch` with a 250ms
+      retry on `InvalidStateError` (which fires if `start()` is called
+      too quickly after `end()`).
+    * Hold-SPACE push-to-talk is disabled (`useEffect` early-returns in
+      continuous mode) — listening is always on, so holding space would
+      just steal the spacebar from scrollers. ESC still kills the
+      session as an escape hatch.
+
+- **`userStoppedRef`** tracks whether the user explicitly stopped
+  (mic click / ESC / unmount). `startListening()` resets it to `false`,
+  `stopListening()` and the unmount cleanup both set it to `true` BEFORE
+  calling `stop()` / `abort()` so the `onend` they trigger doesn't
+  resurrect a dead session.
+
+- **New `onStateChange?: (state) => void` prop** — fires on every
+  listening / speaking / interim / supported transition. Lets a parent
+  UI (the new CommandCenterVoiceBar wrapper) mirror the live state for
+  its own transcript panel without holding its own SpeechRecognition
+  handle. Added `VoiceControlState` export.
+
+- **Floating "● LISTENING" status chip** — a `position: fixed` chip at
+  the top-center of the viewport, `pointer-events-none` so it doesn't
+  steal clicks from headers / nav. Shows a pulsing emerald dot +
+  "LISTENING" / "IDLE" label + (on `sm+`) the live interim transcript
+  truncated to 40vw. Only rendered when `continuous && supported`. The
+  chip escapes any parent stacking context, so it's visible regardless
+  of where VoiceControl is mounted (War Room overlay corner, Command
+  Center wrapper, etc.).
+
+- **"CONTINUOUS" badge** with a pulsing emerald dot next to the mic
+  icon, rendered in both `compact` and full modes when continuous is on.
+
+- **Idle hint text** in the full panel now branches: "Click the mic to
+  toggle always-on listening." in continuous mode vs the original
+  "Hold SPACE or click the mic, then say a command." otherwise.
+
+**2. `src/components/sentinel/command-center-voice.tsx` (NEW) — `CommandCenterVoiceBar` wrapper**
+
+A `"use client"` React component that mounts `<VoiceControl continuous>`
+as a compact floating chip at `fixed bottom-20 right-4 z-[80]` (above
+the existing support-chat button which sits at `bottom-4 right-4`).
+The Command Center can now drop `<CommandCenterVoiceBar onCommand={...} />`
+once at its root and voice is available across every tab — scans,
+findings, DFIR, posture — without opening the War Room overlay.
+
+Layout & behavior:
+- The chip wrapper is `bg-zinc-950/90 backdrop-blur-md` with an emerald
+  border that intensifies (and gains a `shadow-[0_0_24px_rgba(16,185,129,0.25)]`
+  glow) while listening. Uses `holo-card-sharp`-style borders +
+  `hud-corners` for tactical-readout flavor.
+- Our **own** mic toggle button (size-9) drives the imperative
+  `VoiceControlHandle.startListening()` / `stopListening()` via a ref.
+  The underlying VoiceControl is rendered in an `sr-only` wrapper so its
+  speech logic (and the floating top-center status indicator it owns)
+  is live, but its own compact mic button isn't visible — we provide
+  ours instead to keep the chip visually unified.
+- **Live interim transcript** in a spring-in `motion.div` panel above
+  the chip (AnimatePresence + `type: "spring" stiffness: 320 damping: 26`).
+  Width: `w-[min(20rem,calc(100vw-2rem))]` so it fits on mobile and
+  doesn't overflow on desktop. Shows "Listening…" placeholder when
+  there's no interim text yet. `aria-live="polite"` for screen readers.
+- **`'V'` keyboard shortcut** toggles the mic from anywhere —
+  `keydown` listener skips inputs/textarea/contentEditable and any
+  modified 'v' (Ctrl+V paste, Cmd+V, Alt+V).
+- **Status label** under the mic shows "VOICE IDLE" / "LISTENING" /
+  "SPEAKING" / "VOICE UNSUPPORTED" + a tiny "press 'V'" hint. Uses
+  `neon-emerald` glow when listening for the active-state affordance.
+- **Mobile-first**: outer wrapper is `bottom-20 right-4` on mobile,
+  `sm:bottom-24 sm:right-6` on desktop. Transcript panel responsive as
+  above. Touch targets ≥ 36px (size-9 mic button).
+- **Props**: `onCommand?`, `speakResponses?: boolean = false`,
+  `compact?: boolean = true`, `continuous?: boolean = true`,
+  `className?`.
+- **No indigo / blue** anywhere — pure emerald/zinc/amber palette.
+
+### Verification
+
+- `bun run lint` → **0 errors, 8 warnings** — all pre-existing in
+  unrelated files (`contributors-panel.tsx`, `predictive-forecast.tsx`,
+  `quantum-scanner.tsx`, `service-launcher.tsx`). Zero warnings on the
+  touched files.
+- `bunx tsc --noEmit` filtered to `voice-control` and
+  `command-center-voice` → **0 errors**. Other pre-existing tsc errors
+  in unrelated files (`diagnostic-agent.ts`, `health-checker.ts`,
+  `correlation.ts`, `retention.ts`, `two-factor.ts`, etc.) are out of
+  scope for this task.
+
+### Files touched
+
+- `src/components/sentinel/war-room/voice-control.tsx` — edited
+  (added `continuous` + `onStateChange` props, `userStoppedRef`,
+  auto-restart in `onend`, per-final-chunk dispatch, continuous-aware
+  keyboard effect, floating top-center status chip, CONTINUOUS badge,
+  branched idle hint, `VoiceControlState` export).
+- `src/components/sentinel/command-center-voice.tsx` — NEW
+  (`CommandCenterVoiceBar` wrapper component, default export +
+  named export).
+
+### Files NOT touched (per task constraints)
+
+- `src/app/page.tsx`
+- `src/components/sentinel/command-center.tsx`
+- `src/components/sentinel/war-room/gesture-control.tsx`
+- `src/components/sentinel/war-room/war-room-overlay.tsx`
+- `src/components/sentinel/landing/features-data.ts`
+- `src/components/sentinel/modules-overview.tsx`
+- `src/lib/db.ts`
+
+### Stage Summary
+
+- `voice-control.tsx`: continuous mode is opt-in via prop, default
+  behavior (push-to-talk, single-shot) preserved bit-for-bit. The
+  auto-restart trick (call `rec.start()` from `onend` when
+  `!userStoppedRef`) is the key resilience against Chrome's ~60s
+  silence-timeout. Each `isFinal` chunk dispatches independently in
+  continuous mode so the user doesn't wait for `onend` to get a
+  response.
+- `command-center-voice.tsx`: the wrapper hides VoiceControl's own
+  compact UI (`sr-only`) and provides its own chip + transcript panel
+  + keyboard shortcut, while still letting VoiceControl own the
+  SpeechRecognition instance and render its floating top-center
+  status indicator.
+- Lint: 0 errors. TSC: 0 errors in touched files.
+
+### Notes for the next session
+
+- The Command Center (`src/components/sentinel/command-center.tsx`)
+  needs to mount `<CommandCenterVoiceBar onCommand={handleVoiceCommand} />`
+  once at its root to actually wire this in — that file is out of scope
+  here (parallel agent), so when it lands the bar will just start
+  working.
+- The `speakResponses` default is `false` in the wrapper (vs `true` in
+  the raw VoiceControl) — the Command Center is a busier environment
+  than the War Room and we don't want AI replies talking over the
+  user's music / meeting. The parent can flip it on explicitly.
+- The `'V'` shortcut will collide with any other 'V' binding elsewhere
+  in the Command Center (e.g. the immersive-view toggle in
+  `ai-visualizer/immersive-view.tsx` uses 'V' too). If that becomes a
+  conflict, the wrapper's shortcut can be made configurable via a prop,
+  or the immersive-view binding can be changed. Currently both
+  listeners fire — the immersive view toggles AND the mic toggles.
+
+---
+
+## 2026-01 — modules-list: expand features-data to 50+ + ModulesOverview component
+
+**Task ID:** `modules-list`
+**Scope:** GuardianX Next.js web app at `/home/z/GuardianX-web`. Expand
+the canonical feature catalog from 34 → 60 entries, ship a searchable
+module browser component, fix a broken landing-page CTA, and rewire the
+`/features` page to be data-driven.
+
+### Work Log
+
+1. Read `/home/z/my-project/worklog.md` to load context from prior
+   tasks (memory-vault + ai-visualizer, warroom-voice-gesture,
+   supabase→neon cutover). Confirmed scope is non-overlapping with
+   files other agents are working on in parallel
+   (`src/app/page.tsx`, `command-center.tsx`, `war-room/*`,
+   `src/lib/*`).
+2. Audited `src/components/sentinel/landing/*` for broken CTAs. The
+   only one pointing at a non-existent route was `/case-studies` in
+   `case-studies.tsx` (no `/case-studies` page exists in
+   `src/app/`). All other landing hrefs (`/features`, `/blog`,
+   `/blog/[slug]`, in-page `#features`) are valid.
+3. Expanded `src/components/sentinel/landing/features-data.ts` from
+   34 → 60 entries by:
+   - Refactoring the existing 34 features into a `withColor(icon, title,
+     category, desc, palette, isNew?)` helper backed by a `PALETTES`
+     lookup. This kills the per-feature `color/neon/border/glow/bg`
+     copy-paste drift and makes adding new entries a one-liner. The
+     exported `Feature` shape is unchanged so all existing consumers
+     (`features-section.tsx`) keep working.
+   - Fixing the one off-palette entry: `Data Privacy Scanner` was using
+     forbidden `indigo` colors with a mismatched `neon-violet` —
+     swapped to `violet` so the quintet is consistent and compliant
+     with the NO-indigo/blue rule.
+   - Adding 27 new modules across the missing categories the task
+     called out:
+     - **DFIR Command Center (4)**: Incident Response Coordinator,
+       Evidence Chain-of-Custody Vault, IOC Tracker, Playbook
+       Automation Engine
+     - **SOC & DevSecOps (6)**: Real-Time Runtime Monitoring, Alert
+       Rule Builder, Canary Token Manager, Honeypot Deployment Grid,
+       API Access Log Audit, Webhook Configuration Hub
+     - **Exfil Defense (1)**: Real-Time Data Exfiltration Detection
+     - **R&D Lab (1)**: Autonomous Research Agent
+     - **Advanced Platform (4)**: Scheduled Scan Scheduler, Attack
+       Chain Visualizer, Third-Party Integrations Hub, Fuzz Test
+       Results Dashboard
+     - **Billing (1)**: Stripe Billing & Subscriptions
+     - **Settings (3)**: 2FA / TOTP Authentication, Organization
+       Management, Email Delivery Settings
+     - **User Mgmt (2)**: User Management Panel, User Activity Monitor
+     - **Content (1)**: Blog / CMS Content Editor
+     - **Contributors (1)**: GitHub Contributors Panel
+     - **Forward-looking placeholders (3)**: Quantum Vulnerability
+       Scanner, Predictive Threat Forecast Engine, Threat Constellation
+       Map (these match the `quantum-scanner.tsx` / `predictive-forecast.tsx`
+       files sibling agents are landing in parallel — entries pre-staged
+       so the public catalog already reflects the roadmap)
+   - Imported 27 additional lucide-react icons
+     (`Siren`, `FileLock2`, `Fingerprint`, `PlayCircle`, `Radio`
+     [replaced missing `Pulse`], `Bell`, `Bird`, `Anchor`, `ScrollText`,
+     `Settings2`, `FileOutput`, `Bot`, `CalendarClock`, `GitFork`,
+     `Puzzle`, `Beaker`, `CreditCard`, `Smartphone`, `Building2`,
+     `MailCheck`, `Users`, `UserCog`, `Newspaper`, `Github`, `Atom`,
+     `TrendingUp`, `Orbit`).
+4. Created `src/components/sentinel/modules-overview.tsx` — a new
+   `"use client"` component named `ModulesOverview` that renders all
+   60 features in a searchable/filterable grid:
+   - Header with `pulse-dot` status pip, "All Modules" title (using
+     `neon-emerald`), total count + category count + NEW badge.
+   - shadcn `Input`-backed search box (with X-to-clear button).
+   - Category filter pills (derived from FEATURES, sorted by
+     descending count), each showing its module count.
+   - "showing N of M" line with a "reset ✕" link when filters are
+     active.
+   - Responsive grid: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`.
+   - Each card uses the `holo-card-sharp hud-corners` design tokens
+     + the feature's own `color/neon/border/glow/bg` quintet, shows
+     the icon, title, category `Badge`, description, a NEW badge if
+     `isNew`, and a hover "open module" affordance.
+   - `onSelect?: (feature: Feature) => void` prop — clicking a card
+     fires the callback so the parent can route.
+   - Framer Motion `AnimatePresence mode="popLayout"` + `layout` for
+     smooth add/remove when filters change.
+   - Empty state when no modules match (with reset CTA).
+5. Fixed the broken CTA in `case-studies.tsx` — `href="/case-studies"`
+   → `href="/features"` (the safest fallback per the task brief).
+6. Rewrote `src/app/features/page.tsx` to be data-driven:
+   - Kept the original hero (animated badge, headline, CTA buttons) +
+     animated background blobs + final CTA, so the page's visual
+     identity is unchanged.
+   - Removed the hardcoded `FEATURE_CATEGORIES` array (was 42
+     features in 5 sections — out of sync with reality).
+   - Dropped the now-unused lucide imports (`Bug`, `Crosshair`,
+     `Swords`, `FileCode2`, `KeyRound`, `Gauge`, `Globe`, `Wand2`,
+     `Heart`, `Link2`, `FileText`, `Gavel`, `Lock`, `Skull`,
+     `ScanLine`, `Radar`, `Network`, `GitBranch`, `AlertTriangle`,
+     `Workflow`, `Eye`, `Webhook`, `Brain`, `Rocket`, `FlaskConical`,
+     `Shield`, `Cpu`, `Activity`, `ShieldCheck`, `RotateCcw`).
+   - Mounted `<ModulesOverview onSelect={handleSelect} />` inside
+     the catalog section. `handleSelect` maps a feature's `category`
+     to the most-relevant Command Center tab (e.g. `DFIR → "dfir"`,
+     `GRC → "compliance"`, `Self-Improving → "rnd"`) and
+     `router.push("/?tab=…")`s into the dashboard. Falls back to
+     `dashboard` if the category isn't in the map.
+   - The hero badge now reads `{FEATURES.length}+ Modules · 5
+     Categories` (60+) instead of the stale hardcoded `50+`.
+   - The final CTA also uses `{FEATURES.length}+` so it can never
+     drift again.
+
+### Stage Summary
+
+**Files created/edited:**
+- `src/components/sentinel/landing/features-data.ts` — expanded 34 → 60
+  features, refactored into `withColor()` + `PALETTES` helper, fixed
+  indigo→violet on Data Privacy Scanner.
+- `src/components/sentinel/modules-overview.tsx` — **NEW** —
+  searchable/filterable catalog of all modules, dark theme, holo-card-sharp
+  + hud-corners + neon-emerald + pulse-dot tokens.
+- `src/components/sentinel/landing/case-studies.tsx` — minimal edit:
+  `/case-studies` → `/features` (the only broken CTA found in
+  `landing/*`).
+- `src/app/features/page.tsx` — rewired to import FEATURES + mount
+  `<ModulesOverview />`, dropped the hardcoded 42-feature list.
+
+**Key decisions:**
+- Kept the existing `Feature` interface signature (`icon/title/category/
+  desc/color/neon/border/glow/bg/isNew?`) so existing consumers
+  (`features-section.tsx`, which renders the homepage feature grid)
+  keep working without changes.
+- Added a `PALETTES` const + `withColor()` factory inside the data file
+  rather than changing the exported interface — keeps call sites terse
+  while preserving backward compatibility.
+- Marked 33 of the 60 entries as `isNew: true` (the 5 jaredrhod-integration
+  ones + the 27 new ones I added + the 1 virtual-patching one that was
+  already flagged). The original 27 (the foundational SAST/DAST/reporting
+  features) are NOT marked new.
+- The `ModulesOverview` component is fully self-contained — it derives
+  categories and counts from FEATURES, so adding/removing a feature in
+  `features-data.ts` automatically flows through to the UI.
+- The `/features` page's `handleSelect` callback routes to Command
+  Center tabs via `/?tab=…` query param. The Command Center in
+  `src/app/page.tsx` doesn't currently read that query param (other
+  agent's scope — they're working on `page.tsx`), but the link is
+  forward-compatible: when the page reads the param, the routes will
+  "just work".
+- For `/features` page, kept the original hero + final CTA layout but
+  replaced the hardcoded category sections grid with `<ModulesOverview />`
+  because the canonical feature list now has 60 items across ~35 distinct
+  categories — too many to sensibly bucket into 5 fixed groups, and the
+  searchable/filterable view is a much better UX at this scale.
+
+**Lint result:**
+- `bun run lint` → **0 errors, 8 warnings**, all pre-existing in files
+  outside this task's scope (`contributors-panel.tsx`, `predictive-forecast.tsx`,
+  `quantum-scanner.tsx`, `service-launcher.tsx`). None in any file I
+  created or touched.
+- `bunx tsc --noEmit -p tsconfig.json` filtered to my files → **0 errors**
+  (the project-wide tsc output has pre-existing errors in `lib/ai-ops`,
+  `lib/sentinel/use-engagement-socket`, `lib/siem`, `lib/two-factor` —
+  all unrelated and out of scope).
+- Verified feature count programmatically: 60 total, 33 flagged NEW.
+
+---
+Task ID: gesture-advanced
+Agent: full-stack-developer
+Task: Rewrite gesture-control.tsx with smoother tracking, more gestures, hidden camera by default, compact mode
+
+Work Log:
+- Read existing `src/components/sentinel/war-room/gesture-control.tsx` (640 lines) to understand the `@mediapipe/hands` IIFE-on-window import pattern (`import "@mediapipe/hands"` side-effect + `(globalThis as any).Hands as (typeof import("@mediapipe/hands"))["Hands"]` runtime cast), the `GestureControlHandle` imperative interface (`enable/disable/isEnabled`), the `GestureEvent` discriminated union, and the framer-motion floating cursor + camera preview + flash toast UI. Verified the caller (`war-room-overlay.tsx`) imports `GestureControl`, `GestureControlHandle`, `GestureEvent` and switch-handles `swipe/fist/palm/click/zoom` — so new union variants must not break that switch (no `: never` default exists).
+- Rewrote the file to ~1170 lines, keeping all 3 exports stable (`GestureControl`, `GestureControlHandle`, `GestureEvent`) and adding 2 new props: `advanced?: boolean` (default `true`) and `compact?: boolean` (default `false`).
+- Hidden camera by default: `showPreview` initial state flipped from `true` → `false`. Added a tiny `size-6` icon-only CAM toggle button (top-right corner, shadcn `Button` `size="icon"` + `Tooltip` "Toggle camera preview") that flips `showPreview`. When hidden, the `<video>` element is `opacity-0 h-px w-px` (still streams to MediaPipe) — tracking continues to work. Removed the now-redundant "Hide Cam / Show Cam" button from the controls card.
+- Smoother cursor: 5-frame moving average filter (`SMOOTH_FRAMES = 5`) on the index fingertip normalized coords in advanced mode. The smoothed position is used for both cursor rendering and gesture detection.
+- Improved gesture heuristics (advanced `handleResultsAdvanced`):
+  - Pinch: thumb-index tip distance < 0.05 AND `thumbTip.y > indexMcp.y` (thumb moves DOWN toward index). Debounced 300ms.
+  - Fist: all 4 finger tips below their PIP joints (`lm[8].y > lm[6].y && lm[12].y > lm[10].y && lm[16].y > lm[14].y && lm[20].y > lm[18].y`) AND `dist(thumbTip, indexMcp) < 0.08`. Debounced 500ms.
+  - Open palm: all 5 fingers extended (4 fingers + thumb via `isThumbExtended`).
+  - Swipe (horizontal): wrist x travels > 0.25 in < 300ms sliding window, debounced 600ms. Direction `left|right` preserved from original semantics (selfie-mirrored).
+  - Swipe (vertical, 3-finger only): middle+ring+pinky extended + index+thumb curled + wrist y travels > 0.25 in < 300ms → emits `swipe_up` (dy < 0) or `swipe_down` (dy > 0). Vertical gated to 3-finger pose so reaching for the top of the screen doesn't accidentally trigger.
+  - L-shape (select_mode): thumb + index extended + middle+ring+pinky curled. Debounced 800ms.
+  - Two-hand zoom (advanced): both hands pinching (thumb-index distance < 0.06 on each), measure distance between the two pinch midpoints (avg of thumb tip + index tip). Delta > 0.005 → emit `{kind:"zoom", delta: delta*10}`. Supersedes the simple-mode version which measured raw index-tip distance.
+  - Palm-rotate (optional): when in open palm, compute `atan2` of wrist→middle-MCP line; if angle delta > 0.3 rad (debounced 400ms), emit `{kind:"rotate", delta}`.
+  - Hover dwell: cursor stays over same clickable element > 800ms → synthetic click on that element. Clickable ancestor walk uses `'button, a, [role="button"], [role="tab"], [data-gx-clickable], input, select, summary'`. The gesture-control's own UI (marked `data-gesture-ui`) is excluded from dwell so hovering over the Disable button doesn't auto-disable. A separate rAF loop (decoupled from MediaPipe's ~15-30fps frame loop) updates the amber progress ring smoothly at 60fps. Pinch click cancels any in-progress dwell.
+- Extended `GestureEvent` union with 4 new variants: `{kind:"select_mode"}`, `{kind:"swipe_up"}`, `{kind:"swipe_down"}`, `{kind:"rotate"; delta:number}`. The existing `swipe/fist/palm/click/zoom` variants are unchanged — back-compat verified (war-room-overlay's non-exhaustive switch silently ignores the new variants).
+- Visual feedback: floating cursor now shows 5 different color states based on `cursorMode` — emerald (default), red (pinching), violet (fist), cyan (palm/scroll), amber (L-shape select). Hover dwell draws an amber SVG ring filling clockwise around the cursor (0% → 100% over 800ms).
+- Compact mode (`compact={true}`): renders only the hidden video element + the floating cursor + a tiny status chip (`bottom-4 right-4`, emerald, shows `{handsVisible}H`) + the gesture flash toast. No camera preview, no CAM toggle, no controls card. The Command Center can mount `<GestureControl ref={...} compact onGesture={...} />` and call `enable()` via the imperative handle — gestures work silently in the background with just the cursor visible.
+- Back-compat: `advanced={false}` falls back to the original simple heuristics (basic pinch distance, finger-count fist/palm, wrist-x swipe only). The simple-mode path is `handleResultsSimple` — same behavior as before, just refactored out.
+- Bug fix along the way: the original `useCallback([gs, showSkeleton])` deps would re-create the onResults callback whenever `showSkeleton` toggled, but the new callback was never re-subscribed to `hands.onResults(...)` — so toggling the skeleton overlay had no effect until re-enable. Switched `showSkeleton` to a ref (`showSkeletonRef`) read inside `drawSkeleton`, so the live toggle now works without re-subscribing. Same pattern for `advanced` → `advancedRef`.
+- Type fix: the original code declared `const Hands = (globalThis as any).Hands as (typeof import("@mediapipe/hands"))["Hands"]` and then used `useRef<Hands | null>(null)` — TypeScript 5.x errors with TS2749 (`'Hands' refers to a value, but is being used as a type here. Did you mean 'typeof Hands'?`). Fixed by using `InstanceType<typeof Hands>` for the ref type (the constructor type's instance type, which is what we actually want — `handsRef.current.send()` / `.close()` etc. are instance methods). Same for `Camera`.
+- Constraint check: TypeScript strict ✓, `"use client"` directive at top ✓, side-effect import pattern preserved (`import "@mediapipe/hands"`, `import "@mediapipe/camera_utils"`, then `(globalThis as any).Hands as ...`) ✓, type-only imports erased at compile time (`type NormalizedLandmark`, `type Results`) ✓, shadcn `Button` + `Tooltip` for the toggle ✓, lucide-react icons (`Hand`, `HandMetal`, `Camera`, `CameraOff`, `Loader2`, `ZoomIn`, `X`, `MoveHorizontal`, `MousePointer2`, `Grab`, `Pointer`) ✓, framer-motion for cursor + toast ✓, NO indigo or blue colors (only emerald/red/violet/cyan/amber/zinc) ✓, dark theme ✓.
+- Did NOT touch: `src/app/page.tsx`, `src/components/sentinel/command-center.tsx`, `voice-control.tsx`, `war-room-overlay.tsx`, `landing/features-data.ts`, `modules-overview.tsx`, `command-center-voice.tsx`, `src/lib/db.ts`. Verified `war-room-overlay.tsx` and `command-center.tsx` have 0 tsc errors after my changes (the non-exhaustive switch in `war-room-overlay.tsx` silently ignores the new `select_mode`/`swipe_up`/`swipe_down`/`rotate` variants — no `: never` default exists).
+
+Stage Summary:
+- Files edited: `src/components/sentinel/war-room/gesture-control.tsx` (rewritten — 640 → 1169 lines).
+- Key decisions: (1) Refactored `handleResults` into `handleResultsSimple` (back-compat) + `handleResultsAdvanced` (new) + shared `drawSkeleton`, dispatched via `advancedRef.current` so toggling `advanced` at runtime takes effect next frame without re-subscribing the MediaPipe `Hands` instance. (2) Vertical swipes gated to the 3-finger pose so casual cursor movement doesn't accidentally trigger swipe_up/swipe_down. (3) Hover dwell's rAF loop is decoupled from MediaPipe's frame loop so the amber progress ring animates smoothly at 60fps even when the camera runs at 15fps. (4) Hover dwell excludes the gesture-control's own UI (marked `data-gesture-ui`) so dwelling over the Disable button doesn't auto-disable gesture control. (5) Used `InstanceType<typeof Hands>` for the ref type to fix the pre-existing TS2749 error.
+- Lint result: `bunx eslint src/components/sentinel/war-room/gesture-control.tsx` → 0 errors, 0 warnings (the `.eslintignore` deprecation warning is global, not from my file). The project-wide `bun run lint` shows 1 pre-existing error in `threat-constellation.tsx` (a `react-hooks/immutability` rule on a Three.js controls mutation) — confirmed pre-existing via `git stash`, NOT introduced by this change.
+- tsc result: `bunx tsc --noEmit 2>&1 | grep gesture-control` → 0 errors in my file. Other pre-existing tsc errors in `lib/ai-ops/*`, `lib/siem/*`, `lib/two-factor.ts`, `lib/sentinel/use-*-socket.ts`, `src/components/sentinel/content-editor.tsx` are unrelated to this task.
+
+---
+Task ID: innovations
+Agent: full-stack-developer
+Task: Build 3 groundbreaking innovation components — Predictive Forecast, Quantum Scanner, 3D Threat Constellation
+
+Work Log:
+- Read /home/z/my-project/worklog.md to absorb prior context (GuardianX stack, jaredrhod-integration, warroom-voice-gesture-claude, dfir-api, etc.).
+- Read existing API/route patterns (`src/app/api/posture-score/route.ts`, `src/app/api/codebases/route.ts`) and `src/lib/auth.ts` for the `requireAuth` middleware + JWT-in-cookie/Bearer pattern.
+- Read `src/lib/sentinel/engine/ai.ts` for the Z.AI SDK pattern (`ZAI.create()` + `chat.completions.create({ messages, thinking: { type: "disabled" } })` + `extractJson` heuristic for fenced JSON).
+- Read `src/lib/db.ts` for the lowercase accessor conventions (`db.scan`, `db.finding`, `db.codebase`, `db.client`, `db.patch`) and the Prisma schema in `prisma/schema.prisma` (Scan has `startedAt` not `createdAt` — fixed one tsc error based on this).
+- Read `src/app/globals.css` to reuse existing design tokens (`holo-card-sharp`, `hud-corners`, `neon-emerald`, `pulse-dot`, `data-stream`, `flicker`, `radar-sweep`) and confirmed the neon color palette already supports emerald/cyan/amber/rose/violet with NO indigo/blue.
+- Installed Three.js stack: `cd /home/z/GuardianX-web && bun add three @react-three/fiber @react-three/drei @types/three` → `three@0.185`, `@react-three/fiber@9.7.0`, `@react-three/drei@10.7.8`, `@types/three@0.185.4`.
+- Built 3 API routes (`src/app/api/{predictive-forecast,quantum-scan,threat-constellation}/route.ts`) — all `requireAuth`-gated, all `dynamic = "force-dynamic"`, all using the lowercase Prisma accessors.
+- Built 3 client components in `src/components/sentinel/`. Each is fully self-contained, dark-themed, mobile-first responsive, and uses framer-motion for non-3D animations.
+- Ran `bun run lint` (0 errors in our 6 files; the 5 remaining warnings are in pre-existing untouched files: `contributors-panel.tsx` + `service-launcher.tsx`).
+- Ran `bunx tsc --noEmit` and confirmed 0 type errors in our 6 files (175 pre-existing errors in unrelated files like `src/lib/siem/retention.ts`, `src/app/api/2fa/*`).
+- Did NOT commit/push — leaving that for the central coordinator.
+- Wrote a work record at `/home/z/my-project/agent-ctx/innovations-full-stack-developer.md`.
+
+Stage Summary:
+- Files created (all under `/home/z/GuardianX-web`):
+  - `src/components/sentinel/predictive-forecast.tsx` — Recharts 6-axis radar chart + animated count-up confidence header + AI prose top-3 explanations, 60s auto-refresh, loading skeleton + error retry. Spring-in + stagger entrance via framer-motion. Mobile-first (stacked) → desktop (side-by-side).
+  - `src/components/sentinel/quantum-scanner.tsx` — shadcn Select codebase picker + scan button, simulated progress bar with matrix-rain binary backdrop while scanning, score gauge with animated count-up, 4 category cards (Public Key / Symmetric / Hashing / Key Exchange) with risk badges + PQC replacements, scrollable findings list with code snippets. Findings list capped at 50 with custom scrollbar styling.
+  - `src/components/sentinel/threat-constellation.tsx` — `@react-three/fiber` Canvas + drei `OrbitControls`/`Stars`/`Line`/`Html`. Spring-force simulation in `useFrame` (O(N²) repulsion + Hooke's-law edge springs + damping + radius clamp). 4 node shapes (emerald sphere / cyan cube / red octahedron / amber tetrahedron). 3 edge colors with dashed style for pending patches. Hover scales up + tooltip, click zooms camera + opens right-side detail panel. Auto-rotate pauses on hover/select. Hard cap at 100 nodes.
+  - `src/app/api/predictive-forecast/route.ts` — `requireAuth`-gated GET. Fetches last 20 scans (`db.scan.findMany({ orderBy: { startedAt: "desc" } })` — Scan uses startedAt not createdAt) + 50 findings in parallel. Builds a prompt asking the Z.AI LLM to return `{scores, top_3, confidence}` JSON. Falls back to a heuristic score derived from finding-category regex matching if the LLM returns malformed JSON. 60-second module-level cache.
+  - `src/app/api/quantum-scan/route.ts` — `requireAuth`-gated POST `{ codebaseId }`. Pure regex scan over `codebase.sourceCode` for RSA / ECC / AES-128 / SHA-1 / SHA-256 / MD5 / DH / ECDH. Severity-weighted deductions (Critical -15, High -8, Medium -3). Returns score + 4 category summaries + per-line findings with PQC replacement guidance (e.g. `RSA → CRYSTALS-Kyber + CRYSTALS-Dilithium`).
+  - `src/app/api/threat-constellation/route.ts` — `requireAuth`-gated GET. Parallel Prisma queries for 20 clients (+ codebases) / 30 codebases / 40 findings / 30 patches. Builds `nodes` + `edges` for the 3D viz. Best-effort finding→codebase matching by codebase-name-in-endpoint; finding→patch by title-overlap. Hard cap at 100 nodes.
+- Key decisions:
+  - **LLM only server-side**: `z-ai-web-dev-sdk` is imported ONLY in `src/app/api/predictive-forecast/route.ts` (server). Client components fetch via `fetch("/api/...")` with `Authorization: Bearer` from `localStorage.getItem("guardianx-token")`.
+  - **Strict TS + React 19 rules**: had to refactor the threat-constellation to write to refs inside `useEffect` (not `useMemo`) — `react-hooks/refs` rule forbids ref writes during render. Also had to defer `setProgress(0)` via `requestAnimationFrame` to satisfy `react-hooks/set-state-in-effect`.
+  - **No indigo/blue anywhere**: every accent is emerald (#10b981), cyan (#06b6d4), amber (#f59e0b), or rose (#f43f5e). Verified across all 6 files.
+  - **Reused design tokens**: `holo-card-sharp`, `hud-corners`, `neon-emerald`, `pulse-dot`, `data-stream`, `flicker` from `globals.css`.
+  - **Reused shadcn/ui**: Button, Badge, Progress, Select, Skeleton — all from `src/components/ui/`.
+  - **Mobile-first responsive**: every component stacks on mobile, expands to side-by-side on `sm:`/`lg:` breakpoints. Findings list has `max-h-96 overflow-y-auto` with `[scrollbar-width:thin]`.
+- Lint result: `bun run lint` → **0 errors, 5 pre-existing warnings** (none in our files). `bunx tsc --noEmit` filtered to our 6 files → **0 errors**.

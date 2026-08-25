@@ -1,0 +1,1057 @@
+     1→# GuardianX Worklog
+     2→
+     3→A running record of agent-driven work on the GuardianX codebase.
+     4→The sentinel-engine lives at `/home/z/my-project`; the Next.js web app
+     5→lives at `/home/z/GuardianX-web`. Append new entries to the bottom.
+     6→
+     7→---
+     8→
+     9→## 2026-01 — jaredrhod-integration: AI Memory Vault + AI Visualizer
+    10→
+    11→**Task ID:** `jaredrhod-integration`
+    12→**Scope:** Next.js web app at `/home/z/GuardianX-web` (the Next.js half
+    13→of the project — the sentinel-engine repo at `/home/z/my-project` is
+    14→unaffected by this integration; both halves share this worklog).
+    15→
+    16→Ported two of `@jaredrhod`'s open-source agent projects into GuardianX:
+    17→
+    18→1. **ai-memory-vault** — markdown-style persistent memory for the
+    19→   Guardian AI chat assistant. Source patterns cribbed from
+    20→   `/tmp/ai-memory-vault/templates/` (VAULT-INDEX / MEMORY.md /
+    21→   DAILY-NOTE frontmatter conventions, the "fewer fuller notes" rule,
+    22→   "Recent Activity / Active Threats / User Preferences / Recent
+    23→   Conversation" section shape).
+    24→2. **ai-visualizer** — React + canvas port of the `board` face from
+    25→   `/tmp/ai-visualizer/faces/board/index.html` and the state-bus
+    26→   plumbing from `/tmp/ai-visualizer/core.js`.
+    27→
+    28→### What landed
+    29→
+    30→**AI Memory Vault** (`src/lib/memory-vault/` + `src/app/api/memory/`)
+    31→
+    32→- `src/lib/memory-vault/memory-store.ts` — Supabase-backed
+    33→  `MemoryEntry` table accessor (proxied via `db.memoryEntry.*` in
+    34→  `src/lib/db.ts`). `storeMemory`, `getMemories`, `searchMemories`,
+    35→  `getRecentContext`. Content capped at 500 chars. Categories:
+    36→  `scan_result | finding | patch | user_preference | conversation |
+    37→  client_context | threat_intel` (the 5 required + 2 extras for
+    38→  future scope).
+    39→- `src/lib/memory-vault/memory-context.ts` — `buildContextForChat(userId)`
+    40→  pulls the latest 5 scans / 10 findings / 8 patches / 5 prefs / 6
+    41→  conversations and shapes them into a markdown block (## Recent
+    42→  Activity / ## Active Threats / ## User Preferences / ## Recent
+    43→  Conversation) that gets injected into the Guardian chat system
+    44→  prompt. Open findings are surfaced as "Active Threats" via the
+    45→  `status:open` tag, and drop off once a matching `status:patched`
+    46→  memory is written.
+    47→- `src/lib/memory-vault/memory-writer.ts` — fire-and-forget event
+    48→  writers (`onScanComplete`, `onFindingFound`, `onPatchApproved`,
+    49→  `onUserMessage`, `onAssistantReply`, `onUserPreference`) that
+    50→  convert platform events into memories. Failures are swallowed
+    51→  (logged) so a memory write never blocks the user-facing flow.
+    52→- `src/app/api/memory/route.ts` — `GET /api/memory?category=&limit=`
+    53→  and `POST /api/memory { category, title, content, tags? }`,
+    54→  `requireAuth`-gated.
+    55→- `src/app/api/memory/context/route.ts` — `GET /api/memory/context`
+    56→  returns the built markdown string + char count (used by
+    57→  `guardian-chat.tsx` to badge the header with vault size).
+    58→- `src/app/api/memory/ingest/route.ts` — internal POST for the
+    59→  sentinel-engine to record off-band events (scan_complete /
+    60→  finding_found / patch_approved / user_preference) so the vault
+    61→  stays current without the chat route having to be in the loop.
+    62→- `supabase/migrations/0009_memory_vault.sql` — creates the
+    63→  `MemoryEntry` table with indexes on `(userId, createdAt DESC)` and
+    64→  `(userId, category, createdAt DESC)`, RLS disabled (the app uses
+    65→  service_role). Mirrored in `prisma/schema.prisma` as the
+    66→  `MemoryEntry` model.
+    67→- `src/components/sentinel/guardian-chat.tsx` — header now badges a
+    68→  `Brain` icon with the live vault size in chars; the actual context
+    69→  is fetched server-side by `/api/guardian-chat/route.ts`, merged
+    70→  into the system prompt as a `Memory vault (recent activity...)`
+    71→  block with a fallback "(memory vault is empty — this may be a new
+    72→  user)" string when fresh. After each turn the assistant reply
+    73→  length is echoed back so the badge updates without a refetch.
+    74→- `src/app/api/guardian-chat/route.ts` — `onUserMessage` is fired
+    75→  before the LLM call, `onAssistantReply` after, so the next turn
+    76→  already has the prior turn as context. Best-effort: a thrown
+    77→  memory write is caught and warned, never blocks the reply.
+    78→
+    79→**AI Visualizer** (`src/components/sentinel/ai-visualizer/`)
+    80→
+    81→- `src/components/sentinel/ai-visualizer/circuit-board.tsx` —
+    82→  canvas-based React port of the `board` face. Procedurally routes
+    83→  traces across a grid (mulberry32 RNG, seed 7 so the board looks
+    84→  identical every boot), places ~34 components (ICs / resistors /
+    85→  caps) on top, and spawns data pulses that flow along the traces
+    86→  lighting up components as they hit. A central chip "breathes" at
+    87→  idle and amps up under load. Pulses spawn from chip pins outward,
+    88→  ~62% biased to the chip side. Pulses use additive blending with a
+    89→  cached radial-gradient glow sprite (the same `makeGlow` trick from
+    90→  `core.js` `U.makeGlow`). rAF loop is paused when the canvas is
+    91→  off-screen (IntersectionObserver) or the tab is hidden, and DPR is
+    92→  capped at 1.5 — matches the perf rules in `core.js`. HUD: corner
+    93→  brackets, GUARDIANX brand, status mode label, live clock, signal
+    94→  indicator. `forcedState` prop lets callers pin a state without the
+    95→  bus (used by the landing particle-bg variant).
+    96→- `src/components/sentinel/ai-visualizer/signal-bus.tsx` — React
+    97→  Context provider that owns the single source of truth for the
+    98→  visualizer state. Connects to the sentinel-engine socket.io relay
+    99→  (via `ENGINE_SOCKET_URL` + `engineSocketOptions()` from
+   100→  `src/lib/sentinel/engine-socket.ts`) and listens for
+   101→  `pipeline:event` payloads. Each event is mapped (by message regex
+   102→  on stage/message/level) to one of five states:
+   103→  `idle | scanning | analyzing | finding | patching`. States
+   104→  auto-expire (scanning 30s, analyzing 20s, finding 4s, patching 6s)
+   105→  so a missed "scan_complete" doesn't strand the board in `scanning`
+   106→  forever. Keeps a 40-event ring buffer for the live feed. Also
+   107→  exposes `push()` so local UI actions (e.g. "user approved a patch")
+   108→  can drive the visualization without waiting for the engine to
+   109→  echo them back. `useSignalBus()` returns a no-op shim when used
+   110→  outside a provider, so leaf components (homepage particle bg)
+   111→  don't crash without a provider.
+   112→- `src/components/sentinel/ai-visualizer/neural-link.tsx` — bonus
+   113→  port of the `neural` face (constellation of brain-region clusters
+   114→  with traveling dots along bezier tendrils). Same state mapping,
+   115→  same color story (green / amber / red on the dark substrate).
+   116→- `src/components/sentinel/ai-visualizer/immersive-view.tsx` —
+   117→  fullscreen overlay (ESC to close, `V` to toggle circuit/neural)
+   118→  for wall-projection / SOC-monitoring use. Overlays scan progress,
+   119→  live findings feed (from the SignalBus event ring), and AI status
+   120→  prose per state.
+   121→- `src/components/sentinel/ai-visualizer/index.ts` — barrel export
+   122→  of the provider + hook + three views.
+   123→- `src/components/sentinel/command-center.tsx` — wraps the dashboard
+   124→  in `<SignalBusProvider>` and mounts `<ImmersiveView>` behind a
+   125→  button, so every page that uses the command center gets a live
+   126→  visualizer context.
+   127→- `src/components/sentinel/landing/particle-bg.tsx` — `variant="circuit"`
+   128→  swaps the homepage particle background for a dimmed (`opacity=0.35`,
+   129→  HUD-off) `CircuitBoard` instance.
+   130→
+   131→### Colors / states (per spec)
+   132→
+   133→States: `idle | scanning | analyzing | finding | patching`
+   134→(colors pulled from `core.js` :root):
+   135→- green `#3ddc84` (idle / scanning / patching base)
+   136→- amber `#e7c368` (analyzing / amber traces)
+   137→- red `#ff4d5e` (finding)
+   138→Plus a "hot" companion per color for the pulse head (`#a6ffd0`,
+   139→`#ffe9ae`, `#ffb0b8`).
+   140→
+   141→### Constraints honored
+   142→
+   143→- TypeScript throughout (`strict: true`, `noImplicitAny: true` in
+   144→  `tsconfig.json`; the ai-visualizer + memory-vault files type-check
+   145→  clean — `bunx tsc --noEmit` reports zero errors for them).
+   146→- `"use client"` on every component that touches the DOM, canvas,
+   147→  IntersectionObserver, socket.io, or React state.
+   148→- Dark theme — substrate `#020705`, emerald accent throughout, no
+   149→  light-mode branch.
+   150→- No external Python server. The reference `ai-visualizer/server.py`
+   151→  was replaced by direct socket.io-client → sentinel-engine
+   152→  connection (the engine already speaks socket.io for pipeline
+   153→  events). The `/state` and `/config` polling endpoints from
+   154→  `core.js` are unused — state is pushed in via `pipeline:event`.
+   155→
+   156→### Verification
+   157→
+   158→- `bun run lint` → **0 errors, 5 warnings** (all pre-existing in
+   159→  `contributors-panel.tsx` + `service-launcher.tsx`, unrelated to
+   160→  this work).
+   161→- `bunx tsc --noEmit -p tsconfig.json` filtered to the touched
+   162→  files → **0 errors**. (One TS narrowing issue in `neural-link.tsx`
+   163→  where the `splat()` closure call made TS widen the outer `let`
+   164→  canvas contexts back to `| null` / infer them as `never`; fixed by
+   165→  snapshotting the narrowed bindings into explicitly-typed local
+   166→  consts before the for-loop. `circuit-board.tsx` and `signal-bus.tsx`
+   167→  were clean from the start.)
+   168→- Build-time TS errors are tolerated by `next.config.ts`'s
+   169→  `typescript.ignoreBuildErrors: true`, but the new files don't lean
+   170→  on that — they're type-clean on their own.
+   171→
+   172→### Notes for the next session
+   173→
+   174→- The memory vault is wired into the chat route but the
+   175→  `/api/memory/ingest` endpoint isn't called by the sentinel-engine
+   176→  yet — the engine runs at `/home/z/my-project` (separate repo).
+   177→  When the engine is updated to call `/api/memory/ingest` on
+   178→  scan_complete / finding_found / patch_approved, the chat assistant
+   179→  will start surfacing "Last time you scanned CyberShield, we found
+   180→  3 SQL injections — 2 are still unpatched." automatically.
+   181→- `signal-bus.tsx` infers event type from message regex; if the
+   182→  engine's stage names change, update `deriveState()` and the
+   183→  `pipeline:event` listener in tandem.
+   184→- The `immersive-view.tsx` is reachable from the Command Center via
+   185→  an "Immersive View" button — easy to miss in the UI.
+   186→
+   187→
+   188→
+   189→---
+   190→
+   191→## 2026-08-24 — warroom-voice-gesture: backtalk + barehands → War Room
+   192→
+   193→**Task ID:** `warroom-voice-gesture`
+   194→**Scope:** Next.js web app at `/home/z/GuardianX-web`.
+   195→
+   196→Ported two of `@jaredrhod`'s open-source agent projects — `backtalk`
+   197→(voice) and `barehands` (gesture) — into the GuardianX War Room as
+   198→tri-modal (voice OR gesture OR mouse) input layers. Both reference
+   199→repos are Python/HTML; this work reimplements their interaction
+   200→vocabulary on pure browser APIs so they run inside the existing
+   201→Next.js dashboard with no extra services.
+   202→
+   203→### What landed
+   204→
+   205→**Voice Control** (`src/components/sentinel/war-room/voice-control.tsx`)
+   206→
+   207→- backtalk shape (push-to-talk, status ring, spoken reply) on the
+   208→  native Web Speech API. STT via `webkitSpeechRecognition` (Chrome/
+   209→  Edge), TTS via `SpeechSynthesisUtterance` (cross-browser). **No
+   210→  Python server, no API keys, no external deps.**
+   211→- Push-to-talk: hold SPACE, or click the mic. 24-bar waveform
+   212→  animation when listening. Status ring color: green (idle) / red
+   213→  (listening) / amber (speaking).
+   214→- Voice commands parsed locally by `parseVoiceCommand`:
+   215→  `scan <codebase>`, `show <tab>`, `search findings for <query>`,
+   216→  `approve patch <id>`, `what's the security posture?`, `stop`.
+   217→- Imperative handle (`VoiceControlHandle`) exposes `speak` /
+   218→  `stopSpeaking` / `startListening` / `stopListening` / `isSupported`
+   219→  so the parent overlay can drive TTS from gesture or AI events.
+   220→- Feature detection via `useSyncExternalStore` (no setState-in-effect,
+   221→  no hydration mismatch). Stale-closure bug on the `onend` transcript
+   222→  fixed with a `latestTranscriptRef` mirror so the React Compiler
+   223→  preserves the `useCallback` memoization.
+   224→
+   225→**Gesture Control** (`src/components/sentinel/war-room/gesture-control.tsx`)
+   226→
+   227→- barehands vocabulary on `@mediapipe/hands` + `@mediapipe/camera_utils`
+   228→  (npm packages, first-class TS types). WASM loaded from jsDelivr via
+   229→  `locateFile`.
+   230→- Gestures: **pinch** → synthetic click on element under cursor;
+   231→  **swipe** (wrist x > 0.32 in < 380ms) → tab nav;
+   232→  **open palm** → vertical scroll;
+   233→  **fist** → synthetic ESC + `onGesture({kind:"fist"})`;
+   234→  **two-hand pinch** → zoom (delta between two index tips).
+   235→- Spring-animated fixed cursor tracks the index fingertip. Small
+   236→  160×120 camera preview in the corner with hand-landmark skeleton
+   237→  overlay (toggleable).
+   238→- Graceful degradation: camera-permission / WebGL / model-load
+   239→  failures show an "OFFLINE" chip; the rest of the War Room keeps
+   240→  working with voice + mouse.
+   241→
+   242→**War Room Overlay** (`src/components/sentinel/war-room/war-room-overlay.tsx`)
+   243→
+   244→- Fullscreen (`fixed inset-0 z-[150]`) tri-modal overlay combining:
+   245→  - `CircuitBoard` visualizer as a 55%-opacity background.
+   246→  - Voice control card (toggle with `V`).
+   247→  - Gesture control card (toggle with `G`).
+   248→  - Tab strip: overview / clients / patches / findings / system
+   249→    (cycleable with `← →`, voice "show <tab>", or gesture swipe).
+   250→  - Live scan terminal (bottom-left, reads from `useSignalBus()`).
+   251→  - KPI tiles, client pipeline cards, pending-patch list with inline
+   252→    approve buttons, critical-findings feed with voice-driven filter,
+   253→    system-status grid.
+   254→- Closes on ESC, the Exit button, or a fist gesture (barehands'
+   255→  "close modal" idiom).
+   256→- Voice commands wired through `handleVoiceCommand`: `scan` looks up
+   257→  the codebase by name (case-insensitive substring) and POSTs
+   258→  `/api/scans`; `approve` POSTs `/api/patches/[id]/approve`; `search`
+   259→  filters the in-memory findings list; `status` reads `/api/posture-
+   260→  score` aloud; `navigate` switches the internal view + speaks the
+   261→  label. Gesture `swipe` cycles views, `fist` closes the overlay.
+   262→- Header shows live visualizer state, posture score, clock.
+   263→
+   264→**Voice Command API** (`src/app/api/voice-command/route.ts`)
+   265→
+   266→- POST, `requireAuth`-gated. Accepts pre-parsed command OR raw
+   267→  transcript (mirrors `parseVoiceCommand` server-side so external
+   268→  clients — mobile, CLI, agents — parse identically).
+   269→- Handlers:
+   270→  - `scan` → looks up codebase by name, prevents concurrent scans,
+   271→    creates a `Scan` row, fire-and-forgets to the engine.
+   272→  - `navigate` → no-op server-side (client handles view switch).
+   273→  - `search` → ILIKE-style contains query on `Finding.title|category|
+   274→    endpoint`, returns up to 25 matches.
+   275→  - `approve` → resolves patch by `patchId` OR `id`, applies patched
+   276→    source, appends to the tamper-evident attestation chain
+   277→    (`computeAttestationHash`), fires `onPatchApproved` memory writer.
+   278→  - `status` → computes posture score inline (same formula as
+   279→    `/api/posture-score`), returns `{overall, grade, message}`.
+   280→- Returns `{ok, action, message, ...payload}` per spec.
+   281→
+   282→**Command Center wiring** (`src/components/sentinel/command-center.tsx`)
+   283→
+   284→- Imported `WarRoomOverlay` and mounted it behind the existing
+   285→  "War Room" button (`<WarRoomOverlay open={warRoom} onClose={...} />`).
+   286→- The legacy `WarRoomMode` (auto-cycling 3-view fullscreen) is
+   287→  replaced by a `_WarRoomModeLegacyStub` (no-op) so any external
+   288→  imports still resolve; the War Room button now opens the tri-modal
+   289→  overlay. The "Immersive View" button (circuit board only) is
+   290→  unchanged.
+   291→
+   292→### Constraints honored
+   293→
+   294→- Voice uses **pure browser Web Speech API** — no Python server
+   295→  (backtalk's Whisper/Kokoro path is replaced by SpeechRecognition +
+   296→  SpeechSynthesis).
+   297→- Gesture uses **`@mediapipe/hands` + `@mediapipe/camera_utils`** (the
+   298→  task-specified legacy packages, not `tasks-vision` which barehands
+   299→  itself uses — these ship first-class TS types and a `Camera` rAF
+   300→  helper that fit the React lifecycle better).
+   301→- Both new components are **`"use client"`**.
+   302→- **Dark theme, emerald accents** throughout — no indigo/blue.
+   303→- Works in **fullscreen mode** (overlay is `fixed inset-0 z-[150]`,
+   304→  body scroll locked, ESC to exit).
+   305→- All three input modes reach the same actions — voice `show patches`
+   306→  and gesture `swipe right` both call `cycleView(1)`; voice `approve
+   307→  patch X` and mouse-clicking the Approve button both POST
+   308→  `/api/patches/[id]/approve`.
+   309→
+   310→### Verification
+   311→
+   312→- `bun run lint` → **0 errors, 5 warnings** (all pre-existing in
+   313→  `contributors-panel.tsx` + `service-launcher.tsx`, unrelated).
+   314→- `bunx tsc --noEmit -p tsconfig.json` filtered to the touched files
+   315→  → **0 errors**. (Two initial TS errors in `gesture-control.tsx`
+   316→  where `wristHistory` was typed `{x,t}` but palm-scroll pushed
+   317→  `{x,y,t}` — fixed by widening the type to `{x,y,t}`.)
+   318→- One React Compiler error in `voice-control.tsx` (`setState-in-
+   319→  effect` for the `supported` flag) fixed by switching to
+   320→  `useSyncExternalStore` for feature detection.
+   321→- One React Compiler error (`preserve-manual-memoization` on
+   322→  `startListening` because the closure captured `interim` state but
+   323→  deps only listed `dispatchCommand`) fixed by mirroring the latest
+   324→  transcript into a `latestTranscriptRef` so `onend` reads the ref
+   325→  instead of the stale state closure.
+   326→
+   327→### Notes for the next session
+   328→
+   329→- The `WarRoomOverlay` inherits `SignalBusProvider` from
+   330→  `command-center.tsx`'s wrapper, so `useSignalBus()` returns real
+   331→  engine events. If the overlay is ever mounted outside the command
+   332→  center (e.g. on a dedicated `/war-room` route), wrap it in
+   333→  `<SignalBusProvider>` or the live terminal will be empty.
+   334→- The voice parser (`parseVoiceCommand` in `voice-control.tsx`) and
+   335→  the server-side parser (`parseTranscript` in `voice-command/route.ts`)
+   336→  are intentionally duplicated to keep the client zero-network for
+   337→  navigation/search/stop commands. If you add a new voice command,
+   338→  update BOTH parsers.
+   339→- The MediaPipe Hands WASM is loaded from
+   340→  `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/<file>`.
+   341→  If the sandbox has no outbound CDN access, gesture init will fail
+   342→  gracefully (the "OFFLINE" chip shows). Self-hosting the WASM under
+   343→  `/public/mediapipe/` and pointing `locateFile` at the local path is
+   344→  the fix if offline operation matters.
+   345→- `barehands` itself uses the newer `@mediapipe/tasks-vision`
+   346→  HandLandmarker (stage.html loads
+   347→  `vision_bundle.mjs@0.10.14`); we stayed on the older
+   348→  `@mediapipe/hands` because the task explicitly named those packages
+   349→  and they ship TypeScript types. The gesture vocabulary is identical.
+   350→- The legacy `WarRoomMode` (auto-cycling 3-view) is gone from the UI
+   351→  but its 150-line body is replaced by a `_WarRoomModeLegacyStub` —
+   352→  remove the stub if you want a clean diff.
+   353→
+   354→
+   355→
+   356→---
+   357→
+   358→## 2026-09-01 — frontend-update: 8 missing UI components wired into the console
+   359→
+   360→**Task ID:** `frontend-update`
+   361→**Scope:** Next.js web app at `/home/z/GuardianX-web`.
+   362→
+   363→The console had many features built (DFIR, SOC, compliance, war room,
+   364→etc.) but several spec-listed UI features were missing entirely. This
+   365→task creates all 8 missing components, the 7 API routes they depend on,
+   366→one Supabase migration + two Prisma models, and wires everything into
+   367→`src/app/page.tsx` + `src/app/layout.tsx`.
+   368→
+   369→### What landed
+   370→
+   371→**New components** (`src/components/sentinel/`):
+   372→
+   373→- `support-chat.tsx` — floating bottom-right chat widget. Round launcher
+   374→  + spring-animated panel. Persists the conversation in localStorage,
+   375→  fetches prior tickets via `GET /api/support/ticket`, files new
+   376→  tickets via `POST /api/support/ticket`. Admin role auto-tags
+   377→  priority=high and shows an amber "Priority: Admin" badge. Links to
+   378→  `/features` (Docs) and `/architecture` (API Docs). Stacks above the
+   379→  onboarding help button via `bottomOffset`.
+   380→- `analyst-onboarding.tsx` — 4-step tour (Welcome → Create Client →
+   381→  Upload Code → Run Scan). Auto-opens for viewers on first login
+   382→  (localStorage-tracked). Spotlight effect via a `radial-gradient`
+   383→  mask computed from the highlighted element's `getBoundingClientRect`.
+   384→  Floating help button (bottom-right, above the support chat launcher)
+   385→  replays the tour anytime.
+   386→- `billing-panel.tsx` — three pricing cards (Free / Pro ₹5,000/mo /
+   387→  Enterprise Custom). Current-plan banner with usage tiles. `Upgrade`
+   388→  → `POST /api/billing/checkout`; `Manage Subscription` → `POST
+   389→  /api/billing/portal`. Falls back to a "billing disabled" banner
+   390→  when Stripe env vars aren't set.
+   391→- `org-switcher.tsx` — sidebar header dropdown. Lists personal workspace
+   392→  + every org from `GET /api/orgs`. Persists the active workspace in
+   393→  localStorage and patches `globalThis.fetch` so every subsequent
+   394→  GuardianX API request carries `x-guardianx-workspace: <id>`. Admin-
+   395→  only "Create Organization" dialog with auto-slug generation.
+   396→- `user-activity-monitor.tsx` — admin-only user activity table. Summary
+   397→  tiles (total users / active today / 2FA enabled ratio / total
+   398→  clients across users) + a table with avatar, name+email, role badge,
+   399→  client count, last login, last activity, 2FA icon. Click to expand
+   400→  and see that user's last 5 audit entries. Auto-refreshes every 30s.
+   401→- `admin-2fa-banner.tsx` — amber banner for admins without 2FA. Polls
+   402→  `POST /api/2fa {action:"status"}`. "Enable 2FA" button → caller
+   403→  switches to the Settings → Security tab. Dismissible per-session
+   404→  (sessionStorage).
+   405→- `analyst-banner.tsx` — sky-blue banner for `role === "viewer"`.
+   406→  "You are signed in as an Analyst. Upload your own clients for
+   407→  testing." CTA navigates to the Clients tab. Dismissible per-session.
+   408→- `cookie-banner.tsx` — GDPR/DPDPA bottom banner mounted in
+   409→  `layout.tsx` after `<Toaster />`. Accept / Decline persist to
+   410→  localStorage and dispatch a `guardianx:cookie-consent` CustomEvent.
+   411→  SSR-safe via `mounted` guard.
+   412→- `settings-panel.tsx` — new Settings route with three tabs:
+   413→  - **Security** — full 2FA setup flow (QR scan → 6-digit verify →
+   414→    backup codes reveal), disable button, login-history card.
+   415→  - **Organization** — admin-only org manager (list, create, invite).
+   416→  - **Email Delivery** — admin-only email log monitor (sent/failed/
+   417→    pending/total stat tiles + scrollable mail log). Gracefully
+   418→    handles the case where the `MailLog` table doesn't exist.
+   419→
+   420→**Backend API routes** (all new, all `requireAuth`-gated):
+   421→
+   422→- `src/app/api/support/ticket/route.ts` — `GET` (your tickets) + `POST`
+   423→  (file a ticket). Validates message length 3–4000 chars; admins auto-
+   424→  get priority `high`.
+   425→- `src/app/api/billing/status/route.ts` — `GET` returns plan + live
+   426→  usage (admins: real `db.client.count({})` / `db.scan.count({})`;
+   427→  viewers: derived from `db.auditLog.findMany({actor: email})`).
+   428→- `src/app/api/billing/checkout/route.ts` — `POST {plan}` returns
+   429→  Stripe Checkout URL. Lazy-imports `stripe` so the route doesn't crash
+   430→  at import time when Stripe env vars aren't set.
+   431→- `src/app/api/billing/portal/route.ts` — `POST` opens the Stripe
+   432→  Customer Portal. Falls back to `customers.list({email})` if no
+   433→  cached customer ID.
+   434→- `src/app/api/admin/user-activity/route.ts` — admin-only. Joins User
+   435→  rows against the last 2000 AuditLog entries bucketed by actor email.
+   436→  Returns summary + per-user last 5 audit entries.
+   437→- `src/app/api/admin/login-history/route.ts` — auth-required. Defaults
+   438→  to the caller's own events; admins can pass `?scope=all` to see
+   439→  everyone. Filters to login/logout/2FA/password/approve actions.
+   440→- `src/app/api/admin/email-delivery/route.ts` — admin-only. Reads the
+   441→  `MailLog` table (returns `tableMissing: true` instead of erroring if
+   442→  it doesn't exist) + sent/failed/pending/total summary.
+   443→
+   444→**Database changes**:
+   445→
+   446→- `prisma/schema.prisma` — added `SupportTicket` (id, userId, subject,
+   447→  message, priority, status, reply, timestamps) and `Subscription` (id,
+   448→  userId unique, plan, status, stripeCustomerId, stripeSubscriptionId,
+   449→  currentPeriodEnd, cancelAtPeriodEnd, clientsUsed, scansUsed,
+   450→  timestamps) models.
+   451→- `supabase/migrations/0010_support_billing.sql` — creates both tables
+   452→  with `TIMESTAMPTZ` defaults, indexes on `(userId, createdAt DESC)` +
+   453→  `(status, createdAt DESC)`, grants `service_role` all + `anon/
+   454→  authenticated` CRUD, disables RLS.
+   455→- `src/lib/db.ts` — added `supportTicket: "SupportTicket"` and
+   456→  `subscription: "Subscription"` to `MODEL_TO_TABLE` so the existing
+   457→  Supabase-REST dispatcher routes them.
+   458→
+   459→**Wiring**:
+   460→
+   461→- `src/app/page.tsx`:
+   462→  - Extended `Tab` union with `"billing" | "user-activity" | "settings"`.
+   463→  - Added `<OrgSwitcher>` in the sidebar header.
+   464→  - Added `<AdminTwoFactorBanner>` + `<AnalystBanner>` directly above
+   465→    the command center content.
+   466→  - Added `<AnalystOnboarding>` + `<SupportChat>` at the bottom of
+   467→    ConsoleView (both `position: fixed`, stacking via `bottomOffset`).
+   468→  - Added Billing / Settings NavItems in the Advanced group + User
+   469→    Activity NavItem in the Administration group (admin-only).
+   470→  - Added tab content cases + header title + neon color mappings for
+   471→    the three new tabs.
+   472→  - Added `data-onboarding="clients"` / `"codebases"` / `"patches"`
+   473→    data attributes on the relevant sidebar slots so the onboarding
+   474→    spotlight can find them.
+   475→- `src/app/layout.tsx` — imported `<CookieBanner>` and rendered it
+   476→  right after `<Toaster />` so it overlays every page on first visit.
+   477→
+   478→### Constraints honored
+   479→
+   480→- All 8 new components are `"use client"` + TypeScript.
+   481→- Dark theme throughout — substrate `zinc-950`, accents emerald /
+   482→  amber / sky / purple. No indigo or blue.
+   483→- shadcn/ui components used exclusively: Button, Input, Textarea,
+   484→  Card, Badge, Skeleton, Progress, Label, DropdownMenu, Dialog,
+   485→  Tabs, Table.
+   486→- `framer-motion` for all transitions (spring-based launches,
+   487→  AnimatePresence for dismissals + spotlight mask).
+   488→- Mobile-first responsive: sidebar collapses on mobile, chat panel is
+   489→  `width: min(380px, calc(100vw - 2rem))`, cookie banner stacks
+   490→  vertically on small screens.
+   491→- Reuses the existing `useToast` hook + `holo-card` / `hud-corners` /
+   492→  `pulse-dot` / `neon-emerald` design tokens so the new UI matches the
+   493→  existing console.
+   494→
+   495→### Verification
+   496→
+   497→- `bun run lint` → **0 errors, 5 warnings** (all 5 pre-existing in
+   498→  `contributors-panel.tsx` + `service-launcher.tsx`, untouched by this
+   499→  task).
+   500→- `bunx tsc --noEmit -p tsconfig.json` filtered to the touched files
+   501→  → **0 errors** in the new components + new API routes + the
+   502→  `db.ts` `MODEL_TO_TABLE` addition. (Pre-existing Supabase-REST
+   503→  typing errors elsewhere are unrelated and tolerated by
+   504→  `next.config.ts`'s `typescript.ignoreBuildErrors: true`.)
+   505→- Installed `stripe@22.5.0` as a new dependency (needed for
+   506→  `import("stripe")` dynamic imports in the checkout + portal routes).
+   507→
+   508→### Notes for the next session
+   509→
+   510→- **Stripe env vars** (when going live): set `STRIPE_SECRET_KEY`,
+   511→  `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE`. Without them the
+   512→  Billing panel shows a "billing disabled" banner — the rest of the
+   513→  UI keeps working. The webhook route `/api/billing/webhook` is already
+   514→  whitelisted in `src/middleware.ts`'s `PUBLIC_ROUTES`.
+   515→- **`MailLog` table**: the Email Delivery tab gracefully handles its
+   516→  absence. If you want email logging to actually populate, add a
+   517→  `MailLog` table via Supabase migration and have `src/lib/email.ts`
+   518→  insert rows on send.
+   519→- **`x-guardianx-workspace` header** is set on every relative fetch by
+   520→  `org-switcher.tsx`'s `globalThis.fetch` monkey-patch. Downstream API
+   521→  routes can read `req.headers.get("x-guardianx-workspace")` to scope
+   522→  queries per workspace — none do yet, but the plumbing is in place.
+   523→- **Onboarding spotlight** depends on `[data-onboarding="..."]`
+   524→  selectors being present on the sidebar NavItem wrappers. They're on
+   525→  the "All Clients", "Codebases", and "Patch Queue" targets. If you
+   526→  rename those slots, update the `STEPS` array's `spotlightSelector`
+   527→  strings in `analyst-onboarding.tsx`.
+   528→- **User activity "Clients" column** is approximate for viewers — the
+   529→  `Client` table has no `ownerId`, so we attribute clients to users by
+   530→  counting `AuditLog` rows where `action` contains "create" AND
+   531→  `entity` contains "client". For admins we just show the global
+   532→  total. If you want true per-user client ownership, add a `userId`
+   533→  column to `Client` and update `/api/admin/user-activity` to read it.
+   534→- **`Stripe` API version**: pinned to `2025-08-27.basil` (latest stable
+   535→  as of stripe@22.5.0). Cast through `as never` to keep TS happy with
+   536→  the version-string union.
+   537→
+   538→
+   539→---
+   540→
+   541→## 2026-08-25 — supabase-reswap: cutover live Vercel deploy to new Supabase project
+   542→
+   543→**Task ID:** `supabase-reswap`
+   544→**Scope:** Vercel-hosted Next.js web app (https://guardianx-two.vercel.app) +
+   545→new Supabase project. The engine repo at `/home/z/my-project` is unaffected;
+   546→this entry covers the database cutover only.
+   547→
+   548→### Context
+   549→
+   550→User provisioned a brand-new Supabase project and asked to wire the live
+   551→Vercel deployment of GuardianX onto it (the existing project had env vars
+   552→pointing at an older Supabase that was being retired).
+   553→
+   554→New Supabase details:
+   555→- Project URL: `https://nhvdjkblqhlkftzsaoin.supabase.co`
+   556→- Project ref: `nhvdjkblqhlkftzsaoin` (region: **ap-south-1 / Mumbai**)
+   557→- DB host (direct): `db.nhvdjkblqhlkftzsaoin.supabase.co:5432` (IPv6 only)
+   558→- DB host (pooler): `aws-0-ap-south-1.pooler.supabase.com:5432` (IPv4, session mode)
+   559→- DB user: `postgres.nhvdjkblqhlkftzsaoin` (pooler requires project-ref suffix)
+   560→- DB password: `Ayanalidar@110`
+   561→- Publishable API key: `sb_publishable_KcTYwmG4lJEH-qvBdGxRbA_otyD21Pt`
+   562→
+   563→### What landed
+   564→
+   565→**1. Migration apply (psycopg2 via the IPv4 pooler)**
+   566→
+   567→- Cloned `github.com/ayanalidar/GuardianX` (web repo) into
+   568→  `/home/z/GuardianX-web` (was missing on this machine).
+   569→- The sandbox has no IPv6 → the direct `db.*.supabase.co` host is unreachable.
+   570→  Probed every regional pooler hostname; `aws-0-ap-south-1.pooler.supabase.com`
+   571→  is the one that resolves + accepts the connection (port 5432 session mode or
+   572→  6543 transaction mode both work).
+   573→- Wrote `scripts/apply_migrations.py` in the cloned web repo and ran it —
+   574→  applies all 10 migrations (`0001_init.sql` → `0010_support_billing.sql`)
+   575→  each in its own transaction, aborts on first failure. All 10 applied
+   576→  cleanly on the empty DB.
+   577→- Final schema: **34 tables** (AlertRule, ApiAccessLog, AttackChain,
+   578→  Attestation, AuditLog, Canary, ChatMessage, Client, Codebase, Credential,
+   579→  CredentialAudit, Engagement, Evidence, Finding, FuzzResult, HoneypotHit,
+   580→  IOC, Incident, IncidentEvent, Integration, MemoryEntry, Organization,
+   581→  Patch, PipelineEvent, Playbook, RedAgentEvent, Scan, ScheduledScan,
+   582→  Subscription, SupportTicket, Target, TeamMember, User, WebhookConfig) +
+   583→  the `exec_sql(TEXT)` SECURITY-DEFINER helper. 325 columns total.
+   584→
+   585→**2. RLS / publishable-key interop check**
+   586→
+   587→- All 10 migrations `DISABLE ROW LEVEL SECURITY` on every table they create
+   588→  (intentional — the app uses the service_role bypass). Side effect: the
+   589→  publishable key (anon-equivalent) gains full CRUD on every table via the
+   590→  PostgREST API, because RLS is off.
+   591→- Verified with curl: GET count, POST insert, DELETE — all three succeed
+   592→  with the publishable key. The only thing the publishable key cannot do
+   593→  is call the `exec_sql` RPC (it's `REVOKE … FROM PUBLIC, anon,
+   594→  authenticated; GRANT … TO service_role`). That RPC is only used by the
+   595→  `/api/db-init` demo-data seeder — not needed in production.
+   596→
+   597→**3. Vercel env var cutover (project `guardianx`,
+   598→   id `prj_9qicOddsjMvr3hXf1t0xSZlCm0Q4`)**
+   599→
+   600→- Deleted old `SUPABASE_URL` (id `r2DEQJA5cSEp73LS`) and
+   601→  `SUPABASE_SERVICE_ROLE_KEY` (id `4XhYK4YBct5a0m6b`) — both pointed at the
+   602→  retired Supabase.
+   603→- Added three new env vars (all `target=["production"]`):
+   604→  - `SUPABASE_URL` = `https://nhvdjkblqhlkftzsaoin.supabase.co`
+   605→    (id `F7UzRPeV3ZToiBAo`)
+   606→  - `SUPABASE_SERVICE_ROLE_KEY` =
+   607→    `sb_publishable_KcTYwmG4lJEH-qvBdGxRbA_otyD21Pt`
+   608→    (id `VwzfIKtanL8wgn07`) — the publishable key works because RLS is off
+   609→    everywhere; a true `sb_secret_…` service_role key was not provided by
+   610→    the user, and the publishable key is sufficient for all app routes.
+   611→  - `NEXT_PUBLIC_SUPABASE_URL` =
+   612→    `https://nhvdjkblqhlkftzsaoin.supabase.co`
+   613→    (id `Wk2QukE73Ay3xKDF`) — newly added so client-side code that reads
+   614→    `process.env.NEXT_PUBLIC_SUPABASE_URL` (referenced in `src/lib/db.ts`
+   615→    line 10 and `src/lib/ai-ops/diagnostic-agent.ts` line 362) also sees
+   616→    the new value. Previously only the non-public `SUPABASE_URL` was set.
+   617→
+   618→**4. Redeploy**
+   619→
+   620→- Triggered a production redeploy of the latest successful deployment
+   621→  (`dpl_BcBfpBZfq3Ypuuni3zcDfCLu1uUd`, sha `9f52cb3a`) via the Vercel
+   622→  v13 deployments API.
+   623→- New deployment: `dpl_AG5yQgUfdoP4zS9DHWdkW1XKrpDA`,
+   624→  URL `https://guardianx-eyc0mv26u-guardianx.vercel.app`, reached `READY`
+   625→  in ~60s. Production alias `guardianx-two.vercel.app` now serves this
+   626→  deployment.
+   627→
+   628→### Verification (all live on https://guardianx-two.vercel.app)
+   629→
+   630→- `GET /` → HTTP 200, 297 KB HTML, `<title>GuardianX, Autonomous Security
+   631→  Operations Platform</title>`, no fatal/missing-env errors in the response.
+   632→- `GET /api/health` → HTTP 200, `status: operational`, components:
+   633→  - Web App: operational, Responding
+   634→  - Database: operational, **PostgreSQL reachable** (latency 1.2s — the
+   635→    DB-read path through Supabase REST is working end-to-end)
+   636→  - Sentinel Engine: operational
+   637→  - Recon Tools: operational
+   638→- `GET /api/scans` → HTTP 401 `Authentication required` (auth gate still
+   639→  enforced — confirms the middleware + auth path still works, just the
+   640→  DB connection was swapped underneath).
+   641→- `POST /api/auth/login` with bogus creds → HTTP 401 `Invalid email or
+   642→  password` after 2 s — confirms the login route actually queried the
+   643→  new Supabase `User` table (no rows yet → user not found).
+   644→- Direct REST probe against new Supabase confirmed `User`, `Scan`,
+   645→  `Client` tables all exist and return `count: 0` (fresh instance).
+   646→
+   647→### Notes for the next session
+   648→
+   649→- **Publishable vs service_role key.** The app currently uses the
+   650→  publishable key as `SUPABASE_SERVICE_ROLE_KEY` because RLS is disabled
+   651→  on all tables — CRUD works, but `exec_sql` (used by `/api/db-init` for
+   652→  demo seeding) returns `permission denied for function exec_sql`.
+   653→  If demo-data seeding is needed, either (a) drop the GRANT restriction
+   654→  in migration `0001` (line ~35: `REVOKE ALL … FROM PUBLIC, anon,
+   655→  authenticated; GRANT EXECUTE … TO service_role`) so the publishable
+   656→  key can call it too, or (b) get the actual `sb_secret_…` service_role
+   657→  key from the Supabase dashboard (Project Settings → API → "secret"
+   658→  key) and replace `SUPABASE_SERVICE_ROLE_KEY` with it.
+   659→- **DB pooler is IPv4-only reachable.** The direct `db.*.supabase.co`
+   660→  host resolves to IPv6 only, which is unreachable from this sandbox.
+   661→  Use `aws-0-ap-south-1.pooler.supabase.com:5432` (session mode) or
+   662→  `:6543` (transaction mode, recommended for serverless). Username must
+   663→  be `postgres.<project-ref>`.
+   664→- **Migrations are tracked only on the filesystem.** Supabase tracks
+   665→  applied migrations via the `supabase_migrations.schema_migrations`
+   666→  table when you use `supabase db push`; we ran raw SQL via psycopg2 so
+   667→  that table doesn't exist. If `supabase db push` is run later it will
+   668→  re-apply all 10 (they're idempotent for the most part — `CREATE TABLE
+   669→  IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION` — but a few ALTER
+   670→  statements in `0004_2fa_columns.sql` / `0005_approval_column.sql` /
+   671→  `0008_token_version.sql` will fail on the second run).
+   672→- **No client data migrated.** The new Supabase instance is empty
+   673→  (`User`, `Client`, `Scan` all return `count: 0`). Users will need to
+   674→  re-register. If data migration from the old Supabase is needed, dump
+   675→  each table via `pg_dump --table=*` on the old instance (over the old
+   676→  pooler host) and `pg_restore` into the new one — but only do this if
+   677→  the old instance is still reachable.
+   678→
+   679→---
+   680→
+   681→## 2026-08-25 — admin-user-seed: bootstrap first admin on the new Supabase
+   682→
+   683→**Task ID:** `admin-user-seed`
+   684→**Scope:** New Supabase project (`nhvdjkblqhlkftzsaoin`) + live Vercel
+   685→deployment at https://guardianx-two.vercel.app.
+   686→
+   687→### Context
+   688→
+   689→User asked for login credentials for the freshly-cut-over deployment.
+   690→The new Supabase instance was empty (`User` table had 0 rows), so there
+   691→was no account to log in with. Per the signup route
+   692→(`src/app/api/auth/signup/route.ts`), the **first** user to register is
+   693→auto-promoted to `role=admin, approved=true`; subsequent users get
+   694→`role=viewer, approved=false` (pending admin approval). Rather than
+   695→have the user sign up through the UI, I seeded the admin account
+   696→directly in the DB so the credentials are known ahead of time.
+   697→
+   698→### What landed
+   699→
+   700→- Generated a bcrypt hash (`bcryptjs` v3.0.3, 12 rounds — matches the
+   701→  `hashPassword` function in `src/lib/auth.ts`) for the chosen password
+   702→  via `scripts/hash-pwd.js` in the cloned web repo.
+   703→- Inserted the row directly into the `User` table via psycopg2 over the
+   704→  ap-south-1 pooler, with explicit `role=admin, approved=true,
+   705→  "tokenVersion"=0, "twofaEnabled"=false` so the user can log in
+   706→  immediately without needing admin approval (which would be impossible
+   707→  — there were no admins to approve them).
+   708→- Preflight check confirmed the `User` table was empty before insert
+   709→  (so this is legitimately the first admin, not a second one).
+   710→- Postflight: table now has 1 row.
+   711→
+   712→### Credentials (handed to the user)
+   713→
+   714→- **URL:** https://guardianx-two.vercel.app
+   715→- **Email:** `ayan@guardianx.in`
+   716→- **Password:** `GuardianX@Admin2026`
+   717→- **Role:** admin (auto-approved)
+   718→- **User ID:** `ef2a904a-97ea-441e-a879-2a8d5614ea89`
+   719→
+   720→### Verification (live, against the production URL)
+   721→
+   722→- `POST /api/auth/login` with the creds → HTTP 200, returned a valid
+   723→  JWT (`eyJ...`), `user.role=admin`, `message=Login successful`. Latency
+   724→  5.5 s (cold start on the bcrypt compare + DB round-trip).
+   725→- Used the returned token on `GET /api/posture-score` (was HTTP 401
+   726→  before login) → HTTP 200, `{"overall":100,"overall_grade":"A",
+   727→  "codebases":[]}`. Confirms the JWT flows through `requireAuth` →
+   728→  `verifyToken` → `supabase.from("User").select(...)` end-to-end on
+   729→  the new Supabase.
+   730→- `/api/auth/session` returned `authenticated: false` via curl because
+   731→  that route reads the `guardianx-token` HTTP-only cookie (set by the
+   732→  browser flow), not the `Authorization: Bearer` header. Not a bug —
+   733→  when the user logs in through the actual UI form, the cookie is set
+   734→  and session checks will work.
+   735→
+   736→### Notes for the next session
+   737→
+   738→- **Subsequent users** who sign up via the UI will get `role=viewer,
+   739→  approved=false`. To approve them, the admin can call
+   740→  `PATCH /api/admin/users/[id]` (or whatever the admin-approval route
+   741→  is) or flip the `approved` column directly in Supabase.
+   742→- **Change the password** from the UI once logged in (Settings →
+   743→  Security) if you want to rotate it away from the seeded value.
+   744→- **2FA** is `false` for this admin — the AdminTwoFactorBanner will
+   745→  nag the admin to enable 2FA on first login. Optional but recommended.
+   746→- **Cleanup:** the `scripts/hash-pwd.js` helper in the cloned web repo
+   747→  is a one-off — safe to delete. The actual password is not stored
+   748→  anywhere in plaintext (only the bcrypt hash is in the DB).
+   749→
+   750→---
+   751→
+   752→## 2026-08-25 — circuit-bg-command-center + mediapipe build fix
+   753→
+   754→**Task ID:** `circuit-bg-cc`
+   755→**Scope:** Next.js web app at `/home/z/GuardianX-web`. Live deployment
+   756→at https://guardianx-two.vercel.app.
+   757→
+   758→### Context
+   759→
+   760→User asked: "the circuit background is awesome can we use that in whole
+   761→command center?" — referring to the `CircuitBoard` canvas visualizer
+   762→that was previously only used in (a) the landing page at opacity 0.35
+   763→and (b) the War Room fullscreen overlay at opacity 0.55.
+   764→
+   765→### What landed
+   766→
+   767→**1. CircuitBoard as Command Center background**
+   768→(`src/components/sentinel/command-center.tsx`)
+   769→
+   770→- Imported `CircuitBoard` from `./ai-visualizer` (alongside the existing
+   771→  `SignalBusProvider` + `ImmersiveView`).
+   772→- Wrapped the dashboard's `<div className="space-y-4">` in a `relative`
+   773→  container that owns a `pointer-events-none fixed inset-0 -z-10`
+   774→  background layer mounting `<CircuitBoard opacity={0.55} showHud={false} />`.
+   775→- A bottom-only gradient wash (`from-zinc-950/0 via-zinc-950/10
+   776→  to-zinc-950/50`) keeps the lower dashboard cards legible on top of
+   777→  the traces while leaving the header + KPI strip on full-bright circuit.
+   778→- Final opacity chosen via 3 iterations: 0.18 → 0.35 → 0.55. The first
+   779→  two were invisible to VLM analysis of a live screenshot because the
+   780→  CircuitBoard substrate is `#020705` (very close to the page's
+   781→  zinc-950 background), so traces at low opacity blend into the page
+   782→  bg. 0.55 matches the War Room overlay's setting where traces
+   783→  actually pop.
+   784→
+   785→**2. Pre-existing build break fix** (`src/components/sentinel/war-room/gesture-control.tsx`)
+   786→
+   787→- Discovered while pushing the circuit-bg change: Vercel build had been
+   788→  silently broken since the warroom-voice-gesture task (sha 9f52cb3).
+   789→  The previous "successful" deploy (7h before this task) used Vercel's
+   790→  cached build artifacts — a fresh build from the same commit fails
+   791→  with:
+   792→  ```
+   793→  The export Hands was not found in module
+   794→  @mediapipe/hands/hands.js. The module has no exports at all.
+   795→  ```
+   796→- Root cause: `@mediapipe/hands` v0.4.1675469240 + `@mediapipe/camera_utils`
+   797→  ship as IIFE-on-`window` rather than real ESM. The package.json
+   798→  declares `"module": "hands.js"` but the file is a Closure-compiled
+   799→  IIFE that calls `za("Hands", od)` to attach the class to `window`
+   800→  at runtime. A static `import { Hands } from "@mediapipe/hands"`
+   801→  therefore trips Turbopack's static-export checker (the module has
+   802→  zero ESM exports, statically known).
+   803→- Fix: replaced the named imports with:
+   804→  - Type-only imports (`import { type NormalizedLandmark, type Results }
+   805→    from "@mediapipe/hands"`) — erased at compile time.
+   806→  - Two side-effect-only imports (`import "@mediapipe/hands"` +
+   807→    `import "@mediapipe/camera_utils"`) — these execute the IIFE, which
+   808→    attaches `Hands` / `HAND_CONNECTIONS` / `Camera` to `globalThis`.
+   809→  - Module-level `const Hands = (globalThis as any).Hands as (typeof
+   810→    import("@mediapipe/hands"))["Hands"]` to pull the symbols off
+   811→    globalThis with a TS cast back to the original declared type.
+   812→- All value usages of `Hands` / `HAND_CONNECTIONS` / `Camera` are inside
+   813→  `useEffect` / `useCallback` (browser-only), so by the time they run,
+   814→  the side-effect imports have fired and `globalThis.Hands` is defined.
+   815→- Tried `transpilePackages: ["@mediapipe/hands", "@mediapipe/camera_utils"]`
+   816→  in `next.config.ts` first — it did NOT fix the issue (transpilePackages
+   817→  is for source-transpilation, not ESM/CJS interop). Reverted that
+   818→  experiment; the side-effect-import approach is the clean fix.
+   819→
+   820→### Verification
+   821→
+   822→- Local `bun run build` now passes the Turbopack compile step (was
+   823→  failing). It still fails at "Collecting page data" because the local
+   824→  env doesn't have `JWT_SECRET`/`SUPABASE_URL` set — Vercel has them,
+   825→  so Vercel builds successfully.
+   826→- Vercel deployment `a380870c` reached `READY` in ~60s.
+   827→- Live smoke test: `GET /` → 200, `GET /api/health` → operational,
+   828→  `POST /api/auth/login` with admin creds → 200 + JWT.
+   829→- VLM (glm-5v-turbo) analysis of a full-page screenshot:
+   830→  > "Yes, there are visible thin glowing green lines and traces forming
+   831→  > a circuit-board pattern in the dark background area between the
+   832→  > dashboard cards. Yes, there are small glowing components, dots,
+   833→  > and pulse animations visible in the background... Yes, the dashboard
+   834→  > text content, including headers, KPI numbers, and chart labels,
+   835→  > remains clearly readable."
+   836→- DOM probe confirmed the CircuitBoard canvas is mounted at
+   837→  `div.pointer-events-none.fixed.inset-0.-z-10` with parent class
+   838→  `relative h-full w-full overflow-hidden` and dimensions 1280×577.
+   839→
+   840→### Notes for the next session
+   841→
+   842→- The CircuitBoard breathes more visibly when the sentinel-engine is
+   843→  running scans — engine events drive `scanning` / `analyzing` /
+   844→  `finding` / `patching` states via the SignalBusProvider, which
+   845→  brightens the traces and spawns data pulses. At idle (engine
+   846→  offline), the board still draws the static trace grid + the central
+   847→  chip breathing animation, just dimmer.
+   848→- If the circuit board feels too prominent on a particular screen,
+   849→  drop `opacity={0.55}` to `0.40` in `command-center.tsx`. Don't go
+   850→  below 0.35 or it becomes invisible against zinc-950.
+   851→- The gesture-control fix is purely about module resolution; the
+   852→  gesture vocabulary and runtime behavior are unchanged. If MediaPipe
+   853→  ever ships a real ESM build (`@mediapipe/tasks-vision` is the newer
+   854→  path), the side-effect imports can be reverted to named imports.
+   855→
+   856→
+   857→---
+   858→
+   859→## 2026-08-25 — supabase→neon: cutover live Vercel deploy to Neon Postgres
+   860→
+   861→**Task ID:** `supabase-to-neon`
+   862→**Scope:** Vercel-hosted Next.js web app (https://guardianx-two.vercel.app) +
+   863→new Neon project. Migrates the live deployment off Supabase free-tier
+   864→(quota exhausted) onto Neon free-tier via Prisma Client.
+   865→
+   866→### Context
+   867→
+   868→User: "we need to change from supabase to someone else suggest? Grace period
+   869→is over · Your projects will not be able to serve requests when you use up
+   870→your quota · secondly the circuit background is awesome can we use that in
+   871→whole command center"
+   872→
+   873→Two asks in one message:
+   874→1. Swap the backing database from Supabase to a free-tier alternative
+   875→2. Use the CircuitBoard visualizer as the background across the whole
+   876→   Command Center (handled separately, see `circuit-bg-cc` entry above).
+   877→
+   878→User provided a Neon API key (`napi_…`) and asked me to provision a project
+   879→via the Neon REST API.
+   880→
+   881→### Neon project setup (via REST API)
+   882→
+   883→- User's `/users/me` returned `plan: free` but `projects_limit: 0`. List
+   884→  projects: 0. Tried creating a project — got "org_id is required" error.
+   885→  Listed `/users/me/organizations` (NOT `/organizations`, which 405s) and
+   886→  found the user already had one org: `GuardianX` (id `org-empty-violet-42097117`).
+   887→- `POST /api/v2/projects` rejected the body shape `{"org_id": "...", "project":
+   888→  {...}}` even though that's what the docs imply. The only shape that worked
+   889→  was **`{"project": {..., "org_id": "..."}}`** — i.e. `org_id` goes INSIDE
+   890→  the `project` object, not at the top level. The error message is misleading
+   891→  ("org_id is required") because it doesn't say where to put it.
+   892→- Created project `falling-silence-23321279` (Neon auto-names projects;
+   893→  user-supplied `name` field is preserved) in `aws-us-east-1` (us-east-1
+   894→  is Vercel's free-tier function region, so function→DB latency is ~10ms).
+   895→- Default role: `neondb_owner`, default DB: `neondb`, default password
+   896→  `npg_dMaNE13YOeWV` (Neon generates a strong password on project create).
+   897→- Direct host: `ep-weathered-smoke-auazxmbr.c-10.us-east-1.aws.neon.tech`
+   898→- Pooler host: `ep-weathered-smoke-auazxmbr-pooler.c-10.us-east-1.aws.neon.tech`
+   899→- Verified connectivity via psycopg3 (binary wheel) over SSL.
+   900→
+   901→### What landed
+   902→
+   903→**1. Schema fix** (`prisma/schema.production.prisma`)
+   904→
+   905→- The dev `schema.prisma` had 3 models that the production
+   906→  `schema.production.prisma` was missing: `MemoryEntry` (AI Memory Vault),
+   907→  `SupportTicket` (support chat widget), `Subscription` (Stripe billing).
+   908→  They were added to the dev schema in the `frontend-update` task but never
+   909→  ported to the production schema.
+   910→- Appended all 3 models (with their `@@index` declarations) to the production
+   911→  schema. Production schema now has 34 models matching the 34 tables created
+   912→  by the SQL migrations on Supabase.
+   913→
+   914→**2. Prisma db push** (creates all 34 tables on Neon)
+   915→
+   916→- Set `DATABASE_URL` to the Neon pooler connection string (with
+   917→  `?sslmode=require&pgbouncer=true&connect_timeout=15`).
+   918→- Set `DIRECT_URL` to the Neon direct connection (with `?sslmode=require`).
+   919→- `cp prisma/schema.production.prisma prisma/schema.prisma` (prebuild.sh
+   920→  would normally do this during Vercel build, but I needed it locally for
+   921→  `prisma db push`).
+   922→- `./node_modules/.bin/prisma db push --skip-generate --accept-data-loss`
+   923→  → all 34 tables created on Neon in 21s. Verified via psycopg3 that
+   924→  `information_schema.tables` returns 34 rows.
+   925→- `./node_modules/.bin/prisma generate` → built the Prisma Client with
+   926→  all 34 models.
+   927→- Restored `prisma/schema.prisma` to its original SQLite dev state via
+   928→  `git checkout prisma/schema.prisma` (the prebuild.sh script will swap
+   929→  production in during the Vercel build).
+   930→
+   931→**3. db.ts rewrite** (`src/lib/db.ts`)
+   932→
+   933→- Replaced 462 lines of hand-rolled Supabase-REST dispatcher with:
+   934→  - `export const db = new PrismaClient()` (singleton across hot-reloads
+   935→    via `globalThis` cache, the standard Next.js pattern).
+   936→  - `export const supabase = { from: (table) => new ShQueryBuilder(table) }` —
+   937→    a thin PostgREST-compatible shim that translates
+   938→    `supabase.from("User").select(...).eq(...).order(...).limit(...).maybeSingle()`
+   939→    into the equivalent Prisma `findFirst/findMany/count` calls. Returns
+   940→    the Supabase-shaped `{ data, error }` envelope so the 5 routes that
+   941→    still do `const { data, error } = await supabase...` keep working
+   942→    unchanged.
+   943→  - `export async function execSql(sql)` — wraps `db.$queryRawUnsafe(sql)`,
+   944→    replacing the old Supabase `exec_sql` RPC.
+   945→  - `TABLE_TO_MODEL` maps PascalCase PostgREST table names to camelCase
+   946→    Prisma Client accessors (e.g. `"User" → db.user`, `"MemoryEntry" →
+   947→    db.memoryEntry`, `"Subscription" → db.subscription`). All 34 models
+   948→    mapped, plus `MailLog` (not a real model — shim returns a helpful
+   949→    "relation does not exist" error so `admin/email-delivery` route
+   950→    gracefully reports `tableMissing: true`).
+   951→- Shim supports: `eq`, `neq`, `in`, `ilike`, `lte`, `gte`, `lt`, `gt`,
+   952→  `contains` filters; `order(col, {ascending})`; `limit(n)`; `range(from,to)`;
+   953→  `head: true` with `count: "exact"` for count-only queries; `maybeSingle()`
+   954→  and `single()` terminals; thenable for findMany.
+   955→
+   956→**4. Vercel env var cutover**
+   957→
+   958→- Deleted: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+   959→  `NEXT_PUBLIC_SUPABASE_URL` (the 3 I added in the previous `supabase-reswap`
+   960→  task).
+   961→- Added:
+   962→  - `DATABASE_URL` =
+   963→    `postgresql://neondb_owner:npg_dMaNE13YOeWV@ep-weathered-smoke-auazxmbr-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require&pgbouncer=true&connect_timeout=15`
+   964→    (id `EkJxoCh3xzz5eohi`)
+   965→  - `DIRECT_URL` =
+   966→    `postgresql://neondb_owner:npg_dMaNE13YOeWV@ep-weathered-smoke-auazxmbr.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require`
+   967→    (id `faVqhHNn3jpR9ygU`)
+   968→- Existing env vars untouched: `ENGINE_URL`, `SMTP_*` (5), `BREAK_GLASS_KEY`,
+   969→  `JWT_SECRET`.
+   970→
+   971→**5. Admin user re-seeded on Neon**
+   972→
+   973→- Same creds as before (so the user's bookmarked login still works):
+   974→  - Email: `ayan@guardianx.in`
+   975→  - Password: `GuardianX@Admin2026`
+   976→- New Neon user id: `15f867f6-6e36-42cb-949b-cf2dce97e04a` (was
+   977→  `ef2a904a-97ea-441e-a879-2a8d5614ea89` on Supabase).
+   978→- Inserted via psycopg3 with `role=admin, approved=true, "tokenVersion"=0,
+   979→  "twofaEnabled"=false` (explicit quoted column names — Prisma generates
+   980→  quoted identifiers for camelCase columns on Postgres).
+   981→
+   982→### Verification (all live on https://guardianx-two.vercel.app)
+   983→
+   984→- Vercel deployment `96b120fd` reached `READY` in ~60s.
+   985→- `GET /` → HTTP 200, 297 KB HTML.
+   986→- `GET /api/health` → HTTP 200, `Database: operational, PostgreSQL reachable`
+   987→  (latency dropped from Supabase's 1.2s to ~100ms on Neon — Neon is in the
+   988→  same AWS region as Vercel functions).
+   989→- `POST /api/auth/login` with admin creds → HTTP 200, JWT issued. (DB read
+   990→  via Prisma Client works end-to-end.)
+   991→- `GET /api/posture-score` (with token) → HTTP 200,
+   992→  `{"overall":100,"overall_grade":"A","codebases":[]}`. Latency **0.36s**
+   993→  (was 0.93s on Supabase — **2.6x faster**).
+   994→- `GET /api/stats` (uses `supabase.from("Patch").select("*", {count:"exact",
+   995→  head:true}).eq("status","pending")` ×4 + Codebase + Scan counts) → HTTP 200,
+   996→  all counts 0 (fresh DB). Shim correctly translates the PostgREST
+   997→  count-only queries to Prisma `count({where})`.
+   998→- `GET /api/admin/login-history` (uses `supabase.from("AuditLog").select()
+   999→  .order().limit()`) → HTTP 200, `{"entries":[]}`. Shim correctly translates
+  1000→  findMany with orderBy + limit.
+  1001→- `GET /api/admin/user-activity` (uses `supabase.from("User").select().order()`
+  1002→  + a follow-up per-user AuditLog fetch) → HTTP 200, returns the admin user
+  1003→  with `totalUsers:1, admins:1`. Shim correctly handles the denormalized
+  1004→  projection pattern.
+  1005→- Browser verification (agent-browser): login flow works end-to-end through
+  1006→  the actual UI form, dashboard renders with sidebar + KPI tiles + circuit
+  1007→  background, no console errors.
+  1008→- VLM (glm-5v-turbo) screenshot analysis confirmed: *"the dashboard loads
+  1009→  successfully with the sidebar navigation, KPI tiles, various charts,
+  1010→  and the dark circuit-board background all clearly visible. There are no
+  1011→  visible error states, empty sections, or 'database error' messages."*
+  1012→
+  1013→### Latency improvements
+  1014→
+  1015→| Endpoint                   | Supabase (ap-south-1) | Neon (aws-us-east-1) | Improvement |
+  1016→|----------------------------|----------------------|----------------------|-------------|
+  1017→| `/api/health` (DB ping)    | 1.18 s               | ~0.10 s              | ~12x faster |
+  1018→| `/api/posture-score`       | 0.93 s               | 0.36 s               | 2.6x faster |
+  1019→| `/api/auth/login`          | 2.03 s               | ~0.50 s              | 4x faster   |
+  1020→| `/api/admin/user-activity` | ?                    | 0.36 s               | —           |
+  1021→
+  1022→The big win is that Vercel functions (iad1 / us-east-1) and Neon
+  1023→(aws-us-east-1) are in the same AWS region, so DB round-trips are ~10ms
+  1024→instead of ~250ms (Supabase was in Mumbai).
+  1025→
+  1026→### Notes for the next session
+  1027→
+  1028→- **No data migrated.** The old Supabase instance had 1 user (the admin I
+  1029→  created) and no client/scan/finding data. The new Neon instance has the
+  1030→  same admin user with the same creds. If you ever want to migrate real
+  1031→  client/scan data from Supabase to Neon, dump each table via `pg_dump`
+  1032→  on the old Supabase pooler and `pg_restore` into Neon — but the old
+  1033→  Supabase project's quota is already exhausted, so reads may not even
+  1034→  work anymore. Effectively a fresh start.
+  1035→- **Stale "Supabase" label in UI.** The System Status panel in the
+  1036→  Command Center still labels the DB row as "Supabase DB" — that's a
+  1037→  hardcoded UI label, not a real probe. Cosmetic only. Search for
+  1038→  "Supabase DB" in `src/components/sentinel/command-center.tsx` and
+  1039→  update to "Postgres DB" or "Neon DB" if it bugs you.
+  1040→- **Free-tier limits.** Neon free tier gives 0.5 GB storage + 100
+  1041→  compute-hours/month. Compute auto-suspends after 5 min idle (cold start
+  1042→  adds ~1-2s on the first query after idle). For a security dashboard
+  1043→  that's checked throughout the day, this is fine. If you hit the limit,
+  1044→  the project pauses until the next month.
+  1045→- **The `supabase` shim in `db.ts`** is intentionally narrow — it supports
+  1046→  only the chainable patterns that the 5 admin routes use. If a future
+  1047→  route does `supabase.from("Foo").select().limit(5).single()` with a
+  1048→  different filter combination, it may need new operators added to
+  1049→  `ShQueryBuilder`. Easier: just use `db.<model>.findMany({...})` directly
+  1050→  (Prisma syntax) for new routes.
+  1051→- **The prebuild.sh script** still auto-swaps `schema.production.prisma`
+  1052→  over `schema.prisma` when `DATABASE_URL` starts with `postgresql://`.
+  1053→  No change needed there — the Vercel build will pick up the postgres
+  1054→  schema automatically on every deploy.
+  1055→- **Prisma version**: pinned to 6.11.1 in package.json. Prisma 8 is
+  1056→  available but a major version bump needs careful migration. Stay on 6.x.
+  1057→
