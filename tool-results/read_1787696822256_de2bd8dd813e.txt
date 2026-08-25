@@ -1,0 +1,529 @@
+     1→"use client";
+     2→import { SiteHeader } from "@/components/sentinel/site-header";
+     3→import { SiteFooter } from "@/components/sentinel/site-footer";
+     4→
+     5→import { Fragment } from "react";
+     6→import { motion } from "framer-motion";
+     7→import { Button } from "@/components/ui/button";
+     8→import { Badge } from "@/components/ui/badge";
+     9→import {
+    10→  Network, GitBranch, Server, Cpu, KeyRound, Boxes, Workflow,
+    11→  ArrowRight, ArrowDown, CheckCircle2, Terminal, Globe, Layers,
+    12→  Zap, Shield, Lock, Eye, ShieldCheck, FileText, Braces,
+    13→  Database, ScanLine, Gavel,
+    14→  UserCheck, Crosshair, Wand2, MonitorSmartphone,
+    15→} from "lucide-react";
+    16→
+    17→export default function ArchitecturePage() {
+    18→  const fadeUp = {
+    19→    initial: { opacity: 0, y: 24 },
+    20→    whileInView: { opacity: 1, y: 0 },
+    21→    viewport: { once: true, margin: "-80px" },
+    22→  } as const;
+    23→
+    24→  /* ------------------------------------------------------------------ */
+    25→  /* SECTION 1, Deployment Model                                        */
+    26→  /* ------------------------------------------------------------------ */
+    27→  const DEPLOYMENT = [
+    28→    {
+    29→      icon: Network,
+    30→      title: "No Agents, No Sidecars",
+    31→      desc: "GuardianX operates entirely through API calls and HTTP probing. No software installed on your servers, no daemon processes, no kernel modules. Zero runtime overhead on production systems. Works with any cloud (AWS, GCP, Azure) or on-premise infrastructure.",
+    32→      points: ["Zero install footprint", "No kernel modules", "Works across clouds & on-prem"],
+    33→    },
+    34→    {
+    35→      icon: Workflow,
+    36→      title: "API-First Integration",
+    37→      desc: "Connect via REST API. Import codebases via Git URL or paste source. Add live targets via URL. Webhooks push results to Slack, Teams, or any HTTP endpoint. Full programmatic control, every UI action has an API equivalent.",
+    38→      points: ["REST + Webhooks", "Git URL or paste source", "Slack / Teams / HTTP endpoints"],
+    39→    },
+    40→    {
+    41→      icon: ShieldCheck,
+    42→      title: "Read-Only by Default",
+    43→      desc: "SAST reads your source code (never modifies it, patches are generated for review, not auto-applied). DAST probes live endpoints with non-destructive payloads. No write operations without explicit human approval. Every action is audit-logged.",
+    44→      points: ["Source code never modified", "Non-destructive payloads", "Every action audit-logged"],
+    45→    },
+    46→  ];
+    47→
+    48→  /* ------------------------------------------------------------------ */
+    49→  /* SECTION 2, 7-Stage Pipeline                                        */
+    50→  /* ------------------------------------------------------------------ */
+    51→  const PIPELINE = [
+    52→    { icon: UserCheck, name: "Onboard",  desc: "Add client, codebases (Git), targets (live URLs), define scope." },
+    53→    { icon: ScanLine,  name: "Scan",     desc: "AI SAST reads source, DAST crawls live endpoints, SCA checks dependencies." },
+    54→    { icon: Crosshair, name: "Test",     desc: "PoC exploit generation, adversarial red-team arena, protocol fuzzing." },
+    55→    { icon: Wand2,     name: "Patch",    desc: "AI generates fixes + test code, sandbox-verifies before review." },
+    56→    { icon: CheckCircle2, name: "Verify", desc: "Human approves, re-test confirms exploit is blocked." },
+    57→    { icon: Shield,    name: "Defend",   desc: "Canary tokens, honeypots, virtual WAF patches, runtime monitoring." },
+    58→    { icon: Gavel,     name: "Comply",   desc: "Hash-chained attestation ledger, DPDPA/GDPR/ISO mapping, PDF reports." },
+    59→  ];
+    60→
+    61→  /* ------------------------------------------------------------------ */
+    62→  /* SECTION 3, Blast Radius Safety Controls                            */
+    63→  /* ------------------------------------------------------------------ */
+    64→  const SAFETY = [
+    65→    {
+    66→      icon: Lock,
+    67→      title: "Authorization Gate",
+    68→      desc: "Every target must be explicitly authorized before any testing begins. The \u201CAuthorize\u201D button is a deliberate, logged action. Unauthorized targets cannot be scanned, tested, or patched, enforced at the API layer.",
+    69→    },
+    70→    {
+    71→      icon: Eye,
+    72→      title: "Scope Enforcement",
+    73→      desc: "Define what\u2019s in/out of bounds per engagement (e.g., \u201Capp.acme.com only, exclude /admin and payment gateway\u201D). GuardianX honors scope boundaries, crawlers stay within declared paths, DAST payloads hit only scoped endpoints.",
+    74→    },
+    75→    {
+    76→      icon: Boxes,
+    77→      title: "Sandbox Isolation",
+    78→      desc: "All patch testing happens in an isolated sandbox, never against production. AI-generated test code runs against a copy, not live data. A patch only reaches your codebase after human approval AND sandbox pass.",
+    79→    },
+    80→    {
+    81→      icon: UserCheck,
+    82→      title: "Human-in-the-Loop",
+    83→      desc: "No patch is ever auto-deployed to production (unless you explicitly enable auto-approve for low-severity). Every critical/high finding requires human review. The AI recommends; humans decide. Full rollback for any approved patch.",
+    84→    },
+    85→  ];
+    86→
+    87→  /* ------------------------------------------------------------------ */
+    88→  /* SECTION 4, Data Flow & Security                                    */
+    89→  /* ------------------------------------------------------------------ */
+    90→  const DATAFLOW = [
+    91→    {
+    92→      icon: KeyRound,
+    93→      title: "Credential Vault",
+    94→      desc: "All stored credentials (Git tokens, API keys) encrypted with AES-256-GCM. Each credential has a unique IV and auth tag. Keys never logged, never returned in API responses. Access audit-logged.",
+    95→      spec: "AES-256-GCM · unique IV per record · zero key exposure",
+    96→    },
+    97→    {
+    98→      icon: GitBranch,
+    99→      title: "Hash-Chained Attestation",
+   100→      desc: "Every approved patch creates a SHA-256 ledger entry (prevHash + patchId + codeHash + timestamp). Tamper-evident, any modification breaks every subsequent hash. Proves remediation timeline to auditors.",
+   101→      spec: "SHA-256 · hash = H(prevHash + patchId + codeHash + ts)",
+   102→    },
+   103→    {
+   104→      icon: Shield,
+   105→      title: "JWT + 2FA Auth",
+   106→      desc: "Edge middleware verifies JWT on every API request. TOTP 2FA (RFC 6238) via Google Authenticator. Admin approval workflow, new signups can\u2019t access anything until approved. Rate limiting (auth: 10/15min, API: 300/min).",
+   107→      spec: "HS256 JWT · RFC 6238 TOTP · sliding-window rate limits",
+   108→    },
+   109→    {
+   110→      icon: Globe,
+   111→      title: "Data Localization",
+   112→      desc: "Runs on Supabase (you choose region). No data leaves your configured region. DPDPA §16 compliant for Indian users. Region pinning enforced at the database layer, cross-region replication is opt-in only.",
+   113→      spec: "Region-pinned PostgreSQL · DPDPA §16 compliant",
+   114→    },
+   115→  ];
+   116→
+   117→  /* ------------------------------------------------------------------ */
+   118→  /* SECTION 5, Technology Stack                                        */
+   119→  /* ------------------------------------------------------------------ */
+   120→  const STACK = [
+   121→    { icon: MonitorSmartphone, label: "Frontend",   items: ["Next.js 16", "TypeScript", "Tailwind CSS 4", "shadcn/ui", "Framer Motion"] },
+   122→    { icon: Server,            label: "Backend",    items: ["Next.js API Routes", "Edge runtime (auth middleware)"] },
+   123→    { icon: Database,          label: "Database",   items: ["PostgreSQL (Supabase)", "Accessed via REST API"] },
+   124→    { icon: Cpu,               label: "AI",         items: ["Z.AI LLM", "Vulnerability analysis", "Patch generation", "Exploit synthesis", "Chat"] },
+   125→    { icon: Terminal,          label: "Compute",    items: ["Railway sentinel-engine", "Bun runtime", "Python3 (SAST/DAST/PDF/scraper)"] },
+   126→    { icon: Zap,               label: "Real-time",  items: ["Socket.io", "Live event streaming"] },
+   127→    { icon: Lock,              label: "Auth",       items: ["JWT (jsonwebtoken)", "bcrypt (12 rounds)", "TOTP 2FA (otplib)"] },
+   128→    { icon: Layers,            label: "Desktop",    items: ["Electron", "Cross-platform .exe / .dmg / .AppImage"] },
+   129→  ];
+   130→
+   131→  return (
+   132→    <>
+   133→      <SiteHeader />
+   134→      <div className="scanlines cyber-vignette relative flex min-h-screen flex-col overflow-hidden bg-zinc-950 text-zinc-100">
+   135→        <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-30" />
+   136→        <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+   137→          <div className="absolute -top-40 left-1/4 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-cyan-500/10 blur-3xl" />
+   138→          <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-emerald-600/8 blur-3xl" />
+   139→        </div>
+   140→
+   141→        <div className="relative z-10 mx-auto w-full max-w-5xl px-4 pb-24 pt-16 sm:px-6">
+   142→          {/* ------------------------------------------------------------ */}
+   143→          {/* HERO                                                          */}
+   144→          {/* ------------------------------------------------------------ */}
+   145→          <motion.section
+   146→            initial={{ opacity: 0, y: 24 }}
+   147→            animate={{ opacity: 1, y: 0 }}
+   148→            transition={{ duration: 0.6 }}
+   149→            className="pt-12"
+   150→          >
+   151→            <Badge className="mb-5 border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
+   152→              <Layers className="size-3" /> Architecture
+   153→            </Badge>
+   154→            <h1 className="text-4xl font-bold leading-tight tracking-tight text-zinc-50 sm:text-5xl">
+   155→              How GuardianX sits in{" "}
+   156→              <span className="bg-gradient-to-r from-cyan-300 to-emerald-300 bg-clip-text text-transparent">
+   157→                your environment
+   158→              </span>
+   159→            </h1>
+   160→            <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
+   161→              Agentless. API-first. Blast-radius safe. No code changes, no sidecars, no runtime overhead.
+   162→            </p>
+   163→
+   164→            {/* Pills */}
+   165→            <div className="mt-6 flex flex-wrap gap-2">
+   166→              {[
+   167→                { icon: Network,  label: "Agentless" },
+   168→                { icon: Workflow, label: "API-first" },
+   169→                { icon: Shield,   label: "Blast-radius safe" },
+   170→                { icon: Braces,   label: "No code changes" },
+   171→                { icon: Boxes,    label: "No sidecars" },
+   172→                { icon: Zap,      label: "Zero runtime overhead" },
+   173→              ].map((p) => (
+   174→                <span
+   175→                  key={p.label}
+   176→                  className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700/70 bg-zinc-900/60 px-3 py-1 font-mono text-[11px] text-zinc-300"
+   177→                >
+   178→                  <p.icon className="size-3 text-cyan-400" />
+   179→                  {p.label}
+   180→                </span>
+   181→              ))}
+   182→            </div>
+   183→          </motion.section>
+   184→
+   185→          {/* ------------------------------------------------------------ */}
+   186→          {/* SECTION 1, Deployment Model                                  */}
+   187→          {/* ------------------------------------------------------------ */}
+   188→          <motion.section {...fadeUp} className="mt-20">
+   189→            <div className="mb-6 flex items-center gap-3">
+   190→              <div className="flex size-10 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/10">
+   191→                <Network className="size-5 text-cyan-400" />
+   192→              </div>
+   193→              <div>
+   194→                <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+   195→                  {"// Section 01"}
+   196→                </div>
+   197→                <h2 className="text-2xl font-bold text-zinc-50">
+   198→                  Deployment Model, Agentless by Design
+   199→                </h2>
+   200→              </div>
+   201→            </div>
+   202→            <div className="grid gap-4 md:grid-cols-3">
+   203→              {DEPLOYMENT.map((d, i) => (
+   204→                <motion.div
+   205→                  key={d.title}
+   206→                  initial={{ opacity: 0, y: 24 }}
+   207→                  whileInView={{ opacity: 1, y: 0 }}
+   208→                  viewport={{ once: true }}
+   209→                  transition={{ delay: i * 0.08, duration: 0.5 }}
+   210→                  className="group holo-card-sharp hud-corners relative overflow-hidden rounded-xl border border-zinc-700 p-5 transition-colors hover:border-cyan-500/40"
+   211→                >
+   212→                  <div className="absolute right-0 top-0 h-16 w-16 rounded-bl-full bg-cyan-500/5 transition-colors group-hover:bg-cyan-500/10" />
+   213→                  <div className="relative">
+   214→                    <div className="mb-3 flex size-10 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/5">
+   215→                      <d.icon className="size-5 text-cyan-400" />
+   216→                    </div>
+   217→                    <h3 className="text-sm font-bold text-cyan-300">{d.title}</h3>
+   218→                    <p className="mt-2 text-xs leading-relaxed text-zinc-400">{d.desc}</p>
+   219→                    <ul className="mt-3 space-y-1.5">
+   220→                      {d.points.map((pt) => (
+   221→                        <li key={pt} className="flex items-start gap-2 text-[11px] text-zinc-500">
+   222→                          <CheckCircle2 className="mt-0.5 size-3 shrink-0 text-emerald-400" />
+   223→                          <span>{pt}</span>
+   224→                        </li>
+   225→                      ))}
+   226→                    </ul>
+   227→                  </div>
+   228→                </motion.div>
+   229→              ))}
+   230→            </div>
+   231→          </motion.section>
+   232→
+   233→          {/* ------------------------------------------------------------ */}
+   234→          {/* SECTION 2, The 7-Stage Pipeline                              */}
+   235→          {/* ------------------------------------------------------------ */}
+   236→          <motion.section {...fadeUp} className="mt-20">
+   237→            <div className="mb-6 flex items-center gap-3">
+   238→              <div className="flex size-10 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+   239→                <Workflow className="size-5 text-emerald-400" />
+   240→              </div>
+   241→              <div>
+   242→                <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+   243→                  {"// Section 02"}
+   244→                </div>
+   245→                <h2 className="text-2xl font-bold text-zinc-50">The 7-Stage Pipeline</h2>
+   246→              </div>
+   247→            </div>
+   248→
+   249→            <div className="holo-card-sharp hud-corners p-5 sm:p-6">
+   250→              <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+   251→                {PIPELINE.map((stage, i) => (
+   252→                  <Fragment key={stage.name}>
+   253→                    <motion.div
+   254→                      initial={{ opacity: 0, scale: 0.96 }}
+   255→                      whileInView={{ opacity: 1, scale: 1 }}
+   256→                      viewport={{ once: true }}
+   257→                      transition={{ delay: i * 0.06, duration: 0.4 }}
+   258→                      className="relative flex-1 overflow-hidden rounded-lg border border-zinc-700/80 bg-zinc-900/40 p-3 transition-colors hover:border-emerald-500/50"
+   259→                    >
+   260→                      <div className="flex items-center gap-2">
+   261→                        <span className="flex size-6 items-center justify-center rounded border border-emerald-500/40 bg-emerald-500/10 font-mono text-[11px] font-bold text-emerald-300">
+   262→                          {i + 1}
+   263→                        </span>
+   264→                        <stage.icon className="size-4 text-cyan-400" />
+   265→                      </div>
+   266→                      <h4 className="mt-2 text-xs font-bold text-zinc-100">{stage.name}</h4>
+   267→                      <p className="mt-1 text-[11px] leading-snug text-zinc-500">
+   268→                        {stage.desc}
+   269→                      </p>
+   270→                    </motion.div>
+   271→
+   272→                    {i < PIPELINE.length - 1 && (
+   273→                      <div className="flex shrink-0 items-center justify-center py-1 lg:py-0">
+   274→                        <ArrowDown className="size-4 text-cyan-400/60 lg:hidden" />
+   275→                        <ArrowRight className="hidden size-4 text-cyan-400/60 lg:block" />
+   276→                      </div>
+   277→                    )}
+   278→                  </Fragment>
+   279→                ))}
+   280→              </div>
+   281→
+   282→              {/* legend */}
+   283→              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-zinc-800 pt-4 font-mono text-[10px] text-zinc-600">
+   284→                <span className="inline-flex items-center gap-1.5">
+   285→                  <span className="size-2 rounded-full bg-emerald-400" /> Offense
+   286→                </span>
+   287→                <span className="inline-flex items-center gap-1.5">
+   288→                  <span className="size-2 rounded-full bg-cyan-400" /> Defense / Verify
+   289→                </span>
+   290→                <span className="inline-flex items-center gap-1.5">
+   291→                  <span className="size-2 rounded-full bg-violet-400" /> Comply
+   292→                </span>
+   293→                <span className="ml-auto hidden sm:inline">
+   294→                  Each stage emits audit-logged events to Socket.io
+   295→                </span>
+   296→              </div>
+   297→            </div>
+   298→          </motion.section>
+   299→
+   300→          {/* ------------------------------------------------------------ */}
+   301→          {/* SECTION 3, Blast Radius Safety Controls                      */}
+   302→          {/* ------------------------------------------------------------ */}
+   303→          <motion.section {...fadeUp} className="mt-20">
+   304→            <div className="mb-6 flex items-center gap-3">
+   305→              <div className="flex size-10 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+   306→                <Shield className="size-5 text-emerald-400" />
+   307→              </div>
+   308→              <div>
+   309→                <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+   310→                  {"// Section 03"}
+   311→                </div>
+   312→                <h2 className="text-2xl font-bold text-zinc-50">
+   313→                  Blast Radius Safety Controls
+   314→                </h2>
+   315→              </div>
+   316→            </div>
+   317→            <div className="grid gap-4 sm:grid-cols-2">
+   318→              {SAFETY.map((s, i) => (
+   319→                <motion.div
+   320→                  key={s.title}
+   321→                  initial={{ opacity: 0, y: 24 }}
+   322→                  whileInView={{ opacity: 1, y: 0 }}
+   323→                  viewport={{ once: true }}
+   324→                  transition={{ delay: i * 0.08, duration: 0.5 }}
+   325→                  className="group holo-card-sharp hud-corners relative overflow-hidden rounded-xl border border-zinc-700 p-5 transition-colors hover:border-emerald-500/40"
+   326→                >
+   327→                  <div className="absolute right-0 top-0 h-16 w-16 rounded-bl-full bg-emerald-500/5 transition-colors group-hover:bg-emerald-500/10" />
+   328→                  <div className="relative">
+   329→                    <div className="mb-3 flex items-center gap-3">
+   330→                      <div className="flex size-10 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/5">
+   331→                        <s.icon className="size-5 text-emerald-400" />
+   332→                      </div>
+   333→                      <h3 className="text-sm font-bold text-emerald-300">{s.title}</h3>
+   334→                    </div>
+   335→                    <p className="text-xs leading-relaxed text-zinc-400">{s.desc}</p>
+   336→                  </div>
+   337→                </motion.div>
+   338→              ))}
+   339→            </div>
+   340→          </motion.section>
+   341→
+   342→          {/* ------------------------------------------------------------ */}
+   343→          {/* SECTION 4, Data Flow & Security                              */}
+   344→          {/* ------------------------------------------------------------ */}
+   345→          <motion.section {...fadeUp} className="mt-20">
+   346→            <div className="mb-6 flex items-center gap-3">
+   347→              <div className="flex size-10 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/10">
+   348→                <Lock className="size-5 text-cyan-400" />
+   349→              </div>
+   350→              <div>
+   351→                <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+   352→                  {"// Section 04"}
+   353→                </div>
+   354→                <h2 className="text-2xl font-bold text-zinc-50">Data Flow &amp; Security</h2>
+   355→              </div>
+   356→            </div>
+   357→
+   358→            {/* Diagram-style row: client -> gateway -> engine -> vault */}
+   359→            <div className="holo-card-sharp hud-corners mb-4 overflow-hidden p-5 sm:p-6">
+   360→              <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+   361→                {[
+   362→                  { icon: Globe,    label: "Client / Browser",   sub: "HTTPS + JWT cookie" },
+   363→                  { icon: Server,   label: "Edge Middleware",    sub: "JWT verify · rate limit" },
+   364→                  { icon: Cpu,      label: "sentinel-engine",    sub: "Bun + Python3" },
+   365→                  { icon: Database, label: "Supabase Postgres",  sub: "Region-pinned" },
+   366→                ].map((node, i, arr) => (
+   367→                  <Fragment key={node.label}>
+   368→                    <motion.div
+   369→                      initial={{ opacity: 0, y: 12 }}
+   370→                      whileInView={{ opacity: 1, y: 0 }}
+   371→                      viewport={{ once: true }}
+   372→                      transition={{ delay: i * 0.1, duration: 0.4 }}
+   373→                      className="flex-1 rounded-lg border border-zinc-700/80 bg-zinc-900/40 p-3 text-center"
+   374→                    >
+   375→                      <node.icon className="mx-auto size-5 text-cyan-400" />
+   376→                      <div className="mt-2 text-xs font-bold text-zinc-100">{node.label}</div>
+   377→                      <div className="mt-0.5 font-mono text-[10px] text-zinc-500">{node.sub}</div>
+   378→                    </motion.div>
+   379→                    {i < arr.length - 1 && (
+   380→                      <div className="flex shrink-0 items-center justify-center">
+   381→                        <ArrowDown className="size-4 text-cyan-400/50 sm:hidden" />
+   382→                        <ArrowRight className="hidden size-4 text-cyan-400/50 sm:block" />
+   383→                      </div>
+   384→                    )}
+   385→                  </Fragment>
+   386→                ))}
+   387→              </div>
+   388→              <p className="mt-4 border-t border-zinc-800 pt-3 text-center font-mono text-[10px] text-zinc-600">
+   389→                All hops TLS 1.2+ · credentials never traverse the client boundary
+   390→              </p>
+   391→            </div>
+   392→
+   393→            <div className="grid gap-4 sm:grid-cols-2">
+   394→              {DATAFLOW.map((d, i) => (
+   395→                <motion.div
+   396→                  key={d.title}
+   397→                  initial={{ opacity: 0, y: 24 }}
+   398→                  whileInView={{ opacity: 1, y: 0 }}
+   399→                  viewport={{ once: true }}
+   400→                  transition={{ delay: i * 0.08, duration: 0.5 }}
+   401→                  className="group holo-card-sharp hud-corners relative overflow-hidden rounded-xl border border-zinc-700 p-5 transition-colors hover:border-cyan-500/40"
+   402→                >
+   403→                  <div className="relative">
+   404→                    <div className="mb-3 flex items-center gap-3">
+   405→                      <div className="flex size-10 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/5">
+   406→                        <d.icon className="size-5 text-cyan-400" />
+   407→                      </div>
+   408→                      <h3 className="text-sm font-bold text-cyan-300">{d.title}</h3>
+   409→                    </div>
+   410→                    <p className="text-xs leading-relaxed text-zinc-400">{d.desc}</p>
+   411→                    <div className="mt-3 rounded border border-zinc-800 bg-zinc-950/60 px-2.5 py-1.5 font-mono text-[10px] text-emerald-300/80">
+   412→                      {d.spec}
+   413→                    </div>
+   414→                  </div>
+   415→                </motion.div>
+   416→              ))}
+   417→            </div>
+   418→          </motion.section>
+   419→
+   420→          {/* ------------------------------------------------------------ */}
+   421→          {/* SECTION 5, Technology Stack                                  */}
+   422→          {/* ------------------------------------------------------------ */}
+   423→          <motion.section {...fadeUp} className="mt-20">
+   424→            <div className="mb-6 flex items-center gap-3">
+   425→              <div className="flex size-10 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+   426→                <Boxes className="size-5 text-emerald-400" />
+   427→              </div>
+   428→              <div>
+   429→                <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+   430→                  {"// Section 05"}
+   431→                </div>
+   432→                <h2 className="text-2xl font-bold text-zinc-50">Technology Stack</h2>
+   433→              </div>
+   434→            </div>
+   435→
+   436→            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+   437→              {STACK.map((s, i) => (
+   438→                <motion.div
+   439→                  key={s.label}
+   440→                  initial={{ opacity: 0, y: 24 }}
+   441→                  whileInView={{ opacity: 1, y: 0 }}
+   442→                  viewport={{ once: true }}
+   443→                  transition={{ delay: i * 0.06, duration: 0.4 }}
+   444→                  className="holo-card-sharp hud-corners group relative overflow-hidden rounded-xl border border-zinc-700 p-4 transition-colors hover:border-emerald-500/40"
+   445→                >
+   446→                  <div className="absolute right-0 top-0 h-12 w-12 rounded-bl-full bg-emerald-500/5 transition-colors group-hover:bg-emerald-500/10" />
+   447→                  <div className="relative">
+   448→                    <div className="mb-2 flex items-center gap-2">
+   449→                      <s.icon className="size-4 text-emerald-400" />
+   450→                      <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-300">
+   451→                        {s.label}
+   452→                      </span>
+   453→                    </div>
+   454→                    <ul className="space-y-1">
+   455→                      {s.items.map((it) => (
+   456→                        <li key={it} className="text-[11px] leading-relaxed text-zinc-400">
+   457→                          <span className="mr-1 text-cyan-400/70">›</span>
+   458→                          {it}
+   459→                        </li>
+   460→                      ))}
+   461→                    </ul>
+   462→                  </div>
+   463→                </motion.div>
+   464→              ))}
+   465→            </div>
+   466→          </motion.section>
+   467→
+   468→          {/* ------------------------------------------------------------ */}
+   469→          {/* CTA                                                           */}
+   470→          {/* ------------------------------------------------------------ */}
+   471→          <motion.section {...fadeUp} className="mt-20">
+   472→            <div className="holo-card-sharp hud-corners relative overflow-hidden p-8 sm:p-12">
+   473→              <div aria-hidden className="cyber-grid pointer-events-none absolute inset-0 opacity-20" />
+   474→              <div aria-hidden className="pointer-events-none absolute -top-20 right-10 h-60 w-60 rounded-full bg-cyan-500/15 blur-3xl" />
+   475→              <div className="relative text-center">
+   476→                <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl border border-cyan-500/40 bg-cyan-500/10">
+   477→                  <Terminal className="size-7 text-cyan-300" />
+   478→                </div>
+   479→                <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">
+   480→                  See the architecture in action
+   481→                </h2>
+   482→                <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-400">
+   483→                  Walk through a live engagement with our team. We&apos;ll show you the 7-stage
+   484→                  pipeline end-to-end against a target of your choice, with every safety
+   485→                  control visible.
+   486→                </p>
+   487→                <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+   488→                  <a href="/contact">
+   489→                    <Button
+   490→                      size="lg"
+   491→                      className="bg-cyan-600 text-white hover:bg-cyan-500"
+   492→                    >
+   493→                      <Wand2 className="size-5" /> Request Demo
+   494→                      <ArrowRight className="size-4" />
+   495→                    </Button>
+   496→                  </a>
+   497→                  <a href="/whitepaper">
+   498→                    <Button
+   499→                      size="lg"
+   500→                      variant="outline"
+   501→                      className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-emerald-500/50 hover:text-emerald-300"
+   502→                    >
+   503→                      <FileText className="size-5" /> Read the Whitepaper
+   504→                    </Button>
+   505→                  </a>
+   506→                </div>
+   507→              </div>
+   508→            </div>
+   509→          </motion.section>
+   510→
+   511→          {/* footer micro-text */}
+   512→          <div className="mt-12 border-t border-zinc-800 pt-6 text-center text-xs text-zinc-600">
+   513→            <p>
+   514→              © {new Date().getFullYear()} GuardianX · Agentless VAPT &amp; Autonomous Security Operations
+   515→            </p>
+   516→            <p className="mt-1">
+   517→              DPDPA 2023 · GDPR · HIPAA · PCI-DSS · ISO 27001 · SOC 2 ready
+   518→            </p>
+   519→          </div>
+   520→        </div>
+   521→
+   522→        <div className="mt-auto">
+   523→          <SiteFooter />
+   524→        </div>
+   525→      </div>
+   526→    </>
+   527→  );
+   528→}
+   529→

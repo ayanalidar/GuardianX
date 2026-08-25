@@ -2423,3 +2423,388 @@ Full details in `LLM_SETUP.md` at the project root.
 - MODIFIED `src/app/api/predictive-forecast/route.ts` — migrated to
   chatWithFallback() from @/lib/llm
 - MODIFIED `package.json` + `bun.lock` — added openai@4.104.0
+
+---
+
+## 2026-01 — architecture-rewrite: /architecture page rewrite
+
+**Task ID:** `architecture-rewrite`
+**Agent:** full-stack-developer
+**Task:** Rewrite /architecture page — modern, with deployment model + 7-stage pipeline visual + tech stack + API reference
+
+### Work Log
+
+- Read the existing 528-line `src/app/architecture/page.tsx` to understand the structure (DEPLOYMENT / PIPELINE / SAFETY / DATAFLOW / STACK arrays + 5 sections).
+- Verified design tokens (`cyber-grid`, `holo-card-sharp`, `hud-corners`, `scanlines`, `cyber-vignette`) and `SiteHeader` / `SiteFooter` exports before authoring.
+- Rewrote `src/app/architecture/page.tsx` (now 753 lines) with all 7 required sections:
+  1. **Hero** — Badge "Architecture", gradient headline "Built for scale, designed for safety", subhead mentioning zero-agent / API-first / read-only / 7-stage / SHA-256 attestation, 4 stats tiles (0 agents, 7 stages, SHA-256, <100ms), 2 CTAs (Enter the Lab → `/`, See the API docs → `/architecture#api`), dark circuit-grid bg with cyan + emerald + amber ambient glows.
+  2. **Deployment Model** — 3 cards (No Agents, API-First, Read-Only) each with icon, 2-sentence desc, 3 bullets, a `curl -X POST https://api.guardianx.in/v1/scans …` code snippet, and a "Zero install footprint" badge.
+  3. **7-Stage Pipeline** — horizontal flow (Onboard → Scan → Test → Patch → Verify → Defend → Comply) with arrow connectors that flip to vertical `ArrowDown` on mobile; each stage has a progress rail that animates width via framer-motion; stages fade in left-to-right on scroll; "90 seconds end-to-end" badge.
+  4. **Blast Radius Safety** — 4 cards (Authorization Gate, Scope Enforcement, Sandbox Isolation, Audit Logging) each with icon, 2-sentence desc, 3 bullets; "Defense in depth" badge.
+  5. **Tech Stack** (NEW) — grid of 11 tech cards (Next.js, TypeScript, Prisma, Neon Postgres, Tailwind, shadcn/ui, Z.AI/OpenAI/Groq, Three.js, MediaPipe, Web Speech API, Stripe) each with icon, name, and 1-sentence "why we chose it"; dark cards with subtle borders + hover accent.
+  6. **API Reference** (NEW) — `id="api"` section with 8 endpoints (`POST /api/scans`, `GET /api/posture-score`, `POST /api/agent-x/chat`, `GET /api/predictive-forecast`, `POST /api/public-scan/scan`, `GET /api/threat-constellation`, `POST /api/patches/[id]/approve`, `GET /api/health`), each with method badge (GET=emerald, POST=cyan), path, 1-sentence desc, and example request body in a `<pre><code>` block; "Full OpenAPI spec coming soon" badge.
+  7. **Final CTA** — "Ready to see it in action?" with "Enter the Lab Console →" → `/`.
+- Tech requirements honored: `"use client"` directive, `SiteHeader` + `SiteFooter` wrapper, dark zinc-950 theme with emerald/cyan/amber accents (NO indigo/blue), mobile-first responsive (grid cols collapse, flow arrows switch axis), framer-motion scroll animations, existing design tokens, code blocks use `<pre>` + `<code>` with `font-mono text-xs bg-zinc-950/80 border border-zinc-800 rounded-lg p-3`.
+- Sticky-footer layout preserved via `flex min-h-screen flex-col` + `mt-auto` on `<SiteFooter />`.
+
+### Stage Summary
+
+- **Files edited:** `src/app/architecture/page.tsx` (rewritten, 528 → 753 lines)
+- **Lint result:** `bun run lint` → 0 errors in this file (5 pre-existing warnings in unrelated files `contributors-panel.tsx`, `service-launcher.tsx`).
+- **Type-check result:** `bunx tsc --noEmit | grep architecture` → 0 errors in the architecture page (remaining errors are in unrelated files `lib/siem/retention.ts`, `lib/two-factor.ts`, etc.).
+- No commit or push performed.
+
+
+---
+Task ID: live-demo-refresh
+Agent: full-stack-developer
+Task: Rewrite Live Command Center demo section header + enhance 4 demo cards with stat badges + CTA
+
+Work Log:
+- Read existing `src/components/sentinel/animated-demo.tsx`, the `GlowCTA` component, and the `cyber-grid` / `hud-corners` / `holo-card-sharp` / `demo-card` / `demo-shine` CSS utilities in `globals.css` to confirm what's already available before editing.
+- Confirmed `AnimatedDemo` was previously rendered with no props (`<AnimatedDemo />` in `landing-page.tsx`), so added an optional `onEnter?: () => void` prop (default-param form) to keep the existing call site valid without touching any other file.
+- Rewrote the section header:
+  - Kept the `// Live Command Center` eyebrow.
+  - Added a pulsing "LIVE" badge (emerald ring + `animate-ping` dot) next to the eyebrow.
+  - Replaced "See it in action" with the more compelling "From code to exploit to patch — in 90 seconds".
+  - Replaced the subhead with a value-dense 3-clause line: "Watch a full VAPT run end-to-end — AI reads the code, finds the vulnerability, generates a PoC exploit, writes the patch, sandbox-verifies it, and produces an executive briefing. 90 seconds, zero human input."
+- Added a subtle circuit-grid background to the section via the existing `cyber-grid` utility (absolute inset, opacity-30, pointer-events-none), plus a top/bottom zinc-950 fade so the grid never competes with content. Added `relative overflow-hidden` to the section wrapper (kept `contentVisibility: auto` + `containIntrinsicSize`).
+- Introduced two shared helpers (typed, no `any`): `StatBadge` (emerald/cyan/amber/violet pill with glow shadow) and `DemoCardHeader` (eyebrow + compelling title + value-prop subtitle + stat badge). Color palette restricted to emerald/cyan/amber/violet — no indigo/blue.
+- Enhanced each of the 4 demo cards with a `DemoCardHeader` block placed above the existing animation. All existing animation logic (state machines, intervals, refs, JSX visuals) is untouched.
+  - TerminalDemo → title "Autonomous Exploit Console", stat "90s" (emerald). Kept the animated scan-bar (moved under the header, full width on the right).
+  - PipelineDemo → title "7-Stage Vulnerability → Patch Chain", stat "7 stages" (cyan).
+  - KpiDemo → title "Live SOC KPIs", stat "85%" (amber).
+  - AiBriefingDemo → title "Executive Briefing, Autogenerated", stat "GPT-4 class" (violet).
+- Added a centered `GlowCTA` at the bottom with text "Enter the Lab Console →" (`ArrowRight` icon). The handler calls `onEnter?.()` if provided; otherwise falls back to a smooth `window.scrollBy` so the button is never a dead click. Added a small mono caption "No signup · runs in your browser · fully interactive" under the CTA.
+- Cards already used `hud-corners` + `holo-card-sharp` (corner brackets + glow border) and the 2x2 grid (`grid lg:grid-cols-2`) already stacks on mobile — kept both.
+
+Stage Summary:
+- Files edited: `src/components/sentinel/animated-demo.tsx` (only this file, per scope).
+- Lint: `bun run lint` → 0 errors in `animated-demo.tsx` (5 pre-existing warnings in `contributors-panel.tsx` + `service-launcher.tsx`, untouched).
+- Type-check: `bunx tsc --noEmit | grep animated-demo` → 0 errors in `animated-demo.tsx` (pre-existing errors elsewhere in `src/lib/siem/*` and `src/lib/two-factor.ts` are unrelated and not introduced by this change).
+- Not committed / not pushed.
+
+---
+
+## 2026-01 — solutions-rewrite: Solutions page cinematic rewrite
+
+**Task ID:** `solutions-rewrite`
+**Agent:** full-stack-developer
+**Task:** Rewrite `/solutions` page — modern, valuable, attention-grabbing with hero stats + ROI section + compliance matrix.
+
+**Scope:** `/home/z/GuardianX-web/src/app/solutions/page.tsx` only (single-file rewrite).
+
+### Work Log
+
+1. Read existing 544-line `src/app/solutions/page.tsx` to understand the structure,
+   imports (SiteHeader / SiteFooter / motion / Button / Badge / lucide icons),
+   and existing data (HERO_STATS, USE_CASES, COMPLIANCE, ROLES).
+2. Inspected supporting components referenced by the task spec:
+   - `src/components/sentinel/landing/tilt-card.tsx` — TiltCard (motion.div with
+     `rotateX`/`rotateY` driven by mouse position, uses `transformStyle: preserve-3d`).
+   - `src/components/sentinel/landing/use-count-up.ts` — `useCountUp(target, opts)`
+     returning `[ref, value]`, plus `formatInt(n)` helper.
+   - `src/components/sentinel/landing/roi-calculator.tsx` — confirmed ROI section
+     copy conventions (₹50L vs ₹60K math, formatINR helper).
+   - `src/components/sentinel/landing/final-cta.tsx` + `glow-cta.tsx` — confirmed
+     the "Enter Lab Console" + animated-gradient banner pattern.
+   - `src/app/globals.css` — confirmed design tokens exist:
+     `holo-card-sharp`, `hud-corners`, `neon-emerald`, `cyber-grid`,
+     `cyber-vignette`, `scanlines`, `gradient-text`, `neon-border`,
+     `pulse-dot`, `tilt-card`, `custom-scrollbar`.
+3. Designed + wrote the new page with these sections, all on dark `bg-zinc-950`
+   with emerald/cyan/amber accents (NO indigo/blue):
+   - **Hero** — animated Layers icon with ping, gradient-text headline
+     "Solutions for every security problem", subhead citing 90s VAPT + 85% MTTR
+     + 60+ modules, dual CTAs ("Scan Your Website For Free" → `/?#scan-widget`,
+     "Enter the Lab Console" → `/`), chips (Use Case / Compliance / Role),
+     and 4 count-up stat tiles (90s / 85% / 22+ / SHA-256) wired to `useCountUp`.
+   - **Section 1 — By Use Case** — 3 cards (Cloud Security Posture, SOC
+     Acceleration, Exposure Management) wrapped in `TiltCard` for 3D hover tilt,
+     each with icon + value prop + stat badge ("60+ modules" / "85% MTTR
+     reduction" / "22+ exposure paths") + 3–5 bullets + "Learn more" link.
+   - **Section 2 — By Compliance** — 5 frameworks (ISO 27001, SOC 2, NIST CSF
+     2.0, PCI-DSS, DPDPA — added DPDPA per task spec) as cards with icon +
+     1-sentence desc + 3–4 bullets; "Generate compliance report" CTA → `/`;
+     + a module→framework control matrix table (8 modules × 5 frameworks)
+     with sticky header, custom-scrollbar overflow, and color-coded control
+     ID chips per cell.
+   - **Section 3 — By Role** — 3 role cards (CISOs & Executives, SecOps
+     Engineers, Cloud Architects) with amber accent, value prop + 3–4 bullets
+     + "See it in action" link → `/` per role.
+   - **Section 4 — ROI (NEW)** — full-width `holo-card-sharp` panel:
+     headline "Replace a 5-person security team with one platform", body copy
+     citing ₹50L team vs ₹60K GuardianX, animated cost-comparison bar
+     (red→amber 98.8% vs emerald 1.2%), 4 count-up stat tiles (₹50L saved / 85%
+     MTTR / 90s per scan / 60+ modules), and "Start free trial" CTA → `/`.
+   - **Section 5 — Final CTA** — full-width gradient banner (emerald → cyan
+     → amber gradient overlay + cyber-grid), Layers icon, headline "Ready to
+     close the loop?", subhead, "Enter the Lab Console →" CTA → `/`, and
+     a 6-item trust strip (Agentless / API-first / SHA-256 / Board-ready /
+     DPDPA / GDPR / 2FA + RBAC).
+4. Wired all entrance animations through framer-motion `containerStagger` +
+   `fadeUpItem` variants (fade-up + stagger pattern), with `whileInView`
+   on every section so animations re-fire as the user scrolls.
+5. Removed 5 unused icon imports (ListChecks, Users, Building2, Crown,
+   AlertTriangle) after a grep-usage audit.
+6. Verified: `bun run lint` reports 0 errors / 0 warnings on
+   `src/app/solutions/page.tsx`; `bunx tsc --noEmit 2>&1 | grep solutions`
+   returns empty (0 type errors). Pre-existing lint warnings in
+   `contributors-panel.tsx` and `service-launcher.tsx` are unrelated and
+   out of scope.
+
+### Stage Summary
+
+- **Files edited:** `src/app/solutions/page.tsx` (full rewrite, ~720 lines).
+- **Lint result:** 0 errors / 0 warnings on solutions/page.tsx (the only
+  file in scope). Project-wide lint shows 0 errors (5 unrelated pre-existing
+  warnings in `contributors-panel.tsx` + `service-launcher.tsx`).
+- **Typecheck result:** 0 errors referencing `solutions` (pre-existing
+  unrelated errors in `lib/ai-ops/*`, `lib/siem/*`, `lib/two-factor.ts`,
+  `lib/sentinel/use-*-socket.ts` remain out of scope).
+- **Did NOT commit or push** — per task spec.
+
+---
+
+## 2026-01 — company-rewrite: Modern /company page rewrite
+
+**Task ID:** `company-rewrite`
+**Agent:** full-stack-developer
+**Scope:** Rewrite `src/app/company/page.tsx` in the GuardianX Next.js web app at `/home/z/GuardianX-web`. Only this single file was edited.
+
+### Work Log
+
+1. Read existing `src/app/company/page.tsx` (355 lines, hero + mission + framework + problem/solution + advantages + contact) to understand structure, design tokens (`holo-card-sharp`, `hud-corners`, `cyber-grid`, `cyber-vignette`, `scanlines`, `pulse-dot`, `neon-emerald`), and accent palette (emerald / cyan / violet / rose / amber — no indigo/blue).
+2. Verified `useCountUp` + `formatInt` exports at `src/components/sentinel/landing/use-count-up.ts` and the calling pattern in `stats-strip.tsx` (returns `[ref, value]`, ref attached to wrapper, animates when scrolled into view via `useInView`).
+3. Verified `SiteHeader`, `SiteFooter`, `Button`, `Badge`, and the `LucideIcon` type are all importable from the standard locations.
+4. Rewrote `src/app/company/page.tsx` end-to-end with all required sections:
+   - **Hero** — "Company" badge, "We're building the autonomous immune system for code" headline, founder-vision subhead (India-first, AI-native, 60+ modules, 90s VAPT), 4 stat tiles (60+ modules / 90s VAPT / 85% MTTR reduction / 1.6M+ Indian companies), "Meet Agent X" CTA → `/#agent-x`, dark bg with emerald + violet + cyan ambient glows over `cyber-grid`.
+   - **Mission** — heading + 3 value cards (Autonomy First / Built for India / AI-Native) + Founder's note quote card with `AA` headshot placeholder, `pulse-dot`, founder name "Ayan Ali", title "Founder & CEO", 2-sentence mission statement.
+   - **Core Framework** — Think / Attack / Heal as 3 cards (01/02/03, icon, sub-label, title, 3-sentence desc, 3 bullet points each), plus a centered "Closed-loop · Think → Attack → Heal → Think" pill badge with `pulse-dot` and infinity icon.
+   - **The Platform (NEW)** — "One platform, three closed-loop engines" with SAST / DAST / Defense engine cards (icon + name + 1-sentence desc + 3 capabilities each).
+   - **Built for India (NEW)** — "Made in India" badge + DPDPA-First / Rupee Pricing / Local Support cards.
+   - **Stats / Impact (NEW)** — 4-tile grid (60+ modules / 90s per scan / 85% MTTR reduction / ₹50L/yr saved per customer) using the `useCountUp` hook via a small `ImpactTile` subcomponent with staggered delays.
+   - **Contact / CTA** — "Let's talk" heading, 3 contact rows (Email / Phone / Website with `Mail` / `Phone` / `Globe` icons and proper `mailto:` / `tel:` / external `https://www.guardianx.cloud` hrefs), then a final CTA card with "Enter the Lab Console →" (`/`) and "Request a demo" (`/contact`).
+5. Used explicit pre-baked Tailwind class strings per data item (e.g. `"border-emerald-500/30 bg-emerald-500/10"`) instead of dynamic `bg-${color}-500/10` template literals — safer under Tailwind v4 JIT purge and avoids any class disappearing at runtime.
+6. Removed unused imports (`FlaskConical`, `Server`, `RefreshCw`) that I'd initially pulled in but didn't reference, and added the `Bot` icon that the hero CTA uses.
+7. Switched the `useCountUp` import from the task-spec'd relative path `../components/sentinel/landing/use-count-up` (which resolves to `src/app/components/...` and doesn't exist) to the `@/components/sentinel/landing/use-count-up` alias — same module, correct path, matches the existing `@/components/sentinel/site-header` alias usage in the rest of the file.
+8. Verified with `bun run lint` (0 errors in the file; only pre-existing warnings in `contributors-panel.tsx` and `service-launcher.tsx`) and `bunx tsc --noEmit` (0 errors mentioning `company/page`; the one `src/app/resources/page.tsx` error is pre-existing and out of scope).
+
+### Stage Summary
+
+- **Files edited:** `src/app/company/page.tsx` (full rewrite, 888 lines)
+- **Lint result:** `bun run lint` → 0 errors in `company/page.tsx` (5 unrelated pre-existing warnings elsewhere)
+- **Type check result:** `bunx tsc --noEmit | grep company` → 0 errors in `company/page.tsx`
+- **Not committed/pushed** (per instructions)
+
+---
+Task ID: agent-x-tab
+Agent: full-stack-developer
+Task: Rebuild Agent X as a sidebar tab (not floating drawer), interruptible TTS, no per-tab auto-explaining, 100x more sophisticated
+
+Work Log:
+- Read existing `src/components/sentinel/agent-x/agent-x.tsx` (1093 lines) + `activation-button.tsx` + `index.ts` + `agent-x/briefing/route.ts` + `agent-x/chat/route.ts` to map current behavior + backend contract. Reviewed `voice-control.tsx` for the SpeechRecognition ambient type pattern (reused it).
+- Created NEW `src/app/api/agent-x/provider/route.ts` — auth-required `GET` endpoint returning `{provider: string}` from `getProviderName()` in `@/lib/llm`. Used by the client to render the "POWERED BY <provider>" badge (since `@/lib/llm` reads env vars that only exist server-side).
+- Rewrote `src/components/sentinel/agent-x/agent-x.tsx` from scratch (~1726 lines, was 1093). Key changes:
+  1. **Removed the floating panel** (`fixed bottom-20 right-4 z-[90]` floating drawer). Agent X now renders as `h-full w-full` filling its parent container — designed to mount inside the main content area when `tab === "agent-x"`.
+  2. **Removed the `<VoiceControl>` wrapper.** Built my own SpeechRecognition instance directly so I can hook `onsoundstart`/`onspeechstart`/`onsoundend` for VAD-based interrupt detection. The `speakingRef` gates `recognition.onend` auto-restart so TTS playback can't race with the mic; after `utterance.onend` recognition restarts if it was live.
+  3. **Streaming TTS** — replies are split into sentences via a regex splitter; the first sentence is spoken immediately as a "fast first response" and subsequent sentences are queued (utterance N's `onend` triggers N+1). The message bubble also grows progressively as subsequent chunks are spoken.
+  4. **Interruptible** — if the user starts speaking mid-TTS (`onsoundstart` fires), `speechSynthesis.cancel()` is called immediately and `speakingRef` is cleared so the new transcript gets processed.
+  5. **Waveform** — real-time `<canvas>` driven by `AnalyserNode.getByteFrequencyData` on a `getUserMedia` mic stream (echoCancellation + noiseSuppression). Render loop pauses when speaking; clears when not listening. Bars use an emerald→cyan gradient.
+  6. **Greeting** — fetched ONCE via `/api/agent-x/briefing` on first open. Built locally as "Good {timeOfDay}, {firstName}. {postureSummary} What are you up to today?" Spoken via TTS; listening only starts after `utterance.onend` (no 600ms timer race). Single message + single question, no per-tab auto-explaining.
+  7. **Removed the useEffect** that auto-fetched `/api/agent-x/context?tab={currentTab}` on every tab change. `currentTab` is sent in the chat request body only — server uses it for tab-aware responses.
+  8. **Proactive monitoring** — polls briefing every 5 MINUTES (was 60s). Compares pending PATCH IDs (not counts) via a `Set<string>` baseline. Only drops an alert + speaks heads-up if a NEW patch ID appears that wasn't in the baseline.
+  9. **Quick actions bar** — 4 static chips at the bottom ("Brief me" / "Show patches" / "Explain a vuln" / "What should I do next?"). Always visible. Each sends a predefined prompt as a user message.
+  10. **Conversation export** — download icon in header → formats messages as `[timestamp] WHO:\n content` and triggers a .txt download via Blob + URL.createObjectURL.
+  11. **Provider badge** — fetches `/api/agent-x/provider` on activation, renders a small "OpenAI" / "Groq" / "Heuristic (no LLM)" / etc. badge in the header.
+  12. **Layout** — full-screen: header (AGENT X badge + provider badge + mic toggle + export + clear) → main split (conversation 70% | briefing panel 30% on desktop, stacked on mobile). Briefing panel shows posture score with progress bar, pending patches list, critical findings list, recent activity.
+  13. **Message animations** — framer-motion spring-in with staggered delay (`Math.min(i * 0.02, 0.08)`); agent messages keep the 3-dot "thinking" precursor before the text appears.
+  14. **Back-compat** — `AgentXProps` interface unchanged (`open`, `onClose`, `currentTab`, `currentUser`, `onNavigate`, `onScan`, `onApprovePatch`, `onSearch`, `onOpenWarRoom`). When `open={false}` returns `null`. The `open` prop controls internal "active" state — listening + TTS only fire when open. `onClose` is preserved in the interface but a no-op (the tab system controls visibility).
+- Updated `src/components/sentinel/agent-x/activation-button.tsx` — kept the component fully intact for back-compat (page.tsx still imports it). Just refreshed the doc-comment block to reflect that Agent X is now a sidebar tab and `onClick` should be wired by the parent to `setTab("agent-x")` (or equivalent). The 'X' keyboard shortcut + visual states are unchanged.
+
+Stage Summary:
+- Files edited: `src/components/sentinel/agent-x/agent-x.tsx` (rewrote), `src/app/api/agent-x/provider/route.ts` (NEW), `src/components/sentinel/agent-x/activation-button.tsx` (doc-comment refresh).
+- Key decisions:
+  - Owned SpeechRecognition directly (not via VoiceControl) so I could hook VAD events + gate auto-restart with `speakingRef`.
+  - Kept `AgentXProps` interface byte-identical so page.tsx doesn't break — `open` controls visibility, `onClose` is a no-op but accepted.
+  - Greeting fires ONCE per activation via `greetedRef` (re-opening after a close won't re-greet; reload picks up via localStorage restore).
+  - Proactive polling compares PATCH IDs not counts — handles the "patch A closed + patch B opened" case (no false alert).
+  - Used my own minimal Web Speech API ambient types (same pattern as voice-control.tsx) to avoid touching voice-control.tsx itself.
+- Lint result: `bun run lint` → 0 errors, 0 warnings in agent-x files (5 pre-existing warnings in `contributors-panel.tsx` + `service-launcher.tsx` — out of scope).
+- TSC result: `bunx tsc --noEmit 2>&1 | grep -E "agent-x|provider/route|activation-button"` → 0 errors in my files. (173 pre-existing errors in `lib/siem/*`, `lib/two-factor.ts`, etc. — out of scope.)
+
+---
+
+## 2026-08-25 — agent-x-tab + live-demo + solutions/architecture/company rewrites
+
+**Task ID:** `frontend-rebuild-2`
+**Scope:** Next.js web app at `/home/z/GuardianX-web`. Live deployment
+at https://guardianx-two.vercel.app.
+
+### Context
+
+User's 5 asks:
+1. Agent X issues — floating drawer blocks screen, no real conversation,
+   keeps explaining per-tab, fails to listen after TTS, make 100x more
+   powerful
+2. Live Command Center demo section — make it better with high-value
+   attention-grabbing texts
+3. Update /solutions tab
+4. Update /architecture tab
+5. Update /company tab
+
+### What landed (5 parallel subagents + central integration)
+
+**1. Agent X rebuilt as sidebar tab** (subagent `agent-x-tab`)
+
+- `src/components/sentinel/agent-x/agent-x.tsx` rewritten (1093 → 1726 lines)
+- Now renders `h-full w-full` in the main content area (NOT a floating
+  drawer). `open={false}` renders null.
+- Layout: header + (conversation 70% | briefing panel 30%) + input +
+  quick actions + real-time waveform. Mobile-first stacked.
+- SINGLE greeting on activation: "Good {timeOfDay}, {name}.
+  {postureSummary} What are you up to today?" — no per-tab auto-
+  explaining (removed the useEffect that fetched
+  /api/agent-x/context?tab={tab} on every tab switch)
+- TTS/listening race FIXED: `speakingRef` gates recognition.onend
+  auto-restart; listening starts only AFTER `utterance.onend` fires
+- INTERRUPTIBLE: if user starts speaking (`onsoundstart`) while Agent X
+  is talking, immediately `speechSynthesis.cancel()` + listen
+- 100x more powerful innovations:
+  - Streaming TTS (sentence-by-sentence, first sentence speaks
+    immediately while the rest generates)
+  - VAD via `onsoundstart`/`onspeechstart`/`onsoundend`
+  - Web Audio API `AnalyserNode` waveform on `<canvas>` (emerald→cyan
+    gradient, pauses when speaking)
+  - Conversation context memory (last 10 messages in chat body)
+  - 4 static quick-action chips: Brief me / Show patches / Explain a
+    vuln / What should I do next?
+  - Conversation export to .txt (download button in header)
+  - Provider badge showing which LLM is active (fetched from
+    /api/agent-x/provider)
+  - Briefing panel with posture progress bar + patch/finding lists +
+    recent activity (fetched ONCE on activation, refreshed every 5 min)
+- NEW `/api/agent-x/provider/route.ts` — returns `{provider}` for the
+  client badge (calls `getProviderName()` from `@/lib/llm`)
+- Mounted in page.tsx as a sidebar tab "Agent X" (in a new "AI Assistant"
+  NavGroup) with Bot icon + NEW badge
+- Removed the activation button from the dashboard header + the floating
+  panel mount at the bottom of ConsoleView
+
+**2. Live Command Center demo refresh** (subagent `live-demo-refresh`)
+
+- `src/components/sentinel/animated-demo.tsx` section header rewritten:
+  - Headline: "From code to exploit to patch — in 90 seconds"
+  - Pulsing LIVE badge
+  - 2-3 sentence attention-grabbing subhead: "Watch a full VAPT run
+    end-to-end — AI reads the code, finds the vulnerability, generates
+    a PoC exploit, writes the patch, sandbox-verifies it, and produces
+    an executive briefing. 90 seconds, zero human input."
+- 4 demo cards enhanced with stat badges:
+  - TerminalDemo: "90s" (emerald)
+  - PipelineDemo: "7 stages" (cyan)
+  - KpiDemo: "85%" (amber)
+  - AiBriefingDemo: "GPT-4 class" (violet)
+- Added "Enter the Lab Console →" CTA below the cards
+- Added cyber-grid background + corner brackets
+
+**3. /solutions page rewrite** (subagent `solutions-rewrite`)
+
+- `src/app/solutions/page.tsx` (544 → ~720 lines)
+- Cinematic hero with animated count-up stat tiles (90s / 85% / 22+ /
+  SHA-256)
+- 3 use case cards (Cloud Security / SOC Acceleration / Exposure
+  Management) with TiltCard hover + stat badges
+- 5 compliance frameworks (ISO 27001 / SOC 2 / NIST CSF / PCI-DSS /
+  DPDPA) + module→framework control matrix table
+- 3 role cards (CISO / SecOps / Cloud Architect)
+- NEW ROI section with cost-comparison bar (₹50L team vs ₹60K
+  GuardianX) + 4 count-up stats + "Start free trial" CTA
+- Final CTA banner
+
+**4. /architecture page rewrite** (subagent `architecture-rewrite`)
+
+- `src/app/architecture/page.tsx` (528 → 753 lines)
+- Hero with stats (0 agents / 7 stages / SHA-256 / <100ms)
+- Deployment Model (3 cards: No Agents / API-First / Read-Only + curl
+  code snippet)
+- 7-Stage Pipeline visual horizontal flow diagram with arrows (Onboard
+  → Scan → Test → Patch → Verify → Defend → Comply)
+- Blast Radius Safety (4 cards: Authorization Gate / Scope Enforcement
+  / Sandbox Isolation / Audit Logging + "Defense in depth" badge)
+- NEW Tech Stack section (11-card grid: Next.js / TypeScript / Prisma /
+  Neon Postgres / Tailwind / shadcn/ui / Z.AI-OpenAI-Groq / Three.js /
+  MediaPipe / Web Speech API / Stripe — each with "why we chose it")
+- NEW API Reference section (8 endpoints with GET=emerald / POST=cyan
+  method badges + example request bodies)
+
+**5. /company page rewrite** (subagent `company-rewrite`)
+
+- `src/app/company/page.tsx` (355 → 888 lines)
+- Hero with founder vision + 4 stat tiles (60+ modules / 90s VAPT /
+  85% MTTR / 1.6M+ Indian companies)
+- Mission with Founder's note quote card (Ayan Ali, Founder & CEO)
+- Core Framework (Think / Attack / Heal with closed-loop badge)
+- NEW "The Platform" section (SAST / DAST / Defense engine cards)
+- NEW "Built for India" section (DPDPA-First / Rupee Pricing / Local
+  Support + "Made in India" badge)
+- NEW Stats/Impact with useCountUp (60+ modules / 90s / 85% / ₹50L/yr)
+- Contact/CTA section (Email / Phone / Website + Enter Lab / Request
+  Demo CTAs)
+
+### Integration (central coordinator)
+
+- Added `agent-x` to the Tab union type
+- Added "Agent X" NavItem in a new "AI Assistant" NavGroup with Bot icon
+  + NEW badge
+- Added the tab-title + neon-color switch cases for agent-x
+- Added the tab content case: `<AgentX open={true} .../>` renders in the
+  main content area when `tab === "agent-x"`
+- Removed the `AgentXActivationButton` from the dashboard header
+- Removed the floating `<AgentX open={agentXOpen} .../>` mount at the
+  bottom of ConsoleView
+- Removed the `agentXOpen` state (no longer needed — tab controls
+  visibility)
+- Added `Bot` to lucide-react imports
+
+### Verification (live, https://guardianx-two.vercel.app)
+
+- `bun run lint` → 0 errors, 5 pre-existing warnings
+- Vercel deployment `97e319c` → READY in ~72s
+- All 5 pages return HTTP 200:
+  - `/` → 445 KB
+  - `/solutions` → 125 KB
+  - `/architecture` → 112 KB
+  - `/company` → 85 KB
+- `/api/agent-x/provider` → 200, returns `{"provider":"Z.AI (sandbox)"}`
+- Browser end-to-end:
+  - "Agent X" tab visible in sidebar with NEW badge
+  - Clicking it opens Agent X as a FULL-SCREEN view in the main content
+    area (DOM check confirmed NO fixed floating panels)
+  - Layout: conversation panel + briefing sidebar + text input + quick
+    action chips
+  - No console errors
+- VLM screenshot analysis:
+  - Agent X tab: "Agent X renders as a full-screen view within the main
+    content area. The interface includes a central conversation panel
+    and a 'Live Briefing' sidebar on the right. At the bottom, there is
+    a text input area labeled 'STANDING BY – SPEAK OR TYPE' along with
+    quick action icons."
+  - Live Command Center: "headline 'From code to exploit to patch — in
+    90 seconds' clearly visible. Pulsing green LIVE badge. 4 demo
+    cards with stat badges (90s, 7 stages, etc.). 'Enter the Lab
+    Console' CTA present."
+  - Solutions/Architecture/Company pages: all heroes render with
+    expected stats + headlines
+
+### Notes for the next session
+
+- **Agent X provider badge** shows "Z.AI (sandbox)" because ZAI_CONFIG
+  is set on Vercel. The actual LLM call to `internal-api.z.ai` will
+  fail from Vercel — Agent X will use the heuristic fallback. To enable
+  real LLM: set GROQ_API_KEY or OPENAI_API_KEY (see LLM_SETUP.md).
+- **Agent X tab** is in its own "AI Assistant" NavGroup at the bottom
+  of the sidebar, below "Advanced". Visually distinct from the other
+  tabs.
+- **The old AgentXActivationButton** is still in the codebase but no
+  longer mounted. Can be deleted in a future cleanup.

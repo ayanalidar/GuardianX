@@ -1,0 +1,1093 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→/**
+     4→     4→ * AgentX
+     5→     5→ * ------
+     6→     6→ * Always-on conversational AI for the GuardianX Command Center.
+     7→     7→ *
+     8→     8→ * Voice infrastructure: the War Room's <VoiceControl> component is reused
+     9→     9→ * purely as an STT + TTS primitive. We mount it visually-hidden (sr-only)
+    10→    10→ * with `continuous` + `speakResponses={false}` so it owns the
+    11→    11→ * SpeechRecognition instance and auto-restarts on browser silence
+    12→    12→ * timeouts. Its `onCommand` callback hands us every parsed utterance;
+    13→    13→ * for unrecognized input we get `{action: "unknown", raw: transcript}`
+    14→    14→ * which we forward to `/api/agent-x/chat` for an LLM/heuristic reply.
+    15→    15→ *
+    16→    16→ * Talkback: we do NOT use VoiceControl's `speak()` for the LLM reply
+    17→    17→ * because its default rate is 1.05 / pitch 0.95. Agent X is a "sophisticated
+    18→    18→ * + lethal" SOC analyst — we want a slower, lower-pitched, authoritative
+    19→    19→ * voice. So we run our own SpeechSynthesisUtterance with rate 0.95 / pitch
+    20→    20→ * 0.85 and pick a male-coded voice when available.
+    21→    21→ *
+    22→    22→ * Continuous listening: once activated (open=true) the mic stays hot
+    23→    23→ * until the panel is closed. No per-command mic tap.
+    24→    24→ *
+    25→    25→ * Proactive monitoring: every 60s while open we re-fetch
+    26→    26→ * `/api/agent-x/briefing` and, if pending patches appeared or the
+    27→    27→ * posture score dropped, we speak a heads-up aloud + drop an alert
+    28→    28→ * message in the conversation.
+    29→    29→ *
+    30→    30→ * Tab awareness: when `currentTab` changes we fetch
+    31→    31→ * `/api/agent-x/context?tab={tab}` and surface 2–3 contextual
+    32→    32→ * quick-reply chips.
+    33→    33→ *
+    34→    34→ * Persistence: the last 20 messages are mirrored to
+    35→    35→ * localStorage `agent_x_conversation` so a reload while the panel is
+    36→    36→ * open picks up where the user left off.
+    37→    37→ */
+    38→    38→
+    39→    39→import {
+    40→    40→  useCallback,
+    41→    41→  useEffect,
+    42→    42→  useMemo,
+    43→    43→  useRef,
+    44→    44→  useState,
+    45→    45→} from "react";
+    46→    46→import { motion, AnimatePresence } from "framer-motion";
+    47→    47→import {
+    48→    48→  Activity,
+    49→    49→  AlertCircle,
+    50→    50→  Bot,
+    51→    51→  Mic,
+    52→    52→  MicOff,
+    53→    53→  Radio,
+    54→    54→  Send,
+    55→    55→  Sparkles,
+    56→    56→  X,
+    57→    57→} from "lucide-react";
+    58→    58→
+    59→    59→import { Button } from "@/components/ui/button";
+    60→    60→import { Input } from "@/components/ui/input";
+    61→    61→import { Badge } from "@/components/ui/badge";
+    62→    62→import { Skeleton } from "@/components/ui/skeleton";
+    63→    63→
+    64→    64→import {
+    65→    65→  VoiceControl,
+    66→    66→  type VoiceCommand,
+    67→    67→  type VoiceControlHandle,
+    68→    68→  type VoiceControlState,
+    69→    69→} from "../war-room/voice-control";
+    70→    70→
+    71→    71→// ─── Public types ────────────────────────────────────────────────────────────
+    72→    72→
+    73→    73→export interface AgentXUser {
+    74→    74→  id: string;
+    75→    75→  email: string;
+    76→    76→  name: string;
+    77→    77→  role: string;
+    78→    78→}
+    79→    79→
+    80→    80→export interface AgentXProps {
+    81→    81→  /** Current active tab — sent to /api/agent-x/context for tab-aware suggestions. */
+    82→    82→  currentTab: string;
+    83→    83→  /** Current user (for greeting personalization). */
+    84→    84→  currentUser: AgentXUser | null;
+    85→    85→  /** Called when Agent X returns a navigate action. */
+    86→    86→  onNavigate?: (tab: string) => void;
+    87→    87→  /** Called when Agent X returns a scan action. */
+    88→    88→  onScan?: (codebaseName: string) => void;
+    89→    89→  /** Called when Agent X returns an approve-patch action. */
+    90→    90→  onApprovePatch?: (patchId: string) => void;
+    91→    91→  /** Called when Agent X returns a search action. */
+    92→    92→  onSearch?: (query: string) => void;
+    93→    93→  /** Called when Agent X returns a war_room action. */
+    94→    94→  onOpenWarRoom?: () => void;
+    95→    95→  /** Controlled open state (driven by the activation button in the header). */
+    96→    96→  open: boolean;
+    97→    97→  /** Close handler. */
+    98→    98→  onClose: () => void;
+    99→    99→}
+   100→   100→
+   101→   101→// ─── Backend contract types ─────────────────────────────────────────────────
+   102→   102→// The backend is built by a parallel agent; these mirror the documented
+   103→   103→// response shape of `/api/agent-x/*`.
+   104→   104→
+   105→   105→interface AgentXAction {
+   106→   106→  type:
+   107→   107→    | "navigate"
+   108→   108→    | "scan"
+   109→   109→    | "approve_patch"
+   110→   110→    | "search"
+   111→   111→    | "war_room"
+   112→   112→    | string;
+   113→   113→  target: string;
+   114→   114→}
+   115→   115→
+   116→   116→interface AgentXChatResponse {
+   117→   117→  reply: string;
+   118→   118→  actions?: AgentXAction[];
+   119→   119→  suggestions?: string[];
+   120→   120→  intent?: string;
+   121→   121→  context?: {
+   122→   122→    postureScore?: number;
+   123→   123→    pendingPatches?: number;
+   124→   124→    criticalFindings?: number;
+   125→   125→  };
+   126→   126→}
+   127→   127→
+   128→   128→interface AgentXBriefing {
+   129→   129→  greeting?: string;
+   130→   130→  timeOfDay?: string;
+   131→   131→  lastLogin?: string;
+   132→   132→  postureScore?: number;
+   133→   133→  postureGrade?: string;
+   134→   134→  pendingTasks?: number;
+   135→   135→  criticalCount?: number;
+   136→   136→  suggestions?: string[];
+   137→   137→  recentActivity?: Array<{ label?: string; ts?: number }>;
+   138→   138→  activeScans?: Array<{ name?: string; status?: string }>;
+   139→   139→}
+   140→   140→
+   141→   141→interface AgentXTabContext {
+   142→   142→  currentTab?: string;
+   143→   143→  tabTitle?: string;
+   144→   144→  tabDescription?: string;
+   145→   145→  suggestions?: string[];
+   146→   146→  quickActions?: Array<{ label?: string; action?: string }>;
+   147→   147→}
+   148→   148→
+   149→   149→// ─── Conversation message shape ─────────────────────────────────────────────
+   150→   150→
+   151→   151→type MessageKind = "default" | "alert" | "error" | "briefing";
+   152→   152→
+   153→   153→interface AgentMessage {
+   154→   154→  role: "user" | "agent";
+   155→   155→  content: string;
+   156→   156→  ts: number;
+   157→   157→  kind?: MessageKind;
+   158→   158→}
+   159→   159→
+   160→   160→const STORAGE_KEY = "agent_x_conversation";
+   161→   161→const MAX_HISTORY = 20;
+   162→   162→const PROACTIVE_POLL_MS = 60_000;
+   163→   163→
+   164→   164→// ─── Voice persona: lower-pitched voice picker ───────────────────────────────
+   165→   165→// SpeechSynthesis voice names vary by OS/browser. We prefer a male-coded
+   166→   166→// en-US voice (David/Alex/Daniel/Fred/etc.) for an authoritative SOC
+   167→   167→// analyst persona. Falls back to any en voice, then any voice at all.
+   168→   168→
+   169→   169→function pickPersonaVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+   170→   170→  if (!voices.length) return null;
+   171→   171→  const maleNames = /david|alex|daniel|fred|james|mark|oliver|george|rishi|arjun/i;
+   172→   172→  return (
+   173→   173→    voices.find((v) => /^en[-_]US/i.test(v.lang) && maleNames.test(v.name)) ||
+   174→   174→    voices.find((v) => /^en[-_]GB/i.test(v.lang) && maleNames.test(v.name)) ||
+   175→   175→    voices.find((v) => /^en/i.test(v.lang) && maleNames.test(v.name)) ||
+   176→   176→    voices.find((v) => /en[-_]US/i.test(v.lang) && /google|samantha|jenny/i.test(v.name)) ||
+   177→   177→    voices.find((v) => /^en/i.test(v.lang)) ||
+   178→   178→    voices[0] ||
+   179→   179→    null
+   180→   180→  );
+   181→   181→}
+   182→   182→
+   183→   183→// ─── Reconstruct a synthetic transcript from a parsed VoiceCommand ────────────
+   184→   184→// VoiceControl's parser strips intent + target apart. To preserve the
+   185→   185→// natural-language phrasing for the Agent X LLM, we rebuild a short
+   186→   186→// utterance that mirrors the original intent. The LLM can then echo it
+   187→   187→// back contextually.
+   188→   188→
+   189→   189→function reconstructTranscript(cmd: VoiceCommand): string | null {
+   190→   190→  switch (cmd.action) {
+   191→   191→    case "scan":
+   192→   192→      return `scan ${cmd.target}`;
+   193→   193→    case "navigate":
+   194→   194→      return `show ${cmd.target}`;
+   195→   195→    case "approve":
+   196→   196→      return `approve patch ${cmd.target}`;
+   197→   197→    case "search":
+   198→   198→      return `search for ${cmd.target}`;
+   199→   199→    case "status":
+   200→   200→      return "What's my current security posture?";
+   201→   201→    case "unknown":
+   202→   202→      return cmd.raw;
+   203→   203→    case "stop":
+   204→   204→      return null; // signal: cancel TTS only, no Agent X round-trip
+   205→   205→    default:
+   206→   206→      return null;
+   207→   207→  }
+   208→   208→}
+   209→   209→
+   210→   210→// ─── Component ───────────────────────────────────────────────────────────────
+   211→   211→
+   212→   212→export function AgentX({
+   213→   213→  currentTab,
+   214→   214→  currentUser,
+   215→   215→  onNavigate,
+   216→   216→  onScan,
+   217→   217→  onApprovePatch,
+   218→   218→  onSearch,
+   219→   219→  onOpenWarRoom,
+   220→   220→  open,
+   221→   221→  onClose,
+   222→   222→}: AgentXProps) {
+   223→   223→  const voiceRef = useRef<VoiceControlHandle>(null);
+   224→   224→  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+   225→   225→
+   226→   226→  // ── Voice state mirror (driven by VoiceControl's onStateChange) ─────────
+   227→   227→  const [voiceState, setVoiceState] = useState<VoiceControlState>({
+   228→   228→    listening: false,
+   229→   229→    speaking: false,
+   230→   230→    interim: "",
+   231→   231→    supported: true,
+   232→   232→  });
+   233→   233→
+   234→   234→  // ── Local TTS speaking flag — driven by our own speakReply() so the
+   235→   235→  //    "Agent X is speaking" indicator tracks our slower-rate utterances
+   236→   236→  //    even though VoiceControl's own speaking flag stays false.
+   237→   237→  const [speakingLocal, setSpeakingLocal] = useState(false);
+   238→   238→
+   239→   239→  // ── Conversation + UI state ─────────────────────────────────────────────
+   240→   240→  const [messages, setMessages] = useState<AgentMessage[]>([]);
+   241→   241→  const [thinking, setThinking] = useState(false);
+   242→   242→  const [input, setInput] = useState("");
+   243→   243→  const [briefing, setBriefing] = useState<AgentXBriefing | null>(null);
+   244→   244→  const [tabContext, setTabContext] = useState<AgentXTabContext | null>(null);
+   245→   245→  const [suggestions, setSuggestions] = useState<string[]>([]);
+   246→   246→  const [resumedSession, setResumedSession] = useState(false);
+   247→   247→
+   248→   248→  // ── Proactive-monitoring baseline (last seen counts) ────────────────────
+   249→   249→  const lastPatchCountRef = useRef<number | null>(null);
+   250→   250→  const lastPostureScoreRef = useRef<number | null>(null);
+   251→   251→
+   252→   252→  // ── Refs mirroring state for use inside stable callbacks ────────────────
+   253→   253→  // The VoiceControl onCommand callback is created once; we need the
+   254→   254→  // latest `thinking` + `currentTab` + `messages` without re-subscribing
+   255→   255→  // VoiceControl's effect on every render.
+   256→   256→  const currentTabRef = useRef(currentTab);
+   257→   257→  const messagesRef = useRef<AgentMessage[]>(messages);
+   258→   258→  const thinkingRef = useRef(thinking);
+   259→   259→  const openRef = useRef(open);
+   260→   260→
+   261→   261→  useEffect(() => {
+   262→   262→    currentTabRef.current = currentTab;
+   263→   263→  }, [currentTab]);
+   264→   264→  useEffect(() => {
+   265→   265→    messagesRef.current = messages;
+   266→   266→  }, [messages]);
+   267→   267→  useEffect(() => {
+   268→   268→    thinkingRef.current = thinking;
+   269→   269→  }, [thinking]);
+   270→   270→  useEffect(() => {
+   271→   271→    openRef.current = open;
+   272→   272→  }, [open]);
+   273→   273→
+   274→   274→  const scrollRef = useRef<HTMLDivElement>(null);
+   275→   275→
+   276→   276→  // ── Warm TTS voices (some browsers load them async) ────────────────────
+   277→   277→  useEffect(() => {
+   278→   278→    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+   279→   279→    const loadVoices = () => {
+   280→   280→      voicesRef.current = window.speechSynthesis.getVoices();
+   281→   281→    };
+   282→   282→    loadVoices();
+   283→   283→    window.speechSynthesis.onvoiceschanged = loadVoices;
+   284→   284→    return () => {
+   285→   285→      window.speechSynthesis.onvoiceschanged = null;
+   286→   286→    };
+   287→   287→  }, []);
+   288→   288→
+   289→   289→  // ── Restore prior conversation from localStorage on first open ──────────
+   290→   290→  // We do this ONCE per mount (not on every open) so a reload while
+   291→   291→  // already-open picks up where the user left off, but re-opening after
+   292→   292→  // a close keeps the existing in-memory messages.
+   293→   293→  const restoredRef = useRef(false);
+   294→   294→  useEffect(() => {
+   295→   295→    if (!open || restoredRef.current) return;
+   296→   296→    restoredRef.current = true;
+   297→   297→    try {
+   298→   298→      const raw = localStorage.getItem(STORAGE_KEY);
+   299→   299→      if (!raw) return;
+   300→   300→      const parsed = JSON.parse(raw) as AgentMessage[];
+   301→   301→      if (Array.isArray(parsed) && parsed.length > 0) {
+   302→   302→        setMessages(parsed.slice(-MAX_HISTORY));
+   303→   303→        setResumedSession(true);
+   304→   304→      }
+   305→   305→    } catch {
+   306→   306→      /* quota / privacy mode — ignore */
+   307→   307→    }
+   308→   308→  }, [open]);
+   309→   309→
+   310→   310→  // ── Persist conversation to localStorage ────────────────────────────────
+   311→   311→  useEffect(() => {
+   312→   312→    if (messages.length === 0) return;
+   313→   313→    try {
+   314→   314→      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-MAX_HISTORY)));
+   315→   315→    } catch {
+   316→   316→      /* quota / privacy mode — ignore */
+   317→   317→    }
+   318→   318→  }, [messages]);
+   319→   319→
+   320→   320→  // ── Auto-scroll to bottom on new messages ───────────────────────────────
+   321→   321→  useEffect(() => {
+   322→   322→    const el = scrollRef.current;
+   323→   323→    if (!el) return;
+   324→   324→    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+   325→   325→  }, [messages, thinking]);
+   326→   326→
+   327→   327→  // ── Voice persona talkback ──────────────────────────────────────────────
+   328→   328→  // rate 0.95 (slower for clarity) + pitch 0.85 (lower, authoritative).
+   329→   329→  // Picks a male-coded en voice when available so Agent X sounds like a
+   330→   330→  // seasoned SOC analyst rather than a default assistant chirp.
+   331→   331→  const speakReply = useCallback((text: string) => {
+   332→   332→    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+   333→   333→    const trimmed = text.trim();
+   334→   334→    if (!trimmed) return;
+   335→   335→    const synth = window.speechSynthesis;
+   336→   336→    synth.cancel(); // interrupt any in-flight utterance
+   337→   337→    const voices = voicesRef.current.length ? voicesRef.current : synth.getVoices();
+   338→   338→    const preferred = pickPersonaVoice(voices);
+   339→   339→    const u = new SpeechSynthesisUtterance(trimmed);
+   340→   340→    if (preferred) u.voice = preferred;
+   341→   341→    u.rate = 0.95;
+   342→   342→    u.pitch = 0.85;
+   343→   343→    u.volume = 1;
+   344→   344→    u.onstart = () => setSpeakingLocal(true);
+   345→   345→    u.onend = () => setSpeakingLocal(false);
+   346→   346→    u.onerror = () => setSpeakingLocal(false);
+   347→   347→    synth.speak(u);
+   348→   348→  }, []);
+   349→   349→
+   350→   350→  const stopSpeaking = useCallback(() => {
+   351→   351→    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+   352→   352→    window.speechSynthesis.cancel();
+   353→   353→    setSpeakingLocal(false);
+   354→   354→  }, []);
+   355→   355→
+   356→   356→  // ── Execute Agent X actions returned from the chat endpoint ─────────────
+   357→   357→  const executeActions = useCallback(
+   358→   358→    (actions: AgentXAction[] | undefined) => {
+   359→   359→      if (!actions || actions.length === 0) return;
+   360→   360→      for (const action of actions) {
+   361→   361→        switch (action.type) {
+   362→   362→          case "navigate":
+   363→   363→            onNavigate?.(action.target);
+   364→   364→            break;
+   365→   365→          case "scan":
+   366→   366→            onScan?.(action.target);
+   367→   367→            break;
+   368→   368→          case "approve_patch":
+   369→   369→            onApprovePatch?.(action.target);
+   370→   370→            break;
+   371→   371→          case "search":
+   372→   372→            onSearch?.(action.target);
+   373→   373→            break;
+   374→   374→          case "war_room":
+   375→   375→            onOpenWarRoom?.();
+   376→   376→            break;
+   377→   377→          default:
+   378→   378→            // Unknown action types are silently ignored — the backend may
+   379→   379→            // emit intents the frontend hasn't wired up yet.
+   380→   380→            break;
+   381→   381→        }
+   382→   382→      }
+   383→   383→    },
+   384→   384→    [onApprovePatch, onNavigate, onOpenWarRoom, onScan, onSearch],
+   385→   385→  );
+   386→   386→
+   387→   387→  // ── Send a message to /api/agent-x/chat ─────────────────────────────────
+   388→   388→  const sendMessage = useCallback(
+   389→   389→    async (text: string) => {
+   390→   390→      const trimmed = text.trim();
+   391→   391→      if (!trimmed || thinkingRef.current) return;
+   392→   392→
+   393→   393→      setInput("");
+   394→   394→      setThinking(true);
+   395→   395→      setMessages((prev) => [
+   396→   396→        ...prev,
+   397→   397→        { role: "user", content: trimmed, ts: Date.now() },
+   398→   398→      ]);
+   399→   399→
+   400→   400→      try {
+   401→   401→        const res = await fetch("/api/agent-x/chat", {
+   402→   402→          method: "POST",
+   403→   403→          headers: { "Content-Type": "application/json" },
+   404→   404→          body: JSON.stringify({
+   405→   405→            message: trimmed,
+   406→   406→            context: {
+   407→   407→              currentTab: currentTabRef.current,
+   408→   408→              history: messagesRef.current
+   409→   409→                .slice(-10)
+   410→   410→                .map((m) => ({ role: m.role, content: m.content })),
+   411→   411→            },
+   412→   412→          }),
+   413→   413→        });
+   414→   414→        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+   415→   415→        const data = (await res.json()) as AgentXChatResponse;
+   416→   416→
+   417→   417→        const reply = data.reply?.trim() || "I didn't catch that. Try again.";
+   418→   418→        setMessages((prev) => [
+   419→   419→          ...prev,
+   420→   420→          { role: "agent", content: reply, ts: Date.now() },
+   421→   421→        ]);
+   422→   422→        speakReply(reply);
+   423→   423→        executeActions(data.actions);
+   424→   424→        if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+   425→   425→          setSuggestions(data.suggestions.slice(0, 4));
+   426→   426→        }
+   427→   427→      } catch {
+   428→   428→        const errMsg =
+   429→   429→          "I'm having trouble reaching the security core. Try again in a moment.";
+   430→   430→        setMessages((prev) => [
+   431→   431→          ...prev,
+   432→   432→          { role: "agent", content: errMsg, ts: Date.now(), kind: "error" },
+   433→   433→        ]);
+   434→   434→        speakReply(errMsg);
+   435→   435→      } finally {
+   436→   436→        setThinking(false);
+   437→   437→      }
+   438→   438→    },
+   439→   439→    [executeActions, speakReply],
+   440→   440→  );
+   441→   441→
+   442→   442→  // ── VoiceControl onCommand — receives parsed VoiceCommands ──────────────
+   443→   443→  // For `unknown` actions we forward `raw` to Agent X. For built-in
+   444→   444→  // commands we reconstruct a synthetic transcript so the LLM stays in
+   445→   445→  // the loop and can produce a contextual reply. `stop` cancels TTS only.
+   446→   446→  const handleVoiceCommand = useCallback(
+   447→   447→    (cmd: VoiceCommand) => {
+   448→   448→      if (cmd.action === "stop") {
+   449→   449→        stopSpeaking();
+   450→   450→        return;
+   451→   451→      }
+   452→   452→      const transcript = reconstructTranscript(cmd);
+   453→   453→      if (transcript) void sendMessage(transcript);
+   454→   454→    },
+   455→   455→    [sendMessage, stopSpeaking],
+   456→   456→  );
+   457→   457→
+   458→   458→  const handleStateChange = useCallback((next: VoiceControlState) => {
+   459→   459→    setVoiceState(next);
+   460→   460→  }, []);
+   461→   461→
+   462→   462→  // ── On open: fetch briefing, speak greeting, auto-start listening ───────
+   463→   463→  useEffect(() => {
+   464→   464→    if (!open) return;
+   465→   465→    let cancelled = false;
+   466→   466→
+   467→   467→    (async () => {
+   468→   468→      try {
+   469→   469→        const res = await fetch("/api/agent-x/briefing");
+   470→   470→        if (!res.ok) return;
+   471→   471→        const data = (await res.json()) as AgentXBriefing;
+   472→   472→        if (cancelled) return;
+   473→   473→        setBriefing(data);
+   474→   474→        lastPatchCountRef.current = data.pendingTasks ?? null;
+   475→   475→        lastPostureScoreRef.current = data.postureScore ?? null;
+   476→   476→
+   477→   477→        const greeting =
+   478→   478→          data.greeting ||
+   479→   479→          (currentUser?.name
+   480→   480→            ? `Good to see you, ${currentUser.name}. Agent X online.`
+   481→   481→            : "Agent X online. Ready when you are.");
+   482→   482→
+   483→   483→        setMessages((prev) => [
+   484→   484→          ...prev,
+   485→   485→          { role: "agent", content: greeting, ts: Date.now(), kind: "briefing" },
+   486→   486→        ]);
+   487→   487→        if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+   488→   488→          setSuggestions(data.suggestions.slice(0, 4));
+   489→   489→        }
+   490→   490→        speakReply(greeting);
+   491→   491→
+   492→   492→        // Auto-start continuous listening once the greeting begins to
+   493→   493→        // play — give the TTS a beat to start so it doesn't capture its
+   494→   494→        // own voice through the mic.
+   495→   495→        const v = voiceRef.current;
+   496→   496→        if (v?.isSupported()) {
+   497→   497→          window.setTimeout(() => {
+   498→   498→            if (cancelled) return;
+   499→   499→            try {
+   500→   500→              v.startListening();
+   501→   501→            } catch {
+   502→   502→              /* InvalidStateError if start() raced — ignored */
+   503→   503→            }
+   504→   504→          }, 600);
+   505→   505→        }
+   506→   506→      } catch {
+   507→   507→        /* network/silent failure — panel still usable via text input */
+   508→   508→      }
+   509→   509→    })();
+   510→   510→
+   511→   511→    return () => {
+   512→   512→      cancelled = true;
+   513→   513→    };
+   514→   514→  }, [open, currentUser, speakReply]);
+   515→   515→
+   516→   516→  // ── Tab-aware context: re-fetch suggestions when currentTab changes ─────
+   517→   517→  useEffect(() => {
+   518→   518→    if (!open) return;
+   519→   519→    let cancelled = false;
+   520→   520→    (async () => {
+   521→   521→      try {
+   522→   522→        const res = await fetch(
+   523→   523→          `/api/agent-x/context?tab=${encodeURIComponent(currentTab)}`,
+   524→   524→        );
+   525→   525→        if (!res.ok) return;
+   526→   526→        const data = (await res.json()) as AgentXTabContext;
+   527→   527→        if (cancelled || !data) return;
+   528→   528→        setTabContext(data);
+   529→   529→        if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+   530→   530→          setSuggestions(data.suggestions.slice(0, 4));
+   531→   531→        }
+   532→   532→      } catch {
+   533→   533→        /* ignore — fall back to existing suggestions */
+   534→   534→      }
+   535→   535→    })();
+   536→   536→    return () => {
+   537→   537→      cancelled = true;
+   538→   538→    };
+   539→   539→  }, [open, currentTab]);
+   540→   540→
+   541→   541→  // ── Proactive monitoring: poll briefing every 60s, speak alerts ─────────
+   542→   542→  useEffect(() => {
+   543→   543→    if (!open) return;
+   544→   544→    const id = window.setInterval(async () => {
+   545→   545→      if (!openRef.current) return;
+   546→   546→      try {
+   547→   547→        const res = await fetch("/api/agent-x/briefing");
+   548→   548→        if (!res.ok) return;
+   549→   549→        const data = (await res.json()) as AgentXBriefing;
+   550→   550→        const newPatches = data.pendingTasks ?? 0;
+   551→   551→        const newScore = data.postureScore ?? 0;
+   552→   552→
+   553→   553→        if (
+   554→   554→          lastPatchCountRef.current !== null &&
+   555→   555→          newPatches > lastPatchCountRef.current
+   556→   556→        ) {
+   557→   557→          const msg =
+   558→   558→            "Heads up — a new critical patch was just generated. Want me to show you?";
+   559→   559→          setMessages((prev) => [
+   560→   560→            ...prev,
+   561→   561→            { role: "agent", content: msg, ts: Date.now(), kind: "alert" },
+   562→   562→          ]);
+   563→   563→          speakReply(msg);
+   564→   564→        }
+   565→   565→        if (
+   566→   566→          lastPostureScoreRef.current !== null &&
+   567→   567→          newScore < lastPostureScoreRef.current
+   568→   568→        ) {
+   569→   569→          const msg = `Your security posture dropped to ${newScore}. Want me to investigate?`;
+   570→   570→          setMessages((prev) => [
+   571→   571→            ...prev,
+   572→   572→            { role: "agent", content: msg, ts: Date.now(), kind: "alert" },
+   573→   573→          ]);
+   574→   574→          speakReply(msg);
+   575→   575→        }
+   576→   576→        lastPatchCountRef.current = newPatches;
+   577→   577→        lastPostureScoreRef.current = newScore;
+   578→   578→      } catch {
+   579→   579→        /* swallow — proactive polling must never crash the panel */
+   580→   580→      }
+   581→   581→    }, PROACTIVE_POLL_MS);
+   582→   582→    return () => window.clearInterval(id);
+   583→   583→  }, [open, speakReply]);
+   584→   584→
+   585→   585→  // ── Stop TTS + listening when the panel closes ──────────────────────────
+   586→   586→  useEffect(() => {
+   587→   587→    if (open) return;
+   588→   588→    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+   589→   589→      window.speechSynthesis.cancel();
+   590→   590→    }
+   591→   591→    setSpeakingLocal(false);
+   592→   592→    try {
+   593→   593→      voiceRef.current?.stopListening();
+   594→   594→    } catch {
+   595→   595→      /* noop */
+   596→   596→    }
+   597→   597→  }, [open]);
+   598→   598→
+   599→   599→  // ── ESC closes the panel (VoiceControl's own ESC handler stops listening
+   600→   600→  //    when active; we only close if it isn't, so users can ESC-out of a
+   601→   601→  //    stray listen session without dismissing Agent X entirely).
+   602→   602→  useEffect(() => {
+   603→   603→    if (!open) return;
+   604→   604→    const onKey = (e: KeyboardEvent) => {
+   605→   605→      if (e.key !== "Escape") return;
+   606→   606→      if (voiceState.listening) return; // let VoiceControl handle it
+   607→   607→      onClose();
+   608→   608→    };
+   609→   609→    window.addEventListener("keydown", onKey);
+   610→   610→    return () => window.removeEventListener("keydown", onKey);
+   611→   611→  }, [open, onClose, voiceState.listening]);
+   612→   612→
+   613→   613→  // ── Cleanup TTS on unmount ──────────────────────────────────────────────
+   614→   614→  useEffect(() => {
+   615→   615→    return () => {
+   616→   616→      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+   617→   617→        window.speechSynthesis.cancel();
+   618→   618→      }
+   619→   619→    };
+   620→   620→  }, []);
+   621→   621→
+   622→   622→  // ── Derived display state ───────────────────────────────────────────────
+   623→   623→  const listening = voiceState.listening;
+   624→   624→  const speaking = speakingLocal || voiceState.speaking;
+   625→   625→  const supported = voiceState.supported;
+   626→   626→  const interim = voiceState.interim;
+   627→   627→
+   628→   628→  const micToggle = useCallback(() => {
+   629→   629→    const v = voiceRef.current;
+   630→   630→    if (!v || !v.isSupported()) return;
+   631→   631→    if (voiceState.listening) v.stopListening();
+   632→   632→    else v.startListening();
+   633→   633→  }, [voiceState.listening]);
+   634→   634→
+   635→   635→  // ── Visible suggestion chips (merge tab context + chat suggestions) ─────
+   636→   636→  const visibleSuggestions = useMemo(() => {
+   637→   637→    const merged = Array.from(
+   638→   638→      new Set([
+   639→   639→        ...suggestions,
+   640→   640→        ...(tabContext?.suggestions ?? []),
+   641→   641→      ]),
+   642→   642→    );
+   643→   643→    return merged.slice(0, 4);
+   644→   644→  }, [suggestions, tabContext]);
+   645→   645→
+   646→   646→  // ── Waveform bars (animated when listening) ─────────────────────────────
+   647→   647→  const bars = useMemo(() => Array.from({ length: 18 }, (_, i) => i), []);
+   648→   648→
+   649→   649→  return (
+   650→   650→    <>
+   651→   651→      {/* VoiceControl — owns the SpeechRecognition instance + auto-restart
+   652→   652→          in continuous mode. Visually hidden inside an sr-only wrapper so
+   653→   653→          only the floating top-center status chip escapes (which is fine —
+   654→   654→          it's pointer-events-none and shows the live transcript). */}
+   655→   655→      <div className="sr-only" aria-hidden="true">
+   656→   656→        <VoiceControl
+   657→   657→          ref={voiceRef}
+   658→   658→          continuous
+   659→   659→          speakResponses={false}
+   660→   660→          compact
+   661→   661→          onCommand={handleVoiceCommand}
+   662→   662→          onStateChange={handleStateChange}
+   663→   663→        />
+   664→   664→      </div>
+   665→   665→
+   666→   666→      <AnimatePresence>
+   667→   667→        {open && (
+   668→   668→          <motion.div
+   669→   669→            key="agent-x-panel"
+   670→   670→            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+   671→   671→            animate={{ opacity: 1, y: 0, scale: 1 }}
+   672→   672→            exit={{ opacity: 0, y: 24, scale: 0.96 }}
+   673→   673→            transition={{ type: "spring", stiffness: 320, damping: 26 }}
+   674→   674→            role="dialog"
+   675→   675→            aria-label="Agent X conversational panel"
+   676→   676→            aria-live="polite"
+   677→   677→            className="hud-corners fixed bottom-20 right-4 z-[90] flex max-h-[calc(100vh-7rem)] w-[min(28rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-emerald-500/30 bg-zinc-950/90 shadow-2xl backdrop-blur-xl sm:bottom-24 sm:right-6"
+   678→   678→          >
+   679→   679→            {/* ── Header ──────────────────────────────────────────────────── */}
+   680→   680→            <div className="flex items-center justify-between border-b border-emerald-500/20 bg-gradient-to-r from-emerald-500/5 to-transparent px-3 py-2.5">
+   681→   681→              <div className="flex items-center gap-2">
+   682→   682→                <div className="relative flex size-7 items-center justify-center rounded-md border border-emerald-500/40 bg-emerald-500/10">
+   683→   683→                  <Bot className="size-4 text-emerald-300" />
+   684→   684→                  <span className="pulse-dot absolute -right-0.5 -top-0.5 size-2 rounded-full bg-emerald-500" />
+   685→   685→                </div>
+   686→   686→                <div className="flex flex-col leading-none">
+   687→   687→                  <span className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] neon-emerald text-emerald-300">
+   688→   688→                    Agent X
+   689→   689→                  </span>
+   690→   690→                  <span className="mt-0.5 font-mono text-[8px] uppercase tracking-wider text-zinc-500">
+   691→   691→                    Autonomous SOC
+   692→   692→                  </span>
+   693→   693→                </div>
+   694→   694→              </div>
+   695→   695→              <div className="flex items-center gap-1.5">
+   696→   696→                {open && (
+   697→   697→                  <Badge
+   698→   698→                    variant="outline"
+   699→   699→                    className="border-emerald-500/40 bg-emerald-500/10 font-mono text-[8px] uppercase tracking-wider text-emerald-300"
+   700→   700→                  >
+   701→   701→                    <span className="size-1 animate-pulse rounded-full bg-emerald-400" />
+   702→   702→                    ACTIVE
+   703→   703→                  </Badge>
+   704→   704→                )}
+   705→   705→                <button
+   706→   706→                  type="button"
+   707→   707→                  onClick={onClose}
+   708→   708→                  aria-label="Close Agent X"
+   709→   709→                  className="flex size-7 items-center justify-center rounded-md border border-zinc-800 bg-zinc-900/60 text-zinc-400 transition-colors hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
+   710→   710→                >
+   711→   711→                  <X className="size-3.5" />
+   712→   712→                </button>
+   713→   713→              </div>
+   714→   714→            </div>
+   715→   715→
+   716→   716→            {/* ── Briefing strip (posture score + pending tasks) ────────────── */}
+   717→   717→            {briefing && (
+   718→   718→              <div className="grid grid-cols-3 gap-1.5 border-b border-emerald-500/10 bg-zinc-950/60 px-3 py-2">
+   719→   719→                <BriefingStat
+   720→   720→                  label="POSTURE"
+   721→   721→                  value={
+   722→   722→                    briefing.postureScore != null
+   723→   723→                      ? `${briefing.postureScore}`
+   724→   724→                      : "—"
+   725→   725→                  }
+   726→   726→                  sub={briefing.postureGrade ?? ""}
+   727→   727→                  tone="emerald"
+   728→   728→                />
+   729→   729→                <BriefingStat
+   730→   730→                  label="PATCHES"
+   731→   731→                  value={
+   732→   732→                    briefing.pendingTasks != null
+   733→   733→                      ? `${briefing.pendingTasks}`
+   734→   734→                      : "—"
+   735→   735→                  }
+   736→   736→                  sub="pending"
+   737→   737→                  tone={
+   738→   738→                    (briefing.pendingTasks ?? 0) > 0 ? "amber" : "emerald"
+   739→   739→                  }
+   740→   740→                />
+   741→   741→                <BriefingStat
+   742→   742→                  label="CRITICAL"
+   743→   743→                  value={
+   744→   744→                    briefing.criticalCount != null
+   745→   745→                      ? `${briefing.criticalCount}`
+   746→   746→                      : "—"
+   747→   747→                  }
+   748→   748→                  sub="findings"
+   749→   749→                  tone={
+   750→   750→                    (briefing.criticalCount ?? 0) > 0 ? "rose" : "emerald"
+   751→   751→                  }
+   752→   752→                />
+   753→   753→              </div>
+   754→   754→            )}
+   755→   755→            {!briefing && open && (
+   756→   756→              <div className="grid grid-cols-3 gap-1.5 border-b border-emerald-500/10 bg-zinc-950/60 px-3 py-2">
+   757→   757→                <Skeleton className="h-10 rounded-md bg-zinc-900/60" />
+   758→   758→                <Skeleton className="h-10 rounded-md bg-zinc-900/60" />
+   759→   759→                <Skeleton className="h-10 rounded-md bg-zinc-900/60" />
+   760→   760→              </div>
+   761→   761→            )}
+   762→   762→
+   763→   763→            {/* ── Conversation body ───────────────────────────────────────── */}
+   764→   764→            <div
+   765→   765→              ref={scrollRef}
+   766→   766→              className="custom-scrollbar flex-1 space-y-2.5 overflow-y-auto p-3"
+   767→   767→              style={{ maxHeight: "20rem", minHeight: "8rem" }}
+   768→   768→            >
+   769→   769→              {resumedSession && messages.length > 1 && (
+   770→   770→                <div className="flex justify-center">
+   771→   771→                  <span className="rounded-full border border-zinc-800 bg-zinc-900/60 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-zinc-500">
+   772→   772→                    Picking up where we left off…
+   773→   773→                  </span>
+   774→   774→                </div>
+   775→   775→              )}
+   776→   776→
+   777→   777→              <AnimatePresence mode="popLayout">
+   778→   778→                {messages.map((m, i) => (
+   779→   779→                  <motion.div
+   780→   780→                    key={`${m.ts}-${i}`}
+   781→   781→                    layout
+   782→   782→                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+   783→   783→                    animate={{ opacity: 1, y: 0, scale: 1 }}
+   784→   784→                    exit={{ opacity: 0, scale: 0.96 }}
+   785→   785→                    transition={{ duration: 0.18 }}
+   786→   786→                    className={`flex ${
+   787→   787→                      m.role === "user" ? "justify-end" : "justify-start"
+   788→   788→                    }`}
+   789→   789→                  >
+   790→   790→                    <div
+   791→   791→                      className={`group max-w-[88%] rounded-lg px-3 py-2 ${
+   792→   792→                        m.role === "user"
+   793→   793→                          ? "border border-emerald-500/30 bg-emerald-600/15 text-emerald-100"
+   794→   794→                          : m.kind === "error"
+   795→   795→                            ? "border border-rose-500/40 bg-rose-500/5 text-rose-200"
+   796→   796→                            : m.kind === "alert"
+   797→   797→                              ? "border border-amber-500/40 bg-amber-500/5 text-amber-100"
+   798→   798→                              : "border border-emerald-500/20 bg-zinc-900/70 text-zinc-200"
+   799→   799→                      }`}
+   800→   800→                    >
+   801→   801→                      {m.role === "agent" && (
+   802→   802→                        <div className="mb-1 flex items-center gap-1">
+   803→   803→                          {m.kind === "error" ? (
+   804→   804→                            <AlertCircle className="size-3 text-rose-400" />
+   805→   805→                          ) : m.kind === "alert" ? (
+   806→   806→                            <AlertCircle className="size-3 text-amber-400" />
+   807→   807→                          ) : m.kind === "briefing" ? (
+   808→   808→                            <Sparkles className="size-3 text-emerald-400" />
+   809→   809→                          ) : (
+   810→   810→                            <Bot className="size-3 text-emerald-400" />
+   811→   811→                          )}
+   812→   812→                          <span
+   813→   813→                            className={`font-mono text-[8px] uppercase tracking-wider ${
+   814→   814→                              m.kind === "error"
+   815→   815→                                ? "text-rose-400/70"
+   816→   816→                                : m.kind === "alert"
+   817→   817→                                  ? "text-amber-400/70"
+   818→   818→                                  : "text-emerald-400/60"
+   819→   819→                            }`}
+   820→   820→                          >
+   821→   821→                            {m.kind === "error"
+   822→   822→                              ? "ERR"
+   823→   823→                              : m.kind === "alert"
+   824→   824→                                ? "ALERT"
+   825→   825→                                : m.kind === "briefing"
+   826→   826→                                  ? "BRIEF"
+   827→   827→                                  : "AGENT X"}
+   828→   828→                          </span>
+   829→   829→                        </div>
+   830→   830→                      )}
+   831→   831→                      <p className="whitespace-pre-wrap text-xs leading-relaxed">
+   832→   832→                        {m.content}
+   833→   833→                      </p>
+   834→   834→                    </div>
+   835→   835→                  </motion.div>
+   836→   836→                ))}
+   837→   837→              </AnimatePresence>
+   838→   838→
+   839→   839→              {/* ── Thinking indicator ────────────────────────────────────── */}
+   840→   840→              <AnimatePresence>
+   841→   841→                {thinking && (
+   842→   842→                  <motion.div
+   843→   843→                    key="thinking"
+   844→   844→                    initial={{ opacity: 0, y: 8 }}
+   845→   845→                    animate={{ opacity: 1, y: 0 }}
+   846→   846→                    exit={{ opacity: 0, y: -4 }}
+   847→   847→                    className="flex justify-start"
+   848→   848→                  >
+   849→   849→                    <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-zinc-900/70 px-3 py-2">
+   850→   850→                      <Bot className="size-3 text-emerald-400" />
+   851→   851→                      <span className="font-mono text-[9px] uppercase tracking-wider text-emerald-400/60">
+   852→   852→                        Agent X is thinking
+   853→   853→                      </span>
+   854→   854→                      <span className="flex items-center gap-0.5">
+   855→   855→                        {[0, 1, 2].map((i) => (
+   856→   856→                          <motion.span
+   857→   857→                            key={i}
+   858→   858→                            className="size-1 rounded-full bg-emerald-400"
+   859→   859→                            animate={{ y: [0, -3, 0], opacity: [0.4, 1, 0.4] }}
+   860→   860→                            transition={{
+   861→   861→                              duration: 0.7,
+   862→   862→                              repeat: Infinity,
+   863→   863→                              delay: i * 0.15,
+   864→   864→                              ease: "easeInOut",
+   865→   865→                            }}
+   866→   866→                          />
+   867→   867→                        ))}
+   868→   868→                      </span>
+   869→   869→                    </div>
+   870→   870→                  </motion.div>
+   871→   871→                )}
+   872→   872→              </AnimatePresence>
+   873→   873→
+   874→   874→              {/* ── Live interim transcript (while listening) ─────────────── */}
+   875→   875→              <AnimatePresence>
+   876→   876→                {listening && interim && (
+   877→   877→                  <motion.div
+   878→   878→                    key="interim"
+   879→   879→                    initial={{ opacity: 0, y: 8 }}
+   880→   880→                    animate={{ opacity: 1, y: 0 }}
+   881→   881→                    exit={{ opacity: 0, y: -4 }}
+   882→   882→                    className="flex justify-end"
+   883→   883→                  >
+   884→   884→                    <div className="max-w-[88%] rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 italic text-cyan-200/80">
+   885→   885→                      <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-400/60">
+   886→   886→                        HEARING
+   887→   887→                      </span>
+   888→   888→                      <p className="mt-0.5 text-xs">{interim}&hellip;</p>
+   889→   889→                    </div>
+   890→   890→                  </motion.div>
+   891→   891→                )}
+   892→   892→              </AnimatePresence>
+   893→   893→
+   894→   894→              {messages.length === 0 && !thinking && (
+   895→   895→                <div className="flex h-32 flex-col items-center justify-center gap-2 text-center">
+   896→   896→                  <Bot className="size-6 text-emerald-500/40" />
+   897→   897→                  <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">
+   898→   898→                    {supported
+   899→   899→                      ? "Initializing Agent X…"
+   900→   900→                      : "Voice unsupported — type below"}
+   901→   901→                  </p>
+   902→   902→                </div>
+   903→   903→              )}
+   904→   904→            </div>
+   905→   905→
+   906→   906→            {/* ── Quick-reply suggestion chips ────────────────────────────── */}
+   907→   907→            {visibleSuggestions.length > 0 && (
+   908→   908→              <div className="flex gap-1.5 overflow-x-auto border-t border-emerald-500/10 px-3 py-2 custom-scrollbar">
+   909→   909→                {visibleSuggestions.map((s) => (
+   910→   910→                  <button
+   911→   911→                    key={s}
+   912→   912→                    type="button"
+   913→   913→                    onClick={() => void sendMessage(s)}
+   914→   914→                    disabled={thinking}
+   915→   915→                    className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/5 px-2.5 py-1 font-mono text-[10px] text-emerald-300 transition-colors hover:border-emerald-500/60 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+   916→   916→                  >
+   917→   917→                    {s.length > 40 ? `${s.slice(0, 38)}…` : s}
+   918→   918→                  </button>
+   919→   919→                ))}
+   920→   920→              </div>
+   921→   921→            )}
+   922→   922→
+   923→   923→            {/* ── Status strip (listening waveform / speaking indicator) ──── */}
+   924→   924→            <div className="border-t border-emerald-500/10 bg-zinc-950/60 px-3 py-1.5">
+   925→   925→              {speaking ? (
+   926→   926→                <div className="flex items-center gap-2">
+   927→   927→                  <motion.span
+   928→   928→                    animate={{ opacity: [0.4, 1, 0.4] }}
+   929→   929→                    transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+   930→   930→                  >
+   931→   931→                    <Radio className="size-3 text-amber-300" />
+   932→   932→                  </motion.span>
+   933→   933→                  <span className="font-mono text-[9px] uppercase tracking-wider text-amber-300/80">
+   934→   934→                    Agent X is speaking…
+   935→   935→                  </span>
+   936→   936→                  <button
+   937→   937→                    type="button"
+   938→   938→                    onClick={stopSpeaking}
+   939→   939→                    className="ml-auto font-mono text-[9px] uppercase tracking-wider text-zinc-500 underline-offset-2 hover:text-amber-200 hover:underline"
+   940→   940→                  >
+   941→   941→                    mute
+   942→   942→                  </button>
+   943→   943→                </div>
+   944→   944→              ) : listening ? (
+   945→   945→                <div className="flex items-center gap-2">
+   946→   946→                  <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
+   947→   947→                  <span className="font-mono text-[9px] uppercase tracking-wider text-emerald-300/80">
+   948→   948→                    Listening
+   949→   949→                  </span>
+   950→   950→                  <div className="flex h-3 flex-1 items-center gap-0.5 overflow-hidden">
+   951→   951→                    {bars.map((i) => (
+   952→   952→                      <motion.div
+   953→   953→                        key={i}
+   954→   954→                        className="flex-1 rounded-sm bg-emerald-400"
+   955→   955→                        animate={{
+   956→   956→                          height: [
+   957→   957→                            2,
+   958→   958→                            4 + Math.abs(Math.sin(i * 0.7)) * 8,
+   959→   959→                            2,
+   960→   960→                          ],
+   961→   961→                          opacity: [0.3, 0.9, 0.3],
+   962→   962→                        }}
+   963→   963→                        transition={{
+   964→   964→                          duration: 0.6 + (i % 5) * 0.08,
+   965→   965→                          repeat: Infinity,
+   966→   966→                          ease: "easeInOut",
+   967→   967→                          delay: i * 0.02,
+   968→   968→                        }}
+   969→   969→                      />
+   970→   970→                    ))}
+   971→   971→                  </div>
+   972→   972→                </div>
+   973→   973→              ) : (
+   974→   974→                <div className="flex items-center gap-2">
+   975→   975→                  <Activity className="size-3 text-zinc-500" />
+   976→   976→                  <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-500">
+   977→   977→                    {supported
+   978→   978→                      ? "Standing by — speak or type"
+   979→   979→                      : "Voice unsupported — type below"}
+   980→   980→                  </span>
+   981→   981→                </div>
+   982→   982→              )}
+   983→   983→            </div>
+   984→   984→
+   985→   985→            {/* ── Footer: text input + mic + send ─────────────────────────── */}
+   986→   986→            <div className="flex items-center gap-1.5 border-t border-emerald-500/20 bg-zinc-950/80 p-2">
+   987→   987→              <button
+   988→   988→                type="button"
+   989→   989→                onClick={micToggle}
+   990→   990→                disabled={!supported}
+   991→   991→                aria-label={
+   992→   992→                  !supported
+   993→   993→                    ? "Voice unsupported"
+   994→   994→                    : listening
+   995→   995→                      ? "Stop listening"
+   996→   996→                      : "Start listening"
+   997→   997→                }
+   998→   998→                title={
+   999→   999→                  !supported
+  1000→  1000→                    ? "Web Speech API unavailable. Try Chrome."
+  1001→  1001→                    : listening
+  1002→  1002→                      ? "Stop listening"
+  1003→  1003→                      : "Start listening"
+  1004→  1004→                }
+  1005→  1005→                className={`relative flex size-9 shrink-0 items-center justify-center rounded-md border transition-all ${
+  1006→  1006→                  listening
+  1007→  1007→                    ? "border-red-500/60 bg-red-500/20"
+  1008→  1008→                    : supported
+  1009→  1009→                      ? "border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20"
+  1010→  1010→                      : "cursor-not-allowed border-zinc-800 bg-zinc-900 opacity-50"
+  1011→  1011→                }`}
+  1012→  1012→              >
+  1013→  1013→                {listening ? (
+  1014→  1014→                  <MicOff className="size-4 text-red-300" />
+  1015→  1015→                ) : (
+  1016→  1016→                  <Mic className="size-4 text-emerald-300" />
+  1017→  1017→                )}
+  1018→  1018→                {listening && (
+  1019→  1019→                  <motion.span
+  1020→  1020→                    initial={{ scale: 1, opacity: 0.6 }}
+  1021→  1021→                    animate={{ scale: 1.4, opacity: 0 }}
+  1022→  1022→                    transition={{ duration: 1, repeat: Infinity, ease: "easeOut" }}
+  1023→  1023→                    className="absolute inset-0 rounded-md border border-red-500/40"
+  1024→  1024→                  />
+  1025→  1025→                )}
+  1026→  1026→              </button>
+  1027→  1027→
+  1028→  1028→              <Input
+  1029→  1029→                value={input}
+  1030→  1030→                onChange={(e) => setInput(e.target.value)}
+  1031→  1031→                onKeyDown={(e) => {
+  1032→  1032→                  if (e.key === "Enter" && !e.shiftKey) {
+  1033→  1033→                    e.preventDefault();
+  1034→  1034→                    void sendMessage(input);
+  1035→  1035→                  }
+  1036→  1036→                }}
+  1037→  1037→                placeholder="Ask Agent X anything…"
+  1038→  1038→                disabled={thinking}
+  1039→  1039→                aria-label="Message Agent X"
+  1040→  1040→                className="border-emerald-500/20 bg-zinc-900/60 font-mono text-xs text-zinc-200 placeholder:text-zinc-600 focus-visible:border-emerald-500/50 focus-visible:ring-emerald-500/20"
+  1041→  1041→              />
+  1042→  1042→
+  1043→  1043→              <Button
+  1044→  1044→                type="button"
+  1045→  1045→                size="icon"
+  1046→  1046→                onClick={() => void sendMessage(input)}
+  1047→  1047→                disabled={thinking || !input.trim()}
+  1048→  1048→                aria-label="Send message"
+  1049→  1049→                className="size-9 shrink-0 border border-emerald-500/40 bg-emerald-600/80 text-white hover:bg-emerald-500"
+  1050→  1050→              >
+  1051→  1051→                <Send className="size-4" />
+  1052→  1052→              </Button>
+  1053→  1053→            </div>
+  1054→  1054→          </motion.div>
+  1055→  1055→        )}
+  1056→  1056→      </AnimatePresence>
+  1057→  1057→    </>
+  1058→  1058→  );
+  1059→  1059→}
+  1060→  1060→
+  1061→  1061→// ─── Briefing stat cell ──────────────────────────────────────────────────────
+  1062→  1062→
+  1063→  1063→interface BriefingStatProps {
+  1064→  1064→  label: string;
+  1065→  1065→  value: string;
+  1066→  1066→  sub: string;
+  1067→  1067→  tone: "emerald" | "amber" | "rose";
+  1068→  1068→}
+  1069→  1069→
+  1070→  1070→function BriefingStat({ label, value, sub, tone }: BriefingStatProps) {
+  1071→  1071→  const toneClasses =
+  1072→  1072→    tone === "emerald"
+  1073→  1073→      ? "border-emerald-500/30 text-emerald-300"
+  1074→  1074→      : tone === "amber"
+  1075→  1075→        ? "border-amber-500/40 text-amber-300"
+  1076→  1076→        : "border-rose-500/40 text-rose-300";
+  1077→  1077→  return (
+  1078→  1078→    <div
+  1079→  1079→      className={`flex flex-col items-center justify-center rounded-md border bg-zinc-900/40 px-1.5 py-1.5 ${toneClasses}`}
+  1080→  1080→    >
+  1081→  1081→      <span className="font-mono text-[8px] uppercase tracking-wider text-zinc-500">
+  1082→  1082→        {label}
+  1083→  1083→      </span>
+  1084→  1084→      <span className="font-mono text-base font-bold leading-none">{value}</span>
+  1085→  1085→      <span className="mt-0.5 font-mono text-[8px] uppercase tracking-wider opacity-70">
+  1086→  1086→        {sub}
+  1087→  1087→      </span>
+  1088→  1088→    </div>
+  1089→  1089→  );
+  1090→  1090→}
+  1091→  1091→
+  1092→  1092→export default AgentX;
+  1093→  1093→
