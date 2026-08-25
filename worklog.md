@@ -1459,3 +1459,240 @@ Stage Summary:
   - **Reused shadcn/ui**: Button, Badge, Progress, Select, Skeleton — all from `src/components/ui/`.
   - **Mobile-first responsive**: every component stacks on mobile, expands to side-by-side on `sm:`/`lg:` breakpoints. Findings list has `max-h-96 overflow-y-auto` with `[scrollbar-width:thin]`.
 - Lint result: `bun run lint` → **0 errors, 5 pre-existing warnings** (none in our files). `bunx tsc --noEmit` filtered to our 6 files → **0 errors**.
+
+---
+
+## 2026-08-25 — big-drop: 60+ modules, always-on voice, advanced gestures, 3 innovations
+
+**Task ID:** `big-drop`
+**Scope:** Next.js web app at `/home/z/GuardianX-web`. Live deployment
+at https://guardianx-two.vercel.app.
+
+### Context
+
+User's 4 asks in one message:
+1. "navigation is missing in some CTAs" — broken landing-page links
+2. "50+ modules we say list them all where they need to be" — features
+   catalog was only 34 items, /features page had hardcoded 42 out of sync
+3. "talkback should be available without clicking on the mic (once
+   activated it should be there for commands) throughout the command center"
+4. "hand gestures needs more improvements as they dont follow proper
+   hand movements + it shows camera tab it should work without opening
+   camera tab"
++ "do some more groundbreaking innovations"
+
+### What landed (5 work streams, 4 via parallel subagents)
+
+**1. 60+ Modules Catalog** (subagent `modules-list`)
+
+- `src/components/sentinel/landing/features-data.ts` expanded from 34 → 60
+  features using a `PALETTES` const + `withColor()` factory. Covers every
+  Command Center tab (DFIR, SOC, Exfil, Audit Scraper, R&D, Advanced,
+  Billing, Settings, User Mgmt, Content, Contributors) + 3 placeholders
+  for the new innovations.
+- Fixed the `Data Privacy Scanner` entry that was using forbidden indigo
+  colors — swapped to violet.
+- NEW `src/components/sentinel/modules-overview.tsx` (`ModulesOverview`) —
+  searchable/filterable grid with category pills, NEW badges, onSelect
+  routing to relevant tab. Uses `holo-card-sharp`, `hud-corners`,
+  `neon-emerald`, `pulse-dot` design tokens. Framer Motion
+  `AnimatePresence` for smooth filter transitions.
+- `src/app/features/page.tsx` rewritten — removed the 42-feature
+  hardcoded `FEATURE_CATEGORIES` array (was out of sync), now mounts
+  `<ModulesOverview>` driven by FEATURES data. Hero badge reads
+  "60+ Modules" (live from FEATURES).
+- NEW "All Modules" sidebar tab in page.tsx (under "Advanced" group).
+
+**2. Always-On Voice Control** (subagent `voice-always-on`)
+
+- `src/components/sentinel/war-room/voice-control.tsx` gained a
+  `continuous?: boolean` prop. When true:
+  - `rec.continuous = true` + `rec.interimResults = true`
+  - On `onend`, if `!userStoppedRef`, auto-restart recognition (handles
+    browsers that end after silence timeout)
+  - Each `isFinal` chunk dispatches its own command immediately
+    (no waiting for the whole session to end)
+  - Hold-SPACE push-to-talk disabled in continuous mode
+  - Floating `position: fixed` "● LISTENING" / "○ IDLE" chip at
+    top-center of viewport with the interim transcript on `sm+`
+  - "CONTINUOUS" badge with pulsing emerald dot next to the mic
+- NEW `src/components/sentinel/command-center-voice.tsx`
+  (`CommandCenterVoiceBar`) — floating chip at `fixed bottom-20 right-4
+  z-[80]` (above the support-chat button). Mic toggle drives the
+  imperative `VoiceControlHandle.startListening()/stopListening()`.
+  Spring-in `motion.div` transcript panel above the chip. 'V' keyboard
+  shortcut to toggle (skips inputs/textarea/contentEditable). Props:
+  `onCommand?`, `speakResponses?=false`, `compact?=true`,
+  `continuous?=true`.
+- Mounted in `page.tsx` so voice is available across the WHOLE Command
+  Center, not just inside the War Room overlay. Voice commands route
+  to all 23 tabs (dashboard, clients, patches, codebases, redagent,
+  compliance, soc, exfil, scraper, dfir, rnd, advanced, forecast,
+  quantum, constellation, modules, billing, settings, users, content,
+  contributors).
+
+**3. Advanced Hand Gestures** (subagent `gesture-advanced`)
+
+- `src/components/sentinel/war-room/gesture-control.tsx` rewritten
+  (640 → 1169 lines), keeping the 3 exports (`GestureControl`,
+  `GestureControlHandle`, `GestureEvent`) stable. Added 2 props:
+  `advanced?: boolean` (default `true`) + `compact?: boolean`
+  (default `false`).
+- Hidden camera by default — `showPreview` initial state `false`. Tiny
+  `size-6` icon-only CAM toggle button in the corner. Camera keeps
+  streaming via the hidden `<video>` (`opacity-0 h-px w-px`) so
+  tracking continues to work without any visible camera UI.
+- 5-frame moving-average smoothing on the index fingertip — kills
+  cursor jitter.
+- Better pinch (thumb-index distance < 0.05 AND thumb tip y >
+  index MCP y — thumb moving DOWN toward index, not just nearby).
+  Debounced 300ms.
+- Better fist (all 4 finger tips below their PIP joints AND thumb tip
+  near index MCP, `dist < 0.08`). Debounced 500ms.
+- New gestures: vertical swipe (3-finger pose only), L-shape →
+  `select_mode`, two-hand pinch-midpoint zoom, palm-rotate.
+- Hover dwell — cursor over a clickable element > 800ms → auto-click.
+  Decoupled rAF loop draws an amber SVG progress ring around the
+  cursor at 60fps. Gesture-control's own UI (marked `data-gesture-ui`)
+  excluded so dwell can't auto-disable gesture control.
+- Cursor visual feedback — 5 color states (emerald/red/violet/cyan/
+  amber) for default/pinching/fist/palm/select modes.
+- `compact` mode — renders only the cursor + a tiny status chip. The
+  Command Center can mount `<GestureControl compact onGesture={...} />`
+  and gestures work silently in the background.
+- New `GestureEvent` variants: `{kind:"select_mode"}`,
+  `{kind:"swipe_up"}`, `{kind:"swipe_down"}`, `{kind:"rotate";
+  delta:number}`. Old callers silently ignore (back-compat verified
+  via tsc).
+
+**4. Groundbreaking Innovations** (subagent `innovations`)
+
+Three new Command-Center tab components + 3 backing API routes:
+
+- **Predictive Threat Forecast** — `src/components/sentinel/
+  predictive-forecast.tsx` + `src/app/api/predictive-forecast/route.ts`.
+  AI-powered radar chart forecasting next likely attack vectors across
+  6 axes (Web App / API / Auth / Crypto / Infra / Supply Chain). LLM
+  call with 60s module-level cache; heuristic fallback (regex-based
+  scoring weighted by finding severity) if LLM unavailable or returns
+  malformed JSON. Animated count-up confidence header, AI-generated
+  top-3 prose with stagger entrance, 60s auto-refresh, loading
+  skeleton, error+retry state. Recharts 6-axis radar.
+
+- **Quantum-Readiness Scanner** — `src/components/sentinel/
+  quantum-scanner.tsx` + `src/app/api/quantum-scan/route.ts`. Pure
+  regex scan over `codebase.sourceCode` for RSA / ECC / AES-128 /
+  SHA-1 / SHA-256 / MD5 / DH / ECDH. Returns per-line findings + 4
+  category summaries (Public Key / Symmetric / Hashing / Key Exchange)
+  with PQC replacement guidance (RSA → CRYSTALS-Kyber +
+  CRYSTALS-Dilithium, AES-128 → AES-256, SHA-256 → SHA-384/512, etc.).
+  Quantum Readiness Score = `100 − Σ(severity weights)` clamped 0-100.
+  No LLM needed — pure regex, fast.
+
+- **3D Threat Constellation** — `src/components/sentinel/
+  threat-constellation.tsx` + `src/app/api/threat-constellation/route.ts`.
+  WebGL viz using `@react-three/fiber` + `@react-three/drei`. Maps
+  clients (emerald spheres) / codebases (cyan cubes) / findings (red
+  octahedrons) / patches (amber tetrahedrons) as nodes in a 3D
+  force-directed graph. Custom O(N²) repulsion + Hooke's-law edge
+  spring simulation in `useFrame`. Hover → scale + tooltip. Click →
+  camera lerps to node + right-side detail panel. Auto-rotate pauses
+  on hover. Background: dark space with `Stars` from drei. Hard cap
+  at 100 nodes.
+
+**5. Integration** (central coordinator)
+
+- `src/app/page.tsx`:
+  - Imported 4 new components + VoiceCommand type
+  - Added 4 new Tab variants: `modules`, `forecast`, `quantum`,
+    `constellation`
+  - Added 4 new NavItems in the "Advanced" sidebar group with
+    `isNew` badges on the 3 innovations
+  - Added `isNew` prop to `NavItem` — shows a small "NEW" cyan badge
+  - Extended the tab-title + neon-color switch to cover the 4 new
+    tabs
+  - Added 4 new tab content cases (PredictiveForecast, QuantumScanner,
+    ThreatConstellation, ModulesOverview with onSelect routing)
+  - Mounted `<CommandCenterVoiceBar>` at the bottom of ConsoleView
+    with onCommand routing to all 23 tabs
+- `src/components/sentinel/landing/case-studies.tsx`: fixed broken
+  `/case-studies` link → `/features` (the only broken CTA found)
+
+**6. Predictive Forecast graceful LLM fallback** (central coordinator)
+
+- Initial deployment: `/api/predictive-forecast` returned HTTP 500
+  with "Forecast failed. Configuration file not found or invalid.
+  Please create .z-ai-config..." — the Z.AI SDK throws when the
+  config file isn't present (Vercel doesn't have it; it lives only
+  in the sentinel-engine Docker image).
+- Fix: wrapped the `llmForecast()` call in its own try/catch. On
+  any LLM failure (config missing, network error, malformed JSON),
+  fall back to `heuristicScores()` which derives a 0-100 score per
+  attack vector from finding-category counts. The endpoint now
+  always returns data — LLM-powered when available, heuristic when
+  not. Confirmed: now returns HTTP 200 with
+  `{"scores":{"web":20,"api":20,"auth":20,"crypto":20,"infra":20,
+  "supply_chain":20},"top_3":[...],"confidence":25,...}` on a fresh
+  empty DB.
+
+### Dependencies added
+
+- `three@0.185.1` + `@react-three/fiber@9.7.0` + `@react-three/drei@10.7.8`
+  + `@types/three@0.185.4` — for the 3D Threat Constellation WebGL viz.
+
+### Verification (live, https://guardianx-two.vercel.app)
+
+- `bun run lint` → **0 errors, 5 warnings** (all 5 pre-existing in
+  `contributors-panel.tsx` + `service-launcher.tsx`, untouched).
+- Vercel deployment `0a62bf4` reached `READY` in ~60s.
+- `GET /api/predictive-forecast` → HTTP 200, returns heuristic
+  baseline (scores 20 across all 6 axes, confidence 25, no findings
+  in DB). Latency 0.64s.
+- `GET /api/threat-constellation` → HTTP 200, returns
+  `{"nodes":[],"edges":[]}` (empty DB). Latency 0.62s.
+- `POST /api/quantum-scan` → not tested (no codebases in DB), but
+  the route is wired.
+- Agent-browser verified:
+  - All 4 new sidebar tabs visible: "Predictive Forecast NEW",
+    "Quantum Scanner NEW", "Threat Constellation NEW", "All Modules"
+  - Clicking each tab renders its component correctly
+  - Voice chip mounted at `fixed bottom-20 right-4 z-[80]` showing
+    "VOICE IDLE · press 'V' · CONTINUOUS" — confirmed via DOM eval
+  - No console errors during the entire session
+- VLM (glm-5v-turbo) screenshot analysis:
+  - All Modules page: "search box at top right, modules displayed in
+    grid with icons/titles/descriptions, category filter pills above,
+    NEW badges visible"
+  - Predictive Forecast: "radar chart with 6 axes, confidence score
+    of 25%, AI-generated prose under 'Top 3 Predicted Vectors'"
+  - Quantum Scanner: "codebase selector dropdown labeled 'No
+    codebases available', 'Scan for Quantum Readiness' button"
+  - Threat Constellation: "large 3D canvas area, EMPTY CONSTELLATION
+    message and prompt to add clients"
+
+### Notes for the next session
+
+- **3D Threat Constellation is empty** because there are no
+  clients/codebases/findings/patches in the Neon DB yet. Add a
+  client + run a scan and the constellation will populate.
+- **Predictive Forecast returns heuristic baseline** for the same
+  reason — no findings to analyze. Once scans start producing
+  findings, the heuristic scores will rise above 20 and the LLM
+  call (if Z.AI config is added to Vercel env) will produce real
+  predictions.
+- **Voice control needs mic permission** — the first time the user
+  clicks the mic (or presses V), the browser will prompt for
+  microphone access. After granting, continuous mode auto-restarts
+  recognition on silence timeout. The chip shows "LISTENING" while
+  active.
+- **Gesture control needs camera permission** — same pattern. The
+  new default is camera-hidden (`showPreview=false`) but the video
+  element still streams, so tracking works. Click the tiny CAM
+  toggle in the corner to show the preview with skeleton overlay.
+- **To enable real LLM-powered forecasts** on Vercel: set the
+  `ZAI_CONFIG` env var (JSON string with `{"baseUrl":"...",
+  "apiKey":"..."}`) on the Vercel project. Without it, the route
+  gracefully falls back to the heuristic scorer — endpoint still
+  returns 200 with baseline data.
+- **NavItem isNew prop** can be reused for future feature flags —
+  it shows a small cyan "NEW" badge next to the label.
