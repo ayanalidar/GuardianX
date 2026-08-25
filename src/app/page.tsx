@@ -89,14 +89,15 @@ import {
   Brain,
   Orbit,
   LayoutGrid,
+  Bot,
 } from "lucide-react";
 import { ModulesOverview } from "@/components/sentinel/modules-overview";
-import { AgentX, AgentXActivationButton } from "@/components/sentinel/agent-x";
+import { AgentX } from "@/components/sentinel/agent-x";
 import { PredictiveForecast } from "@/components/sentinel/predictive-forecast";
 import { QuantumScanner } from "@/components/sentinel/quantum-scanner";
 import { ThreatConstellation } from "@/components/sentinel/threat-constellation";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings" | "modules" | "forecast" | "quantum" | "constellation";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings" | "modules" | "forecast" | "quantum" | "constellation" | "agent-x";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -177,7 +178,6 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [credsOpen, setCredsOpen] = useState(false);
-  const [agentXOpen, setAgentXOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // live scan state
@@ -430,6 +430,9 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <NavItem active={tab === "billing"} onClick={() => { setTab("billing"); setSidebarOpen(false); }} icon={CreditCard} label="Billing" iconColor="text-emerald-400" accentColor="emerald" />
               <NavItem active={tab === "settings"} onClick={() => { setTab("settings"); setSidebarOpen(false); }} icon={Settings} label="Settings" iconColor="text-zinc-300" accentColor="emerald" />
             </NavGroup>
+            <NavGroup label="AI Assistant" color="emerald">
+              <NavItem active={tab === "agent-x"} onClick={() => { setTab("agent-x"); setSidebarOpen(false); }} icon={Bot} label="Agent X" iconColor="text-emerald-400" accentColor="emerald" isNew />
+            </NavGroup>
             {currentUser?.role === "admin" && (
               <NavGroup label="Administration" color="emerald">
                 <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" accentColor="emerald" />
@@ -496,6 +499,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "quantum" ? "neon-violet text-violet-300" :
                   tab === "constellation" ? "neon-emerald text-emerald-300" :
                   tab === "modules" ? "neon-amber text-amber-300" :
+                  tab === "agent-x" ? "neon-emerald text-emerald-300" :
                   tab === "billing" ? "neon-emerald text-emerald-300" :
                   tab === "settings" ? "neon-emerald text-emerald-300" :
                   tab === "user-activity" ? "neon-emerald text-emerald-300" :
@@ -512,6 +516,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "quantum" ? "Quantum-Readiness Scanner" :
                    tab === "constellation" ? "3D Threat Constellation" :
                    tab === "modules" ? "All Modules" :
+                   tab === "agent-x" ? "Agent X" :
                    tab === "patches" ? "Patch Review Queue" :
                    tab === "codebases" ? "Codebase Library" :
                    tab === "redagent" ? "RedAgent VAPT Engine" :
@@ -529,12 +534,9 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    "Advanced Security Platform"}
                 </h1>
               </div>
-              <div className="flex items-center gap-2">
-                <AgentXActivationButton active={agentXOpen} onClick={() => setAgentXOpen((v) => !v)} />
-                <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-mono text-xs">
-                  <span className={`size-1.5 rounded-full ${connected ? "bg-emerald-500 pulse-dot" : "bg-amber-500 animate-pulse"}`} />
-                  <span className={connected ? "text-emerald-300" : "text-amber-300"}>{connected ? "LIVE" : "…"}</span>
-                </div>
+              <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-mono text-xs">
+                <span className={`size-1.5 rounded-full ${connected ? "bg-emerald-500 pulse-dot" : "bg-amber-500 animate-pulse"}`} />
+                <span className={connected ? "text-emerald-300" : "text-amber-300"}>{connected ? "LIVE" : "…"}</span>
               </div>
             </div>
           </header>
@@ -587,6 +589,29 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                 else if (cat.includes("vapt") || cat.includes("redagent")) setTab("redagent");
                 else setTab("advanced");
               }} />
+            ) : tab === "agent-x" ? (
+              <AgentX
+                open={true}
+                onClose={() => setTab("dashboard")}
+                currentTab={tab}
+                currentUser={currentUser}
+                onNavigate={(t) => setTab(t as Tab)}
+                onScan={(name) => {
+                  const cb = codebases.find((c) => c.name.toLowerCase().includes(name.toLowerCase()));
+                  if (cb) handleScan(cb);
+                }}
+                onApprovePatch={(id) => {
+                  const p = patches.find((x) => x.patch_id === id || x.patch_id.endsWith(id));
+                  if (p) handleSelectPatch(p);
+                }}
+                onSearch={(q) => {
+                  setQuery(q);
+                  setTab("patches");
+                }}
+                onOpenWarRoom={() => {
+                  window.dispatchEvent(new CustomEvent("guardianx:open-war-room"));
+                }}
+              />
             ) : (
               <>
                 <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>
@@ -743,32 +768,6 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
         onNavigate={(t) => setTab(t)}
       />
       <SupportChat currentUser={currentUser} bottomOffset={64} />
-      {/* Agent X — always-on conversational AI with TTS talkback */}
-      <AgentX
-        open={agentXOpen}
-        onClose={() => setAgentXOpen(false)}
-        currentTab={tab}
-        currentUser={currentUser}
-        onNavigate={(t) => setTab(t as Tab)}
-        onScan={(name) => {
-          // Find codebase by name + trigger scan
-          const cb = codebases.find((c) => c.name.toLowerCase().includes(name.toLowerCase()));
-          if (cb) handleScan(cb);
-        }}
-        onApprovePatch={(id) => {
-          // Approve patch by ID — reuse the existing handleResolved flow
-          const p = patches.find((x) => x.patch_id === id || x.patch_id.endsWith(id));
-          if (p) handleSelectPatch(p);
-        }}
-        onSearch={(q) => {
-          setQuery(q);
-          setTab("patches");
-        }}
-        onOpenWarRoom={() => {
-          // War Room is inside the Command Center component — open via a custom event
-          window.dispatchEvent(new CustomEvent("guardianx:open-war-room"));
-        }}
-      />
     </div>
   );
 }

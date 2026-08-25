@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Terminal, Activity, ShieldCheck, Brain } from "lucide-react";
+import { Terminal, Activity, ShieldCheck, Brain, ArrowRight } from "lucide-react";
+import { GlowCTA } from "@/components/sentinel/landing/glow-cta";
 
 /* ════════════════════════════════════════════════════════════════════
    AnimatedDemo, live, in-action marketing demo for the landing page.
@@ -13,6 +14,63 @@ import { Terminal, Activity, ShieldCheck, Brain } from "lucide-react";
      4. AI Briefing: alerts slide in one by one
    Each card has a neon shine sweep overlay (like the logo).
    ════════════════════════════════════════════════════════════════════ */
+
+// ── Accent palette (emerald/cyan/amber/violet only — no indigo/blue) ────
+type Accent = "emerald" | "cyan" | "amber" | "violet";
+
+const ACCENT_BADGE: Record<Accent, string> = {
+  emerald:
+    "border-emerald-500/40 bg-emerald-500/10 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]",
+  cyan: "border-cyan-500/40 bg-cyan-500/10 text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.25)]",
+  amber:
+    "border-amber-500/40 bg-amber-500/10 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]",
+  violet:
+    "border-violet-500/40 bg-violet-500/10 text-violet-300 shadow-[0_0_12px_rgba(167,139,250,0.25)]",
+};
+
+/** Small pill showing an impressive headline metric per demo card. */
+function StatBadge({ value, accent }: { value: string; accent: Accent }) {
+  return (
+    <span
+      className={`shrink-0 rounded-sm border px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider ${ACCENT_BADGE[accent]}`}
+    >
+      {value}
+    </span>
+  );
+}
+
+/** Shared card header block: eyebrow + compelling title + value-prop subtitle. */
+function DemoCardHeader({
+  icon,
+  eyebrow,
+  title,
+  subtitle,
+  stat,
+  accent,
+}: {
+  icon: React.ReactNode;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  stat: string;
+  accent: Accent;
+}) {
+  return (
+    <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <span
+          className={`flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-${accent}-400/70`}
+        >
+          {icon}
+          {eyebrow}
+        </span>
+        <h3 className="mt-1 text-sm font-semibold leading-tight text-zinc-100">{title}</h3>
+        <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">{subtitle}</p>
+      </div>
+      <StatBadge value={stat} accent={accent} />
+    </div>
+  );
+}
 
 // ── Terminal sequences (cycled) ─────────────────────────────────────────
 const TERMINAL_SEQUENCES: { text: string; type: "cmd" | "out" | "err" | "success" | "warn" }[][] = [
@@ -100,11 +158,16 @@ function TerminalDemo({ active }: { active: boolean }) {
     >
       <div className="demo-shine" aria-hidden />
       <div className="relative z-10">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-emerald-400/70">
-            <Terminal className="size-3" /> Live Exploit Terminal
-          </span>
-          <div className="relative h-1 w-16 overflow-hidden rounded-full bg-zinc-800">
+        <DemoCardHeader
+          icon={<Terminal className="size-3" />}
+          eyebrow="Live Exploit Terminal"
+          title="Autonomous Exploit Console"
+          subtitle="AI reads the code, proves the exploit, and ships the patch — no human in the loop."
+          stat="90s"
+          accent="emerald"
+        />
+        <div className="mb-2 flex items-center justify-end">
+          <div className="relative h-1 w-20 overflow-hidden rounded-full bg-zinc-800">
             <div className="scan-bar absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-emerald-500 to-transparent" />
           </div>
         </div>
@@ -170,14 +233,18 @@ function PipelineDemo({ active }: { active: boolean }) {
     >
       <div className="demo-shine" aria-hidden />
       <div className="relative z-10">
-        <div className="mb-3 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-cyan-400/70">
-          <Activity className="size-3" /> 7-Stage Pipeline
-        </div>
+        <DemoCardHeader
+          icon={<Activity className="size-3" />}
+          eyebrow="Autonomous Pipeline"
+          title="7-Stage Vulnerability → Patch Chain"
+          subtitle="Onboard → Scan → Test → Patch → Verify → Defend → Comply — fully chained, zero hand-offs."
+          stat="7 stages"
+          accent="cyan"
+        />
         <div className="space-y-2">
           {PIPELINE_STAGES.map((s, i) => {
             const isCompleted = i < activeStage;
             const isActive = i === activeStage;
-            const isPending = i > activeStage;
             return (
               <div
                 key={i}
@@ -262,9 +329,14 @@ function KpiDemo({ active }: { active: boolean }) {
     >
       <div className="demo-shine" aria-hidden />
       <div className="relative z-10">
-        <div className="mb-3 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-emerald-400/70">
-          <ShieldCheck className="size-3" /> Real-Time KPIs
-        </div>
+        <DemoCardHeader
+          icon={<ShieldCheck className="size-3" />}
+          eyebrow="Real-Time KPIs"
+          title="Live SOC KPIs"
+          subtitle="Mean-time-to-remediate down 85% — patched before the analyst finishes their coffee."
+          stat="85%"
+          accent="amber"
+        />
         <div className="grid grid-cols-4 gap-2">
           {KPI_TARGETS.map((k, i) => (
             <KpiCell key={`${cycle}-${i}`} target={k.target} label={k.label} color={k.color} delay={i * 150} />
@@ -321,9 +393,14 @@ function AiBriefingDemo({ active }: { active: boolean }) {
     >
       <div className="demo-shine" aria-hidden />
       <div className="relative z-10">
-        <div className="mb-2 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-violet-400/70">
-          <Brain className="size-3" /> AI Threat Briefing
-        </div>
+        <DemoCardHeader
+          icon={<Brain className="size-3" />}
+          eyebrow="AI Threat Briefing"
+          title="Executive Briefing, Autogenerated"
+          subtitle="An executive-grade brief writes itself the moment a finding closes — no copy-paste, no hallucinations."
+          stat="GPT-4 class"
+          accent="violet"
+        />
         <div className="space-y-2">
           {AI_ALERTS.slice(0, visibleAlerts).map((alert, i) => (
             <div
@@ -347,7 +424,7 @@ function AiBriefingDemo({ active }: { active: boolean }) {
 }
 
 // ── Main exported component ──────────────────────────────────────────────
-export function AnimatedDemo() {
+export function AnimatedDemo({ onEnter }: { onEnter?: () => void } = {}) {
   const sectionRef = useRef<HTMLElement>(null);
   const [active, setActive] = useState(true);
 
@@ -388,27 +465,74 @@ export function AnimatedDemo() {
     };
   }, []);
 
+  // CTA handler — call the wired `onEnter` if provided, otherwise smooth-scroll
+  // down into the next section so the button is never a dead click.
+  const handleEnter = () => {
+    if (onEnter) {
+      onEnter();
+      return;
+    }
+    if (typeof window !== "undefined") {
+      window.scrollBy({ top: window.innerHeight * 0.8, behavior: "smooth" });
+    }
+  };
+
   return (
     <section
       ref={sectionRef}
-      className="mx-auto max-w-6xl px-4 py-16 sm:px-6"
+      className="relative mx-auto max-w-6xl overflow-hidden px-4 py-16 sm:px-6"
       style={{ contentVisibility: "auto", containIntrinsicSize: "600px" }}
     >
-      <div className="mb-10 text-center">
-        <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-cyan-500/60">
-          {"// Live Command Center"}
-        </div>
-        <h2 className="text-3xl font-bold text-zinc-50">See it in action</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-400">
-          Real-time exploit terminal, network topology, threat radar, and AI threat briefing, all in one dashboard.
-        </p>
-      </div>
+      {/* Circuit-grid background */}
+      <div aria-hidden className="cyber-grid pointer-events-none absolute inset-0 opacity-30" />
+      {/* Top + bottom fade so the grid never fights the content */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-950/60 via-transparent to-zinc-950/60"
+      />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <TerminalDemo active={active} />
-        <PipelineDemo active={active} />
-        <KpiDemo active={active} />
-        <AiBriefingDemo active={active} />
+      <div className="relative z-10">
+        {/* ── Section header ──────────────────────────────────────────── */}
+        <div className="mb-10 text-center">
+          <div className="mb-3 flex items-center justify-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-500/60">
+              {"// Live Command Center"}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-300">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+              </span>
+              LIVE
+            </span>
+          </div>
+          <h2 className="text-3xl font-bold leading-tight text-zinc-50 sm:text-4xl">
+            From code to exploit to patch — in 90 seconds
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
+            Watch a full VAPT run end-to-end — AI reads the code, finds the vulnerability,
+            generates a PoC exploit, writes the patch, sandbox-verifies it, and produces
+            an executive briefing. 90 seconds, zero human input.
+          </p>
+        </div>
+
+        {/* ── 2x2 demo grid (stacks on mobile) ─────────────────────────── */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <TerminalDemo active={active} />
+          <PipelineDemo active={active} />
+          <KpiDemo active={active} />
+          <AiBriefingDemo active={active} />
+        </div>
+
+        {/* ── CTA ──────────────────────────────────────────────────────── */}
+        <div className="mt-10 flex flex-col items-center gap-2 text-center">
+          <GlowCTA onClick={handleEnter} variant="solid">
+            Enter the Lab Console <ArrowRight className="size-4" />
+          </GlowCTA>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+            No signup · runs in your browser · fully interactive
+          </p>
+        </div>
       </div>
     </section>
   );

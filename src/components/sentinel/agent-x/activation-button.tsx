@@ -3,26 +3,27 @@
 /**
  * AgentXActivationButton
  * -----------------------
- * Dashboard-header toggle that activates Agent X.
+ * Back-compat header toggle for Agent X.
  *
- * The button is mounted next to the existing Refresh / Creds / Logout
- * buttons in the Command Center header. It owns no state of its own —
- * `active` is a controlled prop driven by the parent (page.tsx), and
- * a single `onClick` callback flips it.
+ * Agent X is now a SIDEBAR TAB (just like Overview / Patches / etc.),
+ * NOT a floating drawer. The central coordinator (page.tsx) wires
+ * `onClick` to `setTab("agent-x")` (or equivalent) so clicking this
+ * button simply navigates to the Agent X tab. The component itself
+ * owns no state — `active` mirrors whether the Agent X tab is
+ * currently selected.
  *
- * 'X' keyboard shortcut: when not focused in an input/textarea, pressing
- * 'X' toggles Agent X via the same `onClick` callback. This is the only
- * place where the shortcut lives — the Agent X panel itself only has an
- * `onClose` (no `onOpen`) and so cannot self-toggle. The button is always
- * mounted in the header, so the shortcut works whether or not the panel
- * is currently open.
+ * 'X' keyboard shortcut: when not focused in an input/textarea,
+ * pressing 'X' triggers the same `onClick` callback (navigates to
+ * the Agent X tab). Modifier+X combos (Ctrl+X cut, Cmd+X) are
+ * ignored so we don't steal OS shortcuts.
  *
  * Visual states:
  *   - inactive: subtle zinc border, dim Bot icon, "AGENT X" label
  *   - active:   emerald glow, pulsing dot, "ACTIVE" badge
  *
  * Reuses the `pulse-dot` + `neon-emerald` design tokens so it matches
- * the rest of the Command Center HUD aesthetic.
+ * the rest of the Command Center HUD aesthetic. Kept for back-compat
+ * with page.tsx — newer dashboards may render Agent X purely as a tab.
  */
 
 import { useEffect } from "react";

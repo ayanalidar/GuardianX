@@ -1,354 +1,887 @@
 "use client";
+
 import { SiteHeader } from "@/components/sentinel/site-header";
 import { SiteFooter } from "@/components/sentinel/site-footer";
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  ShieldHalf, Zap, Clock, IndianRupee, Bot, FlaskConical, Rocket,
-  Bug, Crosshair, ShieldCheck, FileText, AlertTriangle,
-  Building2, Lock, Globe, ArrowRight, Cpu, Eye, Heart, Target,
-  Brain, Activity, HeartPulse, Radar, Network, ShieldAlert, GitBranch, RotateCcw,
+  Building2,
+  Target,
+  Heart,
+  Cpu,
+  Brain,
+  Activity,
+  HeartPulse,
+  ShieldCheck,
+  Lock,
+  RotateCcw,
+  Radar,
+  Network,
+  GitBranch,
+  Crosshair,
+  ShieldAlert,
+  Code2,
+  Bug,
+  Globe,
+  FileText,
+  Phone,
+  ArrowRight,
+  Rocket,
+  Zap,
+  ShieldHalf,
+  IndianRupee,
+  Headphones,
+  Sparkles,
+  Bot,
+  Cctv,
+  Fingerprint,
+  MapPin,
+  Mail,
+  Scale,
+  Infinity as InfinityIcon,
+  type LucideIcon,
 } from "lucide-react";
+import { useCountUp, formatInt } from "@/components/sentinel/landing/use-count-up";
+
+/* ---------------------------------- data ---------------------------------- */
+
+const HERO_STATS: { value: string; label: string; color: string }[] = [
+  { value: "60+", label: "AI modules", color: "text-emerald-400" },
+  { value: "90s", label: "per VAPT scan", color: "text-cyan-400" },
+  { value: "85%", label: "MTTR reduction", color: "text-violet-400" },
+  { value: "1.6M+", label: "Indian companies to protect", color: "text-rose-400" },
+];
+
+const VALUES: {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  iconWrap: string;
+  iconColor: string;
+  titleColor: string;
+}[] = [
+  {
+    icon: Target,
+    title: "Autonomy First",
+    desc: "Security shouldn't require a PhD in pentesting. GuardianX thinks, attacks, patches, and reports — autonomously, in one continuous loop.",
+    iconWrap: "border-emerald-500/30 bg-emerald-500/10",
+    iconColor: "text-emerald-400",
+    titleColor: "text-emerald-400",
+  },
+  {
+    icon: Heart,
+    title: "Built for India",
+    desc: "DPDPA-compliant by design, priced in rupees, and tuned for the regulatory reality of Indian businesses — then scaled globally.",
+    iconWrap: "border-rose-500/30 bg-rose-500/10",
+    iconColor: "text-rose-400",
+    titleColor: "text-rose-400",
+  },
+  {
+    icon: Cpu,
+    title: "AI-Native",
+    desc: "Not a legacy tool with AI bolted on. GuardianX was built from day one around LLMs for analysis, exploit synthesis, and patch generation.",
+    iconWrap: "border-cyan-500/30 bg-cyan-500/10",
+    iconColor: "text-cyan-400",
+    titleColor: "text-cyan-400",
+  },
+];
+
+const STAGES: {
+  stage: string;
+  sub: string;
+  title: string;
+  desc: string;
+  icon: LucideIcon;
+  iconWrap: string;
+  iconColor: string;
+  stageColor: string;
+  subColor: string;
+  glow: string;
+  bullets: { icon: LucideIcon; text: string }[];
+}[] = [
+  {
+    stage: "01 / THINK",
+    sub: "Adaptive Intelligence",
+    title: "AI reads code like antibodies scanning for threats",
+    desc: "The Think engine ingests source code, runtime signals, and threat intel to map your entire attack surface in real time. It predicts compromise paths before adversaries ever exploit them.",
+    icon: Brain,
+    iconWrap: "border-emerald-500/30 bg-emerald-500/10",
+    iconColor: "text-emerald-400",
+    stageColor: "text-emerald-400",
+    subColor: "text-emerald-500/60",
+    glow: "bg-emerald-500/8",
+    bullets: [
+      { icon: Radar, text: "AI vulnerability detection across source, deps, and config" },
+      { icon: Network, text: "Predictive attack-path graph across identity, network, workloads" },
+      { icon: GitBranch, text: "Continuous risk scoring with confidence-weighted prioritization" },
+    ],
+  },
+  {
+    stage: "02 / ATTACK",
+    sub: "Autonomous Adversary Emulation",
+    title: "AI generates PoC exploits like white blood cells hunting pathogens",
+    desc: "You cannot defend what you haven't stress-tested. The Attack engine synthesizes real HTTP payloads, validates every finding with a working proof-of-concept, and surfaces what's actually exploitable — not just what looks risky.",
+    icon: Activity,
+    iconWrap: "border-rose-500/30 bg-rose-500/10",
+    iconColor: "text-rose-400",
+    stageColor: "text-rose-400",
+    subColor: "text-rose-500/60",
+    glow: "bg-rose-500/8",
+    bullets: [
+      { icon: Crosshair, text: "Real HTTP payloads across OWASP categories and CWEs" },
+      { icon: ShieldAlert, text: "Proof-of-concept exploit generation with verified evidence" },
+      { icon: ShieldCheck, text: "Continuous breach-and-attack simulation against live targets" },
+    ],
+  },
+  {
+    stage: "03 / HEAL",
+    sub: "Automated Remediation",
+    title: "AI generates patches like skin regrows over a wound",
+    desc: "Containment in seconds, not hours. Once a flaw is verified, the Heal engine generates a code-level patch, validates it doesn't break the build, and rolls it forward — closing the loop back to Think.",
+    icon: HeartPulse,
+    iconWrap: "border-violet-500/30 bg-violet-500/10",
+    iconColor: "text-violet-400",
+    stageColor: "text-violet-400",
+    subColor: "text-violet-500/60",
+    glow: "bg-violet-500/8",
+    bullets: [
+      { icon: ShieldCheck, text: "AI-generated patches with build-time validation" },
+      { icon: Lock, text: "Blast-radius isolation without operational downtime" },
+      { icon: RotateCcw, text: "Instant rollback to a known-secure baseline" },
+    ],
+  },
+];
+
+const ENGINES: {
+  icon: LucideIcon;
+  name: string;
+  desc: string;
+  iconWrap: string;
+  iconColor: string;
+  nameColor: string;
+  capabilities: { icon: LucideIcon; text: string }[];
+}[] = [
+  {
+    icon: Code2,
+    name: "SAST Engine",
+    desc: "Reads source code at AST granularity and reasons over every function, flow, and dependency.",
+    iconWrap: "border-cyan-500/30 bg-cyan-500/10",
+    iconColor: "text-cyan-400",
+    nameColor: "text-cyan-400",
+    capabilities: [
+      { icon: Code2, text: "AI vulnerability detection across 60+ module categories" },
+      { icon: GitBranch, text: "Full CWE mapping with cross-file taint analysis" },
+      { icon: Sparkles, text: "Confidence scores and exploitability rating per finding" },
+    ],
+  },
+  {
+    icon: Crosshair,
+    name: "DAST Engine",
+    desc: "Crawls live targets, fires real HTTP payloads, and captures evidence like a human pentester.",
+    iconWrap: "border-rose-500/30 bg-rose-500/10",
+    iconColor: "text-rose-400",
+    nameColor: "text-rose-400",
+    capabilities: [
+      { icon: Radar, text: "Autonomous crawler maps every endpoint and parameter" },
+      { icon: Bug, text: "OWASP-category attack payloads against live targets" },
+      { icon: FileText, text: "Reproducible evidence capture for every confirmed vuln" },
+    ],
+  },
+  {
+    icon: ShieldCheck,
+    name: "Defense Engine",
+    desc: "Deploys runtime defenses — canary tokens, honeypots, and virtual WAF patches — in production.",
+    iconWrap: "border-emerald-500/30 bg-emerald-500/10",
+    iconColor: "text-emerald-400",
+    nameColor: "text-emerald-400",
+    capabilities: [
+      { icon: Fingerprint, text: "Canary tokens and honeypots detect lateral movement" },
+      { icon: ShieldCheck, text: "Virtual WAF patches applied at the edge, no deploys" },
+      { icon: Cctv, text: "24/7 runtime monitoring with anomaly detection" },
+    ],
+  },
+];
+
+const INDIA: {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  iconWrap: string;
+  iconColor: string;
+  titleColor: string;
+}[] = [
+  {
+    icon: Scale,
+    title: "DPDPA-First",
+    desc: "Compliant with India's Digital Personal Data Protection Act by design. Every module maps to the DPDPA, with audit trails and consent-aware data handling baked into the platform.",
+    iconWrap: "border-emerald-500/30 bg-emerald-500/10",
+    iconColor: "text-emerald-400",
+    titleColor: "text-emerald-400",
+  },
+  {
+    icon: IndianRupee,
+    title: "Rupee Pricing",
+    desc: "Pricing in rupees, not dollars. Starting at ₹0 for the free tier, with transparent per-scan and per-month plans designed for Indian startups and enterprises alike.",
+    iconWrap: "border-amber-500/30 bg-amber-500/10",
+    iconColor: "text-amber-400",
+    titleColor: "text-amber-400",
+  },
+  {
+    icon: Headphones,
+    title: "Local Support",
+    desc: "Support in English and Hindi. India-based engineering team. Mumbai timezone, working hours that overlap with yours — not a 12-hour-away vendor.",
+    iconWrap: "border-rose-500/30 bg-rose-500/10",
+    iconColor: "text-rose-400",
+    titleColor: "text-rose-400",
+  },
+];
+
+const IMPACT: {
+  target: number;
+  prefix?: string;
+  suffix?: string;
+  label: string;
+  color: string;
+  accent: string;
+  icon: LucideIcon;
+}[] = [
+  {
+    target: 60,
+    suffix: "+",
+    label: "AI modules",
+    color: "text-emerald-400",
+    accent: "border-emerald-500/30",
+    icon: Cpu,
+  },
+  {
+    target: 90,
+    suffix: "s",
+    label: "per scan",
+    color: "text-cyan-400",
+    accent: "border-cyan-500/30",
+    icon: Zap,
+  },
+  {
+    target: 85,
+    suffix: "%",
+    label: "MTTR reduction",
+    color: "text-violet-400",
+    accent: "border-violet-500/30",
+    icon: Activity,
+  },
+  {
+    target: 50,
+    prefix: "₹",
+    suffix: "L/yr",
+    label: "saved per customer",
+    color: "text-amber-400",
+    accent: "border-amber-500/30",
+    icon: IndianRupee,
+  },
+];
+
+const CONTACTS: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  href: string;
+  iconWrap: string;
+  iconColor: string;
+}[] = [
+  {
+    icon: Mail,
+    label: "Email",
+    value: "hello@guardianx.in",
+    href: "mailto:hello@guardianx.in",
+    iconWrap: "border-cyan-500/30 bg-cyan-500/10",
+    iconColor: "text-cyan-400",
+  },
+  {
+    icon: Phone,
+    label: "Phone",
+    value: "+91 70067 12347",
+    href: "tel:+917006712347",
+    iconWrap: "border-emerald-500/30 bg-emerald-500/10",
+    iconColor: "text-emerald-400",
+  },
+  {
+    icon: Globe,
+    label: "Website",
+    value: "www.guardianx.cloud",
+    href: "https://www.guardianx.cloud",
+    iconWrap: "border-violet-500/30 bg-violet-500/10",
+    iconColor: "text-violet-400",
+  },
+];
+
+/* ------------------------------- subcomponents ----------------------------- */
+
+function ImpactTile({
+  item,
+  index,
+}: {
+  item: (typeof IMPACT)[number];
+  index: number;
+}) {
+  const [ref, value] = useCountUp(item.target, {
+    duration: 1800,
+    delay: index * 150,
+  });
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.4 }}
+      transition={{ duration: 0.5, delay: index * 0.08 }}
+      className={`holo-card-sharp hud-corners relative overflow-hidden border p-6 text-center ${item.accent}`}
+    >
+      <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 size-24 rounded-full bg-current opacity-5 blur-2xl" />
+      <item.icon className={`mx-auto mb-3 size-6 ${item.color}`} />
+      <div className={`text-3xl font-bold tabular-nums sm:text-4xl ${item.color}`}>
+        {item.prefix}
+        {formatInt(value)}
+        {item.suffix}
+      </div>
+      <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+        {item.label}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ---------------------------------- page ----------------------------------- */
 
 export default function CompanyPage() {
   return (
     <>
       <SiteHeader />
       <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
-      <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-30" />
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute -top-40 left-1/4 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-violet-600/8 blur-3xl" />
-      </div>
+        {/* Ambient background: circuit grid + emerald/violet glows */}
+        <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-30" />
+        <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+          <div className="absolute -top-40 left-1/4 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/15 blur-3xl" />
+          <div className="absolute -top-20 right-10 h-72 w-72 rounded-full bg-violet-600/12 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-emerald-500/8 blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 h-72 w-72 rounded-full bg-cyan-500/8 blur-3xl" />
+        </div>
 
-      <div className="relative z-10 mx-auto pt-16 max-w-5xl px-4 py-20 sm:px-6">
-        {/* Hero */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-20 text-center">
-          <Badge className="mb-6 border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
-            <Building2 className="size-3" /> Company
-          </Badge>
-          <h1 className="text-4xl font-bold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
-            Your code's <span className="neon-emerald">autonomous</span><br />
-            <span className="neon-red">immune</span> <span className="neon-violet">system</span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400">
-            GuardianX detects threats like antibodies, attacks them like white blood cells, and heals vulnerabilities like skin regrows. One autonomous platform. Three closed-loop engines. Zero human delay.
-          </p>
-        </motion.div>
-
-        {/* Mission */}
-        <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-20">
-          <div className="mb-8 text-center">
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">{"// Our Mission"}</div>
-            <h2 className="text-3xl font-bold text-zinc-50">Make world-class security accessible to every organization</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400">
-              India has 1.6M+ registered companies but fewer than 500 certified penetration testers. GuardianX bridges that gap with AI, delivering the expertise of a 5-person security team in one autonomous platform, at 1/10th the cost.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { icon: Target, title: "Autonomy First", desc: "Security shouldn't require a PhD in pentesting. GuardianX thinks, attacks, patches, and reports, autonomously.", color: "emerald" },
-              { icon: Heart, title: "Built for India", desc: "DPDPA-compliant by design. Pricing in rupees. Built for the regulatory reality of Indian businesses, and scalable globally.", color: "rose" },
-              { icon: Cpu, title: "AI-Native", desc: "Not a legacy tool with AI bolted on. GuardianX was built from day one around LLMs for vulnerability analysis, patch generation, and exploit synthesis.", color: "cyan" },
-            ].map((item, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="holo-card-sharp hud-corners p-5">
-                <div className={`mx-auto mb-3 flex size-10 items-center justify-center rounded-lg border border-${item.color}-500/30 bg-${item.color}-500/10`}>
-                  <item.icon className={`size-5 text-${item.color}-400`} />
-                </div>
-                <h3 className={`text-center text-sm font-bold text-${item.color}-400`}>{item.title}</h3>
-                <p className="mt-2 text-center text-xs text-zinc-400">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* The Core Framework, THINKS / ATTACKS / HEALS */}
-        <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-20">
-          <div className="mb-8 text-center">
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">{"// The Core Framework"}</div>
-            <h2 className="text-3xl font-bold text-zinc-50">Think. Attack. Heal.</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400">
-              GuardianX is built on a closed-loop autonomous security framework. Three engines work in continuous cycles so your defenses adapt as fast as adversaries evolve.
-            </p>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            {/* 01 / THINKS */}
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.05 }}
-              className="holo-card-sharp hud-corners relative overflow-hidden p-6"
-            >
-              <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 size-32 rounded-full bg-emerald-500/8 blur-3xl" />
-              <div className="relative">
-                <div className="mb-4 flex items-center justify-between">
-                  <span className="font-mono text-[10px] font-bold tracking-widest text-emerald-400">01 / THINKS</span>
-                  <div className="flex size-9 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
-                    <Brain className="size-5 text-emerald-400" />
-                  </div>
-                </div>
-                <div className="mb-2 text-xs font-mono uppercase tracking-widest text-emerald-500/60">Adaptive Intelligence</div>
-                <h3 className="text-lg font-bold text-zinc-50">Contextual AI that understands your exposure</h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Traditional tools trigger on isolated events. GuardianX maps your entire attack surface, predicting high-probability compromise paths before adversaries exploit them.
-                </p>
-                <div className="mt-4 space-y-2">
-                  {[
-                    { icon: Radar, text: "Real-time risk prioritization (zero noise, zero fatigue)" },
-                    { icon: Network, text: "Dynamic behavior modeling across identity, network, and workloads" },
-                    { icon: GitBranch, text: "Predictive attack-path graph analysis" },
-                  ].map((cap, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs text-zinc-300">
-                      <cap.icon className="mt-0.5 size-3.5 shrink-0 text-emerald-400" />
-                      <span>{cap.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* 02 / ATTACKS */}
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.12 }}
-              className="holo-card-sharp hud-corners relative overflow-hidden p-6"
-            >
-              <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 size-32 rounded-full bg-red-500/8 blur-3xl" />
-              <div className="relative">
-                <div className="mb-4 flex items-center justify-between">
-                  <span className="font-mono text-[10px] font-bold tracking-widest text-red-400">02 / ATTACKS</span>
-                  <div className="flex size-9 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10">
-                    <Activity className="size-5 text-red-400" />
-                  </div>
-                </div>
-                <div className="mb-2 text-xs font-mono uppercase tracking-widest text-red-500/60">Autonomous Adversary Emulation</div>
-                <h3 className="text-lg font-bold text-zinc-50">Continuous validation. Zero assumptions.</h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  You cannot defend what you have not stress-tested. GuardianX continuously simulates MITRE ATT&amp;CK TTPs to uncover misconfigurations, privilege leaks, and blind spots in real time.
-                </p>
-                <div className="mt-4 space-y-2">
-                  {[
-                    { icon: Crosshair, text: "Automated breach and attack simulation (BAS)" },
-                    { icon: ShieldAlert, text: "Shadow asset discovery and identity risk profiling" },
-                    { icon: ShieldCheck, text: "Real-world control validation (EDR, Firewall, IAM)" },
-                  ].map((cap, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs text-zinc-300">
-                      <cap.icon className="mt-0.5 size-3.5 shrink-0 text-red-400" />
-                      <span>{cap.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* 03 / HEALS */}
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.19 }}
-              className="holo-card-sharp hud-corners relative overflow-hidden p-6"
-            >
-              <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 size-32 rounded-full bg-violet-500/8 blur-3xl" />
-              <div className="relative">
-                <div className="mb-4 flex items-center justify-between">
-                  <span className="font-mono text-[10px] font-bold tracking-widest text-violet-400">03 / HEALS</span>
-                  <div className="flex size-9 items-center justify-center rounded-lg border border-violet-500/30 bg-violet-500/10">
-                    <HeartPulse className="size-5 text-violet-400" />
-                  </div>
-                </div>
-                <div className="mb-2 text-xs font-mono uppercase tracking-widest text-violet-500/60">Automated Remediation and Resilience</div>
-                <h3 className="text-lg font-bold text-zinc-50">Closed-loop response at machine speed</h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Containment in milliseconds, not hours. When a flaw or active breach is detected, GuardianX automatically isolates, reconfigures, and restores systems to a hardened baseline.
-                </p>
-                <div className="mt-4 space-y-2">
-                  {[
-                    { icon: ShieldCheck, text: "Automated policy reconfiguration and exposure patching" },
-                    { icon: Lock, text: "Blast-radius isolation without operational downtime" },
-                    { icon: RotateCcw, text: "Instant rollback to known-secure state" },
-                  ].map((cap, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs text-zinc-300">
-                      <cap.icon className="mt-0.5 size-3.5 shrink-0 text-violet-400" />
-                      <span>{cap.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Loop indicator */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.3 }}
-            className="mt-6 flex items-center justify-center gap-2 text-center text-[11px] text-zinc-500"
+        <div className="relative z-10 mx-auto max-w-6xl px-4 pb-24 pt-16 sm:px-6">
+          {/* ============================ HERO ============================ */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-24 pt-10 text-center sm:pt-16"
           >
-            <span className="font-mono text-emerald-400">THINKS</span>
-            <ArrowRight className="size-3 text-zinc-600" />
-            <span className="font-mono text-red-400">ATTACKS</span>
-            <ArrowRight className="size-3 text-zinc-600" />
-            <span className="font-mono text-violet-400">HEALS</span>
-            <ArrowRight className="size-3 text-zinc-600" />
-            <span className="font-mono text-emerald-400">THINKS</span>
-            <span className="ml-1 italic">(continuous loop)</span>
-          </motion.div>
-        </motion.section>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.05 }}
+              className="mb-6 inline-flex"
+            >
+              <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
+                <Building2 className="size-3" /> Company
+              </Badge>
+            </motion.div>
 
-        {/* The Problem */}
-        <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-20">
-          <div className="mb-8 text-center">
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-red-500/60">{"// The Problem"}</div>
-            <h2 className="text-3xl font-bold text-zinc-50">A crisis hiding in plain sight</h2>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {[
-              { icon: Building2, stat: "1.6M+", label: "Registered companies in India", desc: "But fewer than 500 certified penetration testers to secure them", color: "red" },
-              { icon: AlertTriangle, stat: "₹250 Cr", label: "DPDPA 2023 non-compliance fines", desc: "Mandates security assessments, failure is catastrophic", color: "amber" },
-              { icon: Lock, stat: "RBI + SEBI", label: "Annual VAPT mandatory", desc: "All banks, NBFCs, fintechs, and listed companies must comply", color: "emerald" },
-              { icon: Clock, stat: "6 hours", label: "CERT-In breach reporting window", desc: "Without continuous monitoring, breaches go undetected for months", color: "cyan" },
-            ].map((item, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="holo-card-sharp hud-corners border border-zinc-700 p-5">
-                <div className="flex items-start gap-3">
-                  <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg border border-${item.color}-500/30 bg-${item.color}-500/10`}>
-                    <item.icon className={`size-5 text-${item.color}-400`} />
-                  </div>
-                  <div>
-                    <div className={`text-2xl font-bold text-${item.color}-400`}>{item.stat}</div>
-                    <div className="text-sm font-medium text-zinc-200">{item.label}</div>
-                    <p className="mt-1 text-xs text-zinc-500">{item.desc}</p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
+            <h1 className="mx-auto max-w-4xl text-4xl font-bold leading-[1.05] tracking-tight text-zinc-50 sm:text-6xl">
+              We're building the{" "}
+              <span className="neon-emerald">autonomous immune system</span>{" "}
+              for code
+            </h1>
 
-        {/* The Solution */}
-        <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-20">
-          <div className="mb-8 text-center">
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">{"// The Solution"}</div>
-            <h2 className="text-3xl font-bold text-zinc-50">GuardianX replaces an entire security team</h2>
-            <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-400">One autonomous platform does what normally requires 5 specialists + 4 separate tools</p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              { icon: Bug, title: "SAST Scanner", replaces: "Static Analysis Engineer", color: "cyan" },
-              { icon: Crosshair, title: "RedAgent DAST", replaces: "Penetration Tester", color: "red" },
-              { icon: ShieldCheck, title: "AI Patch Engine", replaces: "Security Developer", color: "emerald" },
-              { icon: FileText, title: "VAPT Reports", replaces: "Report Writer", color: "violet" },
-              { icon: Lock, title: "Compliance Engine", replaces: "GRC Consultant", color: "amber" },
-              { icon: Eye, title: "24/7 Monitoring", replaces: "SOC Analyst", color: "sky" },
-            ].map((item, i) => (
-              <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="holo-card-sharp hud-corners p-4 text-center">
-                <div className={`mx-auto mb-2 flex size-10 items-center justify-center rounded-lg border border-${item.color}-500/30 bg-${item.color}-500/10`}>
-                  <item.icon className={`size-5 text-${item.color}-400`} />
-                </div>
-                <div className="text-sm font-bold text-zinc-100">{item.title}</div>
-                <div className="mt-1 text-[10px] text-zinc-500">Replaces: {item.replaces}</div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
+            <p className="mx-auto mt-6 max-w-2xl text-base text-zinc-400 sm:text-lg">
+              GuardianX is the platform our founder wished existed when he was
+              securing India's startups. AI-native architecture, 60+ modules,
+              and a full VAPT in 90 seconds — built India-first, scaled for the
+              world.
+            </p>
 
-        {/* Advantages */}
-        <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-20">
-          <div className="mb-8 text-center">
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-violet-500/60">{"// Why We're Different"}</div>
-            <h2 className="text-3xl font-bold text-zinc-50">5 advantages no other platform offers</h2>
-          </div>
-          <div className="space-y-4">
-            {[
-              { icon: Clock, title: "10× Faster", stat: "90 seconds", compare: "vs 2-4 weeks for manual VAPT", desc: "Full vulnerability assessment in under 2 minutes. AI analyzes code, attacks live targets, generates patches, and produces a 15-page report, all before your coffee gets cold.", color: "cyan" },
-              { icon: IndianRupee, title: "10× Cheaper", stat: "₹15K/mo", compare: "vs ₹5-15 lakh per assessment", desc: "AI does the work of 5 security engineers. No consultants, no retainers, no per-engagement fees. One subscription covers unlimited scans.", color: "emerald" },
-              { icon: Bot, title: "24/7 Autonomous", stat: "Hourly", compare: "Threat hunter never sleeps", desc: "The AI Threat Hunter runs every hour, scanning for new vulnerabilities across all your clients. Zero human intervention needed.", color: "violet" },
-              { icon: FlaskConical, title: "Self-Improving", stat: "R&D Lab", compare: "Studies GitHub for new techniques", desc: "The only security platform that gets smarter on its own. Our R&D Lab searches GitHub for open-source security tools, analyzes their code, and integrates optimizations into our own modules.", color: "amber" },
-              { icon: Rocket, title: "One-Click VAPT", stat: "1 URL", compare: "Enter URL → get report", desc: "Just enter a website URL and click 'Full VAPT'. GuardianX automatically discovers assets, runs passive recon, launches SAST+DAST, scans for leaked secrets, generates fixes, and produces a professional PDF report.", color: "rose" },
-            ].map((item, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="holo-card-sharp hud-corners p-5">
-                <div className="flex items-start gap-4">
-                  <div className={`flex size-12 shrink-0 items-center justify-center rounded-lg border border-${item.color}-500/40 bg-${item.color}-500/10`}>
-                    <item.icon className={`size-6 text-${item.color}-400`} />
+            {/* Stat tiles */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="mx-auto mt-10 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4"
+            >
+              {HERO_STATS.map((s) => (
+                <div
+                  key={s.label}
+                  className="holo-card-sharp hud-corners p-4 text-center"
+                >
+                  <div className={`text-2xl font-bold tabular-nums ${s.color}`}>
+                    {s.value}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className={`text-lg font-bold text-${item.color}-400`}>{item.title}</h3>
-                      <span className={`font-mono text-2xl font-bold text-${item.color}-400`}>{item.stat}</span>
-                    </div>
-                    <p className="text-xs text-zinc-500">{item.compare}</p>
-                    <p className="mt-2 text-sm text-zinc-300">{item.desc}</p>
+                  <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                    {s.label}
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
+              ))}
+            </motion.div>
 
-        {/* Contact strip */}
-        <motion.section initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mb-20">
-          <div className="holo-card-sharp hud-corners p-6">
-            <div className="mb-4 font-mono text-[10px] uppercase tracking-widest text-cyan-500/60">{"// Get In Touch"}</div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <a href="https://www.guardianx.cloud" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg border border-zinc-700 p-4 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/5">
-                <Globe className="size-5 text-emerald-400" />
-                <div>
-                  <div className="text-xs font-medium text-zinc-300">Website</div>
-                  <div className="text-[11px] text-zinc-500">www.guardianx.cloud</div>
-                </div>
+            {/* CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35, duration: 0.5 }}
+              className="mt-10 flex flex-wrap items-center justify-center gap-3"
+            >
+              <a href="/#agent-x">
+                <Button
+                  size="lg"
+                  className="bg-emerald-600 text-white hover:bg-emerald-500"
+                >
+                  <Bot className="size-5" /> Meet Agent X
+                  <ArrowRight className="size-4" />
+                </Button>
               </a>
-              <a href="mailto:hello@guardianx.in" className="flex items-center gap-3 rounded-lg border border-zinc-700 p-4 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/5">
-                <FileText className="size-5 text-cyan-400" />
-                <div>
-                  <div className="text-xs font-medium text-zinc-300">Email</div>
-                  <div className="text-[11px] text-zinc-500">hello@guardianx.in</div>
-                </div>
+              <a href="/contact">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-zinc-700 bg-zinc-900/50 text-zinc-200 hover:border-emerald-500/40 hover:bg-emerald-500/10"
+                >
+                  Request a demo
+                </Button>
               </a>
-              <a href="tel:+917006712347" className="flex items-center gap-3 rounded-lg border border-zinc-700 p-4 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/5">
-                <Building2 className="size-5 text-violet-400" />
-                <div>
-                  <div className="text-xs font-medium text-zinc-300">Phone</div>
-                  <div className="text-[11px] text-zinc-500">+91 70067 12347</div>
-                </div>
-              </a>
-            </div>
-          </div>
-        </motion.section>
+            </motion.div>
+          </motion.section>
 
-        {/* CTA */}
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="text-center">
-          <div className="holo-card-sharp hud-corners relative overflow-hidden p-10">
-            <div aria-hidden className="cyber-grid pointer-events-none absolute inset-0 opacity-20" />
-            <div className="relative">
-              <ShieldHalf className="mx-auto size-12 text-emerald-400 neon-emerald" />
-              <h2 className="mt-4 text-3xl font-bold text-zinc-50">Ready to secure your assets?</h2>
-              <p className="mx-auto mt-2 max-w-xl text-sm text-zinc-400">
-                See the platform in action or request a personalized demo for your organization.
+          {/* =========================== MISSION ========================== */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-24"
+          >
+            <div className="mb-10 text-center">
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+                {"// Our Mission"}
+              </div>
+              <h2 className="mx-auto max-w-3xl text-3xl font-bold text-zinc-50 sm:text-4xl">
+                Make world-class security accessible to every organization
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400">
+                India has 1.6M+ registered companies but fewer than 500 certified
+                penetration testers. GuardianX bridges that gap with AI —
+                delivering the expertise of a 5-person security team in one
+                autonomous platform, at a fraction of the cost.
               </p>
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <a href="/">
-                  <Button size="lg" className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border">
-                    <Rocket className="size-5" /> Enter the Lab <ArrowRight className="size-4" />
-                  </Button>
-                </a>
-                <a href="/contact">
-                  <Button size="lg" variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20">
-                    <Zap className="size-5" /> Request Demo
-                  </Button>
-                </a>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              {VALUES.map((v, i) => (
+                <motion.div
+                  key={v.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="holo-card-sharp hud-corners p-6"
+                >
+                  <div
+                    className={`mx-auto mb-4 flex size-12 items-center justify-center rounded-lg border ${v.iconWrap}`}
+                  >
+                    <v.icon className={`size-6 ${v.iconColor}`} />
+                  </div>
+                  <h3
+                    className={`text-center text-base font-bold ${v.titleColor}`}
+                  >
+                    {v.title}
+                  </h3>
+                  <p className="mt-3 text-center text-sm text-zinc-400">
+                    {v.desc}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Founder's note */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="holo-card-sharp hud-corners relative mt-6 overflow-hidden p-6 sm:p-8"
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-emerald-500/10 blur-3xl"
+              />
+              <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+                {/* Headshot placeholder */}
+                <div className="relative shrink-0">
+                  <div className="flex size-20 items-center justify-center overflow-hidden rounded-full border border-emerald-500/30 bg-gradient-to-br from-emerald-500/20 via-zinc-800 to-violet-600/20 sm:size-24">
+                    <span className="font-mono text-2xl font-bold text-emerald-300 sm:text-3xl">
+                      AA
+                    </span>
+                  </div>
+                  <div className="pulse-dot absolute -right-0.5 -top-0.5 size-3 rounded-full bg-emerald-400" />
+                </div>
+                {/* Quote */}
+                <div className="flex-1 text-center sm:text-left">
+                  <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+                    {"// Founder's note"}
+                  </div>
+                  <blockquote className="text-base italic leading-relaxed text-zinc-200 sm:text-lg">
+                    "I started GuardianX because India's founders shouldn't have
+                    to choose between shipping fast and being secure. We're
+                    building the autonomous security platform I wish existed
+                    when I was securing my first startup — affordable,
+                    AI-native, and built for the realities of doing business
+                    here."
+                  </blockquote>
+                  <div className="mt-4 flex flex-col items-center gap-1 sm:items-start">
+                    <div className="text-sm font-bold text-zinc-50">Ayan Ali</div>
+                    <div className="font-mono text-[11px] uppercase tracking-widest text-emerald-400">
+                      Founder &amp; CEO
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.section>
+
+          {/* ======================= CORE FRAMEWORK ====================== */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-24"
+          >
+            <div className="mb-10 text-center">
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+                {"// The Core Framework"}
+              </div>
+              <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">
+                Think. Attack. Heal.
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400">
+                Three engines work in a continuous closed loop so your defenses
+                adapt as fast as adversaries evolve. No handoffs. No waiting on
+                a human. Just the cycle, running 24/7.
+              </p>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              {STAGES.map((stage, i) => (
+                <motion.div
+                  key={stage.stage}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="holo-card-sharp hud-corners relative overflow-hidden p-6"
+                >
+                  <div
+                    aria-hidden
+                    className={`pointer-events-none absolute -right-8 -top-8 size-32 rounded-full blur-3xl ${stage.glow}`}
+                  />
+                  <div className="relative">
+                    <div className="mb-4 flex items-center justify-between">
+                      <span
+                        className={`font-mono text-[10px] font-bold tracking-widest ${stage.stageColor}`}
+                      >
+                        {stage.stage}
+                      </span>
+                      <div
+                        className={`flex size-10 items-center justify-center rounded-lg border ${stage.iconWrap}`}
+                      >
+                        <stage.icon className={`size-5 ${stage.iconColor}`} />
+                      </div>
+                    </div>
+                    <div
+                      className={`mb-2 font-mono text-[10px] uppercase tracking-widest ${stage.subColor}`}
+                    >
+                      {stage.sub}
+                    </div>
+                    <h3 className="text-lg font-bold leading-snug text-zinc-50">
+                      {stage.title}
+                    </h3>
+                    <p className="mt-3 text-sm text-zinc-400">{stage.desc}</p>
+                    <div className="mt-5 space-y-2.5">
+                      {stage.bullets.map((b, bi) => (
+                        <div
+                          key={bi}
+                          className="flex items-start gap-2 text-xs text-zinc-300"
+                        >
+                          <b.icon
+                            className={`mt-0.5 size-3.5 shrink-0 ${stage.iconColor}`}
+                          />
+                          <span>{b.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Closed-loop badge */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.25 }}
+              className="mt-6 flex justify-center"
+            >
+              <div className="holo-card-sharp hud-corners flex items-center gap-3 rounded-full px-5 py-2.5">
+                <InfinityIcon className="size-4 text-emerald-400" />
+                <span className="font-mono text-[11px] uppercase tracking-widest text-zinc-300">
+                  Closed-loop &middot; Think → Attack → Heal → Think
+                </span>
+                <div className="pulse-dot size-2 rounded-full bg-emerald-400" />
+              </div>
+            </motion.div>
+          </motion.section>
+
+          {/* ========================= THE PLATFORM ====================== */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-24"
+          >
+            <div className="mb-10 text-center">
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-cyan-500/60">
+                {"// The Platform"}
+              </div>
+              <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">
+                One platform, three closed-loop engines
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400">
+                SAST reads your code. DAST attacks your live targets. Defense
+                protects what's running. All three feed each other in a single
+                closed loop.
+              </p>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              {ENGINES.map((engine, i) => (
+                <motion.div
+                  key={engine.name}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="holo-card-sharp hud-corners relative overflow-hidden p-6"
+                >
+                  <div className="mb-5 flex items-center gap-3">
+                    <div
+                      className={`flex size-12 items-center justify-center rounded-lg border ${engine.iconWrap}`}
+                    >
+                      <engine.icon className={`size-6 ${engine.iconColor}`} />
+                    </div>
+                    <h3
+                      className={`text-lg font-bold ${engine.nameColor}`}
+                    >
+                      {engine.name}
+                    </h3>
+                  </div>
+                  <p className="mb-5 text-sm text-zinc-400">{engine.desc}</p>
+                  <div className="space-y-2.5">
+                    {engine.capabilities.map((c, ci) => (
+                      <div
+                        key={ci}
+                        className="flex items-start gap-2 text-xs text-zinc-300"
+                      >
+                        <c.icon
+                          className={`mt-0.5 size-3.5 shrink-0 ${engine.iconColor}`}
+                        />
+                        <span>{c.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
+
+          {/* ====================== BUILT FOR INDIA ====================== */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-24"
+          >
+            <div className="mb-10 text-center">
+              <div className="mb-3 flex justify-center">
+                <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-300">
+                  <MapPin className="size-3" /> Made in India
+                </Badge>
+              </div>
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-amber-500/60">
+                {"// Built for India, scaled for the world"}
+              </div>
+              <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">
+                Built for India, scaled for the world
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400">
+                We started with the hardest market — India's regulatory, price,
+                and language realities — and engineered a platform that's
+                globally competitive as a result.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              {INDIA.map((card, i) => (
+                <motion.div
+                  key={card.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="holo-card-sharp hud-corners p-6"
+                >
+                  <div
+                    className={`mx-auto mb-4 flex size-12 items-center justify-center rounded-lg border ${card.iconWrap}`}
+                  >
+                    <card.icon className={`size-6 ${card.iconColor}`} />
+                  </div>
+                  <h3
+                    className={`text-center text-base font-bold ${card.titleColor}`}
+                  >
+                    {card.title}
+                  </h3>
+                  <p className="mt-3 text-center text-sm text-zinc-400">
+                    {card.desc}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
+
+          {/* ====================== STATS / IMPACT ======================= */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-24"
+          >
+            <div className="mb-10 text-center">
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-violet-500/60">
+                {"// Impact"}
+              </div>
+              <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">
+                Numbers that change how teams ship
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400">
+                Not promises — measured outcomes across early GuardianX
+                deployments.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {IMPACT.map((item, i) => (
+                <ImpactTile key={item.label} item={item} index={i} />
+              ))}
+            </div>
+          </motion.section>
+
+          {/* ========================== CONTACT ========================== */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-6"
+          >
+            <div className="mb-8 text-center">
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-cyan-500/60">
+                {"// Get in touch"}
+              </div>
+              <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">
+                Let's talk
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-400">
+                Whether you're shipping a new product, prepping for a RBI/SEBI
+                audit, or just want to see Agent X in action — we're here.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              {CONTACTS.map((c, i) => (
+                <motion.a
+                  key={c.label}
+                  href={c.href}
+                  target={c.href.startsWith("http") ? "_blank" : undefined}
+                  rel={c.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="holo-card-sharp hud-corners group flex items-center gap-4 p-5 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/5"
+                >
+                  <div
+                    className={`flex size-12 shrink-0 items-center justify-center rounded-lg border ${c.iconWrap}`}
+                  >
+                    <c.icon className={`size-6 ${c.iconColor}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                      {c.label}
+                    </div>
+                    <div className="truncate text-sm font-medium text-zinc-200">
+                      {c.value}
+                    </div>
+                  </div>
+                  <ArrowRight className="ml-auto size-4 shrink-0 text-zinc-600 transition-colors group-hover:text-emerald-400" />
+                </motion.a>
+              ))}
+            </div>
+          </motion.section>
+
+          {/* ============================ CTA ============================ */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="text-center"
+          >
+            <div className="holo-card-sharp hud-corners relative overflow-hidden p-8 sm:p-12">
+              <div
+                aria-hidden
+                className="cyber-grid pointer-events-none absolute inset-0 opacity-20"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -top-20 left-1/2 h-60 w-96 -translate-x-1/2 rounded-full bg-emerald-500/15 blur-3xl"
+              />
+              <div className="relative">
+                <ShieldHalf className="mx-auto size-12 text-emerald-400 neon-emerald" />
+                <h2 className="mt-4 text-3xl font-bold text-zinc-50 sm:text-4xl">
+                  Ready to secure your assets?
+                </h2>
+                <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-400">
+                  Spin up the Lab Console now, or book a personalized demo for
+                  your organization.
+                </p>
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                  <a href="/">
+                    <Button
+                      size="lg"
+                      className="bg-emerald-600 text-white hover:bg-emerald-500"
+                    >
+                      <Rocket className="size-5" /> Enter the Lab Console
+                      <ArrowRight className="size-4" />
+                    </Button>
+                  </a>
+                  <a href="/contact">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                    >
+                      <Zap className="size-5" /> Request a demo
+                    </Button>
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
-    </div>
       <SiteFooter />
     </>
   );
