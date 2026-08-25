@@ -203,10 +203,10 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
       >
-        <CircuitBoard opacity={0.18} showHud={false} />
-        {/* Vignette + gradient wash so foreground cards stay legible on top of the traces */}
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/40 via-zinc-950/60 to-zinc-950/80" />
-        <div className="absolute inset-0 cyber-vignette opacity-60" />
+        <CircuitBoard opacity={0.35} showHud={false} />
+        {/* Subtle vignette so foreground cards stay legible on top of the traces.
+            Keep this gentle — the user wants the circuit board VISIBLE. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/10 via-zinc-950/20 to-zinc-950/40" />
       </div>
     <div className="space-y-4">
       {/* ═══ FUTURISTIC HEADER ═══ */}
