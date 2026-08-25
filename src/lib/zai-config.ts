@@ -5,11 +5,13 @@
 //   - homedir()/.z-ai-config
 //   - /etc/.z-ai-config
 //
-// None of those paths are writable on Vercel. So when the ZAI_CONFIG env
-// var is set (we add it on the Vercel project), this helper writes the
-// contents to a temp file and points the SDK at it by setting the
-// appropriate env var. The SDK only reads the file once on `ZAI.create()`,
-// so we call this lazily before the first create() call.
+// On Vercel serverless functions:
+//   - process.cwd() is /var/task (read-only deployment bundle)
+//   - homedir() is /home/sbx_user1059 (WRITABLE — this is where we write)
+//   - /etc/ is read-only
+//
+// So we write the config to homedir()/.z-ai-config from the ZAI_CONFIG
+// env var. The SDK finds it there on the next ZAI.create() call.
 //
 // Usage:
 //   import { ensureZaiConfig } from "@/lib/zai-config";
@@ -17,21 +19,21 @@
 //   const z = await ZAI.create();
 
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { tmpdir, homedir } from "node:os";
+import { homedir } from "node:os";
 import { join } from "node:path";
 
 let ensured = false;
-const CONFIG_PATH = join(tmpdir(), ".z-ai-config");
 
 export function ensureZaiConfig(): string | null {
-  if (ensured) return CONFIG_PATH;
+  if (ensured) return "ok";
 
-  // If a config file already exists at one of the search paths, do nothing.
+  // If a config file already exists at one of the SDK's search paths,
+  // the SDK will find it — no action needed.
+  const homeDir = homedir() || "/tmp";
   const candidates = [
     join(process.cwd(), ".z-ai-config"),
-    join(homedir() ?? "/tmp", ".z-ai-config"),
+    join(homeDir, ".z-ai-config"),
     "/etc/.z-ai-config",
-    CONFIG_PATH,
   ];
   for (const p of candidates) {
     if (existsSync(p)) {
@@ -40,7 +42,8 @@ export function ensureZaiConfig(): string | null {
     }
   }
 
-  // Otherwise, if ZAI_CONFIG env var is set, write it to a temp file.
+  // Otherwise, if ZAI_CONFIG env var is set, write it to homedir()
+  // (which is writable on Vercel) so the SDK can find it.
   const raw = process.env.ZAI_CONFIG;
   if (!raw) {
     return null;
@@ -49,12 +52,15 @@ export function ensureZaiConfig(): string | null {
   try {
     // Validate it parses as JSON (catches malformed env vars).
     JSON.parse(raw);
-    mkdirSync(tmpdir(), { recursive: true });
-    writeFileSync(CONFIG_PATH, raw, { mode: 0o600 });
+    const targetDir = homeDir;
+    mkdirSync(targetDir, { recursive: true });
+    const targetPath = join(targetDir, ".z-ai-config");
+    writeFileSync(targetPath, raw, { mode: 0o600 });
     ensured = true;
-    return CONFIG_PATH;
+    return targetPath;
   } catch (err) {
-    console.warn("[zai-config] ZAI_CONFIG env var is not valid JSON:", err);
+    console.warn("[zai-config] failed to write .z-ai-config:", err);
     return null;
   }
 }
+

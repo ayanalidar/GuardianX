@@ -482,6 +482,8 @@ export async function POST(req: Request) {
     ok: false,
     message:
       "Email delivery failed. Your scan is saved — try again in a few minutes or download the report.",
+    error: result.error, // included for debugging — safe to expose SMTP error to the visitor
+    skipped: result.skipped,
   });
 }
 
