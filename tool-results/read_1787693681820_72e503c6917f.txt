@@ -1,0 +1,947 @@
+     1→@import "tailwindcss";
+     2→@import "tw-animate-css";
+     3→
+     4→@custom-variant dark (&:is(.dark *));
+     5→
+     6→@theme inline {
+     7→  --color-background: var(--background);
+     8→  --color-foreground: var(--foreground);
+     9→  --font-sans: var(--font-geist-sans);
+    10→  --font-mono: var(--font-geist-mono);
+    11→  --color-sidebar-ring: var(--sidebar-ring);
+    12→  --color-sidebar-border: var(--sidebar-border);
+    13→  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    14→  --color-sidebar-accent: var(--sidebar-accent);
+    15→  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    16→  --color-sidebar-primary: var(--sidebar-primary);
+    17→  --color-sidebar-foreground: var(--sidebar-foreground);
+    18→  --color-sidebar: var(--sidebar);
+    19→  --color-chart-5: var(--chart-5);
+    20→  --color-chart-4: var(--chart-4);
+    21→  --color-chart-3: var(--chart-3);
+    22→  --color-chart-2: var(--chart-2);
+    23→  --color-chart-1: var(--chart-1);
+    24→  --color-ring: var(--ring);
+    25→  --color-input: var(--input);
+    26→  --color-border: var(--border);
+    27→  --color-destructive: var(--destructive);
+    28→  --color-accent-foreground: var(--accent-foreground);
+    29→  --color-accent: var(--accent);
+    30→  --color-muted-foreground: var(--muted-foreground);
+    31→  --color-muted: var(--muted);
+    32→  --color-secondary-foreground: var(--secondary-foreground);
+    33→  --color-secondary: var(--secondary);
+    34→  --color-primary-foreground: var(--primary-foreground);
+    35→  --color-primary: var(--primary);
+    36→  --color-popover-foreground: var(--popover-foreground);
+    37→  --color-popover: var(--popover);
+    38→  --color-card-foreground: var(--card-foreground);
+    39→  --color-card: var(--card);
+    40→  --radius-sm: calc(var(--radius) - 4px);
+    41→  --radius-md: calc(var(--radius) - 2px);
+    42→  --radius-lg: var(--radius);
+    43→  --radius-xl: calc(var(--radius) + 4px);
+    44→}
+    45→
+    46→/* ════════════════════════════════════════════════════════════════════
+    47→   Theme tokens (next-themes)
+    48→   - :root  → light theme (marketing pages when user toggles)
+    49→       background: white, foreground: zinc-900, borders: zinc-200,
+    50→       accents stay emerald/cyan (defined in neon-* utilities above).
+    51→   - .dark  → dark theme (default; dashboard always dark).
+    52→   next-themes adds/removes the `.dark` class on <html> based on the
+    53→   user's choice (defaultTheme="dark", enableSystem). The dashboard
+    54→   console view uses hardcoded zinc-950 surfaces so it stays dark
+    55→   regardless of the html class — only opt-in marketing pages
+    56→   (blog, status, and future pages using `dark:` variants) toggle.
+    57→   ════════════════════════════════════════════════════════════════════ */
+    58→:root {
+    59→  --radius: 0.625rem;
+    60→  /* Premium blueish light theme — deep navy/slate, not stark white.
+    61→     Visible in daylight, cards stay colorful, text is high-contrast. */
+    62→  --background: oklch(0.23 0.04 250);          /* deep navy-blue */
+    63→  --foreground: oklch(0.93 0.02 250);          /* light blue-white text */
+    64→  --card: oklch(0.28 0.05 250);                /* slightly lighter navy for cards */
+    65→  --card-foreground: oklch(0.93 0.02 250);
+    66→  --popover: oklch(0.26 0.04 250);
+    67→  --popover-foreground: oklch(0.93 0.02 250);
+    68→  --primary: oklch(0.65 0.18 160);             /* emerald accent */
+    69→  --primary-foreground: oklch(0.15 0.02 250);
+    70→  --secondary: oklch(0.32 0.04 250);
+    71→  --secondary-foreground: oklch(0.93 0.02 250);
+    72→  --muted: oklch(0.30 0.03 250);
+    73→  --muted-foreground: oklch(0.70 0.03 250);    /* readable blue-grey */
+    74→  --accent: oklch(0.35 0.05 250);
+    75→  --accent-foreground: oklch(0.93 0.02 250);
+    76→  --destructive: oklch(0.65 0.25 25);
+    77→  --border: oklch(0.38 0.04 250);              /* visible blue border */
+    78→  --input: oklch(0.32 0.04 250);
+    79→  --ring: oklch(0.55 0.15 200);
+    80→  --chart-1: oklch(0.65 0.22 41);
+    81→  --chart-2: oklch(0.60 0.18 185);
+    82→  --chart-3: oklch(0.55 0.15 270);
+    83→  --chart-4: oklch(0.70 0.20 145);
+    84→  --chart-5: oklch(0.65 0.25 340);
+    85→  --sidebar: oklch(0.25 0.04 250);
+    86→  --sidebar-foreground: oklch(0.93 0.02 250);
+    87→  --sidebar-primary: oklch(0.65 0.18 160);
+    88→  --sidebar-primary-foreground: oklch(0.15 0.02 250);
+    89→  --sidebar-accent: oklch(0.32 0.04 250);
+    90→  --sidebar-accent-foreground: oklch(0.93 0.02 250);
+    91→  --sidebar-border: oklch(0.35 0.04 250);
+    92→  --sidebar-ring: oklch(0.55 0.15 200);
+    93→}
+    94→
+    95→.dark {
+    96→  --background: oklch(0.145 0 0);
+    97→  --foreground: oklch(0.985 0 0);
+    98→  --card: oklch(0.205 0 0);
+    99→  --card-foreground: oklch(0.985 0 0);
+   100→  --popover: oklch(0.205 0 0);
+   101→  --popover-foreground: oklch(0.985 0 0);
+   102→  --primary: oklch(0.922 0 0);
+   103→  --primary-foreground: oklch(0.205 0 0);
+   104→  --secondary: oklch(0.269 0 0);
+   105→  --secondary-foreground: oklch(0.985 0 0);
+   106→  --muted: oklch(0.269 0 0);
+   107→  --muted-foreground: oklch(0.708 0 0);
+   108→  --accent: oklch(0.269 0 0);
+   109→  --accent-foreground: oklch(0.985 0 0);
+   110→  --destructive: oklch(0.704 0.191 22.216);
+   111→  --border: oklch(1 0 0 / 10%);
+   112→  --input: oklch(1 0 0 / 15%);
+   113→  --ring: oklch(0.556 0 0);
+   114→  --chart-1: oklch(0.488 0.243 264.376);
+   115→  --chart-2: oklch(0.696 0.17 162.48);
+   116→  --chart-3: oklch(0.769 0.188 70.08);
+   117→  --chart-4: oklch(0.627 0.265 303.9);
+   118→  --chart-5: oklch(0.645 0.246 16.439);
+   119→  --sidebar: oklch(0.205 0 0);
+   120→  --sidebar-foreground: oklch(0.985 0 0);
+   121→  --sidebar-primary: oklch(0.488 0.243 264.376);
+   122→  --sidebar-primary-foreground: oklch(0.985 0 0);
+   123→  --sidebar-accent: oklch(0.269 0 0);
+   124→  --sidebar-accent-foreground: oklch(0.985 0 0);
+   125→  --sidebar-border: oklch(1 0 0 / 10%);
+   126→  --sidebar-ring: oklch(0.556 0 0);
+   127→}
+   128→
+   129→@layer base {
+   130→  * {
+   131→    @apply border-border outline-ring/50;
+   132→    box-sizing: border-box;
+   133→  }
+   134→  html {
+   135→    overflow-x: hidden;
+   136→    scroll-behavior: smooth;
+   137→    color-scheme: light dark;
+   138→  }
+   139→  body {
+   140→    @apply bg-background text-foreground;
+   141→    overflow-x: hidden;
+   142→    max-width: 100vw;
+   143→    /* Smooth theme transition when toggling next-themes */
+   144→    transition: background-color 0.2s ease, color 0.2s ease;
+   145→  }
+   146→
+   147→  /* ── Premium blueish light theme overrides ─────────────────────────────
+   148→     When next-themes removes the .dark class (light mode), override the
+   149→     hardcoded zinc-950/zinc-900 backgrounds with deep navy-blue so the
+   150→     page is visible in daylight but NOT stark white. Cards keep their
+   151→     colorful accents (emerald, cyan, red, violet) from the dark theme. */
+   152→  html:not(.dark) .scanlines,
+   153→  html:not(.dark) .cyber-vignette {
+   154→    background: #1a2238 !important;   /* deep navy */
+   155→    color: #dbe4f5 !important;        /* light blue-white text */
+   156→  }
+   157→  html:not(.dark) .scanlines::before,
+   158→  html:not(.dark) .cyber-vignette::before,
+   159→  html:not(.dark) .cyber-grid {
+   160→    opacity: 0.08 !important;
+   161→  }
+   162→  /* Light mode: override dark backgrounds to navy blue */
+   163→  html:not(.dark) .bg-zinc-950,
+   164→  html:not(.dark) .bg-zinc-950\/90,
+   165→  html:not(.dark) .bg-zinc-950\/95,
+   166→  html:not(.dark) .bg-zinc-950\/40,
+   167→  html:not(.dark) .bg-zinc-950\/60 {
+   168→    background-color: rgba(26, 34, 56, 0.92) !important;   /* navy */
+   169→  }
+   170→  html:not(.dark) .bg-zinc-900,
+   171→  html:not(.dark) .bg-zinc-900\/40,
+   172→  html:not(.dark) .bg-zinc-900\/50,
+   173→  html:not(.dark) .bg-zinc-900\/60 {
+   174→    background-color: rgba(35, 45, 70, 0.85) !important;   /* lighter navy */
+   175→  }
+   176→  /* Light mode: text stays light (on navy bg) — keep readable */
+   177→  html:not(.dark) .text-zinc-50,
+   178→  html:not(.dark) .text-zinc-100,
+   179→  html:not(.dark) .text-zinc-200 {
+   180→    color: #e8edf7 !important;   /* light blue-white */
+   181→  }
+   182→  html:not(.dark) .text-zinc-400,
+   183→  html:not(.dark) .text-zinc-500 {
+   184→    color: #94a3c4 !important;   /* muted blue-grey, still readable */
+   185→  }
+   186→  html:not(.dark) .text-zinc-600,
+   187→  html:not(.dark) .text-zinc-700 {
+   188→    color: #6b7a9c !important;
+   189→  }
+   190→  /* Borders: blue-tinted */
+   191→  html:not(.dark) .border-zinc-800,
+   192→  html:not(.dark) .border-zinc-800\/80,
+   193→  html:not(.dark) .border-zinc-800\/60,
+   194→  html:not(.dark) .border-zinc-800\/50,
+   195→  html:not(.dark) .border-zinc-700 {
+   196→    border-color: rgba(71, 85, 120, 0.6) !important;
+   197→  }
+   198→  /* Keep neon accents vibrant in light mode (don't dim them) */
+   199→  html:not(.dark) .neon-emerald { text-shadow: 0 0 12px rgba(16, 185, 129, 0.5); }
+   200→  html:not(.dark) .neon-cyan { text-shadow: 0 0 12px rgba(6, 182, 212, 0.5); }
+   201→  html:not(.dark) .neon-red { text-shadow: 0 0 12px rgba(239, 68, 68, 0.5); }
+   202→  html:not(.dark) .neon-violet { text-shadow: 0 0 12px rgba(139, 92, 246, 0.5); }
+   203→  html:not(.dark) .neon-amber { text-shadow: 0 0 12px rgba(245, 158, 11, 0.5); }
+   204→}
+   205→
+   206→/* Custom scrollbar for the SentinelPatch dashboard dark surfaces */
+   207→.custom-scrollbar {
+   208→  scrollbar-width: thin;
+   209→  scrollbar-color: rgb(16 185 129 / 0.4) transparent;
+   210→}
+   211→.custom-scrollbar::-webkit-scrollbar {
+   212→  width: 6px;
+   213→  height: 6px;
+   214→}
+   215→.custom-scrollbar::-webkit-scrollbar-track {
+   216→  background: transparent;
+   217→}
+   218→.custom-scrollbar::-webkit-scrollbar-thumb {
+   219→  background-color: rgb(16 185 129 / 0.4);
+   220→  border-radius: 9999px;
+   221→}
+   222→.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+   223→  background-color: rgb(16 185 129 / 0.7);
+   224→}
+   225→
+   226→/* ── Sci-Fi Lab Theme ──────────────────────────────────────────────────── */
+   227→
+   228→/* Animated cyber grid background */
+   229→.cyber-grid {
+   230→  background-image:
+   231→    linear-gradient(rgba(16, 185, 129, 0.07) 1px, transparent 1px),
+   232→    linear-gradient(90deg, rgba(16, 185, 129, 0.07) 1px, transparent 1px);
+   233→  background-size: 40px 40px;
+   234→  animation: grid-pan 20s linear infinite;
+   235→}
+   236→@keyframes grid-pan {
+   237→  0% { background-position: 0 0; }
+   238→  100% { background-position: 40px 40px; }
+   239→}
+   240→
+   241→/* Scanline overlay */
+   242→.scanlines::before {
+   243→  content: "";
+   244→  position: fixed;
+   245→  inset: 0;
+   246→  pointer-events: none;
+   247→  z-index: 100;
+   248→  background: repeating-linear-gradient(
+   249→    0deg,
+   250→    transparent 0,
+   251→    transparent 2px,
+   252→    rgba(16, 185, 129, 0.015) 3px,
+   253→    rgba(16, 185, 129, 0.015) 3px
+   254→  );
+   255→  animation: scanline-sweep 8s linear infinite;
+   256→}
+   257→@keyframes scanline-sweep {
+   258→  0% { transform: translateY(0); }
+   259→  100% { transform: translateY(4px); }
+   260→}
+   261→
+   262→/* Vignette + ambient glow */
+   263→.cyber-vignette::after {
+   264→  content: "";
+   265→  position: fixed;
+   266→  inset: 0;
+   267→  pointer-events: none;
+   268→  z-index: 99;
+   269→  background:
+   270→    radial-gradient(ellipse at top, rgba(16, 185, 129, 0.08), transparent 60%),
+   271→    radial-gradient(ellipse at bottom right, rgba(6, 182, 212, 0.05), transparent 50%),
+   272→    radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.5) 100%);
+   273→}
+   274→
+   275→/* Holographic card — sharp glowing border */
+   276→.holo-card {
+   277→  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.04), rgba(24, 24, 27, 0.85));
+   278→  border: 1px solid rgba(16, 185, 129, 0.35);
+   279→  backdrop-filter: blur(16px);
+   280→  position: relative;
+   281→  overflow: hidden;
+   282→  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.1), 0 4px 16px rgba(0, 0, 0, 0.4);
+   283→  word-wrap: break-word;
+   284→  overflow-wrap: break-word;
+   285→}
+   286→.holo-card::before {
+   287→  content: "";
+   288→  position: absolute;
+   289→  top: 0;
+   290→  left: -100%;
+   291→  width: 50%;
+   292→  height: 100%;
+   293→  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.08), transparent);
+   294→  animation: holo-sweep 6s ease-in-out infinite;
+   295→  pointer-events: none;
+   296→}
+   297→.holo-card > * {
+   298→  position: relative;
+   299→  z-index: 1;
+   300→}
+   301→@keyframes holo-sweep {
+   302→  0%, 100% { left: -100%; }
+   303→  50% { left: 200%; }
+   304→}
+   305→
+   306→/* Neon glow text — vibrant multi-color system */
+   307→.neon-emerald {
+   308→  text-shadow: 0 0 8px rgba(16, 185, 129, 0.8), 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2);
+   309→  color: rgb(52, 211, 153);
+   310→}
+   311→.neon-red {
+   312→  text-shadow: 0 0 8px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(239, 68, 68, 0.2);
+   313→  color: rgb(248, 113, 113);
+   314→}
+   315→.neon-cyan {
+   316→  text-shadow: 0 0 8px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4), 0 0 40px rgba(6, 182, 212, 0.2);
+   317→  color: rgb(34, 211, 238);
+   318→}
+   319→.neon-amber {
+   320→  text-shadow: 0 0 8px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.2);
+   321→  color: rgb(251, 191, 36);
+   322→}
+   323→.neon-violet {
+   324→  text-shadow: 0 0 8px rgba(139, 92, 246, 0.8), 0 0 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(139, 92, 246, 0.2);
+   325→  color: rgb(167, 139, 250);
+   326→}
+   327→.neon-rose {
+   328→  text-shadow: 0 0 8px rgba(244, 63, 94, 0.8), 0 0 20px rgba(244, 63, 94, 0.4), 0 0 40px rgba(244, 63, 94, 0.2);
+   329→  color: rgb(251, 113, 133);
+   330→}
+   331→.neon-sky {
+   332→  text-shadow: 0 0 8px rgba(14, 165, 233, 0.8), 0 0 20px rgba(14, 165, 233, 0.4), 0 0 40px rgba(14, 165, 233, 0.2);
+   333→  color: rgb(56, 189, 248);
+   334→}
+   335→.neon-teal {
+   336→  text-shadow: 0 0 8px rgba(20, 184, 166, 0.8), 0 0 20px rgba(20, 184, 166, 0.4), 0 0 40px rgba(20, 184, 166, 0.2);
+   337→  color: rgb(45, 212, 191);
+   338→}
+   339→.neon-purple {
+   340→  text-shadow: 0 0 8px rgba(168, 85, 247, 0.8), 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2);
+   341→  color: rgb(192, 132, 252);
+   342→}
+   343→.neon-orange {
+   344→  text-shadow: 0 0 8px rgba(249, 115, 22, 0.8), 0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2);
+   345→  color: rgb(251, 146, 60);
+   346→}
+   347→
+   348→/* Neon border pulse — per-color variants */
+   349→.neon-border {
+   350→  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.5), 0 0 16px rgba(16, 185, 129, 0.25), inset 0 0 16px rgba(16, 185, 129, 0.04);
+   351→  border: 1px solid rgba(16, 185, 129, 0.5);
+   352→}
+   353→.neon-border-red {
+   354→  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.25), inset 0 0 16px rgba(239, 68, 68, 0.04);
+   355→  border: 1px solid rgba(239, 68, 68, 0.5);
+   356→}
+   357→.neon-border-cyan {
+   358→  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.5), 0 0 16px rgba(6, 182, 212, 0.25), inset 0 0 16px rgba(6, 182, 212, 0.04);
+   359→  border: 1px solid rgba(6, 182, 212, 0.5);
+   360→}
+   361→.neon-border-amber {
+   362→  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.5), 0 0 16px rgba(245, 158, 11, 0.25), inset 0 0 16px rgba(245, 158, 11, 0.04);
+   363→  border: 1px solid rgba(245, 158, 11, 0.5);
+   364→}
+   365→.neon-border-violet {
+   366→  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.5), 0 0 16px rgba(139, 92, 246, 0.25), inset 0 0 16px rgba(139, 92, 246, 0.04);
+   367→  border: 1px solid rgba(139, 92, 246, 0.5);
+   368→}
+   369→.neon-border-rose {
+   370→  box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.5), 0 0 16px rgba(244, 63, 94, 0.25), inset 0 0 16px rgba(244, 63, 94, 0.04);
+   371→  border: 1px solid rgba(244, 63, 94, 0.5);
+   372→}
+   373→.neon-border-sky {
+   374→  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.5), 0 0 16px rgba(14, 165, 233, 0.25), inset 0 0 16px rgba(14, 165, 233, 0.04);
+   375→  border: 1px solid rgba(14, 165, 233, 0.5);
+   376→}
+   377→.neon-border-purple {
+   378→  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.5), 0 0 16px rgba(168, 85, 247, 0.25), inset 0 0 16px rgba(168, 85, 247, 0.04);
+   379→  border: 1px solid rgba(168, 85, 247, 0.5);
+   380→}
+   381→
+   382→/* Sharp glowing card — intensified */
+   383→.holo-card-sharp {
+   384→  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.05), rgba(24, 24, 27, 0.9));
+   385→  border: 1px solid rgba(16, 185, 129, 0.5);
+   386→  border-radius: 2px;
+   387→  backdrop-filter: blur(16px);
+   388→  position: relative;
+   389→  overflow: hidden;
+   390→  box-shadow:
+   391→    0 0 0 1px rgba(16, 185, 129, 0.15),
+   392→    0 0 24px rgba(16, 185, 129, 0.12),
+   393→    0 4px 24px rgba(0, 0, 0, 0.6),
+   394→    inset 0 1px 0 rgba(16, 185, 129, 0.1);
+   395→  word-wrap: break-word;
+   396→  overflow-wrap: break-word;
+   397→  transition: all 0.3s ease;
+   398→}
+   399→.holo-card-sharp:hover {
+   400→  border-color: rgba(16, 185, 129, 0.8);
+   401→  box-shadow:
+   402→    0 0 0 1px rgba(16, 185, 129, 0.3),
+   403→    0 0 32px rgba(16, 185, 129, 0.25),
+   404→    0 4px 32px rgba(0, 0, 0, 0.6),
+   405→    inset 0 1px 0 rgba(16, 185, 129, 0.2);
+   406→}
+   407→.holo-card-sharp::after {
+   408→  content: "";
+   409→  position: absolute;
+   410→  top: 0;
+   411→  left: 0;
+   412→  right: 0;
+   413→  height: 1px;
+   414→  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.8), transparent);
+   415→  animation: sharp-sweep 4s ease-in-out infinite;
+   416→}
+   417→@keyframes sharp-sweep {
+   418→  0%, 100% { opacity: 0.3; transform: translateX(-100%); }
+   419→  50% { opacity: 1; transform: translateX(100%); }
+   420→}
+   421→
+   422→/* Section header with glowing accent line */
+   423→.section-header {
+   424→  position: relative;
+   425→  padding-left: 12px;
+   426→}
+   427→.section-header::before {
+   428→  content: "";
+   429→  position: absolute;
+   430→  left: 0;
+   431→  top: 0;
+   432→  bottom: 0;
+   433→  width: 3px;
+   434→  background: linear-gradient(180deg, rgb(16, 185, 129), rgb(6, 182, 212));
+   435→  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+   436→  border-radius: 2px;
+   437→}
+   438→
+   439→/* Animated gradient text */
+   440→.gradient-text {
+   441→  background: linear-gradient(90deg, rgb(16, 185, 129), rgb(6, 182, 212), rgb(139, 92, 246), rgb(16, 185, 129));
+   442→  background-size: 300% 100%;
+   443→  -webkit-background-clip: text;
+   444→  background-clip: text;
+   445→  -webkit-text-fill-color: transparent;
+   446→  animation: gradient-shift 6s linear infinite;
+   447→}
+   448→@keyframes gradient-shift {
+   449→  0% { background-position: 0% 50%; }
+   450→  100% { background-position: 300% 50%; }
+   451→}
+   452→
+   453→/* Glowing badge */
+   454→.glow-badge {
+   455→  box-shadow: 0 0 12px currentColor;
+   456→}
+   457→
+   458→/* Glitch effect */
+   459→.glitch {
+   460→  position: relative;
+   461→  animation: glitch-skew 4s infinite linear alternate-reverse;
+   462→}
+   463→@keyframes glitch-skew {
+   464→  0%, 100% { transform: skew(0deg); }
+   465→  20% { transform: skew(0.3deg); }
+   466→  40% { transform: skew(-0.2deg); }
+   467→  60% { transform: skew(0.1deg); }
+   468→  80% { transform: skew(-0.3deg); }
+   469→}
+   470→
+   471→/* Pulse / heartbeat */
+   472→.pulse-dot {
+   473→  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+   474→}
+   475→@keyframes pulse-ring {
+   476→  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+   477→  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+   478→  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+   479→}
+   480→
+   481→/* Radar sweep */
+   482→.radar-sweep {
+   483→  animation: radar-rotate 4s linear infinite;
+   484→  transform-origin: center;
+   485→}
+   486→@keyframes radar-rotate {
+   487→  0% { transform: rotate(0deg); }
+   488→  100% { transform: rotate(360deg); }
+   489→}
+   490→
+   491→/* Blip appearance */
+   492→.blip-appear {
+   493→  animation: blip-pop 0.5s ease-out;
+   494→}
+   495→@keyframes blip-pop {
+   496→  0% { transform: scale(0); opacity: 0; }
+   497→  50% { transform: scale(1.5); opacity: 1; }
+   498→  100% { transform: scale(1); opacity: 1; }
+   499→}
+   500→
+   501→/* Typing cursor */
+   502→.type-cursor::after {
+   503→  content: "▊";
+   504→  animation: blink 1s step-end infinite;
+   505→  color: rgb(16 185 129);
+   506→}
+   507→@keyframes blink {
+   508→  0%, 50% { opacity: 1; }
+   509→  51%, 100% { opacity: 0; }
+   510→}
+   511→
+   512→/* Data stream (vertical falling chars) */
+   513→.data-stream {
+   514→  animation: data-fall linear infinite;
+   515→}
+   516→@keyframes data-fall {
+   517→  0% { transform: translateY(-100%); opacity: 0; }
+   518→  10% { opacity: 0.6; }
+   519→  90% { opacity: 0.6; }
+   520→  100% { transform: translateY(100vh); opacity: 0; }
+   521→}
+   522→
+   523→/* Flicker */
+   524→.flicker {
+   525→  animation: flicker 3s linear infinite;
+   526→}
+   527→@keyframes flicker {
+   528→  0%, 100% { opacity: 1; }
+   529→  41% { opacity: 1; }
+   530→  42% { opacity: 0.5; }
+   531→  43% { opacity: 1; }
+   532→  45% { opacity: 0.3; }
+   533→  46% { opacity: 1; }
+   534→}
+   535→
+   536→/* Corner brackets (HUD frame) */
+   537→.hud-corners {
+   538→  position: relative;
+   539→}
+   540→.hud-corners::before,
+   541→.hud-corners::after {
+   542→  content: "";
+   543→  position: absolute;
+   544→  width: 12px;
+   545→  height: 12px;
+   546→  border: 1px solid rgba(16, 185, 129, 0.5);
+   547→  pointer-events: none;
+   548→}
+   549→.hud-corners::before {
+   550→  top: 0; left: 0;
+   551→  border-right: none;
+   552→  border-bottom: none;
+   553→}
+   554→.hud-corners::after {
+   555→  bottom: 0; right: 0;
+   556→  border-left: none;
+   557→  border-top: none;
+   558→}
+   559→
+   560→/* Entrance animations */
+   561→@keyframes fade-in-up {
+   562→  from { opacity: 0; transform: translateY(12px); }
+   563→  to { opacity: 1; transform: translateY(0); }
+   564→}
+   565→.fade-in-up {
+   566→  animation: fade-in-up 0.5s ease-out backwards;
+   567→}
+   568→
+   569→@keyframes fade-in {
+   570→  from { opacity: 0; }
+   571→  to { opacity: 1; }
+   572→}
+   573→.fade-in {
+   574→  animation: fade-in 0.8s ease-out;
+   575→}
+   576→
+   577→/* Glowing border on hover */
+   578→.glow-hover {
+   579→  transition: all 0.3s ease;
+   580→}
+   581→.glow-hover:hover {
+   582→  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.15);
+   583→  border-color: rgba(16, 185, 129, 0.4);
+   584→}
+   585→
+   586→/* ════════════════════════════════════════════════════════════════════
+   587→   GuardianX Spinning Neon Logo
+   588→   - Continuously rotating (8s linear infinite)
+   589→   - Neon emerald glow pulsing around it (no frame/border added)
+   590→   - Shine sweep: a diagonal light streak crosses the logo every 3s
+   591→   - Sparkle: 4 tiny twinkling dots orbit the logo
+   592→   Usage: <GuardianXLogo size={48} /> or apply .gx-spin-logo to an <img>
+   593→   ════════════════════════════════════════════════════════════════════ */
+   594→
+   595→/* Continuous spin */
+   596→@keyframes gx-spin {
+   597→  from { transform: rotate(0deg); }
+   598→  to   { transform: rotate(360deg); }
+   599→}
+   600→
+   601→/* Pulsing neon glow (emerald + cyan) — no border, just light */
+   602→@keyframes gx-neon-pulse {
+   603→  0%, 100% {
+   604→    filter:
+   605→      drop-shadow(0 0 4px rgba(16, 185, 129, 0.9))
+   606→      drop-shadow(0 0 12px rgba(16, 185, 129, 0.6))
+   607→      drop-shadow(0 0 24px rgba(6, 182, 212, 0.4));
+   608→  }
+   609→  50% {
+   610→    filter:
+   611→      drop-shadow(0 0 8px rgba(16, 185, 129, 1))
+   612→      drop-shadow(0 0 20px rgba(16, 185, 129, 0.8))
+   613→      drop-shadow(0 0 36px rgba(6, 182, 212, 0.6));
+   614→  }
+   615→}
+   616→
+   617→/* Shine sweep — a moving light highlight across the logo */
+   618→@keyframes gx-shine {
+   619→  0%   { transform: translateX(-150%) rotate(25deg); opacity: 0; }
+   620→  20%  { opacity: 0.8; }
+   621→  50%  { transform: translateX(150%) rotate(25deg); opacity: 0; }
+   622→  100% { transform: translateX(150%) rotate(25deg); opacity: 0; }
+   623→}
+   624→
+   625→/* Sparkle twinkle */
+   626→@keyframes gx-sparkle {
+   627→  0%, 100% { opacity: 0; transform: scale(0.3); }
+   628→  50%      { opacity: 1; transform: scale(1); }
+   629→}
+   630→
+   631→/* The logo wrapper */
+   632→.gx-logo-wrap {
+   633→  position: relative;
+   634→  display: inline-block;
+   635→  flex-shrink: 0;
+   636→  line-height: 0;
+   637→}
+   638→/* The spinning + glowing image itself */
+   639→.gx-spin-logo {
+   640→  animation:
+   641→    gx-spin 8s linear infinite,
+   642→    gx-neon-pulse 3s ease-in-out infinite;
+   643→  display: block;
+   644→  /* No border, no border-radius — keep it as a pure cutout */
+   645→  border-radius: 0;
+   646→  border: none;
+   647→  /* Respect reduced-motion users */
+   648→  will-change: transform, filter;
+   649→}
+   650→@media (prefers-reduced-motion: reduce) {
+   651→  .gx-spin-logo {
+   652→    animation: gx-neon-pulse 4s ease-in-out infinite; /* keep glow, stop spin */
+   653→  }
+   654→}
+   655→
+   656→/* Hide the shine overlay + sparkles — logo should just rotate on its axis */
+   657→.gx-shine-overlay { display: none; }
+   658→.gx-sparkle { display: none; }
+   659→
+   660→/* ════════════════════════════════════════════════════════════════════
+   661→   Animated Landing Demo — live, in-action cards
+   662→   - Typewriter terminal lines appear one by one
+   663→   - Pipeline stages light up sequentially
+   664→   - KPI numbers count up + fluctuate
+   665→   - AI briefing alerts slide in sequentially
+   666→   - Neon shine sweep on each card (like the logo)
+   667→   ════════════════════════════════════════════════════════════════════ */
+   668→
+   669→/* Card-level neon shine sweep (reuses gx-shine keyframe) */
+   670→.demo-card {
+   671→  position: relative;
+   672→  overflow: hidden;
+   673→}
+   674→.demo-card .demo-shine {
+   675→  position: absolute;
+   676→  inset: 0;
+   677→  overflow: hidden;
+   678→  pointer-events: none;
+   679→  z-index: 1;
+   680→}
+   681→.demo-card .demo-shine::before {
+   682→  content: "";
+   683→  position: absolute;
+   684→  top: -50%;
+   685→  left: 0;
+   686→  width: 50%;
+   687→  height: 200%;
+   688→  background: linear-gradient(
+   689→    90deg,
+   690→    transparent 0%,
+   691→    rgba(167, 243, 208, 0) 35%,
+   692→    rgba(167, 243, 208, 0.5) 50%,
+   693→    rgba(167, 243, 208, 0) 65%,
+   694→    transparent 100%
+   695→  );
+   696→  transform: translateX(-150%) rotate(20deg);
+   697→  animation: demo-shine-sweep 4s ease-in-out infinite;
+   698→}
+   699→@keyframes demo-shine-sweep {
+   700→  0%   { transform: translateX(-150%) rotate(20deg); opacity: 0; }
+   701→  15%  { opacity: 0.8; }
+   702→  40%  { transform: translateX(200%) rotate(20deg); opacity: 0; }
+   703→  100% { transform: translateX(200%) rotate(20deg); opacity: 0; }
+   704→}
+   705→
+   706→/* Terminal line entrance */
+   707→@keyframes term-line-in {
+   708→  from { opacity: 0; transform: translateY(4px); }
+   709→  to   { opacity: 1; transform: translateY(0); }
+   710→}
+   711→.term-line {
+   712→  animation: term-line-in 0.3s ease-out backwards;
+   713→}
+   714→
+   715→/* Pipeline stage glow pulse (when active) */
+   716→@keyframes stage-active {
+   717→  0%, 100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+   718→  50%      { box-shadow: 0 0 16px rgba(16, 185, 129, 0.7); }
+   719→}
+   720→.stage-active {
+   721→  animation: stage-active 1.5s ease-in-out infinite;
+   722→}
+   723→
+   724→/* KPI count-up pop */
+   725→@keyframes kpi-pop {
+   726→  from { opacity: 0; transform: scale(0.7); }
+   727→  to   { opacity: 1; transform: scale(1); }
+   728→}
+   729→.kpi-pop {
+   730→  animation: kpi-pop 0.4s ease-out backwards;
+   731→}
+   732→
+   733→/* AI alert slide-in */
+   734→@keyframes alert-slide {
+   735→  from { opacity: 0; transform: translateX(-12px); }
+   736→  to   { opacity: 1; transform: translateX(0); }
+   737→}
+   738→.alert-slide {
+   739→  animation: alert-slide 0.4s ease-out backwards;
+   740→}
+   741→
+   742→/* Scanning bar sweep (for terminal header) */
+   743→@keyframes scan-bar {
+   744→  0%   { transform: translateX(-100%); }
+   745→  100% { transform: translateX(100%); }
+   746→}
+   747→.scan-bar {
+   748→  animation: scan-bar 2s linear infinite;
+   749→}
+   750→
+   751→@media (prefers-reduced-motion: reduce) {
+   752→  .demo-card .demo-shine::before,
+   753→  .stage-active,
+   754→  .scan-bar { animation: none; }
+   755→  .term-line, .kpi-pop, .alert-slide { animation: none; opacity: 1; transform: none; }
+   756→}
+   757→
+   758→/* ════════════════════════════════════════════════════════════════════
+   759→   Landing page — cinematic extras
+   760→   - CTA glow halo on hover
+   761→   - Feature card scan sweep
+   762→   - Attack-map scanline
+   763→   - Final-CTA animated gradient banner
+   764→   - 3D tilt card preserve-3d
+   765→   ════════════════════════════════════════════════════════════════════ */
+   766→
+   767→/* CTA glow halo: smoothly expand shadow on hover */
+   768→.cta-glow {
+   769→  position: relative;
+   770→  transition: box-shadow 0.3s ease, transform 0.15s ease;
+   771→  will-change: box-shadow, transform;
+   772→}
+   773→.cta-glow:hover {
+   774→  box-shadow:
+   775→    0 0 0 1px rgba(16, 185, 129, 0.6),
+   776→    0 0 24px rgba(16, 185, 129, 0.35),
+   777→    0 0 48px rgba(6, 182, 212, 0.25),
+   778→    0 4px 24px rgba(0, 0, 0, 0.4);
+   779→}
+   780→
+   781→/* Feature card scan sweep — moves a highlight bar across the code window */
+   782→@keyframes feature-sweep {
+   783→  0%   { transform: translateX(-100%); opacity: 0; }
+   784→  20%  { opacity: 1; }
+   785→  80%  { opacity: 1; }
+   786→  100% { transform: translateX(120%); opacity: 0; }
+   787→}
+   788→
+   789→/* Attack map vertical scanline */
+   790→.attack-scan {
+   791→  background: linear-gradient(
+   792→    180deg,
+   793→    transparent 0%,
+   794→    rgba(16, 185, 129, 0.04) 48%,
+   795→    rgba(16, 185, 129, 0.12) 50%,
+   796→    rgba(16, 185, 129, 0.04) 52%,
+   797→    transparent 100%
+   798→  );
+   799→  animation: attack-scan-move 6s linear infinite;
+   800→}
+   801→@keyframes attack-scan-move {
+   802→  0%   { transform: translateY(-100%); }
+   803→  100% { transform: translateY(100%); }
+   804→}
+   805→
+   806→/* Final CTA — animated gradient banner background */
+   807→.final-cta-bg {
+   808→  background:
+   809→    radial-gradient(ellipse at 20% 20%, rgba(16, 185, 129, 0.25), transparent 60%),
+   810→    radial-gradient(ellipse at 80% 30%, rgba(6, 182, 212, 0.22), transparent 60%),
+   811→    radial-gradient(ellipse at 50% 90%, rgba(139, 92, 246, 0.20), transparent 60%),
+   812→    linear-gradient(135deg, rgba(24, 24, 27, 0.95) 0%, rgba(9, 9, 11, 0.98) 100%);
+   813→  background-size: 200% 200%, 200% 200%, 200% 200%, 100% 100%;
+   814→  animation: final-cta-shift 12s ease-in-out infinite;
+   815→}
+   816→@keyframes final-cta-shift {
+   817→  0%, 100% { background-position: 0% 0%, 100% 0%, 50% 100%, 0 0; }
+   818→  33%      { background-position: 100% 100%, 0% 100%, 80% 0%, 0 0; }
+   819→  66%      { background-position: 50% 100%, 50% 0%, 0% 50%, 0 0; }
+   820→}
+   821→
+   822→/* 3D tilt card — preserve-3d for children with translateZ */
+   823→.tilt-card {
+   824→  transform-style: preserve-3d;
+   825→  will-change: transform;
+   826→}
+   827→
+   828→/* Custom scrollbar for terminal panels */
+   829→.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+   830→.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+   831→.custom-scrollbar::-webkit-scrollbar-thumb {
+   832→  background: rgba(16, 185, 129, 0.25);
+   833→  border-radius: 3px;
+   834→}
+   835→.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+   836→  background: rgba(16, 185, 129, 0.45);
+   837→}
+   838→
+   839→@media (prefers-reduced-motion: reduce) {
+   840→  .cta-glow:hover { box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4); }
+   841→  .attack-scan,
+   842→  .final-cta-bg { animation: none; }
+   843→}
+   844→
+   845→/* ════════════════════════════════════════════════════════════════════
+   846→   ROI calculator — native range slider styling
+   847→   - Track is painted via inline `background: linear-gradient(...)` using
+   848→     `currentColor` (driven by per-instance `--accent` CSS variable).
+   849→   - Thumb is a glowing dot in the same accent color.
+   850→   - Works in WebKit + Firefox. Color adapts to selected industry.
+   851→   ════════════════════════════════════════════════════════════════════ */
+   852→.roi-slider {
+   853→  outline: none;
+   854→  color: var(--accent, #34d399);
+   855→}
+   856→/* WebKit thumb */
+   857→.roi-slider::-webkit-slider-thumb {
+   858→  -webkit-appearance: none;
+   859→  appearance: none;
+   860→  width: 18px;
+   861→  height: 18px;
+   862→  border-radius: 9999px;
+   863→  background: currentColor;
+   864→  border: 2px solid rgba(9, 9, 11, 0.9);
+   865→  box-shadow:
+   866→    0 0 0 1px currentColor,
+   867→    0 0 10px currentColor,
+   868→    0 0 18px color-mix(in srgb, currentColor 60%, transparent);
+   869→  cursor: pointer;
+   870→  transition: transform 0.15s ease;
+   871→}
+   872→.roi-slider::-webkit-slider-thumb:hover { transform: scale(1.18); }
+   873→.roi-slider::-webkit-slider-thumb:active { transform: scale(1.05); }
+   874→/* WebKit track (we use the element's own background for the fill, but
+   875→   still need to neutralize the default track) */
+   876→.roi-slider::-webkit-slider-runnable-track {
+   877→  height: 8px;
+   878→  border-radius: 9999px;
+   879→  background: transparent;
+   880→}
+   881→/* Firefox thumb + track */
+   882→.roi-slider::-moz-range-thumb {
+   883→  width: 16px;
+   884→  height: 16px;
+   885→  border-radius: 9999px;
+   886→  background: currentColor;
+   887→  border: 2px solid rgba(9, 9, 11, 0.9);
+   888→  box-shadow:
+   889→    0 0 0 1px currentColor,
+   890→    0 0 10px currentColor;
+   891→  cursor: pointer;
+   892→}
+   893→.roi-slider::-moz-range-track {
+   894→  height: 8px;
+   895→  border-radius: 9999px;
+   896→  background: rgba(63, 63, 70, 0.6);
+   897→}
+   898→/* Firefox fill: mirror the WebKit gradient via a progress-color hack.
+   899→   (--accent-driven, falls back to zinc track) */
+   900→.roi-slider::-moz-range-progress {
+   901→  height: 8px;
+   902→  border-radius: 9999px;
+   903→  background: currentColor;
+   904→}
+   905→
+   906→@media (prefers-reduced-motion: reduce) {
+   907→  .roi-slider::-webkit-slider-thumb { transition: none; }
+   908→}
+   909→
+   910→/* ════════════════════════════════════════════════════════════════════
+   911→   Performance utilities — perf-optimize task
+   912→   ════════════════════════════════════════════════════════════════════ */
+   913→
+   914→/* Skip rendering work for off-screen sections. The browser skips layout,
+   915→   paint, and hit-testing for elements with `content-visibility: auto` when
+   916→   they're outside the viewport — a huge win on the long GuardianX landing
+   917→   page (12+ sections). `contain-intrinsic-size` provides an estimated
+   918→   height so the scrollbar doesn't jump as sections hydrate. */
+   919→.gx-cv-auto {
+   920→  content-visibility: auto;
+   921→  contain-intrinsic-size: 600px;
+   922→}
+   923→
+   924→/* Hint to the browser that this element will animate via transform — the
+   925→   compositor creates a separate GPU layer so the main thread doesn't have
+   926→   to repaint on every frame. Use sparingly (only on elements that actually
+   927→   animate) — overuse causes memory bloat. */
+   928→.gx-will-transform {
+   929→  will-change: transform;
+   930→}
+   931→
+   932→/* Same idea, but for elements that animate opacity (e.g. fade-in entrants). */
+   933→.gx-will-opacity {
+   934→  will-change: opacity;
+   935→}
+   936→
+   937→/* On reduced-motion devices, force these hints off — they cost memory and
+   938→   don't help when nothing is animating. */
+   939→@media (prefers-reduced-motion: reduce) {
+   940→  .gx-will-transform,
+   941→  .gx-will-opacity {
+   942→    will-change: auto;
+   943→  }
+   944→}
+   945→
+   946→
+   947→

@@ -1,0 +1,693 @@
+     1→import {
+     2→  Bug,
+     3→  Crosshair,
+     4→  Swords,
+     5→  ScanLine,
+     6→  FileText,
+     7→  KeyRound,
+     8→  Gauge,
+     9→  Globe,
+    10→  Wand2,
+    11→  Heart,
+    12→  Link2,
+    13→  Gavel,
+    14→  Lock,
+    15→  Skull,
+    16→  Activity,
+    17→  Radar,
+    18→  Network,
+    19→  GitBranch,
+    20→  AlertTriangle,
+    21→  Workflow,
+    22→  Eye,
+    23→  Webhook,
+    24→  Brain,
+    25→  Rocket,
+    26→  FlaskConical,
+    27→  Shield,
+    28→  FileCode2,
+    29→  ShieldCheck,
+    30→  Mic,
+    31→  Hand,
+    32→  Cpu,
+    33→  Database,
+    34→  // ── NEW icons added for the 50+ module expansion ──────────────────────
+    35→  Siren,
+    36→  FileLock2,
+    37→  Fingerprint,
+    38→  PlayCircle,
+    39→  Radio,
+    40→  Bell,
+    41→  Bird,
+    42→  Anchor,
+    43→  ScrollText,
+    44→  Settings2,
+    45→  FileOutput,
+    46→  Bot,
+    47→  CalendarClock,
+    48→  GitFork,
+    49→  Puzzle,
+    50→  Beaker,
+    51→  CreditCard,
+    52→  Smartphone,
+    53→  Building2,
+    54→  MailCheck,
+    55→  Users,
+    56→  UserCog,
+    57→  Newspaper,
+    58→  Github,
+    59→  Atom,
+    60→  TrendingUp,
+    61→  Orbit,
+    62→  type LucideIcon,
+    63→} from "lucide-react";
+    64→
+    65→export interface Feature {
+    66→  icon: LucideIcon;
+    67→  title: string;
+    68→  category: string;
+    69→  desc: string;
+    70→  color: string;
+    71→  neon: string;
+    72→  border: string;
+    73→  glow: string;
+    74→  bg: string;
+    75→  isNew?: boolean;
+    76→}
+    77→
+    78→// ── Color token helpers ────────────────────────────────────────────────
+    79→// Each color name maps to a self-consistent text/neon/border/glow/bg quintet
+    80→// so new feature entries stay in lock-step with the existing visual language.
+    81→const PALETTES = {
+    82→  red: {
+    83→    color: "text-red-400",
+    84→    neon: "neon-red",
+    85→    border: "border-red-500/40",
+    86→    glow: "hover:shadow-[0_0_24px_rgba(239,68,68,0.2)]",
+    87→    bg: "bg-red-500/5",
+    88→  },
+    89→  orange: {
+    90→    color: "text-orange-400",
+    91→    neon: "neon-orange",
+    92→    border: "border-orange-500/40",
+    93→    glow: "hover:shadow-[0_0_24px_rgba(249,115,22,0.2)]",
+    94→    bg: "bg-orange-500/5",
+    95→  },
+    96→  amber: {
+    97→    color: "text-amber-400",
+    98→    neon: "neon-amber",
+    99→    border: "border-amber-500/40",
+   100→    glow: "hover:shadow-[0_0_24px_rgba(245,158,11,0.2)]",
+   101→    bg: "bg-amber-500/5",
+   102→  },
+   103→  emerald: {
+   104→    color: "text-emerald-400",
+   105→    neon: "neon-emerald",
+   106→    border: "border-emerald-500/40",
+   107→    glow: "hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]",
+   108→    bg: "bg-emerald-500/5",
+   109→  },
+   110→  cyan: {
+   111→    color: "text-cyan-400",
+   112→    neon: "neon-cyan",
+   113→    border: "border-cyan-500/40",
+   114→    glow: "hover:shadow-[0_0_24px_rgba(6,182,212,0.2)]",
+   115→    bg: "bg-cyan-500/5",
+   116→  },
+   117→  sky: {
+   118→    color: "text-sky-400",
+   119→    neon: "neon-sky",
+   120→    border: "border-sky-500/40",
+   121→    glow: "hover:shadow-[0_0_24px_rgba(14,165,233,0.2)]",
+   122→    bg: "bg-sky-500/5",
+   123→  },
+   124→  violet: {
+   125→    color: "text-violet-400",
+   126→    neon: "neon-violet",
+   127→    border: "border-violet-500/40",
+   128→    glow: "hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]",
+   129→    bg: "bg-violet-500/5",
+   130→  },
+   131→  purple: {
+   132→    color: "text-purple-400",
+   133→    neon: "neon-purple",
+   134→    border: "border-purple-500/40",
+   135→    glow: "hover:shadow-[0_0_24px_rgba(168,85,247,0.2)]",
+   136→    bg: "bg-purple-500/5",
+   137→  },
+   138→  rose: {
+   139→    color: "text-rose-400",
+   140→    neon: "neon-rose",
+   141→    border: "border-rose-500/40",
+   142→    glow: "hover:shadow-[0_0_24px_rgba(244,63,94,0.2)]",
+   143→    bg: "bg-rose-500/5",
+   144→  },
+   145→  teal: {
+   146→    color: "text-teal-400",
+   147→    neon: "neon-teal",
+   148→    border: "border-teal-500/40",
+   149→    glow: "hover:shadow-[0_0_24px_rgba(20,184,166,0.2)]",
+   150→    bg: "bg-teal-500/5",
+   151→  },
+   152→} as const;
+   153→
+   154→type PaletteName = keyof typeof PALETTES;
+   155→
+   156→/** Helper to apply a palette to a feature, keeping call sites terse. */
+   157→function withColor(
+   158→  icon: LucideIcon,
+   159→  title: string,
+   160→  category: string,
+   161→  desc: string,
+   162→  palette: PaletteName,
+   163→  isNew?: boolean,
+   164→): Feature {
+   165→  const p = PALETTES[palette];
+   166→  return {
+   167→    icon,
+   168→    title,
+   169→    category,
+   170→    desc,
+   171→    color: p.color,
+   172→    neon: p.neon,
+   173→    border: p.border,
+   174→    glow: p.glow,
+   175→    bg: p.bg,
+   176→    ...(isNew ? { isNew: true } : {}),
+   177→  };
+   178→}
+   179→
+   180→export const FEATURES: Feature[] = [
+   181→  // ════════════════════════════════════════════════════════════════════
+   182→  // ORIGINAL 34 FEATURES (unchanged, except Data Privacy Scanner fixed
+   183→  // from indigo → violet to honor the NO-indigo/blue design rule)
+   184→  // ════════════════════════════════════════════════════════════════════
+   185→  withColor(
+   186→    Bug,
+   187→    "AI Vulnerability Detection",
+   188→    "SAST",
+   189→    "AI reads your source code and identifies real, exploitable vulnerabilities with CVE/CWE mapping, confidence scores, and the exact vulnerable snippet.",
+   190→    "red",
+   191→  ),
+   192→  withColor(
+   193→    Crosshair,
+   194→    "PoC Exploit Playground",
+   195→    "Exploit",
+   196→    "For every vulnerability, the AI generates a working proof-of-concept exploit. Run it against the original code to prove the vuln is real, then against the patched code to prove the fix works.",
+   197→    "orange",
+   198→  ),
+   199→  withColor(
+   200→    Swords,
+   201→    "Adversarial Red-Team Arena",
+   202→    "Self-Attack",
+   203→    "After patching, a second AI persona attacks its own fix. If it finds a bypass, the defender iterates. Loop until the attacker concedes, the patch is battle-tested before human review.",
+   204→    "amber",
+   205→  ),
+   206→  withColor(
+   207→    Crosshair,
+   208→    "RedAgent VAPT Engine",
+   209→    "DAST",
+   210→    "Autonomous penetration testing against live targets. The AI crawls the app, plans category-appropriate attacks, fires real HTTP payloads, and confirms exploitation with full evidence.",
+   211→    "red",
+   212→  ),
+   213→  withColor(
+   214→    ScanLine,
+   215→    "Sensitive Data Exposure Scanner",
+   216→    "Secrets",
+   217→    "Systematically detects exposed AWS/Stripe/GitHub keys, JWTs, private keys, passwords, SSNs, and credit cards. Probes 22+ known exposure paths. All samples redacted, proves the leak without exfiltrating.",
+   218→    "purple",
+   219→  ),
+   220→  withColor(
+   221→    FileText,
+   222→    "Professional VAPT Reports",
+   223→    "Reporting",
+   224→    "Generate a 15-page PDF VAPT report with front page, TOC, document control, executive summary, methodology, findings master table, detailed PoC evidence, compliance mapping, and cleanup certificate.",
+   225→    "emerald",
+   226→  ),
+   227→  withColor(
+   228→    KeyRound,
+   229→    "Encrypted Git Integration",
+   230→    "Credentials",
+   231→    "Connect real private repos with AES-256-GCM encrypted credentials. Tokens are encrypted at rest, never shown again, never leaked in logs. Clone, explore, and import files for scanning.",
+   232→    "sky",
+   233→  ),
+   234→  withColor(
+   235→    Gauge,
+   236→    "PostureScore",
+   237→    "Metrics",
+   238→    "A 0–100 security credit score per codebase, computed from open vulns, sandbox pass rates, and adversarial win rates. Letter grades A–F. Trend over time. Exec-friendly at-a-glance posture.",
+   239→    "emerald",
+   240→  ),
+   241→  withColor(
+   242→    Globe,
+   243→    "Continuous Threat Intel",
+   244→    "Live Feed",
+   245→    "Monitors live CVE disclosures via web search and cross-references them against your codebases. New 0-day for a lib you use? GuardianX flags it high-relevance before you've heard of it.",
+   246→    "cyan",
+   247→  ),
+   248→  withColor(
+   249→    Wand2,
+   250→    "AI Remediation Copilot",
+   251→    "Copilot",
+   252→    "Inside every patch: ask the AI to explain the fix, generate an improved production-ready version, or produce a hardened defense-in-depth variant with input validation and rate limiting.",
+   253→    "violet",
+   254→  ),
+   255→  withColor(
+   256→    Heart,
+   257→    "Self-Healing Runtime",
+   258→    "Runtime",
+   259→    "Live runtime monitoring tracks which functions are vulnerable vs healed. One-click hot-swap deploys a patched function at runtime with zero downtime. Auto-heal when an attack is detected.",
+   260→    "rose",
+   261→  ),
+   262→  withColor(
+   263→    Link2,
+   264→    "Cryptographic Patch Attestation",
+   265→    "Trust",
+   266→    "Every approved patch is hash-chained into an immutable SHA-256 ledger. Tamper-evident: any modification to a past attestation breaks every subsequent hash. Enterprise-grade audit trail.",
+   267→    "teal",
+   268→  ),
+   269→  withColor(
+   270→    Gavel,
+   271→    "DPDPA & Multi-Framework Compliance",
+   272→    "GRC",
+   273→    "Map every finding to DPDPA 2023, GDPR, HIPAA, PCI-DSS, ISO 27001, and SOC 2. Track section-level compliance, generate audit reports, and auto-draft 72-hour breach notifications.",
+   274→    "purple",
+   275→  ),
+   276→  // ⚠️ was indigo/blue (forbidden) — now violet to match its existing neon.
+   277→  withColor(
+   278→    Lock,
+   279→    "Data Privacy Scanner",
+   280→    "Privacy",
+   281→    "Detect PII collection without consent, plaintext password storage, cross-border data transfer risks, and data retention violations, all mapped to specific DPDPA sections.",
+   282→    "violet",
+   283→  ),
+   284→  withColor(
+   285→    Skull,
+   286→    "Dark Web Monitoring",
+   287→    "SOC",
+   288→    "Continuously scans breach databases and dark web sources for leaked credentials, passwords, and data dumps matching your domains. Get alerted before attackers use your leaked data.",
+   289→    "red",
+   290→  ),
+   291→  withColor(
+   292→    Activity,
+   293→    "Security KPI Dashboard",
+   294→    "Metrics",
+   295→    "Real-time security metrics: MTTD, MTTR, vulnerability density per KLOC, sandbox pass rate, adversarial win rate, resolution rate. 7-day trends with severity breakdowns.",
+   296→    "emerald",
+   297→  ),
+   298→  withColor(
+   299→    Radar,
+   300→    "Attack Surface Management",
+   301→    "Discovery",
+   302→    "Continuously discover exposed services, open ports, and missing security headers on your live targets. Real-time risk assessment with per-endpoint exposure tracking.",
+   303→    "cyan",
+   304→  ),
+   305→  withColor(
+   306→    Network,
+   307→    "Data Exfiltration Defense",
+   308→    "Defense",
+   309→    "Inject canary tokens into your data and monitor for exfiltration. Deploy honeypot endpoints to trap attackers. Real-time data flow monitoring detects suspicious outbound transfers.",
+   310→    "rose",
+   311→  ),
+   312→  withColor(
+   313→    ScanLine,
+   314→    "Web Scraping Audit Engine",
+   315→    "Audit",
+   316→    "Dual-mode (lightweight + browser) scraping engine with PII sanitization. Extract structured data from any URL, detect leaked credentials in responses, and generate integrity-hashed audit trails.",
+   317→    "violet",
+   318→  ),
+   319→  withColor(
+   320→    GitBranch,
+   321→    "CI/CD Integration",
+   322→    "DevSecOps",
+   323→    "Trigger scans from GitHub Actions, GitLab CI, or Jenkins. Merge-blocking when critical vulnerabilities are found. PR comments with patch suggestions. Full DevSecOps pipeline integration.",
+   324→    "emerald",
+   325→  ),
+   326→  withColor(
+   327→    AlertTriangle,
+   328→    "AI Attack Chain Synthesis",
+   329→    "Correlation",
+   330→    "AI correlates individual vulnerabilities into multi-step attack chains. See how a low-severity XSS + a medium-severity IDOR + an info disclosure can chain into full account takeover.",
+   331→    "amber",
+   332→  ),
+   333→  withColor(
+   334→    Workflow,
+   335→    "API Fuzzing + Business Logic Testing",
+   336→    "Testing",
+   337→    "Stateful API fuzzing crashes endpoints with malformed inputs. Business logic testing detects price manipulation, privilege escalation, and race conditions. GraphQL + WebSocket testing included.",
+   338→    "orange",
+   339→  ),
+   340→  withColor(
+   341→    Eye,
+   342→    "Executive Dashboard + Heatmap",
+   343→    "Visibility",
+   344→    "Board-ready security posture dashboard with 8 KPIs, 7-day trends, top threats, and severity breakdowns. Per-codebase risk heatmap. Vuln correlation engine for root-cause analysis.",
+   345→    "cyan",
+   346→  ),
+   347→  withColor(
+   348→    Webhook,
+   349→    "Multi-Tenant RBAC + Integrations",
+   350→    "Platform",
+   351→    "Organization-level multi-tenancy with admin/analyst/viewer roles. Integrate with Slack, Jira, GitHub, Splunk, ELK, PagerDuty. Webhook alerts + scheduled scans + full audit logging.",
+   352→    "emerald",
+   353→  ),
+   354→  withColor(
+   355→    Brain,
+   356→    "Guardian AI Assistant",
+   357→    "AI",
+   358→    "Natural language interface to the entire platform. Ask 'what should I prioritize?' or 'which client has the most critical findings?' and get real answers from live data. Chat sidebar with context.",
+   359→    "violet",
+   360→  ),
+   361→  withColor(
+   362→    Rocket,
+   363→    "Service Launcher + War Room",
+   364→    "Operations",
+   365→    "Pick clients, pick a service (Scan/Test/Patch/Verify/Defend/Comply), launch. War Room fullscreen mode for wall projection with auto-cycling views. Clickable pipeline stages per client.",
+   366→    "emerald",
+   367→  ),
+   368→  withColor(
+   369→    FlaskConical,
+   370→    "Autonomous R&D Lab",
+   371→    "Self-Improving",
+   372→    "Searches GitHub for open-source security tools, AI analyzes their code, performs gap analysis vs our modules, and generates optimization recommendations. Benchmark engine, protocol fuzzer, attack graph DAG, behavioral monitor, virtual patching, IaC remediation, rollback safeguards.",
+   373→    "violet",
+   374→  ),
+   375→  withColor(
+   376→    Shield,
+   377→    "Virtual Patching + IaC Remediation",
+   378→    "Defense",
+   379→    "Can't patch code immediately? Auto-generate WAF rules (ModSecurity, Cloudflare, iptables, Nginx) as virtual patches. Generate Terraform, Ansible, K8s, Docker manifests to patch at the deployment template level.",
+   380→    "rose",
+   381→    true,
+   382→  ),
+   383→  // ── jaredrhod integration features ──────────────────────────────────
+   384→  withColor(
+   385→    Mic,
+   386→    "Voice Command Center",
+   387→    "Voice AI",
+   388→    "Talk to GuardianX. Push-to-talk, speech recognition, and text-to-speech built into the War Room. Say 'scan payment-handler.js' or 'what's the security posture?' — hands-free SOC operation. No API keys, runs in your browser.",
+   389→    "cyan",
+   390→    true,
+   391→  ),
+   392→  withColor(
+   393→    Hand,
+   394→    "Gesture Control",
+   395→    "Gesture AI",
+   396→    "Control the War Room with your bare hands. Pinch to click, swipe to navigate tabs, open palm to scroll, fist to close. Webcam-based hand tracking via MediaPipe — no headset, no controllers. Built for wall projection in SOC environments.",
+   397→    "violet",
+   398→    true,
+   399→  ),
+   400→  withColor(
+   401→    Cpu,
+   402→    "AI Neural Visualizer",
+   403→    "Visualization",
+   404→    "A living circuit board that reacts to scans in real-time. Data pulses flow through traces as the AI analyzes code. Components flash red when vulnerabilities are found, green when patches are applied. Fullscreen immersive mode for war room projection.",
+   405→    "emerald",
+   406→    true,
+   407→  ),
+   408→  withColor(
+   409→    Brain,
+   410→    "AI Memory Vault",
+   411→    "Memory",
+   412→    "The Guardian AI remembers. Every scan, every finding, every patch, every conversation — stored in a persistent memory vault. The AI can say 'Last time you scanned this codebase, we found 3 SQL injections. 2 are still unpatched.' No more starting fresh every session.",
+   413→    "amber",
+   414→    true,
+   415→  ),
+   416→  withColor(
+   417→    Database,
+   418→    "Multi-Tenant RBAC + Organizations",
+   419→    "Platform",
+   420→    "Organization-level data isolation with workspace switching. Admins see everything, analysts see only their own clients. Per-IP rate limiting, session revocation, 2FA/TOTP enforcement, audit logging on every sensitive action, and break-glass admin recovery.",
+   421→    "sky",
+   422→    true,
+   423→  ),
+   424→
+   425→  // ════════════════════════════════════════════════════════════════════
+   426→  // NEW — DFIR Command Center modules (incident response, evidence
+   427→  // chain-of-custody, IOC tracking, playbooks)
+   428→  // ════════════════════════════════════════════════════════════════════
+   429→  withColor(
+   430→    Siren,
+   431→    "Incident Response Coordinator",
+   432→    "DFIR",
+   433→    "Auto-create incidents from critical findings, canary triggers, and anomaly alerts. Track the full lifecycle: detected → contained → eradicated → closed. Assign responders, capture root cause, and document lessons learned — all in one timeline.",
+   434→    "red",
+   435→    true,
+   436→  ),
+   437→  withColor(
+   438→    FileLock2,
+   439→    "Evidence Chain-of-Custody Vault",
+   440→    "DFIR",
+   441→    "Every artifact (memory dump, packet capture, screenshot, log slice) is SHA-256 hashed and timestamped on collection. Immutable chain-of-custody ledger records every handoff. Court-admissible by design — tampering breaks the chain visibly.",
+   442→    "amber",
+   443→    true,
+   444→  ),
+   445→  withColor(
+   446→    Fingerprint,
+   447→    "IOC Tracker",
+   448→    "DFIR",
+   449→    "Indicators of Compromise (IPs, domains, file hashes, mutexes, registry keys) are extracted from findings, enriched against threat intel, and stored with first-seen/last-seen. Cross-correlate IOCs across every client to spot campaign-level attacks.",
+   450→    "red",
+   451→    true,
+   452→  ),
+   453→  withColor(
+   454→    PlayCircle,
+   455→    "Playbook Automation Engine",
+   456→    "DFIR",
+   457→    "Pre-built and custom response playbooks (SQLi, ransomware, insider threat, credential leak). One-click execute runs a scripted sequence: contain, isolate, snapshot, gather evidence, notify stakeholders. Playbooks are versioned and auditable.",
+   458→    "violet",
+   459→    true,
+   460→  ),
+   461→
+   462→  // ════════════════════════════════════════════════════════════════════
+   463→  // NEW — SOC & DevSecOps modules (runtime monitoring, alert rules,
+   464→  // canaries, honeypots, API access logs, webhook configs)
+   465→  // ════════════════════════════════════════════════════════════════════
+   466→  withColor(
+   467→    Radio,
+   468→    "Real-Time Runtime Monitoring",
+   469→    "SOC",
+   470→    "Watch live process trees, network sockets, file integrity, and CPU/memory baselines per host. Hot-swap vulnerable functions at runtime with zero downtime. Auto-heal triggers when an attack signature matches.",
+   471→    "cyan",
+   472→    true,
+   473→  ),
+   474→  withColor(
+   475→    Bell,
+   476→    "Alert Rule Builder",
+   477→    "SOC",
+   478→    "Visual rule builder for custom alerts: 'critical finding opened', 'canary triggered', 'scan stuck > 30min', 'unauthorized target accessed'. Route to Slack, PagerDuty, email, or webhook. Severity tiers, dedup, and silence windows built-in.",
+   479→    "cyan",
+   480→    true,
+   481→  ),
+   482→  withColor(
+   483→    Bird,
+   484→    "Canary Token Manager",
+   485→    "SOC",
+   486→    "Generate and inject canary tokens (honey-creds, fake API keys, tracked documents, beacon endpoints) across your codebase and infra. The moment a canary fires — anywhere — GuardianX raises an incident with the source IP, user agent, and full request context.",
+   487→    "cyan",
+   488→    true,
+   489→  ),
+   490→  withColor(
+   491→    Anchor,
+   492→    "Honeypot Deployment Grid",
+   493→    "Defense",
+   494→    "Spin up realistic honeypot endpoints (fake admin panels, bogus DB credentials, decoy APIs) with one click. Every interaction is logged, scored, and reverse-enriched against threat intel. Auto-deploy honeypots around newly discovered attack surface.",
+   495→    "rose",
+   496→    true,
+   497→  ),
+   498→  withColor(
+   499→    ScrollText,
+   500→    "API Access Log Audit",
+   501→    "SOC",
+   502→    "Every API call into GuardianX is captured: caller, IP, user-agent, route, status, latency, response size. Searchable, filterable, exportable. Detects brute force, credential stuffing, and abnormal data exfiltration patterns from your own platform's traffic.",
+   503→    "cyan",
+   504→    true,
+   505→  ),
+   506→  withColor(
+   507→    Settings2,
+   508→    "Webhook Configuration Hub",
+   509→    "Platform",
+   510→    "Register outbound webhooks for any platform event (scan complete, finding opened, patch approved, incident escalated). Per-event URL, secret, retry policy, and dead-letter queue. Built-in HMAC signing so receivers can verify authenticity.",
+   511→    "emerald",
+   512→    true,
+   513→  ),
+   514→
+   515→  // ════════════════════════════════════════════════════════════════════
+   516→  // NEW — Exfil Defense deep-cut (focused detection layer)
+   517→  // ════════════════════════════════════════════════════════════════════
+   518→  withColor(
+   519→    FileOutput,
+   520→    "Real-Time Data Exfiltration Detection",
+   521→    "Defense",
+   522→    "Behavioral egress monitoring: learns normal outbound traffic patterns per service, then flags anomalies — large uploads at 3am, sustained small-chunk transfers to unknown hosts, DNS tunneling signatures, and HTTPS-over-non-standard-ports. Stops slow-drip exfiltration that DLP tools miss.",
+   523→    "rose",
+   524→    true,
+   525→  ),
+   526→
+   527→  // ════════════════════════════════════════════════════════════════════
+   528→  // NEW — R&D Lab expansion (autonomous research agent)
+   529→  // ════════════════════════════════════════════════════════════════════
+   530→  withColor(
+   531→    Bot,
+   532→    "Autonomous Research Agent",
+   533→    "Self-Improving",
+   534→    "A background agent that wakes on a schedule, crawls security blogs + GitHub repos for newly-disclosed techniques, benchmarks GuardianX's detection coverage against them, and writes gap-fix proposals into the R&D backlog. The platform teaches itself new attacks while you sleep.",
+   535→    "violet",
+   536→    true,
+   537→  ),
+   538→
+   539→  // ════════════════════════════════════════════════════════════════════
+   540→  // NEW — Advanced Platform modules (scheduled scans, attack chains,
+   541→  // integrations, fuzz results)
+   542→  // ════════════════════════════════════════════════════════════════════
+   543→  withColor(
+   544→    CalendarClock,
+   545→    "Scheduled Scan Scheduler",
+   546→    "Automation",
+   547→    "Cron-style scheduler for recurring scans: nightly SAST on every codebase, weekly DAST on production, hourly attack-surface check. Time-zone aware, merge-blocking, with back-off and skip-if-running rules. Full run history with diff vs previous run.",
+   548→    "amber",
+   549→    true,
+   550→  ),
+   551→  withColor(
+   552→    GitFork,
+   553→    "Attack Chain Visualizer",
+   554→    "Correlation",
+   555→    "Interactive DAG of multi-step attack paths. Click any node to see the underlying finding, the patch that breaks the chain, and the blast radius if left unpatched. Auto-suggests the single patch that kills the most chains — the highest-leverage fix.",
+   556→    "amber",
+   557→    true,
+   558→  ),
+   559→  withColor(
+   560→    Puzzle,
+   561→    "Third-Party Integrations Hub",
+   562→    "Platform",
+   563→    "Two-way sync with Slack, Jira, GitHub, GitLab, PagerDuty, Splunk, ELK, Microsoft Teams, and webhooks. Findings auto-create Jira tickets; PRs auto-trigger scans; Splunk ingests GuardianX events. Configure once, inherit everywhere.",
+   564→    "emerald",
+   565→    true,
+   566→  ),
+   567→  withColor(
+   568→    Beaker,
+   569→    "Fuzz Test Results Dashboard",
+   570→    "Testing",
+   571→    "Aggregated view across every fuzz run (HTTP, GraphQL, WebSocket, protocol). Crash reproducers, unique stack traces, dedup-by-signature, and pass/fail trends over time. One-click promote any crash into a tracked finding with PoC attached.",
+   572→    "amber",
+   573→    true,
+   574→  ),
+   575→
+   576→  // ════════════════════════════════════════════════════════════════════
+   577→  // NEW — Billing & Subscriptions (Stripe)
+   578→  // ════════════════════════════════════════════════════════════════════
+   579→  withColor(
+   580→    CreditCard,
+   581→    "Stripe Billing & Subscriptions",
+   582→    "Billing",
+   583→    "Self-serve plan upgrades via Stripe Checkout. Free / Pro / Enterprise tiers with seat-based pricing. Customer Portal for invoice history, payment-method updates, and tax receipts. Webhook-synced subscription state enforces plan limits in real-time — downgrade locks premium features the moment the webhook lands.",
+   584→    "emerald",
+   585→    true,
+   586→  ),
+   587→
+   588→  // ════════════════════════════════════════════════════════════════════
+   589→  // NEW — Settings modules (2FA, organization management, email delivery)
+   590→  // ════════════════════════════════════════════════════════════════════
+   591→  withColor(
+   592→    Smartphone,
+   593→    "2FA / TOTP Authentication",
+   594→    "Security",
+   595→    "Time-based one-time passwords via authenticator apps (Google Authenticator, Authy, 1Password). Backup codes for recovery. Admin-enforceable across the org — admins must have 2FA on, analysts can opt-in. Break-glass recovery codes sealed in an env-var-encrypted vault.",
+   596→    "emerald",
+   597→    true,
+   598→  ),
+   599→  withColor(
+   600→    Building2,
+   601→    "Organization Management",
+   602→    "Platform",
+   603→    "Create, rename, suspend, or delete organizations. Switch workspaces from the sidebar. Per-org branding, per-org audit log, per-org rate limits. Org-scoped API keys for programmatic access. Owner / admin / analyst / viewer roles with inheritance.",
+   604→    "emerald",
+   605→    true,
+   606→  ),
+   607→  withColor(
+   608→    MailCheck,
+   609→    "Email Delivery Settings",
+   610→    "Platform",
+   611→    "Configure SMTP, SendGrid, or Postmark for transactional + alert email. Test-send to verify before going live. Per-template preview (welcome, alert, report-ready, breach-notification). Delivery logs + bounce tracking so you know the alert actually reached the SOC.",
+   612→    "emerald",
+   613→    true,
+   614→  ),
+   615→
+   616→  // ════════════════════════════════════════════════════════════════════
+   617→  // NEW — User Management + User Activity Monitor
+   618→  // ════════════════════════════════════════════════════════════════════
+   619→  withColor(
+   620→    Users,
+   621→    "User Management Panel",
+   622→    "Administration",
+   623→    "Invite users by email, assign roles, approve / reject signups, suspend bad actors, force-password-reset. Last-login timestamps, failed-login counters, MFA status. Bulk operations for org-wide onboarding. Every action is audit-logged with actor + IP + timestamp.",
+   624→    "emerald",
+   625→    true,
+   626→  ),
+   627→  withColor(
+   628→    UserCog,
+   629→    "User Activity Monitor",
+   630→    "Administration",
+   631→    "Live per-user activity feed: pages viewed, scans launched, patches approved, exports triggered, API calls made. Anomaly detection flags 'user from a new country', 'API key used at 3am', 'bulk export of findings'. Catches insider threats before they become incidents.",
+   632→    "emerald",
+   633→    true,
+   634→  ),
+   635→
+   636→  // ════════════════════════════════════════════════════════════════════
+   637→  // NEW — Content Editor (blog / CMS)
+   638→  // ════════════════════════════════════════════════════════════════════
+   639→  withColor(
+   640→    Newspaper,
+   641→    "Blog / CMS Content Editor",
+   642→    "Content",
+   643→    "Admin-only CMS for the public marketing site. Edit hero copy, pricing tiers, feature blurbs, and blog posts from a single editor. Markdown + image upload. Changes go live on save. SEO metadata, OpenGraph images, and sitemap.xml auto-generated per post.",
+   644→    "emerald",
+   645→    true,
+   646→  ),
+   647→
+   648→  // ════════════════════════════════════════════════════════════════════
+   649→  // NEW — Contributors panel
+   650→  // ════════════════════════════════════════════════════════════════════
+   651→  withColor(
+   652→    Github,
+   653→    "GitHub Contributors Panel",
+   654→    "Community",
+   655→    "Live roster of every contributor to the GuardianX open-source repos. Pull-request counts, merged-PR velocity, top-contributor leaderboard, recent activity feed. Auto-synced nightly via the GitHub API. Public credit where credit is due — visible on the /company page.",
+   656→    "emerald",
+   657→    true,
+   658→  ),
+   659→
+   660→  // ════════════════════════════════════════════════════════════════════
+   661→  // NEW — Forward-looking modules (placeholders for the upcoming
+   662→  // quantum-scanner, predictive-forecast, threat-constellation work
+   663→  // being landed by sibling agents; listed here so the public catalog
+   664→  // reflects the full roadmap at 50+ entries.)
+   665→  // ════════════════════════════════════════════════════════════════════
+   666→  withColor(
+   667→    Atom,
+   668→    "Quantum Vulnerability Scanner",
+   669→    "Quantum",
+   670→    "Post-quantum readiness scanner. Flags cryptographic primitives vulnerable to Shor's algorithm (RSA, ECDSA, ECDH) and rates the migration urgency per codebase. Generates a phased migration plan to NIST-standardized PQC algorithms (ML-KEM, ML-DSA, SLH-DSA).",
+   671→    "cyan",
+   672→    true,
+   673→  ),
+   674→  withColor(
+   675→    TrendingUp,
+   676→    "Predictive Threat Forecast Engine",
+   677→    "Forecasting",
+   678→    "Time-series model trained on your finding history + global CVE disclosure rate. Forecasts 'likely critical finding count next 7 days', 'most at-risk codebase next sprint', and 'expected patch backlog in 30 days'. Capacity-planning-grade predictions for SOC staffing.",
+   679→    "amber",
+   680→    true,
+   681→  ),
+   682→  withColor(
+   683→    Orbit,
+   684→    "Threat Constellation Map",
+   685→    "Visualization",
+   686→    "3D force-directed graph where every finding, IOC, attacker TTP, and your codebase is a star —连线 shows correlation strength. Zoom out for the constellation view, zoom in for star-system detail. Spinning slowly in the War Room, it's a real-time map of your threat universe.",
+   687→    "violet",
+   688→    true,
+   689→  ),
+   690→];
+   691→
+   692→export { FileCode2, ShieldCheck, Crosshair, Swords, Bug } from "lucide-react";
+   693→
