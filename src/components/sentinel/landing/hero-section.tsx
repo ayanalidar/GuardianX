@@ -39,7 +39,7 @@ export function HeroSection({ onEnter }: { onEnter: () => void }) {
         >
           <Badge className="mb-6 border-emerald-500/30 bg-emerald-500/10 text-emerald-300 neon-border">
             <Zap className="size-3" />
-            Autonomous Security Operations Platform
+            Autonomous Security Operations · Now with Agent X
           </Badge>
           <h1 className="mx-auto max-w-4xl text-center text-4xl font-bold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
             Security that{" "}
@@ -50,7 +50,8 @@ export function HeroSection({ onEnter }: { onEnter: () => void }) {
           <p className="mx-auto mt-6 max-w-2xl text-center text-base text-zinc-400 sm:text-lg">
             The first platform to close the loop from code to live target to patch to report —
             all AI-driven. Autonomous SAST, DAST, exploit generation, adversarial patching,
-            behavioral defense, virtual patching, and a self-improving R&D lab.
+            behavioral defense, virtual patching, a self-improving R&D lab, and Agent X —
+            your always-on voice-controlled SOC analyst.
           </p>
         </motion.div>
 
@@ -67,7 +68,7 @@ export function HeroSection({ onEnter }: { onEnter: () => void }) {
             <ArrowRight className="size-4" />
           </GlowCTA>
           <GlowCTA href="#features" variant="outline">
-            Explore 50+ Modules
+            Explore 60+ Modules
           </GlowCTA>
         </motion.div>
 

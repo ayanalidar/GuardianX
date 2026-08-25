@@ -15,7 +15,6 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { ensureZaiConfig } from "@/lib/zai-config";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
 import {
   GENESIS_PREV_HASH,
@@ -74,23 +73,21 @@ async function llmChat(
   history: LLMHistoryTurn[],
 ): Promise<string | null> {
   try {
-    ensureZaiConfig();
-    // Lazy import so the SDK only loads if ZAI_CONFIG is set.
-    const ZAIModule = await import("z-ai-web-dev-sdk");
-    const ZAI = ZAIModule.default;
-    const z = await ZAI.create();
-    const response = await z.chat.completions.create({
+    // Use the universal LLM router — works with OpenAI / Anthropic / Groq /
+    // OpenRouter / Z.AI (sandbox). Falls back to null on any failure, which
+    // the caller handles by using the heuristic response generator.
+    const { chatWithFallback } = await import("@/lib/llm");
+    const result = await chatWithFallback({
+      system: systemPrompt,
       messages: [
-        { role: "system", content: systemPrompt },
-        ...history.slice(-6).map((h) => ({ role: h.role, content: h.content })),
+        ...history.slice(-6).map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
         { role: "user", content: message },
       ],
-      thinking: { type: "disabled" },
+      fallback: () => "", // empty string signals "use heuristic" to the caller
     });
-    const text = response.choices[0]?.message?.content;
+    const text = result.content;
     return text && text.trim().length > 0 ? text.trim() : null;
   } catch (err) {
-    // Z.AI unreachable on Vercel — fall back to heuristic.
     console.warn("[agent-x] LLM call failed, using heuristic:", err instanceof Error ? err.message : err);
     return null;
   }

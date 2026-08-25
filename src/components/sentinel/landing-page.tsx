@@ -15,6 +15,7 @@ import { Testimonials } from "./landing/testimonials";
 import { ComparisonTable } from "./landing/comparison-table";
 import { FinalCTA } from "./landing/final-cta";
 import { LatestBlogSection } from "./landing/latest-blog-section";
+import { AgentXShowcase } from "./landing/agent-x-showcase";
 import { RecentScansCard } from "./landing/recent-scans-card";
 
 /**
@@ -128,6 +129,9 @@ export function LandingPage({ onEnter }: LandingPageProps) {
 
           {/* 2c. Live cinematic feed of recent public scans (CircuitBoard background) */}
           <RecentScansCard />
+
+          {/* 2d. Agent X showcase — cinematic always-on AI agent feature */}
+          <AgentXShowcase onEnter={onEnter} />
 
           {/* 3. Live command-center demo (existing) */}
           <AnimatedDemo />

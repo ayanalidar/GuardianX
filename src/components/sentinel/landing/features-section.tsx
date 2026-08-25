@@ -464,10 +464,10 @@ export function FeaturesSection() {
         </div>
         <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">Everything you need to secure your code</h2>
         <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-400">
-          <span className="neon-emerald text-emerald-400 font-bold">50+ integrated modules</span> across SAST, DAST,
+          <span className="neon-emerald text-emerald-400 font-bold">60+ integrated modules</span> across SAST, DAST,
           AI autonomy, active defense, R&D engineering, and multi-tenant operations.
           <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-            6 NEW
+            9 NEW
           </span>
         </p>
       </div>
@@ -481,7 +481,7 @@ export function FeaturesSection() {
           href="/features"
           className="inline-flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300 transition-colors hover:bg-emerald-500/20"
         >
-          <Terminal className="size-4" /> See all 50+ modules
+          <Terminal className="size-4" /> See all 60+ modules
         </a>
       </div>
     </section>
