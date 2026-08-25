@@ -675,3 +675,74 @@ New Supabase details:
   each table via `pg_dump --table=*` on the old instance (over the old
   pooler host) and `pg_restore` into the new one — but only do this if
   the old instance is still reachable.
+
+---
+
+## 2026-08-25 — admin-user-seed: bootstrap first admin on the new Supabase
+
+**Task ID:** `admin-user-seed`
+**Scope:** New Supabase project (`nhvdjkblqhlkftzsaoin`) + live Vercel
+deployment at https://guardianx-two.vercel.app.
+
+### Context
+
+User asked for login credentials for the freshly-cut-over deployment.
+The new Supabase instance was empty (`User` table had 0 rows), so there
+was no account to log in with. Per the signup route
+(`src/app/api/auth/signup/route.ts`), the **first** user to register is
+auto-promoted to `role=admin, approved=true`; subsequent users get
+`role=viewer, approved=false` (pending admin approval). Rather than
+have the user sign up through the UI, I seeded the admin account
+directly in the DB so the credentials are known ahead of time.
+
+### What landed
+
+- Generated a bcrypt hash (`bcryptjs` v3.0.3, 12 rounds — matches the
+  `hashPassword` function in `src/lib/auth.ts`) for the chosen password
+  via `scripts/hash-pwd.js` in the cloned web repo.
+- Inserted the row directly into the `User` table via psycopg2 over the
+  ap-south-1 pooler, with explicit `role=admin, approved=true,
+  "tokenVersion"=0, "twofaEnabled"=false` so the user can log in
+  immediately without needing admin approval (which would be impossible
+  — there were no admins to approve them).
+- Preflight check confirmed the `User` table was empty before insert
+  (so this is legitimately the first admin, not a second one).
+- Postflight: table now has 1 row.
+
+### Credentials (handed to the user)
+
+- **URL:** https://guardianx-two.vercel.app
+- **Email:** `ayan@guardianx.in`
+- **Password:** `GuardianX@Admin2026`
+- **Role:** admin (auto-approved)
+- **User ID:** `ef2a904a-97ea-441e-a879-2a8d5614ea89`
+
+### Verification (live, against the production URL)
+
+- `POST /api/auth/login` with the creds → HTTP 200, returned a valid
+  JWT (`eyJ...`), `user.role=admin`, `message=Login successful`. Latency
+  5.5 s (cold start on the bcrypt compare + DB round-trip).
+- Used the returned token on `GET /api/posture-score` (was HTTP 401
+  before login) → HTTP 200, `{"overall":100,"overall_grade":"A",
+  "codebases":[]}`. Confirms the JWT flows through `requireAuth` →
+  `verifyToken` → `supabase.from("User").select(...)` end-to-end on
+  the new Supabase.
+- `/api/auth/session` returned `authenticated: false` via curl because
+  that route reads the `guardianx-token` HTTP-only cookie (set by the
+  browser flow), not the `Authorization: Bearer` header. Not a bug —
+  when the user logs in through the actual UI form, the cookie is set
+  and session checks will work.
+
+### Notes for the next session
+
+- **Subsequent users** who sign up via the UI will get `role=viewer,
+  approved=false`. To approve them, the admin can call
+  `PATCH /api/admin/users/[id]` (or whatever the admin-approval route
+  is) or flip the `approved` column directly in Supabase.
+- **Change the password** from the UI once logged in (Settings →
+  Security) if you want to rotate it away from the seeded value.
+- **2FA** is `false` for this admin — the AdminTwoFactorBanner will
+  nag the admin to enable 2FA on first login. Optional but recommended.
+- **Cleanup:** the `scripts/hash-pwd.js` helper in the cloned web repo
+  is a one-off — safe to delete. The actual password is not stored
+  anywhere in plaintext (only the bcrypt hash is in the DB).
