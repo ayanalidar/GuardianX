@@ -85,9 +85,19 @@ import {
   UserCog,
   Zap,
   FileText,
+  Atom,
+  Brain,
+  Orbit,
+  LayoutGrid,
 } from "lucide-react";
+import { ModulesOverview } from "@/components/sentinel/modules-overview";
+import { CommandCenterVoiceBar } from "@/components/sentinel/command-center-voice";
+import { PredictiveForecast } from "@/components/sentinel/predictive-forecast";
+import { QuantumScanner } from "@/components/sentinel/quantum-scanner";
+import { ThreatConstellation } from "@/components/sentinel/threat-constellation";
+import type { VoiceCommand } from "@/components/sentinel/war-room/voice-control";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings" | "modules" | "forecast" | "quantum" | "constellation";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -413,6 +423,10 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             <NavGroup label="Advanced" color="amber">
               <NavItem active={tab === "rnd"} onClick={() => { setTab("rnd"); setSidebarOpen(false); }} icon={FlaskConical} label="R&D Lab" iconColor="text-violet-400" accentColor="violet" />
               <NavItem active={tab === "advanced"} onClick={() => { setTab("advanced"); setSidebarOpen(false); }} icon={Sparkles} label="Advanced Platform" iconColor="text-amber-400" accentColor="amber" />
+              <NavItem active={tab === "forecast"} onClick={() => { setTab("forecast"); setSidebarOpen(false); }} icon={Brain} label="Predictive Forecast" iconColor="text-cyan-400" accentColor="cyan" isNew />
+              <NavItem active={tab === "quantum"} onClick={() => { setTab("quantum"); setSidebarOpen(false); }} icon={Atom} label="Quantum Scanner" iconColor="text-violet-400" accentColor="violet" isNew />
+              <NavItem active={tab === "constellation"} onClick={() => { setTab("constellation"); setSidebarOpen(false); }} icon={Orbit} label="Threat Constellation" iconColor="text-emerald-400" accentColor="emerald" isNew />
+              <NavItem active={tab === "modules"} onClick={() => { setTab("modules"); setSidebarOpen(false); }} icon={LayoutGrid} label="All Modules" iconColor="text-amber-400" accentColor="amber" />
               <NavItem active={tab === "billing"} onClick={() => { setTab("billing"); setSidebarOpen(false); }} icon={CreditCard} label="Billing" iconColor="text-emerald-400" accentColor="emerald" />
               <NavItem active={tab === "settings"} onClick={() => { setTab("settings"); setSidebarOpen(false); }} icon={Settings} label="Settings" iconColor="text-zinc-300" accentColor="emerald" />
             </NavGroup>
@@ -478,6 +492,10 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "scraper" ? "neon-violet text-violet-300" :
                   tab === "dfir" ? "neon-red text-red-300" :
                   tab === "rnd" ? "neon-violet text-violet-300" :
+                  tab === "forecast" ? "neon-cyan text-cyan-300" :
+                  tab === "quantum" ? "neon-violet text-violet-300" :
+                  tab === "constellation" ? "neon-emerald text-emerald-300" :
+                  tab === "modules" ? "neon-amber text-amber-300" :
                   tab === "billing" ? "neon-emerald text-emerald-300" :
                   tab === "settings" ? "neon-emerald text-emerald-300" :
                   tab === "user-activity" ? "neon-emerald text-emerald-300" :
@@ -490,6 +508,10 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "clients" ? (selectedClientId ? "Client Pipeline" : "Client Engagements") :
                    tab === "pipelines" ? "Active Pipelines" :
                    tab === "rnd" ? "R&D Lab" :
+                   tab === "forecast" ? "Predictive Threat Forecast" :
+                   tab === "quantum" ? "Quantum-Readiness Scanner" :
+                   tab === "constellation" ? "3D Threat Constellation" :
+                   tab === "modules" ? "All Modules" :
                    tab === "patches" ? "Patch Review Queue" :
                    tab === "codebases" ? "Codebase Library" :
                    tab === "redagent" ? "RedAgent VAPT Engine" :
@@ -537,6 +559,31 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <ActivePipelines onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }} onAddClient={() => setTab("clients")} />
             ) : tab === "rnd" ? (
               <RnDLab />
+            ) : tab === "forecast" ? (
+              <PredictiveForecast />
+            ) : tab === "quantum" ? (
+              <QuantumScanner />
+            ) : tab === "constellation" ? (
+              <ThreatConstellation />
+            ) : tab === "modules" ? (
+              <ModulesOverview onSelect={(f) => {
+                // Map feature category to the most relevant tab
+                const cat = f.category.toLowerCase();
+                if (cat.includes("dfir") || cat.includes("incident")) setTab("dfir");
+                else if (cat.includes("soc") || cat.includes("runtime")) setTab("soc");
+                else if (cat.includes("compliance") || cat.includes("grc")) setTab("compliance");
+                else if (cat.includes("exfil")) setTab("exfil");
+                else if (cat.includes("scraper") || cat.includes("audit")) setTab("scraper");
+                else if (cat.includes("research") || cat.includes("r&d")) setTab("rnd");
+                else if (cat.includes("billing")) setTab("billing");
+                else if (cat.includes("setting") || cat.includes("2fa")) setTab("settings");
+                else if (cat.includes("user") || cat.includes("contributor")) setTab("users");
+                else if (cat.includes("content")) setTab("content");
+                else if (cat.includes("patch")) setTab("patches");
+                else if (cat.includes("codebase")) setTab("codebases");
+                else if (cat.includes("vapt") || cat.includes("redagent")) setTab("redagent");
+                else setTab("advanced");
+              }} />
             ) : (
               <>
                 <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>
@@ -693,6 +740,35 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
         onNavigate={(t) => setTab(t)}
       />
       <SupportChat currentUser={currentUser} bottomOffset={64} />
+      {/* Command-Center-wide voice control (always-on, click mic to activate) */}
+      <CommandCenterVoiceBar
+        onCommand={(cmd: VoiceCommand) => {
+          if (cmd.action === "navigate" && cmd.target) {
+            const t = cmd.target.toLowerCase();
+            if (t.includes("overview") || t.includes("dashboard")) setTab("dashboard");
+            else if (t.includes("client")) setTab("clients");
+            else if (t.includes("patch")) setTab("patches");
+            else if (t.includes("codebase")) setTab("codebases");
+            else if (t.includes("redagent") || t.includes("vapt")) setTab("redagent");
+            else if (t.includes("compliance") || t.includes("grc")) setTab("compliance");
+            else if (t.includes("soc") || t.includes("devsecops")) setTab("soc");
+            else if (t.includes("exfil")) setTab("exfil");
+            else if (t.includes("scraper") || t.includes("audit")) setTab("scraper");
+            else if (t.includes("dfir") || t.includes("incident")) setTab("dfir");
+            else if (t.includes("research") || t.includes("rnd")) setTab("rnd");
+            else if (t.includes("advanced")) setTab("advanced");
+            else if (t.includes("forecast")) setTab("forecast");
+            else if (t.includes("quantum")) setTab("quantum");
+            else if (t.includes("constellation")) setTab("constellation");
+            else if (t.includes("module")) setTab("modules");
+            else if (t.includes("billing")) setTab("billing");
+            else if (t.includes("setting")) setTab("settings");
+            else if (t.includes("user")) setTab("users");
+            else if (t.includes("content")) setTab("content");
+            else if (t.includes("contributor")) setTab("contributors");
+          }
+        }}
+      />
     </div>
   );
 }
@@ -831,6 +907,7 @@ function NavItem({
   badgeColor = "emerald",
   iconColor,
   accentColor = "emerald",
+  isNew = false,
 }: {
   active: boolean;
   onClick: () => void;
@@ -840,6 +917,7 @@ function NavItem({
   badgeColor?: "emerald" | "sky" | "red" | "cyan" | "purple" | "rose" | "violet" | "amber";
   iconColor?: string;
   accentColor?: "emerald" | "sky" | "red" | "cyan" | "purple" | "rose" | "violet" | "amber";
+  isNew?: boolean;
 }) {
   const accentMap: Record<string, { bg: string; text: string; ring: string; dot: string; badgeBg: string; badgeText: string }> = {
     emerald: { bg: "bg-emerald-500/10", text: "text-emerald-300", ring: "shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4),0_0_12px_rgba(16,185,129,0.15)]", dot: "bg-emerald-500", badgeBg: "bg-emerald-500/20", badgeText: "text-emerald-300" },
@@ -865,6 +943,9 @@ function NavItem({
     >
       <Icon className={`size-4 shrink-0 ${active ? iconColor ?? a.text : iconColor ?? "text-zinc-500"}`} />
       <span className="flex-1 text-left font-medium">{label}</span>
+      {isNew && (
+        <span className="rounded-full bg-cyan-500/20 px-1.5 text-[9px] font-bold uppercase tracking-wider text-cyan-300">new</span>
+      )}
       {badge !== undefined && badge > 0 && (
         <span className={`rounded-full px-1.5 text-[10px] font-bold ${badgeA.badgeBg} ${badgeA.badgeText}`}>{badge}</span>
       )}

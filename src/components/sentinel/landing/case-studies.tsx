@@ -205,7 +205,7 @@ function CaseCard({ study, index }: { study: CaseStudy; index: number }) {
 
       {/* Read case study link */}
       <a
-        href="/case-studies"
+        href="/features"
         className="mt-5 inline-flex items-center gap-1.5 self-start border-b border-emerald-500/40 pb-0.5 font-mono text-[11px] uppercase tracking-wider text-emerald-300 transition-colors hover:border-emerald-400 hover:text-emerald-200"
       >
         Read case study
