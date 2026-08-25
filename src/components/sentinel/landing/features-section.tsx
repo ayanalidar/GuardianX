@@ -320,6 +320,61 @@ const FEATURE_SNIPPETS: Record<string, { code: string[]; badge: string; lang: st
     ],
     badge: "WAF + IaC patch ready",
   },
+  "Voice Command Center": {
+    lang: "voice.log",
+    code: [
+      "[listening] say a command...",
+      "USER: scan payment.js",
+      "[processing] starting scan...",
+      "AI: Scan started. I'll",
+      "  notify you of findings.",
+    ],
+    badge: "Push-to-talk active",
+  },
+  "Gesture Control": {
+    lang: "gesture.log",
+    code: [
+      "[tracking] hand detected",
+      "PINCH → clicked: Scan button",
+      "SWIPE LEFT → patches tab",
+      "FIST → closed dialog",
+      "[tracking] hand lost",
+    ],
+    badge: "MediaPipe tracking",
+  },
+  "AI Neural Visualizer": {
+    lang: "visualizer.json",
+    code: [
+      '{ "state": "scanning",',
+      '  "pulses": 47,',
+      '  "findings": 3,',
+      '  "patches": 2,',
+      '  "mode": "immersive" }',
+    ],
+    badge: "Circuit board live",
+  },
+  "AI Memory Vault": {
+    lang: "memory.json",
+    code: [
+      '{ "vault": {',
+      '  "scans": 23,',
+      '  "findings": 87,',
+      '  "patches": 45,',
+      '  "conversations": 156 } }',
+    ],
+    badge: "23 memories stored",
+  },
+  "Multi-Tenant RBAC + Organizations": {
+    lang: "rbac.json",
+    code: [
+      '{ "orgs": 2,',
+      '  "users": 8,',
+      '  "roles": ["admin",',
+      '    "analyst","viewer"],',
+      '  "isolated": true }',
+    ],
+    badge: "Org isolation active",
+  },
 };
 
 function FeatureCardScan({ feature }: { feature: Feature }) {
@@ -374,6 +429,11 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
           }}
         />
         <div className="relative p-5">
+          {feature.isNew && (
+            <div className="absolute -right-1 -top-1 z-10 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white shadow-[0_0_12px_rgba(16,185,129,0.5)]">
+              NEW
+            </div>
+          )}
           <div className="mb-3 flex items-center justify-between">
             <div className={`flex size-10 items-center justify-center rounded-lg border ${feature.border} bg-zinc-950/60`} style={{ transform: "translateZ(40px)" }}>
               <Icon className={`size-5 ${feature.color}`} />
@@ -405,7 +465,10 @@ export function FeaturesSection() {
         <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">Everything you need to secure your code</h2>
         <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-400">
           <span className="neon-emerald text-emerald-400 font-bold">50+ integrated modules</span> across SAST, DAST,
-          AI autonomy, active defense, R&D engineering, and multi-tenant operations. Hover any card to see it in action.
+          AI autonomy, active defense, R&D engineering, and multi-tenant operations.
+          <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+            6 NEW
+          </span>
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

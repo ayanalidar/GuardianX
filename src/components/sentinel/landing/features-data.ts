@@ -27,6 +27,10 @@ import {
   Shield,
   FileCode2,
   ShieldCheck,
+  Mic,
+  Hand,
+  Cpu,
+  Database,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,6 +44,7 @@ export interface Feature {
   border: string;
   glow: string;
   bg: string;
+  isNew?: boolean;
 }
 
 export const FEATURES: Feature[] = [
@@ -350,6 +355,68 @@ export const FEATURES: Feature[] = [
     border: "border-rose-500/40",
     glow: "hover:shadow-[0_0_24px_rgba(244,63,94,0.2)]",
     bg: "bg-rose-500/5",
+    isNew: true,
+  },
+  // ── NEW: jaredrhod integration features ──────────────────────────────
+  {
+    icon: Mic,
+    title: "Voice Command Center",
+    category: "Voice AI",
+    desc: "Talk to GuardianX. Push-to-talk, speech recognition, and text-to-speech built into the War Room. Say 'scan payment-handler.js' or 'what's the security posture?' — hands-free SOC operation. No API keys, runs in your browser.",
+    color: "text-cyan-400",
+    neon: "neon-cyan",
+    border: "border-cyan-500/40",
+    glow: "hover:shadow-[0_0_24px_rgba(6,182,212,0.2)]",
+    bg: "bg-cyan-500/5",
+    isNew: true,
+  },
+  {
+    icon: Hand,
+    title: "Gesture Control",
+    category: "Gesture AI",
+    desc: "Control the War Room with your bare hands. Pinch to click, swipe to navigate tabs, open palm to scroll, fist to close. Webcam-based hand tracking via MediaPipe — no headset, no controllers. Built for wall projection in SOC environments.",
+    color: "text-violet-400",
+    neon: "neon-violet",
+    border: "border-violet-500/40",
+    glow: "hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]",
+    bg: "bg-violet-500/5",
+    isNew: true,
+  },
+  {
+    icon: Cpu,
+    title: "AI Neural Visualizer",
+    category: "Visualization",
+    desc: "A living circuit board that reacts to scans in real-time. Data pulses flow through traces as the AI analyzes code. Components flash red when vulnerabilities are found, green when patches are applied. Fullscreen immersive mode for war room projection.",
+    color: "text-emerald-400",
+    neon: "neon-emerald",
+    border: "border-emerald-500/40",
+    glow: "hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]",
+    bg: "bg-emerald-500/5",
+    isNew: true,
+  },
+  {
+    icon: Brain,
+    title: "AI Memory Vault",
+    category: "Memory",
+    desc: "The Guardian AI remembers. Every scan, every finding, every patch, every conversation — stored in a persistent memory vault. The AI can say 'Last time you scanned this codebase, we found 3 SQL injections. 2 are still unpatched.' No more starting fresh every session.",
+    color: "text-amber-400",
+    neon: "neon-amber",
+    border: "border-amber-500/40",
+    glow: "hover:shadow-[0_0_24px_rgba(245,158,11,0.2)]",
+    bg: "bg-amber-500/5",
+    isNew: true,
+  },
+  {
+    icon: Database,
+    title: "Multi-Tenant RBAC + Organizations",
+    category: "Platform",
+    desc: "Organization-level data isolation with workspace switching. Admins see everything, analysts see only their own clients. Per-IP rate limiting, session revocation, 2FA/TOTP enforcement, audit logging on every sensitive action, and break-glass admin recovery.",
+    color: "text-sky-400",
+    neon: "neon-sky",
+    border: "border-sky-500/40",
+    glow: "hover:shadow-[0_0_24px_rgba(14,165,233,0.2)]",
+    bg: "bg-sky-500/5",
+    isNew: true,
   },
 ];
 
