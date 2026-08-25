@@ -424,3 +424,58 @@ model Playbook {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 }
+
+// ── Memory Vault (AI Memory) ─────────────────────────────────────────────────
+// Persistent memory entries for the Guardian AI chat assistant — markdown-style
+// "fewer fuller notes" key/value records keyed by category.
+model MemoryEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  category  String   // scan_result | finding | patch | user_preference | conversation | client_context | threat_intel
+  title     String
+  content   String
+  tags      String?  // comma-separated tags
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([userId, category, createdAt])
+}
+
+// ── Support Tickets (in-app chat widget) ─────────────────────────────────────
+// Lightweight ticket log so users can file issues from the floating chat widget.
+// The widget itself is stateful on the client; this table records the initial
+// ticket + reply status for the admin dashboard.
+model SupportTicket {
+  id          String   @id @default(cuid())
+  userId      String
+  subject     String
+  message     String
+  priority    String   @default("normal") // low | normal | high | urgent
+  status      String   @default("open")   // open | answered | closed
+  reply       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+// ── Billing / Stripe subscriptions ───────────────────────────────────────────
+// Tracks the active plan + Stripe customer/subscription IDs per user. Falls
+// back to a default "free" plan if no row exists.
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  plan                 String   @default("free") // free | pro | enterprise
+  status               String   @default("active") // active | canceled | past_due | trialing
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean  @default(false)
+  // Cached usage counters (refreshed by webhook + on-demand from the panel).
+  clientsUsed          Int      @default(0)
+  scansUsed            Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
