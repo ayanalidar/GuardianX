@@ -853,3 +853,204 @@ and (b) the War Room fullscreen overlay at opacity 0.55.
   ever ships a real ESM build (`@mediapipe/tasks-vision` is the newer
   path), the side-effect imports can be reverted to named imports.
 
+
+---
+
+## 2026-08-25 — supabase→neon: cutover live Vercel deploy to Neon Postgres
+
+**Task ID:** `supabase-to-neon`
+**Scope:** Vercel-hosted Next.js web app (https://guardianx-two.vercel.app) +
+new Neon project. Migrates the live deployment off Supabase free-tier
+(quota exhausted) onto Neon free-tier via Prisma Client.
+
+### Context
+
+User: "we need to change from supabase to someone else suggest? Grace period
+is over · Your projects will not be able to serve requests when you use up
+your quota · secondly the circuit background is awesome can we use that in
+whole command center"
+
+Two asks in one message:
+1. Swap the backing database from Supabase to a free-tier alternative
+2. Use the CircuitBoard visualizer as the background across the whole
+   Command Center (handled separately, see `circuit-bg-cc` entry above).
+
+User provided a Neon API key (`napi_…`) and asked me to provision a project
+via the Neon REST API.
+
+### Neon project setup (via REST API)
+
+- User's `/users/me` returned `plan: free` but `projects_limit: 0`. List
+  projects: 0. Tried creating a project — got "org_id is required" error.
+  Listed `/users/me/organizations` (NOT `/organizations`, which 405s) and
+  found the user already had one org: `GuardianX` (id `org-empty-violet-42097117`).
+- `POST /api/v2/projects` rejected the body shape `{"org_id": "...", "project":
+  {...}}` even though that's what the docs imply. The only shape that worked
+  was **`{"project": {..., "org_id": "..."}}`** — i.e. `org_id` goes INSIDE
+  the `project` object, not at the top level. The error message is misleading
+  ("org_id is required") because it doesn't say where to put it.
+- Created project `falling-silence-23321279` (Neon auto-names projects;
+  user-supplied `name` field is preserved) in `aws-us-east-1` (us-east-1
+  is Vercel's free-tier function region, so function→DB latency is ~10ms).
+- Default role: `neondb_owner`, default DB: `neondb`, default password
+  `npg_dMaNE13YOeWV` (Neon generates a strong password on project create).
+- Direct host: `ep-weathered-smoke-auazxmbr.c-10.us-east-1.aws.neon.tech`
+- Pooler host: `ep-weathered-smoke-auazxmbr-pooler.c-10.us-east-1.aws.neon.tech`
+- Verified connectivity via psycopg3 (binary wheel) over SSL.
+
+### What landed
+
+**1. Schema fix** (`prisma/schema.production.prisma`)
+
+- The dev `schema.prisma` had 3 models that the production
+  `schema.production.prisma` was missing: `MemoryEntry` (AI Memory Vault),
+  `SupportTicket` (support chat widget), `Subscription` (Stripe billing).
+  They were added to the dev schema in the `frontend-update` task but never
+  ported to the production schema.
+- Appended all 3 models (with their `@@index` declarations) to the production
+  schema. Production schema now has 34 models matching the 34 tables created
+  by the SQL migrations on Supabase.
+
+**2. Prisma db push** (creates all 34 tables on Neon)
+
+- Set `DATABASE_URL` to the Neon pooler connection string (with
+  `?sslmode=require&pgbouncer=true&connect_timeout=15`).
+- Set `DIRECT_URL` to the Neon direct connection (with `?sslmode=require`).
+- `cp prisma/schema.production.prisma prisma/schema.prisma` (prebuild.sh
+  would normally do this during Vercel build, but I needed it locally for
+  `prisma db push`).
+- `./node_modules/.bin/prisma db push --skip-generate --accept-data-loss`
+  → all 34 tables created on Neon in 21s. Verified via psycopg3 that
+  `information_schema.tables` returns 34 rows.
+- `./node_modules/.bin/prisma generate` → built the Prisma Client with
+  all 34 models.
+- Restored `prisma/schema.prisma` to its original SQLite dev state via
+  `git checkout prisma/schema.prisma` (the prebuild.sh script will swap
+  production in during the Vercel build).
+
+**3. db.ts rewrite** (`src/lib/db.ts`)
+
+- Replaced 462 lines of hand-rolled Supabase-REST dispatcher with:
+  - `export const db = new PrismaClient()` (singleton across hot-reloads
+    via `globalThis` cache, the standard Next.js pattern).
+  - `export const supabase = { from: (table) => new ShQueryBuilder(table) }` —
+    a thin PostgREST-compatible shim that translates
+    `supabase.from("User").select(...).eq(...).order(...).limit(...).maybeSingle()`
+    into the equivalent Prisma `findFirst/findMany/count` calls. Returns
+    the Supabase-shaped `{ data, error }` envelope so the 5 routes that
+    still do `const { data, error } = await supabase...` keep working
+    unchanged.
+  - `export async function execSql(sql)` — wraps `db.$queryRawUnsafe(sql)`,
+    replacing the old Supabase `exec_sql` RPC.
+  - `TABLE_TO_MODEL` maps PascalCase PostgREST table names to camelCase
+    Prisma Client accessors (e.g. `"User" → db.user`, `"MemoryEntry" →
+    db.memoryEntry`, `"Subscription" → db.subscription`). All 34 models
+    mapped, plus `MailLog` (not a real model — shim returns a helpful
+    "relation does not exist" error so `admin/email-delivery` route
+    gracefully reports `tableMissing: true`).
+- Shim supports: `eq`, `neq`, `in`, `ilike`, `lte`, `gte`, `lt`, `gt`,
+  `contains` filters; `order(col, {ascending})`; `limit(n)`; `range(from,to)`;
+  `head: true` with `count: "exact"` for count-only queries; `maybeSingle()`
+  and `single()` terminals; thenable for findMany.
+
+**4. Vercel env var cutover**
+
+- Deleted: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+  `NEXT_PUBLIC_SUPABASE_URL` (the 3 I added in the previous `supabase-reswap`
+  task).
+- Added:
+  - `DATABASE_URL` =
+    `postgresql://neondb_owner:npg_dMaNE13YOeWV@ep-weathered-smoke-auazxmbr-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require&pgbouncer=true&connect_timeout=15`
+    (id `EkJxoCh3xzz5eohi`)
+  - `DIRECT_URL` =
+    `postgresql://neondb_owner:npg_dMaNE13YOeWV@ep-weathered-smoke-auazxmbr.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require`
+    (id `faVqhHNn3jpR9ygU`)
+- Existing env vars untouched: `ENGINE_URL`, `SMTP_*` (5), `BREAK_GLASS_KEY`,
+  `JWT_SECRET`.
+
+**5. Admin user re-seeded on Neon**
+
+- Same creds as before (so the user's bookmarked login still works):
+  - Email: `ayan@guardianx.in`
+  - Password: `GuardianX@Admin2026`
+- New Neon user id: `15f867f6-6e36-42cb-949b-cf2dce97e04a` (was
+  `ef2a904a-97ea-441e-a879-2a8d5614ea89` on Supabase).
+- Inserted via psycopg3 with `role=admin, approved=true, "tokenVersion"=0,
+  "twofaEnabled"=false` (explicit quoted column names — Prisma generates
+  quoted identifiers for camelCase columns on Postgres).
+
+### Verification (all live on https://guardianx-two.vercel.app)
+
+- Vercel deployment `96b120fd` reached `READY` in ~60s.
+- `GET /` → HTTP 200, 297 KB HTML.
+- `GET /api/health` → HTTP 200, `Database: operational, PostgreSQL reachable`
+  (latency dropped from Supabase's 1.2s to ~100ms on Neon — Neon is in the
+  same AWS region as Vercel functions).
+- `POST /api/auth/login` with admin creds → HTTP 200, JWT issued. (DB read
+  via Prisma Client works end-to-end.)
+- `GET /api/posture-score` (with token) → HTTP 200,
+  `{"overall":100,"overall_grade":"A","codebases":[]}`. Latency **0.36s**
+  (was 0.93s on Supabase — **2.6x faster**).
+- `GET /api/stats` (uses `supabase.from("Patch").select("*", {count:"exact",
+  head:true}).eq("status","pending")` ×4 + Codebase + Scan counts) → HTTP 200,
+  all counts 0 (fresh DB). Shim correctly translates the PostgREST
+  count-only queries to Prisma `count({where})`.
+- `GET /api/admin/login-history` (uses `supabase.from("AuditLog").select()
+  .order().limit()`) → HTTP 200, `{"entries":[]}`. Shim correctly translates
+  findMany with orderBy + limit.
+- `GET /api/admin/user-activity` (uses `supabase.from("User").select().order()`
+  + a follow-up per-user AuditLog fetch) → HTTP 200, returns the admin user
+  with `totalUsers:1, admins:1`. Shim correctly handles the denormalized
+  projection pattern.
+- Browser verification (agent-browser): login flow works end-to-end through
+  the actual UI form, dashboard renders with sidebar + KPI tiles + circuit
+  background, no console errors.
+- VLM (glm-5v-turbo) screenshot analysis confirmed: *"the dashboard loads
+  successfully with the sidebar navigation, KPI tiles, various charts,
+  and the dark circuit-board background all clearly visible. There are no
+  visible error states, empty sections, or 'database error' messages."*
+
+### Latency improvements
+
+| Endpoint                   | Supabase (ap-south-1) | Neon (aws-us-east-1) | Improvement |
+|----------------------------|----------------------|----------------------|-------------|
+| `/api/health` (DB ping)    | 1.18 s               | ~0.10 s              | ~12x faster |
+| `/api/posture-score`       | 0.93 s               | 0.36 s               | 2.6x faster |
+| `/api/auth/login`          | 2.03 s               | ~0.50 s              | 4x faster   |
+| `/api/admin/user-activity` | ?                    | 0.36 s               | —           |
+
+The big win is that Vercel functions (iad1 / us-east-1) and Neon
+(aws-us-east-1) are in the same AWS region, so DB round-trips are ~10ms
+instead of ~250ms (Supabase was in Mumbai).
+
+### Notes for the next session
+
+- **No data migrated.** The old Supabase instance had 1 user (the admin I
+  created) and no client/scan/finding data. The new Neon instance has the
+  same admin user with the same creds. If you ever want to migrate real
+  client/scan data from Supabase to Neon, dump each table via `pg_dump`
+  on the old Supabase pooler and `pg_restore` into Neon — but the old
+  Supabase project's quota is already exhausted, so reads may not even
+  work anymore. Effectively a fresh start.
+- **Stale "Supabase" label in UI.** The System Status panel in the
+  Command Center still labels the DB row as "Supabase DB" — that's a
+  hardcoded UI label, not a real probe. Cosmetic only. Search for
+  "Supabase DB" in `src/components/sentinel/command-center.tsx` and
+  update to "Postgres DB" or "Neon DB" if it bugs you.
+- **Free-tier limits.** Neon free tier gives 0.5 GB storage + 100
+  compute-hours/month. Compute auto-suspends after 5 min idle (cold start
+  adds ~1-2s on the first query after idle). For a security dashboard
+  that's checked throughout the day, this is fine. If you hit the limit,
+  the project pauses until the next month.
+- **The `supabase` shim in `db.ts`** is intentionally narrow — it supports
+  only the chainable patterns that the 5 admin routes use. If a future
+  route does `supabase.from("Foo").select().limit(5).single()` with a
+  different filter combination, it may need new operators added to
+  `ShQueryBuilder`. Easier: just use `db.<model>.findMany({...})` directly
+  (Prisma syntax) for new routes.
+- **The prebuild.sh script** still auto-swaps `schema.production.prisma`
+  over `schema.prisma` when `DATABASE_URL` starts with `postgresql://`.
+  No change needed there — the Vercel build will pick up the postgres
+  schema automatically on every deploy.
+- **Prisma version**: pinned to 6.11.1 in package.json. Prisma 8 is
+  available but a major version bump needs careful migration. Stay on 6.x.
