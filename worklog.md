@@ -2263,3 +2263,163 @@ quickActions: [{label:"What's our posture?", intent:"status"},
   patches arrays. For production, consider adding server-side
   resolution (POST the action target to the API + let it find the
   entity).
+
+---
+
+## 2026-08-25 — frontend-refresh + universal LLM router + Agent X showcase
+
+**Task ID:** `frontend-refresh`
+**Scope:** Next.js web app at `/home/z/GuardianX-web`. Live deployment
+at https://guardianx-two.vercel.app.
+
+### Context
+
+User's 3 asks:
+1. Update front-end with all new things we have
+2. Tell me how to make it work without Z.ai code sandbox
+3. Deploy to GitHub
+
+### What landed
+
+**1. Homepage refresh + Agent X showcase**
+
+- NEW `src/components/sentinel/landing/agent-x-showcase.tsx` — cinematic
+  landing section featuring Agent X:
+  - Dark glass card with hud-corners + ambient emerald/cyan glow +
+    circuit grid background
+  - Floating "AGENT X" header with pulsing emerald dot + "Autonomous
+    SOC · ACTIVE" badge + "LISTENING" indicator
+  - Live typewriter conversation preview cycling through 5 example
+    exchanges (posture check, navigation, explain SQLi, approve patch,
+    suggest next steps)
+  - 6 capability chips: Always-on voice / Talks back / Full platform
+    knowledge / Navigates everything / Executes actions / Proactive
+    monitoring
+  - "Activate Agent X in the Lab" CTA → onEnter (enters the lab console
+    where the user clicks AGENT X in the dashboard header)
+  - Mobile-first responsive: 2-col grid on desktop, stacked on mobile
+- Mounted on the homepage between RecentScansCard and AnimatedDemo
+- Updated hero-section:
+  - Badge: "Autonomous Security Operations Platform" → "Autonomous
+    Security Operations · Now with Agent X"
+  - Subhead: added "and Agent X — your always-on voice-controlled SOC
+    analyst"
+  - CTA: "Explore 50+ Modules" → "Explore 60+ Modules"
+- Updated features-section:
+  - "50+ integrated modules" → "60+ integrated modules"
+  - "6 NEW" → "9 NEW" (Agent X + Predictive Forecast + Quantum Scanner
+    + Threat Constellation + the existing 5)
+  - "See all 50+ modules" → "See all 60+ modules"
+
+**2. Universal LLM router — make it work outside Z.ai sandbox**
+
+- NEW `src/lib/llm.ts` — universal LLM router that picks the best
+  available provider at runtime based on env vars:
+  1. OPENAI_API_KEY → OpenAI Chat Completions (gpt-4o-mini, $0.15/1M)
+  2. ANTHROPIC_API_KEY → Anthropic Messages API (Claude 3.5 Sonnet)
+  3. OPENROUTER_API_KEY → OpenRouter (100+ models, one key)
+  4. GROQ_API_KEY → Groq (Llama 3.3 70B, FREE tier, 500 tok/s)
+  5. ZAI_CONFIG → Z.AI SDK (sandbox only)
+  6. None → null (caller uses heuristic fallback)
+- Exposes:
+  - `detectProvider()` — returns the active provider name
+  - `getProviderName()` — display name for UI/logging
+  - `chatCompletion({system, messages})` — universal call, returns
+    `{content, provider, model, usage}` or throws
+  - `chatWithFallback({system, messages, fallback})` — try LLM, fall
+    back to caller-provided heuristic on any failure. Returns
+    `{content, provider, usedFallback, error?}`
+- Provider implementations:
+  - OpenAI: uses the official `openai` npm package (installed
+    openai@4.104.0). Compatible with any OpenAI-API-compatible
+    endpoint (Azure OpenAI, Together, Anyscale) via OPENAI_BASE_URL.
+  - Anthropic: uses fetch against the Messages API (no SDK needed).
+    System prompt is a top-level field.
+  - OpenRouter: OpenAI-compatible fetch against openrouter.ai. Supports
+    100+ models from OpenAI/Anthropic/Google/Meta/Mistral.
+  - Groq: OpenAI-compatible fetch against api.groq.com. Ultra-fast
+    inference (500+ tokens/sec on Llama 3.3 70B). Free tier: 30
+    req/min, 14000 req/day.
+  - Z.AI: kept for local dev / Z.ai sandbox. Calls ensureZaiConfig()
+    + ZAI.create() + z.chat.completions.create().
+- Migrated routes to the router:
+  - `/api/agent-x/chat` — was using `ZAI.create()` directly, now uses
+    `chatWithFallback()` from `@/lib/llm`. Works with any provider.
+  - `/api/predictive-forecast` — same migration. Removed direct ZAI
+    imports.
+- The existing heuristic fallbacks stay as the safety net — the app
+  always returns a useful response even with no LLM configured.
+
+**3. Documentation**
+
+- NEW `LLM_SETUP.md` in the project root — full docs explaining:
+  - The Z.AI sandbox limitation (internal-api.z.ai not reachable from
+    Vercel)
+  - 5 alternative providers with cost/speed/quality comparison table
+  - Step-by-step setup for each (Groq recommended as free, OpenAI as
+    most reliable, Anthropic as best quality, OpenRouter for variety)
+  - Vercel env var setup commands
+  - Verification steps
+  - Cost estimates per 1000 Agent X conversations
+  - Troubleshooting (401, 429, "fetch failed", etc.)
+  - How to migrate existing Z.AI calls to the router (before/after
+    code example)
+
+**4. Deploy to GitHub**
+
+- All changes committed + pushed to main (sha `00e3574`)
+- Vercel auto-deployed → READY in ~64s
+- Homepage verified: HTTP 200, 442 KB, "60+ modules" badge appears 3x
+  (hero CTA + features section header + features section CTA)
+- VLM screenshot analysis of the Agent X showcase section confirmed:
+  "card titled 'AGENT X' is present with the 'Autonomous SOC · ACTIVE'
+  badge. A conversation preview showing a user message and an agent
+  reply with a typewriter effect is visible. Capability chips like
+  'Always-on voice' are on the right, and an 'Activate Agent X in the
+  Lab' CTA button is included."
+
+### How to enable real LLM features on Vercel (the answer to ask #2)
+
+The app currently runs in heuristic mode on Vercel (no LLM configured).
+To enable real LLM-powered Agent X + Predictive Forecast, set ONE env
+var on Vercel:
+
+**Recommended: Groq (FREE)**
+1. Sign up at https://console.groq.com
+2. Create API key at https://console.groq.com/keys
+3. Vercel → Project Settings → Environment Variables → Add:
+   - Key: `GROQ_API_KEY`
+   - Value: `gsk_your_key_here`
+   - Environment: Production
+4. Push any commit to trigger a redeploy
+5. Agent X + Predictive Forecast now use Llama 3.3 70B at 500 tok/s
+
+**Alternative: OpenAI (most reliable)**
+- Sign up at https://platform.openai.com (add $5 credit)
+- Add `OPENAI_API_KEY=sk-proj-...` to Vercel env vars
+- Optional: `OPENAI_MODEL=gpt-4o` (default gpt-4o-mini at $0.15/1M)
+
+**Alternative: Anthropic (best quality)**
+- Sign up at https://console.anthropic.com (add $5 credit)
+- Add `ANTHROPIC_API_KEY=sk-ant-...` to Vercel env vars
+- Optional: `ANTHROPIC_MODEL=claude-3-5-haiku-20241022` (cheaper)
+
+Full details in `LLM_SETUP.md` at the project root.
+
+### Files changed
+
+- NEW `src/lib/llm.ts` — universal LLM router (5 providers + heuristic)
+- NEW `LLM_SETUP.md` — full setup docs
+- NEW `src/components/sentinel/landing/agent-x-showcase.tsx` —
+  cinematic Agent X showcase section
+- MODIFIED `src/components/sentinel/landing/hero-section.tsx` — badge
+  + subhead + CTA copy
+- MODIFIED `src/components/sentinel/landing/features-section.tsx` —
+  badge counts (50+→60+, 6 NEW→9 NEW)
+- MODIFIED `src/components/sentinel/landing-page.tsx` — mounted
+  AgentXShowcase
+- MODIFIED `src/app/api/agent-x/chat/route.ts` — migrated to
+  chatWithFallback() from @/lib/llm
+- MODIFIED `src/app/api/predictive-forecast/route.ts` — migrated to
+  chatWithFallback() from @/lib/llm
+- MODIFIED `package.json` + `bun.lock` — added openai@4.104.0
