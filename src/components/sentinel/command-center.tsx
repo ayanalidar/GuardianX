@@ -127,6 +127,13 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
     return () => clearInterval(id);
   }, []);
 
+  // Listen for Agent X's "open war room" custom event
+  useEffect(() => {
+    const handler = () => setWarRoom(true);
+    window.addEventListener("guardianx:open-war-room", handler);
+    return () => window.removeEventListener("guardianx:open-war-room", handler);
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const [cRes, fRes] = await Promise.all([

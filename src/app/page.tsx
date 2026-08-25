@@ -91,11 +91,10 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import { ModulesOverview } from "@/components/sentinel/modules-overview";
-import { CommandCenterVoiceBar } from "@/components/sentinel/command-center-voice";
+import { AgentX, AgentXActivationButton } from "@/components/sentinel/agent-x";
 import { PredictiveForecast } from "@/components/sentinel/predictive-forecast";
 import { QuantumScanner } from "@/components/sentinel/quantum-scanner";
 import { ThreatConstellation } from "@/components/sentinel/threat-constellation";
-import type { VoiceCommand } from "@/components/sentinel/war-room/voice-control";
 
 type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings" | "modules" | "forecast" | "quantum" | "constellation";
 type SortKey = "severity" | "recent";
@@ -178,6 +177,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [credsOpen, setCredsOpen] = useState(false);
+  const [agentXOpen, setAgentXOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // live scan state
@@ -529,9 +529,12 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    "Advanced Security Platform"}
                 </h1>
               </div>
-              <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-mono text-xs">
-                <span className={`size-1.5 rounded-full ${connected ? "bg-emerald-500 pulse-dot" : "bg-amber-500 animate-pulse"}`} />
-                <span className={connected ? "text-emerald-300" : "text-amber-300"}>{connected ? "LIVE" : "…"}</span>
+              <div className="flex items-center gap-2">
+                <AgentXActivationButton active={agentXOpen} onClick={() => setAgentXOpen((v) => !v)} />
+                <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-mono text-xs">
+                  <span className={`size-1.5 rounded-full ${connected ? "bg-emerald-500 pulse-dot" : "bg-amber-500 animate-pulse"}`} />
+                  <span className={connected ? "text-emerald-300" : "text-amber-300"}>{connected ? "LIVE" : "…"}</span>
+                </div>
               </div>
             </div>
           </header>
@@ -740,33 +743,30 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
         onNavigate={(t) => setTab(t)}
       />
       <SupportChat currentUser={currentUser} bottomOffset={64} />
-      {/* Command-Center-wide voice control (always-on, click mic to activate) */}
-      <CommandCenterVoiceBar
-        onCommand={(cmd: VoiceCommand) => {
-          if (cmd.action === "navigate" && cmd.target) {
-            const t = cmd.target.toLowerCase();
-            if (t.includes("overview") || t.includes("dashboard")) setTab("dashboard");
-            else if (t.includes("client")) setTab("clients");
-            else if (t.includes("patch")) setTab("patches");
-            else if (t.includes("codebase")) setTab("codebases");
-            else if (t.includes("redagent") || t.includes("vapt")) setTab("redagent");
-            else if (t.includes("compliance") || t.includes("grc")) setTab("compliance");
-            else if (t.includes("soc") || t.includes("devsecops")) setTab("soc");
-            else if (t.includes("exfil")) setTab("exfil");
-            else if (t.includes("scraper") || t.includes("audit")) setTab("scraper");
-            else if (t.includes("dfir") || t.includes("incident")) setTab("dfir");
-            else if (t.includes("research") || t.includes("rnd")) setTab("rnd");
-            else if (t.includes("advanced")) setTab("advanced");
-            else if (t.includes("forecast")) setTab("forecast");
-            else if (t.includes("quantum")) setTab("quantum");
-            else if (t.includes("constellation")) setTab("constellation");
-            else if (t.includes("module")) setTab("modules");
-            else if (t.includes("billing")) setTab("billing");
-            else if (t.includes("setting")) setTab("settings");
-            else if (t.includes("user")) setTab("users");
-            else if (t.includes("content")) setTab("content");
-            else if (t.includes("contributor")) setTab("contributors");
-          }
+      {/* Agent X — always-on conversational AI with TTS talkback */}
+      <AgentX
+        open={agentXOpen}
+        onClose={() => setAgentXOpen(false)}
+        currentTab={tab}
+        currentUser={currentUser}
+        onNavigate={(t) => setTab(t as Tab)}
+        onScan={(name) => {
+          // Find codebase by name + trigger scan
+          const cb = codebases.find((c) => c.name.toLowerCase().includes(name.toLowerCase()));
+          if (cb) handleScan(cb);
+        }}
+        onApprovePatch={(id) => {
+          // Approve patch by ID — reuse the existing handleResolved flow
+          const p = patches.find((x) => x.patch_id === id || x.patch_id.endsWith(id));
+          if (p) handleSelectPatch(p);
+        }}
+        onSearch={(q) => {
+          setQuery(q);
+          setTab("patches");
+        }}
+        onOpenWarRoom={() => {
+          // War Room is inside the Command Center component — open via a custom event
+          window.dispatchEvent(new CustomEvent("guardianx:open-war-room"));
         }}
       />
     </div>
