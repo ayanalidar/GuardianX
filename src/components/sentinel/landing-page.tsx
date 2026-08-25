@@ -15,6 +15,7 @@ import { Testimonials } from "./landing/testimonials";
 import { ComparisonTable } from "./landing/comparison-table";
 import { FinalCTA } from "./landing/final-cta";
 import { LatestBlogSection } from "./landing/latest-blog-section";
+import { RecentScansCard } from "./landing/recent-scans-card";
 
 /**
  * Below-the-fold, code-heavy interactive sections are lazy-loaded with
@@ -122,8 +123,11 @@ export function LandingPage({ onEnter }: LandingPageProps) {
           {/* 2. Stats strip */}
           <StatsStrip />
 
-          {/* 2b. Scan Your Website Free — simulated scan + email lead capture */}
+          {/* 2b. Scan Your Website For Free — real non-intrusive scan + email lead capture */}
           <ScanWidgetLazy onEnter={onEnter} />
+
+          {/* 2c. Live cinematic feed of recent public scans (CircuitBoard background) */}
+          <RecentScansCard />
 
           {/* 3. Live command-center demo (existing) */}
           <AnimatedDemo />

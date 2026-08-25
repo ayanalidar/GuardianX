@@ -23,138 +23,77 @@ import { GlowCTA } from "./glow-cta";
 /**
  * ScanWidget
  * ----------
- * A prominent "Scan Your Website Free" section. User enters a URL → a
- * SIMULATED 30-second scan runs through 4 progress phases → 3-5 realistic
- * sample findings appear → user enters email to "receive the full report"
- * (lead capture via localStorage) → success state with sign-up CTA.
+ * A prominent "Scan Your Website For Free" section. User enters a URL →
+ * a REAL non-intrusive external scan runs server-side (POST
+ * /api/public-scan/scan, ~10-20s) → real findings appear → user enters
+ * email to receive the full report (POST /api/public-scan/send-report,
+ * server emails a PDF) → success state with sign-up CTA.
+ *
+ * UX shape (unchanged from the mock version):
+ *   idle → scanning → findings → email → done
  *
  * Important:
- *  - The scan is fully simulated (no Nmap/Nuclei). Real scanning needs the
- *    recon-tools Docker service + explicit authorization.
- *  - We DO try to POST the URL as a Target to /api/targets (with
- *    authorized=false) so sales can see which URLs visitors probed. If the
- *    API is unreachable, we silently fall back to mock mode.
- *  - Rate-limited client-side: 1 scan per browser per hour via localStorage
- *    key `gx_scan_last_run`.
- *  - Email leads stored in localStorage key `gx_leads`.
+ *  - The scan is REAL — the server runs non-intrusive checks (DNS,
+ *    headers, well-known paths, TLS). No payloads are sent to the
+ *    target. Authenticated testing needs a sign-up + authorized target.
+ *  - Rate-limited client-side: 1 scan per browser per hour via
+ *    localStorage key `gx_scan_last_run`.
+ *  - Phase labels cycle every ~2s while the API call is in flight so
+ *    the user can see what the engine is doing.
+ *  - Score is color-coded: 90+ emerald, 70-89 amber, 50-69 orange,
+ *    <50 red. Same palette as the cinematic RecentScansCard.
+ *  - The bottom CTA ("Enter Lab Console") calls the `onEnter` prop so
+ *    users can jump into the full GuardianX lab without doing a scan.
  */
 
 type Phase = "idle" | "scanning" | "findings" | "email" | "done";
 
-interface SampleFinding {
+type Severity = "critical" | "high" | "medium" | "low" | "info";
+
+interface ScanFinding {
   id: string;
   title: string;
-  severity: "critical" | "high" | "medium" | "low" | "info";
-  owasp: string;
+  severity: Severity;
+  owasp?: string | null;
   endpoint: string;
-  method: string;
+  method?: string | null;
   description: string;
   remediation: string;
 }
 
-const SAMPLE_FINDINGS: SampleFinding[] = [
-  {
-    id: "S-001",
-    title: "SQL Injection",
-    severity: "critical",
-    owasp: "A03:2021",
-    endpoint: "/api/users?id=",
-    method: "GET",
-    description: "The `id` query parameter is concatenated directly into a SQL statement. An attacker can exfiltrate the user table or bypass authentication with `' OR 1=1--`.",
-    remediation: "Use parameterized queries / prepared statements; validate input types.",
-  },
-  {
-    id: "S-002",
-    title: "Reflected XSS",
-    severity: "high",
-    owasp: "A03:2021",
-    endpoint: "/search?q=",
-    method: "GET",
-    description: "User input from the `q` parameter is reflected into HTML without encoding, allowing JavaScript injection.",
-    remediation: "Encode all output on the server; set a strict Content-Security-Policy.",
-  },
-  {
-    id: "S-003",
-    title: "Missing Strict-Transport-Security (HSTS)",
-    severity: "medium",
-    owasp: "A05:2021",
-    endpoint: "/",
-    method: "GET",
-    description: "The HSTS response header is not set, allowing man-in-the-middle SSL stripping attacks.",
-    remediation: "Add `Strict-Transport-Security: max-age=31536000; includeSubDomains`.",
-  },
-  {
-    id: "S-004",
-    title: "Server version header leaked",
-    severity: "low",
-    owasp: "A05:2021",
-    endpoint: "/",
-    method: "GET",
-    description: "The `Server` response header discloses exact software versions, easing targeted exploits.",
-    remediation: "Suppress server banners in your web server config.",
-  },
-  {
-    id: "S-005",
-    title: "Directory listing enabled",
-    severity: "medium",
-    owasp: "A05:2021",
-    endpoint: "/static/",
-    method: "GET",
-    description: "Directory listing is enabled, exposing the contents of static asset folders.",
-    remediation: "Disable autoindex / directory browsing.",
-  },
-  {
-    id: "S-006",
-    title: "Clickjacking — X-Frame-Options missing",
-    severity: "medium",
-    owasp: "A05:2021",
-    endpoint: "/",
-    method: "GET",
-    description: "The page can be framed by any origin, enabling clickjacking attacks.",
-    remediation: "Set `X-Frame-Options: DENY` or `Content-Security-Policy: frame-ancestors 'none'`.",
-  },
-  {
-    id: "S-007",
-    title: "Default admin panel exposed",
-    severity: "critical",
-    owasp: "A05:2021",
-    endpoint: "/admin",
-    method: "GET",
-    description: "An administrative interface is reachable from the public internet without IP allowlisting or VPN.",
-    remediation: "Restrict /admin to internal IPs or behind a VPN + MFA.",
-  },
-  {
-    id: "S-008",
-    title: "Weak TLS — TLS 1.0 enabled",
-    severity: "medium",
-    owasp: "A02:2021",
-    endpoint: ":443",
-    method: "TLS",
-    description: "The server negotiates deprecated TLS 1.0, vulnerable to BEAST and POODLE.",
-    remediation: "Disable TLS < 1.2; prefer TLS 1.3.",
-  },
-];
+interface ScanResponse {
+  scanId: string;
+  url: string;
+  score: number;
+  findingsCount: number;
+  findings: ScanFinding[];
+  summary: string;
+  completedAt: string;
+}
 
-const SCAN_PHASES = [
-  { label: "Crawling endpoints…", icon: Radar, color: "text-cyan-400" },
-  { label: "Scanning ports…", icon: Globe, color: "text-violet-400" },
-  { label: "Testing for vulnerabilities…", icon: Bug, color: "text-amber-400" },
+const SCAN_PHASE_LABELS: { label: string; icon: typeof Radar; color: string }[] = [
+  { label: "Resolving DNS…", icon: Globe, color: "text-cyan-400" },
+  { label: "Fetching headers…", icon: Radar, color: "text-violet-400" },
+  { label: "Probing well-known paths…", icon: Bug, color: "text-amber-400" },
+  { label: "Analyzing TLS…", icon: Lock, color: "text-cyan-400" },
   { label: "Generating report…", icon: Terminal, color: "text-emerald-400" },
 ];
 
 const SEV_META: Record<
-  SampleFinding["severity"],
+  Severity,
   { color: string; bg: string; border: string; label: string }
 > = {
   critical: { color: "text-red-300", bg: "bg-red-500/15", border: "border-red-500/40", label: "CRITICAL" },
   high: { color: "text-amber-300", bg: "bg-amber-500/15", border: "border-amber-500/40", label: "HIGH" },
   medium: { color: "text-yellow-300", bg: "bg-yellow-500/15", border: "border-yellow-500/40", label: "MEDIUM" },
-  low: { color: "text-cyan-300", bg: "bg-cyan-500/15", border: "border-cyan-500/40", label: "LOW" },
+  low: { color: "text-sky-300", bg: "bg-sky-500/15", border: "border-sky-500/40", label: "LOW" },
   info: { color: "text-zinc-300", bg: "bg-zinc-500/15", border: "border-zinc-500/40", label: "INFO" },
 };
 
 const RATE_LIMIT_MS = 60 * 60 * 1000; // 1 scan per hour
-const SCAN_TOTAL_MS = 30_000;
+const PROGRESS_RAMP_MS = 18_000; // pseudo progress ramps 0→90% over 18s
+const PHASE_CYCLE_MS = 2_000; // cycle phase labels every 2s
+const PROGRESS_DONE_PCT = 100;
 
 function normalizeUrl(raw: string): string | null {
   let u = raw.trim();
@@ -179,17 +118,71 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+function scoreColor(score: number): { text: string; bg: string; border: string; label: string } {
+  if (score >= 90) return { text: "text-emerald-300", bg: "bg-emerald-500/15", border: "border-emerald-500/40", label: "STRONG" };
+  if (score >= 70) return { text: "text-amber-300", bg: "bg-amber-500/15", border: "border-amber-500/40", label: "FAIR" };
+  if (score >= 50) return { text: "text-orange-300", bg: "bg-orange-500/15", border: "border-orange-500/40", label: "WEAK" };
+  return { text: "text-red-300", bg: "bg-red-500/15", border: "border-red-500/40", label: "CRITICAL" };
+}
+
+/** Defensive parser — the parallel API agent may return slightly
+ * different shapes, so we coerce everything we read. */
+function parseScanResponse(data: unknown): ScanResponse | null {
+  if (!data || typeof data !== "object") return null;
+  const raw = data as Record<string, unknown>;
+  const findingsRaw = Array.isArray(raw.findings) ? raw.findings : [];
+  const findings: ScanFinding[] = findingsRaw
+    .map((f): ScanFinding | null => {
+      if (!f || typeof f !== "object") return null;
+      const o = f as Record<string, unknown>;
+      const severity = (String(o.severity ?? "info").toLowerCase()) as Severity;
+      const validSev: Severity =
+        severity === "critical" || severity === "high" || severity === "medium" || severity === "low" || severity === "info"
+          ? severity
+          : "info";
+      return {
+        id: String(o.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+        title: String(o.title ?? "Untitled finding"),
+        severity: validSev,
+        owasp: o.owasp == null ? null : String(o.owasp),
+        endpoint: String(o.endpoint ?? "/"),
+        method: o.method == null ? null : String(o.method),
+        description: String(o.description ?? ""),
+        remediation: String(o.remediation ?? ""),
+      };
+    })
+    .filter((f): f is ScanFinding => f !== null);
+
+  const score = typeof raw.score === "number" && Number.isFinite(raw.score) ? Math.max(0, Math.min(100, raw.score)) : 0;
+
+  return {
+    scanId: String(raw.scanId ?? raw.id ?? ""),
+    url: String(raw.url ?? ""),
+    score,
+    findingsCount: typeof raw.findingsCount === "number" ? raw.findingsCount : findings.length,
+    findings,
+    summary: String(raw.summary ?? ""),
+    completedAt: String(raw.completedAt ?? new Date().toISOString()),
+  };
+}
+
 export function ScanWidget({ onEnter }: { onEnter: () => void }) {
   const [url, setUrl] = useState("");
+  const [email, setEmail] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [scanPhaseIdx, setScanPhaseIdx] = useState(0);
   const [progress, setProgress] = useState(0); // 0..100
-  const [findings, setFindings] = useState<SampleFinding[]>([]);
-  const [email, setEmail] = useState("");
-  const [targetCreated, setTargetCreated] = useState(false);
+  const [findings, setFindings] = useState<ScanFinding[]>([]);
+  const [score, setScore] = useState<number | null>(null);
+  const [summary, setSummary] = useState<string>("");
+  const [scanId, setScanId] = useState<string>("");
+  const [scannedUrl, setScannedUrl] = useState<string>("");
+  const [sendingReport, setSendingReport] = useState(false);
   const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
+
+  const abortRef = useRef<AbortController | null>(null);
 
   // Tick clock so the rate-limit countdown refreshes in UI.
   useEffect(() => {
@@ -208,6 +201,9 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
     } catch {
       // localStorage unavailable (SSR / privacy mode) — proceed without it.
     }
+    return () => {
+      abortRef.current?.abort();
+    };
   }, []);
 
   const canScan = useMemo(() => {
@@ -215,10 +211,38 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
     return Date.now() >= rateLimitedUntil;
   }, [rateLimitedUntil, now]);
 
+  // Cycle phase labels every 2s while scanning.
+  useEffect(() => {
+    if (phase !== "scanning") return;
+    setScanPhaseIdx(0);
+    const t = setInterval(() => {
+      setScanPhaseIdx((i) => (i + 1) % SCAN_PHASE_LABELS.length);
+    }, PHASE_CYCLE_MS);
+    return () => clearInterval(t);
+  }, [phase]);
+
+  // Drive pseudo progress (0→90%) while scanning, capped so it never
+  // visually completes before the API responds.
+  useEffect(() => {
+    if (phase !== "scanning") return;
+    const startedAt = Date.now();
+    let raf = 0;
+    const tick = () => {
+      const elapsed = Date.now() - startedAt;
+      // Ease-out-ish: ramps quickly at first, slows near 90%.
+      const ratio = Math.min(1, elapsed / PROGRESS_RAMP_MS);
+      const pct = 90 * (1 - Math.pow(1 - ratio, 2));
+      setProgress(pct);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [phase]);
+
   const startScan = async () => {
     setError(null);
     if (!canScan) {
-      setError(`Rate limit reached — try again in ${timeLeftLabel(rateLimitedUntil! - now)}.`);
+      setError(`Rate limit reached — try again in ${timeLeftLabel((rateLimitedUntil ?? now) - now)}.`);
       return;
     }
     const normalized = normalizeUrl(url);
@@ -227,26 +251,15 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
       return;
     }
     setUrl(normalized);
+    setScannedUrl(normalized);
+    setFindings([]);
+    setScore(null);
+    setSummary("");
+    setScanId("");
+    setScanPhaseIdx(0);
+    setProgress(0);
 
-    // Best-effort: record this URL as a Target so the sales team can see what
-    // visitors are probing. Failure is fine — we proceed with the mock scan.
-    try {
-      const res = await fetch("/api/targets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: normalized,
-          baseUrl: normalized,
-          authorized: false,
-          notes: "Submitted via homepage ScanWidget (free scan lead).",
-        }),
-      });
-      setTargetCreated(res.ok);
-    } catch {
-      setTargetCreated(false);
-    }
-
-    // Persist rate-limit stamp immediately.
+    // Persist rate-limit stamp immediately so the user can't spam the API.
     try {
       localStorage.setItem("gx_scan_last_run", String(Date.now()));
       setRateLimitedUntil(Date.now() + RATE_LIMIT_MS);
@@ -254,71 +267,108 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
       // ignore
     }
 
-    // Pick 3-5 findings at random (deterministic-ish: shuffle + slice).
-    const shuffled = [...SAMPLE_FINDINGS].sort(() => Math.random() - 0.5);
-    const count = 3 + Math.floor(Math.random() * 3); // 3..5
-    setFindings(shuffled.slice(0, count));
-
-    // Begin the simulated scan.
     setPhase("scanning");
-    setScanPhaseIdx(0);
-    setProgress(0);
-  };
 
-  // Drive the simulated scan progress.
-  useEffect(() => {
-    if (phase !== "scanning") return;
-    const phaseDuration = SCAN_TOTAL_MS / SCAN_PHASES.length;
-    const startedAt = Date.now();
-    let raf = 0;
-    const tick = () => {
-      const elapsed = Date.now() - startedAt;
-      const pct = Math.min(100, (elapsed / SCAN_TOTAL_MS) * 100);
-      setProgress(pct);
-      const idx = Math.min(SCAN_PHASES.length - 1, Math.floor(elapsed / phaseDuration));
-      setScanPhaseIdx(idx);
-      if (elapsed >= SCAN_TOTAL_MS) {
-        setPhase("findings");
+    // Call the REAL scan API.
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      const res = await fetch("/api/public-scan/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: normalized }),
+        signal: ctrl.signal,
+      });
+
+      const payload = (await res.json().catch(() => null)) as unknown;
+
+      if (!res.ok) {
+        const msg =
+          payload && typeof payload === "object" && "error" in payload
+            ? String((payload as Record<string, unknown>).error)
+            : res.status === 400
+            ? "Invalid URL — please check the address and try again."
+            : `Scan failed (HTTP ${res.status}). The engine may be busy — please retry in a moment.`;
+        setProgress(PROGRESS_DONE_PCT);
+        setError(msg);
+        setPhase("idle");
         return;
       }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [phase]);
 
-  const submitEmail = () => {
+      const parsed = parseScanResponse(payload);
+      if (!parsed) {
+        setProgress(PROGRESS_DONE_PCT);
+        setError("The scan returned an unexpected response. Please try again.");
+        setPhase("idle");
+        return;
+      }
+
+      // Snap progress to 100% before transitioning for a satisfying finish.
+      setProgress(PROGRESS_DONE_PCT);
+      setFindings(parsed.findings);
+      setScore(parsed.score);
+      setSummary(parsed.summary);
+      setScanId(parsed.scanId);
+      setScannedUrl(parsed.url || normalized);
+
+      // Brief beat so the user sees the bar complete.
+      setTimeout(() => setPhase("findings"), 280);
+    } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") return;
+      setProgress(PROGRESS_DONE_PCT);
+      setError("Network error — couldn't reach the scan engine. Please check your connection and retry.");
+      setPhase("idle");
+    }
+  };
+
+  const submitEmail = async () => {
     setError(null);
     if (!isValidEmail(email)) {
       setError("Please enter a valid email address.");
       return;
     }
-    try {
-      const leadsRaw = localStorage.getItem("gx_leads");
-      const leads = leadsRaw ? (JSON.parse(leadsRaw) as unknown[]) : [];
-      leads.push({
-        url,
-        email: email.trim(),
-        timestamp: new Date().toISOString(),
-        source: "homepage_scan_widget",
-        findingsCount: findings.length,
-      });
-      localStorage.setItem("gx_leads", JSON.stringify(leads));
-    } catch {
-      // localStorage unavailable — we still proceed to the success state.
+    if (!scanId) {
+      setError("No active scan to email — please run a scan first.");
+      return;
     }
-    setPhase("done");
+    setSendingReport(true);
+    try {
+      const res = await fetch("/api/public-scan/send-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanId, email: email.trim() }),
+      });
+      const payload = (await res.json().catch(() => null)) as unknown;
+      if (!res.ok) {
+        const msg =
+          payload && typeof payload === "object" && "error" in payload
+            ? String((payload as Record<string, unknown>).error)
+            : `Failed to send report (HTTP ${res.status}).`;
+        setError(msg);
+        setSendingReport(false);
+        return;
+      }
+      setPhase("done");
+    } catch {
+      setError("Network error — couldn't reach the email service. Please retry.");
+    } finally {
+      setSendingReport(false);
+    }
   };
 
   const reset = () => {
+    abortRef.current?.abort();
     setPhase("idle");
     setUrl("");
     setEmail("");
     setError(null);
     setFindings([]);
+    setScore(null);
+    setSummary("");
+    setScanId("");
+    setScannedUrl("");
     setProgress(0);
     setScanPhaseIdx(0);
-    setTargetCreated(false);
   };
 
   return (
@@ -352,7 +402,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
             <Zap className="size-3" /> {"// Free instant scan"}
           </div>
           <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">
-            Scan Your Website Free
+            Scan Your Website For Free
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm text-zinc-400">
             Enter your URL below. GuardianX runs a non-intrusive external scan and
@@ -361,7 +411,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
         </div>
 
         {/* Main card */}
-        <div className="rounded-xl border border-emerald-500/30 bg-zinc-950/80 p-5 shadow-[0_0_40px_rgba(16,185,129,0.10)] sm:p-6">
+        <div className="holo-card-sharp hud-corners rounded-xl border border-emerald-500/30 bg-zinc-950/80 p-5 shadow-[0_0_40px_rgba(16,185,129,0.10)] sm:p-6">
           <AnimatePresence mode="wait">
             {/* ── IDLE ──────────────────────────────────────────────────── */}
             {phase === "idle" ? (
@@ -401,7 +451,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                       <Lock className="size-3" /> Non-intrusive · no payloads sent
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <Clock className="size-3" /> ~30s
+                      <Clock className="size-3" /> ~15s
                     </span>
                   </div>
                   <span>1 scan / hour</span>
@@ -436,17 +486,12 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                 <div className="mb-4 flex items-center gap-2">
                   <Loader2 className="size-4 animate-spin text-emerald-400" />
                   <span className="text-sm font-semibold text-zinc-100">
-                    Scanning <span className="text-emerald-300">{url}</span>
+                    Scanning <span className="text-emerald-300">{scannedUrl}</span>
                   </span>
-                  {targetCreated ? (
-                    <span className="ml-auto rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[9px] text-emerald-300">
-                      target saved
-                    </span>
-                  ) : (
-                    <span className="ml-auto rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-400">
-                      demo mode
-                    </span>
-                  )}
+                  <span className="ml-auto inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[9px] text-emerald-300">
+                    <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
+                    live scan
+                  </span>
                 </div>
 
                 {/* Progress bar */}
@@ -460,7 +505,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
 
                 {/* Phase list */}
                 <div className="space-y-2">
-                  {SCAN_PHASES.map((p, i) => {
+                  {SCAN_PHASE_LABELS.map((p, i) => {
                     const Icon = p.icon;
                     const state = i < scanPhaseIdx ? "done" : i === scanPhaseIdx ? "active" : "pending";
                     return (
@@ -511,42 +556,90 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.25 }}
               >
-                <div className="mb-4 flex items-center gap-2">
+                <div className="mb-4 flex flex-wrap items-center gap-3">
                   <ShieldAlert className="size-5 text-red-400" />
                   <span className="text-sm font-semibold text-zinc-100">
                     Found {findings.length} potential vulnerabilities on{" "}
-                    <span className="text-red-300">{url}</span>
+                    <span className="text-red-300">{scannedUrl}</span>
                   </span>
+                  {score !== null ? (
+                    <div
+                      className={`ml-auto flex items-center gap-2 rounded-md border ${scoreColor(score).border} ${scoreColor(score).bg} px-3 py-1.5`}
+                    >
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">
+                        score
+                      </span>
+                      <span className={`font-mono text-2xl font-bold tabular-nums ${scoreColor(score).text}`}>
+                        {Math.round(score)}
+                      </span>
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">/100</span>
+                    </div>
+                  ) : null}
                 </div>
 
-                <div className="space-y-2">
-                  {findings.map((f, i) => {
-                    const m = SEV_META[f.severity];
-                    return (
-                      <motion.div
-                        key={f.id}
-                        initial={{ opacity: 0, x: -12 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: i * 0.12 }}
-                        className={`rounded-md border ${m.border} ${m.bg} p-3`}
-                      >
-                        <div className="mb-1 flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${m.color} ${m.bg}`}>
-                              {m.label}
-                            </span>
-                            <h4 className={`text-sm font-semibold ${m.color}`}>{f.title}</h4>
+                {/* LLM-generated summary */}
+                {summary ? (
+                  <div className="mb-4 rounded-md border border-cyan-500/25 bg-cyan-500/5 p-3">
+                    <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-cyan-400/80">
+                      <Terminal className="size-3" /> Guardian AI summary
+                    </div>
+                    <p className="text-xs leading-relaxed text-zinc-300">{summary}</p>
+                  </div>
+                ) : null}
+
+                <div className="custom-scrollbar max-h-96 space-y-2 overflow-y-auto pr-1">
+                  {findings.length === 0 ? (
+                    <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-200">
+                      <ShieldCheck className="mb-1 size-4" />
+                      No exposures detected on the external surface. The scan is point-in-time —
+                      schedule recurring scans for continuous coverage.
+                    </div>
+                  ) : (
+                    findings.map((f, i) => {
+                      const m = SEV_META[f.severity];
+                      return (
+                        <motion.div
+                          key={f.id}
+                          initial={{ opacity: 0, x: -12 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3, delay: i * 0.08 }}
+                          className={`rounded-md border ${m.border} ${m.bg} p-3`}
+                        >
+                          <div className="mb-1 flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${m.color} ${m.bg}`}>
+                                {m.label}
+                              </span>
+                              <h4 className={`text-sm font-semibold ${m.color}`}>{f.title}</h4>
+                            </div>
+                            {f.owasp ? (
+                              <span className="font-mono text-[10px] text-zinc-500">OWASP {f.owasp}</span>
+                            ) : null}
                           </div>
-                          <span className="font-mono text-[10px] text-zinc-500">OWASP {f.owasp}</span>
-                        </div>
-                        <p className="text-xs leading-relaxed text-zinc-400">{f.description}</p>
-                        <div className="mt-2 flex items-center gap-2 font-mono text-[10px] text-zinc-600">
-                          <span className="rounded bg-zinc-800 px-1.5 py-0.5">{f.method}</span>
-                          <span className="text-cyan-300/70">{f.endpoint}</span>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                          {f.description ? (
+                            <p className="text-xs leading-relaxed text-zinc-400">{f.description}</p>
+                          ) : null}
+                          <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-[10px] text-zinc-600">
+                            {f.method ? (
+                              <span className="rounded bg-zinc-800 px-1.5 py-0.5">{f.method}</span>
+                            ) : null}
+                            <span className="text-cyan-300/70">{f.endpoint}</span>
+                          </div>
+                          {f.remediation ? (
+                            <div className="mt-2 flex items-start gap-2 border-t border-zinc-800/60 pt-2 text-xs text-zinc-400">
+                              <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-emerald-400/80" />
+                              <span>
+                                <span className="font-mono text-[9px] uppercase tracking-widest text-emerald-400/70">
+                                  Fix ·{" "}
+                                </span>
+                                {f.remediation}
+                              </span>
+                            </div>
+                          ) : null}
+                        </motion.div>
+                      );
+                    })
+                  )}
                 </div>
 
                 <div className="mt-5 rounded-md border border-cyan-500/30 bg-cyan-500/5 p-4">
@@ -576,9 +669,18 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                     <button
                       type="button"
                       onClick={submitEmail}
-                      className="inline-flex items-center justify-center gap-1 rounded-md border border-cyan-500/40 bg-cyan-500/15 px-4 py-2.5 text-sm font-medium text-cyan-200 transition-colors hover:bg-cyan-500/25"
+                      disabled={sendingReport}
+                      className="inline-flex items-center justify-center gap-1 rounded-md border border-cyan-500/40 bg-cyan-500/15 px-4 py-2.5 text-sm font-medium text-cyan-200 transition-colors hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <Mail className="size-4" /> Send Report
+                      {sendingReport ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" /> Sending…
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="size-4" /> Send Report
+                        </>
+                      )}
                     </button>
                   </div>
                   {error ? (
@@ -613,7 +715,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                 </motion.div>
                 <h3 className="text-xl font-bold text-zinc-50">Report sent!</h3>
                 <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
-                  The full vulnerability report for <span className="text-emerald-300">{url}</span> is
+                  The full vulnerability report for <span className="text-emerald-300">{scannedUrl}</span> is
                   on its way to <span className="text-cyan-300">{email}</span>. A GuardianX security
                   advisor will contact you within 24 hours to walk through remediation.
                 </p>
@@ -628,7 +730,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-3">
                     <GlowCTA onClick={onEnter} variant="solid" className="!px-5 !py-2.5 !text-sm">
-                      Sign up for full access
+                      Enter Lab Console
                       <ArrowRight className="size-4" />
                     </GlowCTA>
                     <button
@@ -645,10 +747,20 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
           </AnimatePresence>
         </div>
 
-        {/* Footnote */}
-        <div className="mt-4 flex items-center justify-center gap-2 text-center font-mono text-[10px] text-zinc-600">
-          <Lock className="size-3" />
-          External scan only · for authenticated testing, sign up + add the target as authorized.
+        {/* Footnote with persistent Enter Lab Console link */}
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center font-mono text-[10px] text-zinc-600">
+          <span className="inline-flex items-center gap-1">
+            <Lock className="size-3" />
+            External scan only · for authenticated testing, sign up + add the target as authorized.
+          </span>
+          <span className="text-zinc-700">·</span>
+          <button
+            type="button"
+            onClick={onEnter}
+            className="inline-flex items-center gap-1 text-emerald-400/80 transition-colors hover:text-emerald-300"
+          >
+            Enter Lab Console <ArrowRight className="size-3" />
+          </button>
         </div>
       </div>
     </section>

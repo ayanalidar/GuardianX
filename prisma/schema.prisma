@@ -509,3 +509,34 @@ model Contributor {
   joinedAt             DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }
+
+// ── WebsiteScan (homepage "Scan Your Website For Free") ──────────────────────
+// Records every public scan run by a visitor from the homepage ScanWidget.
+// Each scan runs real HTTP recon (TLS/headers/security.txt/robots.txt probe)
+// and produces actual findings — no mock data. The visitor's email is
+// captured so the full HTML report can be emailed.
+// Kept in lockstep with prisma/schema.production.prisma — do NOT diverge.
+model WebsiteScan {
+  id              String   @id @default(cuid())
+  url             String
+  email           String?
+  status          String   @default("running") // running | completed | failed
+  score           Int?
+  findingsCount   Int      @default(0)
+  criticalCount   Int      @default(0)
+  highCount       Int      @default(0)
+  mediumCount     Int      @default(0)
+  lowCount        Int      @default(0)
+  findings        String   @default("[]") // JSON array of finding objects
+  reportSent      Boolean  @default(false)
+  reportPath      String?
+  ipAddress       String?
+  userAgent       String?
+  duration        Int?
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([email])
+}

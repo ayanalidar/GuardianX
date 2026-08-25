@@ -13,6 +13,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { ensureZaiConfig } from "@/lib/zai-config";
 import ZAI from "z-ai-web-dev-sdk";
 
 export const dynamic = "force-dynamic";
@@ -131,6 +132,13 @@ async function llmForecast(
   findings: Array<{ title: string; category: string; severity: string; endpoint?: string | null; description?: string | null }>,
   scanCount: number
 ): Promise<{ scores: Record<VectorKey, number>; top_3: TopPrediction[]; confidence: number }> {
+  // Ensure the Z.AI SDK config file exists before ZAI.create() reads it.
+  // On Vercel (and other serverless runtimes) cwd/homedir aren't writable,
+  // so ensureZaiConfig() writes the ZAI_CONFIG env var to a temp file. The
+  // SDK only reads the file once on create() — calling this lazily here
+  // keeps the cost near zero (it's a no-op after the first call thanks to
+  // the `ensured` flag in lib/zai-config.ts).
+  ensureZaiConfig();
   const z = await ZAI.create();
 
   const findingSummary = findings.slice(0, 30).map((f, i) => (
