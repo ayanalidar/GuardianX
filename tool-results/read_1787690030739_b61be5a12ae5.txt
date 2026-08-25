@@ -1,0 +1,657 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useMemo, useRef, useState } from "react";
+     4→import { AnimatePresence, motion } from "framer-motion";
+     5→import {
+     6→  AlertCircle,
+     7→  ArrowRight,
+     8→  Bug,
+     9→  CheckCircle2,
+    10→  Clock,
+    11→  Globe,
+    12→  Loader2,
+    13→  Lock,
+    14→  Mail,
+    15→  Radar,
+    16→  ShieldAlert,
+    17→  ShieldCheck,
+    18→  Terminal,
+    19→  Zap,
+    20→} from "lucide-react";
+    21→import { GlowCTA } from "./glow-cta";
+    22→
+    23→/**
+    24→ * ScanWidget
+    25→ * ----------
+    26→ * A prominent "Scan Your Website Free" section. User enters a URL → a
+    27→ * SIMULATED 30-second scan runs through 4 progress phases → 3-5 realistic
+    28→ * sample findings appear → user enters email to "receive the full report"
+    29→ * (lead capture via localStorage) → success state with sign-up CTA.
+    30→ *
+    31→ * Important:
+    32→ *  - The scan is fully simulated (no Nmap/Nuclei). Real scanning needs the
+    33→ *    recon-tools Docker service + explicit authorization.
+    34→ *  - We DO try to POST the URL as a Target to /api/targets (with
+    35→ *    authorized=false) so sales can see which URLs visitors probed. If the
+    36→ *    API is unreachable, we silently fall back to mock mode.
+    37→ *  - Rate-limited client-side: 1 scan per browser per hour via localStorage
+    38→ *    key `gx_scan_last_run`.
+    39→ *  - Email leads stored in localStorage key `gx_leads`.
+    40→ */
+    41→
+    42→type Phase = "idle" | "scanning" | "findings" | "email" | "done";
+    43→
+    44→interface SampleFinding {
+    45→  id: string;
+    46→  title: string;
+    47→  severity: "critical" | "high" | "medium" | "low" | "info";
+    48→  owasp: string;
+    49→  endpoint: string;
+    50→  method: string;
+    51→  description: string;
+    52→  remediation: string;
+    53→}
+    54→
+    55→const SAMPLE_FINDINGS: SampleFinding[] = [
+    56→  {
+    57→    id: "S-001",
+    58→    title: "SQL Injection",
+    59→    severity: "critical",
+    60→    owasp: "A03:2021",
+    61→    endpoint: "/api/users?id=",
+    62→    method: "GET",
+    63→    description: "The `id` query parameter is concatenated directly into a SQL statement. An attacker can exfiltrate the user table or bypass authentication with `' OR 1=1--`.",
+    64→    remediation: "Use parameterized queries / prepared statements; validate input types.",
+    65→  },
+    66→  {
+    67→    id: "S-002",
+    68→    title: "Reflected XSS",
+    69→    severity: "high",
+    70→    owasp: "A03:2021",
+    71→    endpoint: "/search?q=",
+    72→    method: "GET",
+    73→    description: "User input from the `q` parameter is reflected into HTML without encoding, allowing JavaScript injection.",
+    74→    remediation: "Encode all output on the server; set a strict Content-Security-Policy.",
+    75→  },
+    76→  {
+    77→    id: "S-003",
+    78→    title: "Missing Strict-Transport-Security (HSTS)",
+    79→    severity: "medium",
+    80→    owasp: "A05:2021",
+    81→    endpoint: "/",
+    82→    method: "GET",
+    83→    description: "The HSTS response header is not set, allowing man-in-the-middle SSL stripping attacks.",
+    84→    remediation: "Add `Strict-Transport-Security: max-age=31536000; includeSubDomains`.",
+    85→  },
+    86→  {
+    87→    id: "S-004",
+    88→    title: "Server version header leaked",
+    89→    severity: "low",
+    90→    owasp: "A05:2021",
+    91→    endpoint: "/",
+    92→    method: "GET",
+    93→    description: "The `Server` response header discloses exact software versions, easing targeted exploits.",
+    94→    remediation: "Suppress server banners in your web server config.",
+    95→  },
+    96→  {
+    97→    id: "S-005",
+    98→    title: "Directory listing enabled",
+    99→    severity: "medium",
+   100→    owasp: "A05:2021",
+   101→    endpoint: "/static/",
+   102→    method: "GET",
+   103→    description: "Directory listing is enabled, exposing the contents of static asset folders.",
+   104→    remediation: "Disable autoindex / directory browsing.",
+   105→  },
+   106→  {
+   107→    id: "S-006",
+   108→    title: "Clickjacking — X-Frame-Options missing",
+   109→    severity: "medium",
+   110→    owasp: "A05:2021",
+   111→    endpoint: "/",
+   112→    method: "GET",
+   113→    description: "The page can be framed by any origin, enabling clickjacking attacks.",
+   114→    remediation: "Set `X-Frame-Options: DENY` or `Content-Security-Policy: frame-ancestors 'none'`.",
+   115→  },
+   116→  {
+   117→    id: "S-007",
+   118→    title: "Default admin panel exposed",
+   119→    severity: "critical",
+   120→    owasp: "A05:2021",
+   121→    endpoint: "/admin",
+   122→    method: "GET",
+   123→    description: "An administrative interface is reachable from the public internet without IP allowlisting or VPN.",
+   124→    remediation: "Restrict /admin to internal IPs or behind a VPN + MFA.",
+   125→  },
+   126→  {
+   127→    id: "S-008",
+   128→    title: "Weak TLS — TLS 1.0 enabled",
+   129→    severity: "medium",
+   130→    owasp: "A02:2021",
+   131→    endpoint: ":443",
+   132→    method: "TLS",
+   133→    description: "The server negotiates deprecated TLS 1.0, vulnerable to BEAST and POODLE.",
+   134→    remediation: "Disable TLS < 1.2; prefer TLS 1.3.",
+   135→  },
+   136→];
+   137→
+   138→const SCAN_PHASES = [
+   139→  { label: "Crawling endpoints…", icon: Radar, color: "text-cyan-400" },
+   140→  { label: "Scanning ports…", icon: Globe, color: "text-violet-400" },
+   141→  { label: "Testing for vulnerabilities…", icon: Bug, color: "text-amber-400" },
+   142→  { label: "Generating report…", icon: Terminal, color: "text-emerald-400" },
+   143→];
+   144→
+   145→const SEV_META: Record<
+   146→  SampleFinding["severity"],
+   147→  { color: string; bg: string; border: string; label: string }
+   148→> = {
+   149→  critical: { color: "text-red-300", bg: "bg-red-500/15", border: "border-red-500/40", label: "CRITICAL" },
+   150→  high: { color: "text-amber-300", bg: "bg-amber-500/15", border: "border-amber-500/40", label: "HIGH" },
+   151→  medium: { color: "text-yellow-300", bg: "bg-yellow-500/15", border: "border-yellow-500/40", label: "MEDIUM" },
+   152→  low: { color: "text-cyan-300", bg: "bg-cyan-500/15", border: "border-cyan-500/40", label: "LOW" },
+   153→  info: { color: "text-zinc-300", bg: "bg-zinc-500/15", border: "border-zinc-500/40", label: "INFO" },
+   154→};
+   155→
+   156→const RATE_LIMIT_MS = 60 * 60 * 1000; // 1 scan per hour
+   157→const SCAN_TOTAL_MS = 30_000;
+   158→
+   159→function normalizeUrl(raw: string): string | null {
+   160→  let u = raw.trim();
+   161→  if (!u) return null;
+   162→  if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
+   163→  try {
+   164→    const parsed = new URL(u);
+   165→    if (!parsed.hostname.includes(".")) return null;
+   166→    return parsed.toString();
+   167→  } catch {
+   168→    return null;
+   169→  }
+   170→}
+   171→
+   172→function timeLeftLabel(ms: number): string {
+   173→  const mins = Math.ceil(ms / 60000);
+   174→  if (mins <= 1) return "less than a minute";
+   175→  return `${mins} minutes`;
+   176→}
+   177→
+   178→function isValidEmail(email: string): boolean {
+   179→  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+   180→}
+   181→
+   182→export function ScanWidget({ onEnter }: { onEnter: () => void }) {
+   183→  const [url, setUrl] = useState("");
+   184→  const [phase, setPhase] = useState<Phase>("idle");
+   185→  const [error, setError] = useState<string | null>(null);
+   186→  const [scanPhaseIdx, setScanPhaseIdx] = useState(0);
+   187→  const [progress, setProgress] = useState(0); // 0..100
+   188→  const [findings, setFindings] = useState<SampleFinding[]>([]);
+   189→  const [email, setEmail] = useState("");
+   190→  const [targetCreated, setTargetCreated] = useState(false);
+   191→  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null);
+   192→  const [now, setNow] = useState(Date.now());
+   193→
+   194→  // Tick clock so the rate-limit countdown refreshes in UI.
+   195→  useEffect(() => {
+   196→    if (rateLimitedUntil === null) return;
+   197→    const t = setInterval(() => setNow(Date.now()), 1000);
+   198→    return () => clearInterval(t);
+   199→  }, [rateLimitedUntil]);
+   200→
+   201→  // On mount, hydrate rate-limit window from localStorage.
+   202→  useEffect(() => {
+   203→    try {
+   204→      const last = Number(localStorage.getItem("gx_scan_last_run") || "0");
+   205→      if (last && Date.now() - last < RATE_LIMIT_MS) {
+   206→        setRateLimitedUntil(last + RATE_LIMIT_MS);
+   207→      }
+   208→    } catch {
+   209→      // localStorage unavailable (SSR / privacy mode) — proceed without it.
+   210→    }
+   211→  }, []);
+   212→
+   213→  const canScan = useMemo(() => {
+   214→    if (rateLimitedUntil === null) return true;
+   215→    return Date.now() >= rateLimitedUntil;
+   216→  }, [rateLimitedUntil, now]);
+   217→
+   218→  const startScan = async () => {
+   219→    setError(null);
+   220→    if (!canScan) {
+   221→      setError(`Rate limit reached — try again in ${timeLeftLabel(rateLimitedUntil! - now)}.`);
+   222→      return;
+   223→    }
+   224→    const normalized = normalizeUrl(url);
+   225→    if (!normalized) {
+   226→      setError("Please enter a valid URL (e.g. example.com or https://example.com).");
+   227→      return;
+   228→    }
+   229→    setUrl(normalized);
+   230→
+   231→    // Best-effort: record this URL as a Target so the sales team can see what
+   232→    // visitors are probing. Failure is fine — we proceed with the mock scan.
+   233→    try {
+   234→      const res = await fetch("/api/targets", {
+   235→        method: "POST",
+   236→        headers: { "Content-Type": "application/json" },
+   237→        body: JSON.stringify({
+   238→          name: normalized,
+   239→          baseUrl: normalized,
+   240→          authorized: false,
+   241→          notes: "Submitted via homepage ScanWidget (free scan lead).",
+   242→        }),
+   243→      });
+   244→      setTargetCreated(res.ok);
+   245→    } catch {
+   246→      setTargetCreated(false);
+   247→    }
+   248→
+   249→    // Persist rate-limit stamp immediately.
+   250→    try {
+   251→      localStorage.setItem("gx_scan_last_run", String(Date.now()));
+   252→      setRateLimitedUntil(Date.now() + RATE_LIMIT_MS);
+   253→    } catch {
+   254→      // ignore
+   255→    }
+   256→
+   257→    // Pick 3-5 findings at random (deterministic-ish: shuffle + slice).
+   258→    const shuffled = [...SAMPLE_FINDINGS].sort(() => Math.random() - 0.5);
+   259→    const count = 3 + Math.floor(Math.random() * 3); // 3..5
+   260→    setFindings(shuffled.slice(0, count));
+   261→
+   262→    // Begin the simulated scan.
+   263→    setPhase("scanning");
+   264→    setScanPhaseIdx(0);
+   265→    setProgress(0);
+   266→  };
+   267→
+   268→  // Drive the simulated scan progress.
+   269→  useEffect(() => {
+   270→    if (phase !== "scanning") return;
+   271→    const phaseDuration = SCAN_TOTAL_MS / SCAN_PHASES.length;
+   272→    const startedAt = Date.now();
+   273→    let raf = 0;
+   274→    const tick = () => {
+   275→      const elapsed = Date.now() - startedAt;
+   276→      const pct = Math.min(100, (elapsed / SCAN_TOTAL_MS) * 100);
+   277→      setProgress(pct);
+   278→      const idx = Math.min(SCAN_PHASES.length - 1, Math.floor(elapsed / phaseDuration));
+   279→      setScanPhaseIdx(idx);
+   280→      if (elapsed >= SCAN_TOTAL_MS) {
+   281→        setPhase("findings");
+   282→        return;
+   283→      }
+   284→      raf = requestAnimationFrame(tick);
+   285→    };
+   286→    raf = requestAnimationFrame(tick);
+   287→    return () => cancelAnimationFrame(raf);
+   288→  }, [phase]);
+   289→
+   290→  const submitEmail = () => {
+   291→    setError(null);
+   292→    if (!isValidEmail(email)) {
+   293→      setError("Please enter a valid email address.");
+   294→      return;
+   295→    }
+   296→    try {
+   297→      const leadsRaw = localStorage.getItem("gx_leads");
+   298→      const leads = leadsRaw ? (JSON.parse(leadsRaw) as unknown[]) : [];
+   299→      leads.push({
+   300→        url,
+   301→        email: email.trim(),
+   302→        timestamp: new Date().toISOString(),
+   303→        source: "homepage_scan_widget",
+   304→        findingsCount: findings.length,
+   305→      });
+   306→      localStorage.setItem("gx_leads", JSON.stringify(leads));
+   307→    } catch {
+   308→      // localStorage unavailable — we still proceed to the success state.
+   309→    }
+   310→    setPhase("done");
+   311→  };
+   312→
+   313→  const reset = () => {
+   314→    setPhase("idle");
+   315→    setUrl("");
+   316→    setEmail("");
+   317→    setError(null);
+   318→    setFindings([]);
+   319→    setProgress(0);
+   320→    setScanPhaseIdx(0);
+   321→    setTargetCreated(false);
+   322→  };
+   323→
+   324→  return (
+   325→    <section
+   326→      id="scan-widget"
+   327→      className="relative isolate overflow-hidden px-4 py-20 sm:px-6"
+   328→    >
+   329→      {/* Background gradient */}
+   330→      <motion.div
+   331→        aria-hidden
+   332→        className="absolute inset-0 -z-10"
+   333→        initial={{ opacity: 0 }}
+   334→        whileInView={{ opacity: 1 }}
+   335→        viewport={{ once: true }}
+   336→        transition={{ duration: 1 }}
+   337→      >
+   338→        <div
+   339→          className="absolute inset-0"
+   340→          style={{
+   341→            background:
+   342→              "radial-gradient(ellipse at 30% 30%, rgba(16,185,129,0.15), transparent 55%)," +
+   343→              "radial-gradient(ellipse at 70% 70%, rgba(6,182,212,0.12), transparent 55%)," +
+   344→              "linear-gradient(135deg, rgba(24,24,27,0.95) 0%, rgba(9,9,11,0.98) 100%)",
+   345→          }}
+   346→        />
+   347→      </motion.div>
+   348→
+   349→      <div className="mx-auto max-w-3xl">
+   350→        <div className="mb-8 text-center">
+   351→          <div className="mb-2 flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/70">
+   352→            <Zap className="size-3" /> {"// Free instant scan"}
+   353→          </div>
+   354→          <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">
+   355→            Scan Your Website Free
+   356→          </h2>
+   357→          <p className="mx-auto mt-2 max-w-xl text-sm text-zinc-400">
+   358→            Enter your URL below. GuardianX runs a non-intrusive external scan and
+   359→            surfaces real vulnerabilities — no signup required.
+   360→          </p>
+   361→        </div>
+   362→
+   363→        {/* Main card */}
+   364→        <div className="rounded-xl border border-emerald-500/30 bg-zinc-950/80 p-5 shadow-[0_0_40px_rgba(16,185,129,0.10)] sm:p-6">
+   365→          <AnimatePresence mode="wait">
+   366→            {/* ── IDLE ──────────────────────────────────────────────────── */}
+   367→            {phase === "idle" ? (
+   368→              <motion.div
+   369→                key="idle"
+   370→                initial={{ opacity: 0, y: 8 }}
+   371→                animate={{ opacity: 1, y: 0 }}
+   372→                exit={{ opacity: 0, y: -8 }}
+   373→                transition={{ duration: 0.25 }}
+   374→              >
+   375→                <div className="flex flex-col gap-3 sm:flex-row">
+   376→                  <div className="relative flex-1">
+   377→                    <Globe className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+   378→                    <input
+   379→                      type="url"
+   380→                      inputMode="url"
+   381→                      autoComplete="url"
+   382→                      placeholder="example.com or https://your-site.com"
+   383→                      value={url}
+   384→                      onChange={(e) => setUrl(e.target.value)}
+   385→                      onKeyDown={(e) => {
+   386→                        if (e.key === "Enter") startScan();
+   387→                      }}
+   388→                      className="w-full rounded-md border border-zinc-700 bg-zinc-900/60 py-3 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+   389→                      aria-label="Website URL to scan"
+   390→                    />
+   391→                  </div>
+   392→                  <GlowCTA onClick={startScan} variant="solid" className="!px-6 !py-3 !text-sm">
+   393→                    <Radar className="size-4" />
+   394→                    Scan Now
+   395→                  </GlowCTA>
+   396→                </div>
+   397→
+   398→                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] text-zinc-600">
+   399→                  <div className="flex items-center gap-3">
+   400→                    <span className="inline-flex items-center gap-1">
+   401→                      <Lock className="size-3" /> Non-intrusive · no payloads sent
+   402→                    </span>
+   403→                    <span className="inline-flex items-center gap-1">
+   404→                      <Clock className="size-3" /> ~30s
+   405→                    </span>
+   406→                  </div>
+   407→                  <span>1 scan / hour</span>
+   408→                </div>
+   409→
+   410→                {error ? (
+   411→                  <div className="mt-3 flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+   412→                    <AlertCircle className="size-3.5 shrink-0" />
+   413→                    {error}
+   414→                  </div>
+   415→                ) : null}
+   416→
+   417→                {!canScan && rateLimitedUntil !== null ? (
+   418→                  <div className="mt-3 flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+   419→                    <Clock className="size-3.5 shrink-0" />
+   420→                    You&apos;ve used your free scan for this hour. Next scan available in{" "}
+   421→                    {timeLeftLabel(rateLimitedUntil - now)}.
+   422→                  </div>
+   423→                ) : null}
+   424→              </motion.div>
+   425→            ) : null}
+   426→
+   427→            {/* ── SCANNING ──────────────────────────────────────────────── */}
+   428→            {phase === "scanning" ? (
+   429→              <motion.div
+   430→                key="scanning"
+   431→                initial={{ opacity: 0, y: 8 }}
+   432→                animate={{ opacity: 1, y: 0 }}
+   433→                exit={{ opacity: 0, y: -8 }}
+   434→                transition={{ duration: 0.25 }}
+   435→              >
+   436→                <div className="mb-4 flex items-center gap-2">
+   437→                  <Loader2 className="size-4 animate-spin text-emerald-400" />
+   438→                  <span className="text-sm font-semibold text-zinc-100">
+   439→                    Scanning <span className="text-emerald-300">{url}</span>
+   440→                  </span>
+   441→                  {targetCreated ? (
+   442→                    <span className="ml-auto rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[9px] text-emerald-300">
+   443→                      target saved
+   444→                    </span>
+   445→                  ) : (
+   446→                    <span className="ml-auto rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-400">
+   447→                      demo mode
+   448→                    </span>
+   449→                  )}
+   450→                </div>
+   451→
+   452→                {/* Progress bar */}
+   453→                <div className="relative mb-4 h-2 overflow-hidden rounded-full bg-zinc-800">
+   454→                  <motion.div
+   455→                    className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-400"
+   456→                    style={{ width: `${progress}%` }}
+   457→                    transition={{ ease: "linear" }}
+   458→                  />
+   459→                </div>
+   460→
+   461→                {/* Phase list */}
+   462→                <div className="space-y-2">
+   463→                  {SCAN_PHASES.map((p, i) => {
+   464→                    const Icon = p.icon;
+   465→                    const state = i < scanPhaseIdx ? "done" : i === scanPhaseIdx ? "active" : "pending";
+   466→                    return (
+   467→                      <div
+   468→                        key={p.label}
+   469→                        className={`flex items-center gap-3 rounded-md border px-3 py-2 font-mono text-xs transition-colors ${
+   470→                          state === "done"
+   471→                            ? "border-emerald-500/30 bg-emerald-500/5"
+   472→                            : state === "active"
+   473→                            ? "border-cyan-500/40 bg-cyan-500/10"
+   474→                            : "border-zinc-800 bg-zinc-900/40 text-zinc-600"
+   475→                        }`}
+   476→                      >
+   477→                        {state === "done" ? (
+   478→                          <CheckCircle2 className="size-4 text-emerald-400" />
+   479→                        ) : state === "active" ? (
+   480→                          <Loader2 className={`size-4 animate-spin ${p.color}`} />
+   481→                        ) : (
+   482→                          <Icon className={`size-4 ${p.color} opacity-40`} />
+   483→                        )}
+   484→                        <span
+   485→                          className={
+   486→                            state === "done"
+   487→                              ? "text-emerald-300"
+   488→                              : state === "active"
+   489→                              ? p.color
+   490→                              : "text-zinc-600"
+   491→                          }
+   492→                        >
+   493→                          {p.label}
+   494→                        </span>
+   495→                        {state === "done" ? (
+   496→                          <span className="ml-auto text-[9px] uppercase text-emerald-500/60">ok</span>
+   497→                        ) : null}
+   498→                      </div>
+   499→                    );
+   500→                  })}
+   501→                </div>
+   502→              </motion.div>
+   503→            ) : null}
+   504→
+   505→            {/* ── FINDINGS ──────────────────────────────────────────────── */}
+   506→            {phase === "findings" ? (
+   507→              <motion.div
+   508→                key="findings"
+   509→                initial={{ opacity: 0, y: 8 }}
+   510→                animate={{ opacity: 1, y: 0 }}
+   511→                exit={{ opacity: 0, y: -8 }}
+   512→                transition={{ duration: 0.25 }}
+   513→              >
+   514→                <div className="mb-4 flex items-center gap-2">
+   515→                  <ShieldAlert className="size-5 text-red-400" />
+   516→                  <span className="text-sm font-semibold text-zinc-100">
+   517→                    Found {findings.length} potential vulnerabilities on{" "}
+   518→                    <span className="text-red-300">{url}</span>
+   519→                  </span>
+   520→                </div>
+   521→
+   522→                <div className="space-y-2">
+   523→                  {findings.map((f, i) => {
+   524→                    const m = SEV_META[f.severity];
+   525→                    return (
+   526→                      <motion.div
+   527→                        key={f.id}
+   528→                        initial={{ opacity: 0, x: -12 }}
+   529→                        animate={{ opacity: 1, x: 0 }}
+   530→                        transition={{ duration: 0.3, delay: i * 0.12 }}
+   531→                        className={`rounded-md border ${m.border} ${m.bg} p-3`}
+   532→                      >
+   533→                        <div className="mb-1 flex items-start justify-between gap-2">
+   534→                          <div className="flex items-center gap-2">
+   535→                            <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${m.color} ${m.bg}`}>
+   536→                              {m.label}
+   537→                            </span>
+   538→                            <h4 className={`text-sm font-semibold ${m.color}`}>{f.title}</h4>
+   539→                          </div>
+   540→                          <span className="font-mono text-[10px] text-zinc-500">OWASP {f.owasp}</span>
+   541→                        </div>
+   542→                        <p className="text-xs leading-relaxed text-zinc-400">{f.description}</p>
+   543→                        <div className="mt-2 flex items-center gap-2 font-mono text-[10px] text-zinc-600">
+   544→                          <span className="rounded bg-zinc-800 px-1.5 py-0.5">{f.method}</span>
+   545→                          <span className="text-cyan-300/70">{f.endpoint}</span>
+   546→                        </div>
+   547→                      </motion.div>
+   548→                    );
+   549→                  })}
+   550→                </div>
+   551→
+   552→                <div className="mt-5 rounded-md border border-cyan-500/30 bg-cyan-500/5 p-4">
+   553→                  <div className="mb-2 flex items-center gap-2">
+   554→                    <Mail className="size-4 text-cyan-400" />
+   555→                    <span className="text-sm font-semibold text-cyan-200">
+   556→                      Enter your email for the complete report
+   557→                    </span>
+   558→                  </div>
+   559→                  <p className="mb-3 text-xs text-zinc-400">
+   560→                    We&apos;ll send a detailed PDF with full PoCs, CVSS scores, and
+   561→                    remediation steps. A security advisor will reach out within 24h.
+   562→                  </p>
+   563→                  <div className="flex flex-col gap-2 sm:flex-row">
+   564→                    <input
+   565→                      type="email"
+   566→                      autoComplete="email"
+   567→                      placeholder="you@company.com"
+   568→                      value={email}
+   569→                      onChange={(e) => setEmail(e.target.value)}
+   570→                      onKeyDown={(e) => {
+   571→                        if (e.key === "Enter") submitEmail();
+   572→                      }}
+   573→                      className="flex-1 rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+   574→                      aria-label="Email address for full report"
+   575→                    />
+   576→                    <button
+   577→                      type="button"
+   578→                      onClick={submitEmail}
+   579→                      className="inline-flex items-center justify-center gap-1 rounded-md border border-cyan-500/40 bg-cyan-500/15 px-4 py-2.5 text-sm font-medium text-cyan-200 transition-colors hover:bg-cyan-500/25"
+   580→                    >
+   581→                      <Mail className="size-4" /> Send Report
+   582→                    </button>
+   583→                  </div>
+   584→                  {error ? (
+   585→                    <div className="mt-2 flex items-center gap-2 text-xs text-red-300">
+   586→                      <AlertCircle className="size-3.5" /> {error}
+   587→                    </div>
+   588→                  ) : null}
+   589→                  <div className="mt-2 font-mono text-[10px] text-zinc-600">
+   590→                    We respect your privacy. No spam, unsubscribe anytime.
+   591→                  </div>
+   592→                </div>
+   593→              </motion.div>
+   594→            ) : null}
+   595→
+   596→            {/* ── DONE ──────────────────────────────────────────────────── */}
+   597→            {phase === "done" ? (
+   598→              <motion.div
+   599→                key="done"
+   600→                initial={{ opacity: 0, y: 8 }}
+   601→                animate={{ opacity: 1, y: 0 }}
+   602→                exit={{ opacity: 0, y: -8 }}
+   603→                transition={{ duration: 0.25 }}
+   604→                className="text-center"
+   605→              >
+   606→                <motion.div
+   607→                  initial={{ scale: 0.6, opacity: 0 }}
+   608→                  animate={{ scale: 1, opacity: 1 }}
+   609→                  transition={{ type: "spring", stiffness: 220, delay: 0.1 }}
+   610→                  className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full border border-emerald-500/50 bg-emerald-500/15"
+   611→                >
+   612→                  <ShieldCheck className="size-7 text-emerald-400" />
+   613→                </motion.div>
+   614→                <h3 className="text-xl font-bold text-zinc-50">Report sent!</h3>
+   615→                <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+   616→                  The full vulnerability report for <span className="text-emerald-300">{url}</span> is
+   617→                  on its way to <span className="text-cyan-300">{email}</span>. A GuardianX security
+   618→                  advisor will contact you within 24 hours to walk through remediation.
+   619→                </p>
+   620→
+   621→                <div className="mt-6 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4">
+   622→                  <div className="mb-2 flex items-center justify-center gap-2 text-sm font-semibold text-emerald-200">
+   623→                    <Lock className="size-4" /> Want continuous scanning + auto-patching?
+   624→                  </div>
+   625→                  <p className="mx-auto mb-4 max-w-md text-xs text-zinc-400">
+   626→                    Sign up for full GuardianX access: scheduled scans, AI-generated
+   627→                    patches, attestation ledger, VAPT reports, and compliance dashboards.
+   628→                  </p>
+   629→                  <div className="flex flex-wrap items-center justify-center gap-3">
+   630→                    <GlowCTA onClick={onEnter} variant="solid" className="!px-5 !py-2.5 !text-sm">
+   631→                      Sign up for full access
+   632→                      <ArrowRight className="size-4" />
+   633→                    </GlowCTA>
+   634→                    <button
+   635→                      type="button"
+   636→                      onClick={reset}
+   637→                      className="inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-300"
+   638→                    >
+   639→                      Scan another site
+   640→                    </button>
+   641→                  </div>
+   642→                </div>
+   643→              </motion.div>
+   644→            ) : null}
+   645→          </AnimatePresence>
+   646→        </div>
+   647→
+   648→        {/* Footnote */}
+   649→        <div className="mt-4 flex items-center justify-center gap-2 text-center font-mono text-[10px] text-zinc-600">
+   650→          <Lock className="size-3" />
+   651→          External scan only · for authenticated testing, sign up + add the target as authorized.
+   652→        </div>
+   653→      </div>
+   654→    </section>
+   655→  );
+   656→}
+   657→
