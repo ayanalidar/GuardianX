@@ -64,12 +64,27 @@ import {
   MoveHorizontal,
 } from "lucide-react";
 import {
-  Hands,
-  HAND_CONNECTIONS,
   type NormalizedLandmark,
   type Results,
 } from "@mediapipe/hands";
-import { Camera } from "@mediapipe/camera_utils";
+// The @mediapipe/hands + @mediapipe/camera_utils packages ship as
+// IIFE-on-window rather than real ESM. A static named import
+// (`import { Hands }`) makes the bundler error with "The export Hands
+// was not found" because the module genuinely has zero ESM exports.
+// Instead we side-effect-import the JS (which executes the IIFE and
+// attaches `Hands` / `HAND_CONNECTIONS` / `Camera` to `globalThis`),
+// then read them off `globalThis` at runtime. Type-only imports above
+// are erased at compile time so they don't trip the bundler.
+import "@mediapipe/hands";
+import "@mediapipe/camera_utils";
+
+// Runtime symbol access. `as any` because the packages don't declare
+// these as ESM exports — they're attached to globalThis by the IIFEs
+// above. They're only referenced inside useEffect/useCallback, which
+// run in the browser where the side-effect imports have already fired.
+const Hands = (globalThis as any).Hands as (typeof import("@mediapipe/hands"))["Hands"];
+const HAND_CONNECTIONS = (globalThis as any).HAND_CONNECTIONS as (typeof import("@mediapipe/hands"))["HAND_CONNECTIONS"];
+const Camera = (globalThis as any).Camera as (typeof import("@mediapipe/camera_utils"))["Camera"];
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type GestureEvent =
