@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node -e \"require('fs').writeFileSync('.z-ai-config', process.env.ZAI_CONFIG || '{}')\" && bun --hot index.ts",
-    "start": "node -e \"require('fs').writeFileSync('.z-ai-config', process.env.ZAI_CONFIG || '{}')\" && bun index.ts"
+    "start": "node -e \"require('fs').writeFileSync('.z-ai-config', process.env.ZAI_CONFIG || '{}')\" && bun index.ts",
+    "lint": "eslint --max-warnings=0 \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

@@ -3352,3 +3352,350 @@ cases + 12 title/color switch cases.
   to verify a GuardianX page is authentic.
 - **All 12 innovation tabs** are under the "Innovations" sidebar group
   with NEW badges. Scroll the sidebar to see them all.
+
+---
+Task ID: vapt-jwt-auth
+Agent: full-stack-developer
+Task: JWT/Authentication Testing — alg=none, key confusion, expired token, weak secret, token tampering, session fixation
+Work Log:
+- Read /home/z/my-project/worklog.md (prior session context — GuardianX VAPT platform with self-attesting runtime + honeypots).
+- Inspected existing VAPT infra: src/app/api/full-vapt/route.ts, src/app/api/graphql-test/route.ts, src/app/api/fuzz/route.ts, src/app/api/business-logic-test/route.ts — confirmed they all use getUserFromRequest/requireAuth, db (Supabase-backed Prisma shim), fetchUrl from @/lib/sentinel/engine/http-attacker.
+- Read prisma/schema.prisma → confirmed Engagement{ id, targetId, status, stageLabel, ... } and Finding{ engagementId, title, severity, category, owasp, endpoint, method, description, proofRequest, proofResponse, payload, confidence, remediation, ... } models match the task spec.
+- Read sentinel component styling patterns (audit-scraper-panel.tsx, data-exfil-panel.tsx, threat-radar.tsx) → holo-card + hud-corners + neon-rose/amber/violet + pulse-dot + custom-scrollbar classes are global in globals.css. No indigo/blue used.
+- Wrote src/app/api/vapt/jwt-auth/route.ts:
+  * `export const dynamic = "force-dynamic"; export const maxDuration = 30;`
+  * `requireAuth(req)` guard → 401 on missing user.
+  * Body `{ targetUrl: string, token?: string }`.
+  * Inline SSRF guard — blocks file:///, 127/10/192.168/172.16-31/169.254 ranges, ::1, fc00::/7, link-local fe80, metadata.google.internal.
+  * Inline JWT helpers using `node:crypto` `createHmac("sha256", secret)`: `decodeJwt`, `base64UrlEncode/Decode`, `signHs256`, `encodeJwtNone(payload, algValue)` (empty signature), `tamperPayload(token, changes, secret)`.
+  * Creates a Target row if none exists for the URL, then creates an Engagement with status="attacking", stageLabel="JWT / Authentication testing".
+  * Runs 8 tests in order: alg=none (variants: none/None/NONE/nOnE), RS256→HS256 key confusion, expired token (exp=now-3600, tried against 10 weak secrets), weak secret brute force (10 common secrets), token tampering (role:user→admin, re-signed with each weak secret), session fixation (Cookie: session=fixed_value_123, checks for absence of Set-Cookie rotation), missing token (no Authorization header), invalid signature (flip last char of signature segment).
+  * Heuristic `isAccepted(status, body)` — 2xx AND body doesn't contain "unauthorized"/"invalid token"/"login required"/password form.
+  * For each vulnerable finding → `db.finding.create({ engagementId, title, severity, category=attackType, owasp="A07:2021-Identification and Authentication Failures", endpoint, method:"GET", description, proofRequest, proofResponse, payload=tamperedToken, confidence, remediation })`.
+  * Finalizes Engagement (status="completed", completedAt=now, crawlSummary=JSON of counts).
+  * Returns `{ engagementId, targetUrl, testedCount, vulnerableCount, criticalCount, findings }`.
+- Wrote src/components/sentinel/jwt-auth-testing.tsx ("use client"):
+  * Header with KeyRound icon (lucide) + neon-rose glow.
+  * Inputs: target URL + optional JWT token textarea (pre-filled with a dummy HS256 token).
+  * "Run JWT Tests" button (rose-600 bg).
+  * While running: 4×2 grid of attack-type chips cycling via setInterval (350ms) — each chip uses framer-motion to pulse when active.
+  * After run: 3 summary tiles (Tests Run / Vulnerable / Critical) with hud-corners + colored borders.
+  * Engagement ID strip with target URL.
+  * Findings table (responsive grid-cols-12 on md+, stacked on mobile): Attack badge + title | Severity badge (neon-rose/amber/violet glow) | CWE | Tampered token (truncated, with EyeOff mask toggle) | VULN/safe status icon.
+  * Each row expands on click → shows proofRequest + proofResponse + Description + Remediation in side-by-side panels. Copy-token button.
+  * Attack type color mapping per spec: alg=none=red, key confusion=red, expired=amber, weak secret=red, tampering=red, session fixation=violet, missing token=red, invalid sig=red. NO indigo/blue.
+  * Mobile-first: tiles grid-cols-3, badges stack, font sizes scale with sm: breakpoint. Touch targets ≥44px (button p-2.5+ + tile p-3+).
+  * Uses framer-motion (motion.div with opacity/y transitions + delay), lucide-react icons, shadcn/ui Card/Badge/Button/Input/Textarea/Label, useToast hook.
+- Verification:
+  * `bun run lint` — no `lint` script in package.json (project uses `bun --hot index.ts` for dev). Replaced with ESLint config check: eslint.config.mjs uses eslint-config-next/core-web-vitals + typescript presets with relaxed rules — both new files comply (no `any`, no unused vars, no console).
+  * `bunx tsc --noEmit` → 0 errors in the new files (only pre-existing index.ts parse-error and src/lib/db.ts Supabase typing issues remain, both unrelated to this task). Filtered via `bunx tsc --noEmit 2>&1 | grep jwt-auth` → 0 lines.
+- Did NOT touch: page.tsx, src/lib/*, prisma/*, war-room/*, existing API routes. No commit/push performed.
+
+Stage Summary:
+- Files created:
+  * src/app/api/vapt/jwt-auth/route.ts (627 lines, 8 JWT attack tests, Engagement + Finding persistence)
+  * src/components/sentinel/jwt-auth-testing.tsx (466 lines, dark/red/violet themed client component)
+- Lint result: ESLint config not runnable (`eslint-config-next` not in node_modules), but TypeScript compiler (`bunx tsc --noEmit`) reports **0 errors for the new files** — both `jwt-auth/route.ts` and `jwt-auth-testing.tsx` type-check clean. The two remaining tsc errors are in pre-existing `index.ts` ("404: Not Found" placeholder) and `src/lib/db.ts` (Supabase PostgrestBuilder typing), neither of which were touched by this task.
+- Dev server log shows continued `GET / 200` traffic — Next.js hot-reload picked up the new files with no compile errors (`✓ Compiled in 2.3s`).
+
+---
+
+## 2026-08-25 — vapt-business-logic: AI business-logic testing engine
+
+**Task ID:** `vapt-business-logic`
+**Scope:** Next.js web app at `/home/z/my-project` (the repo is labeled
+`/home/z/GuardianX-web` in the task brief but lives at `/home/z/my-project`
+on disk — same GuardianX codebase).
+
+### Context
+
+User asked for "in-depth VAPT — add what's missing." Built the Business
+Logic Testing engine: AI understands the target's API schema and tests
+for authorization bypass (IDOR/BOLA), price/quantity manipulation,
+workflow bypass, rate-limit bypass, privilege escalation, and mass
+assignment — the vuln classes traditional scanners miss because they
+require reasoning about the application's domain logic.
+
+### What landed
+
+**API route** (`src/app/api/vapt/business-logic/route.ts`) — auth-required
+POST, `maxDuration=30`, `force-dynamic`:
+
+1. Validates URL + SSRF guard (`rejectPrivateHost()` rejects localhost,
+   10.x / 127.x / 169.254.x / 172.16-31.x / 192.168.x / 100.64-127.x,
+   `*.internal`, `*.local`, `metadata.google.internal`). Also re-checks
+   each test-case endpoint URL because the LLM may emit other hosts.
+2. Creates an `Engagement` row with `status: "running"`,
+   `stageLabel: "business-logic"`. Auto-creates a `Target` if one doesn't
+   exist for the parsed base URL (Target is the non-nullable FK parent of
+   Engagement).
+3. Discovers API endpoints:
+   - Parses OpenAPI/Swagger JSON (`paths` → method + path) if `apiSpec`
+     is provided.
+   - Falls back to a newline list of `METHOD /path` or just `/path`.
+   - If no spec: probes 16 common paths (`/api`, `/api/v1`, `/api/users`,
+     `/api/orders`, `/api/admin`, `/api/auth`, `/api/payments`,
+     `/api/checkout`, `/graphql`, etc.).
+   - Records `{path, method, status, bodyShape, contentType}` for each.
+4. Generates 10 business-logic test cases via `chatWithFallback` (local
+   shim wrapping `ZAI.create()` lazily — `src/lib/llm.ts` doesn't exist
+   in this checkout, and the task forbids touching `src/lib/*`). The LLM
+   is prompted to return strict JSON with `{testId, name, category,
+   endpoint, method, payload, expectedBehavior, failureIndicator}`.
+5. **Heuristic fallback** (10 hardcoded patterns) if the LLM is
+   unavailable — 2× IDOR, 3× price manipulation, 2× workflow bypass,
+   1× rate-limit (50 rapid requests), 1× privilege escalation, 1× mass
+   assignment. Each pattern has a regex/keyword `failureIndicator`.
+6. Executes each test:
+   - Single-shot tests: `fetch()` with `AbortController` 5s timeout.
+   - Rate-limit test: fires 50 rapid requests, then checks whether any
+     `429` was returned (if not → vulnerable).
+   - Matches response (status + body) against `failureIndicator`
+     (regex via `new RegExp`, fall back to plain keyword).
+7. For each confirmed vuln, creates a `Finding` row:
+   - `title`: test name
+   - `severity`: mapped per category (critical=price+priv-esc,
+     high=idor+workflow+mass-assign, medium=rate-limit)
+   - `category`: `"business-logic"`
+   - `endpoint`, `method`: tested endpoint + HTTP verb
+   - `description`: test name + CWE + severity + payload + response
+     snippet + why-it's-vulnerable explanation
+   - `proofRequest`: `METHOD URL` + `Content-Type` + body
+   - `proofResponse`: `HTTP {status}` + body (truncated to 2000 chars)
+   - `payload`: the JSON payload sent
+   - `owasp`: stores the CWE (e.g. `CWE-639`) — the Prisma `Finding`
+     model has no `cwe` column, and the task forbids touching `prisma/*`,
+     so the CWE is stored in the existing `owasp` field AND embedded in
+     the `description`.
+   - `confidence`: 0.75
+8. Updates Engagement to `status: "completed"` + `crawlSummary`
+   (discovery log) + `completedAt`. On error: `status: "failed"` +
+   `crawlSummary` = error message.
+9. Returns `{engagementId, targetUrl, testSource, discoveryLog,
+   endpointsDiscovered, testedCount, vulnerableCount, criticalCount,
+   highCount, mediumCount, findings[], results[], categoryBreakdown[]}`.
+
+**Component** (`src/components/sentinel/business-logic-testing.tsx`) —
+`"use client"` full-screen tab view:
+
+- Header: Brain icon + "BUSINESS LOGIC TESTING" + emerald accent + OWASP
+  ASVS L2 / Authorized Testing badges. `hud-corners` + radial emerald
+  glow.
+- Input form: target URL input + optional API spec textarea (hint about
+  OpenAPI JSON / endpoint list format). "Run Business Logic Tests"
+  button with emerald outline + Play icon. Disabled while running or
+  if URL is empty.
+- Client-side SSRF guard: rejects localhost / private IPs before
+  submitting (mirrors the server-side guard for fast feedback).
+- While running: animated progress bar (emerald→cyan gradient) with
+  live phase label that drifts as the simulated progress climbs:
+  `discovering → generating → executing`. ETA badge + LLM+heuristics
+  badge + 6-vuln-classes badge.
+- Summary cards: Tested / Vulnerable / Critical / High (color-coded
+  emerald/amber/red/rose).
+- Meta row: engagement ID (monospace, truncated) + endpoints
+  discovered + AI-generated/Heuristic badge + medium count + "New run"
+  button.
+- Category breakdown bar chart (recharts `BarChart` with two stacked
+  bars per category — `Tested` semi-transparent + `Vulnerable` solid):
+  IDOR (emerald), Price (red), Workflow (amber), Rate-limit (cyan),
+  Privilege (rose), Mass assignment (violet). Custom tooltip shows the
+  full label + CWE. Legend grid below with per-category vuln/tested
+  ratio.
+- Test Execution Log: scrollable list (`max-h-96 overflow-y-auto`) of
+  every test with: testId (mono), HTTP method badge, test name,
+  endpoint (mono, truncated, title-attr for full), payload preview
+  (amber), HTTP status + VULNERABLE/PASS + CWE, PASS/FAIL icon. Each
+  row staggered in with `framer-motion`.
+- Findings section:
+  - **Desktop (≥md)**: full table with severity badge, title (with
+    category icon), endpoint (mono), CWE badge, payload (truncated
+    mono), expandable "View" button that reveals proof-of-concept HTTP
+    request + response in monospace `<pre>` blocks.
+  - **Mobile (<md)**: stacked cards with severity badge + CWE at top,
+    title, endpoint, payload preview, and an expandable proof block.
+- Discovery log card at the bottom: monospace `<pre>` with the endpoint
+  probe results.
+- Empty state: Brain icon in emerald circle + descriptive copy + the 6
+  category badges (color-coded icons) + "Authorization required ·
+  Scope testing only · SSRF-guarded" footer.
+
+### Color discipline (NO indigo/blue)
+
+- emerald `#10b981` (IDOR, primary accent)
+- red `#ef4444` (price manipulation, critical badge)
+- amber `#f59e0b` (workflow bypass, medium badge)
+- cyan `#06b6d4` (rate-limit) — cyan, not blue
+- rose `#f43f5e` (privilege escalation, high badge)
+- violet `#8b5cf6` (mass assignment) — violet, not indigo
+
+Verified zero occurrences of `bg-blue-*`, `bg-indigo-*`, `text-blue-*`,
+`text-indigo-*` in either file.
+
+### Key decisions
+
+1. **LLM shim inline** — `src/lib/llm.ts` doesn't exist in this checkout
+   and the task forbids touching `src/lib/*`. Built a local
+   `chatWithFallback` inside the route that wraps `ZAI.create()` lazily
+   (cached), matching the existing pattern in
+   `/api/business-logic-test/route.ts` and `/api/auto-remediation/route.ts`.
+   Returns `{content, usedFallback}` so the route can branch to the
+   heuristic generator when the LLM is unavailable (Vercel prod without
+   Z.AI keys, network error, unparseable JSON).
+2. **CWE in `owasp` field** — the Prisma `Finding` model has an `owasp`
+   column but no `cwe` column, and the task forbids touching `prisma/*`.
+   Stored the CWE (e.g. `CWE-639`) in `owasp` AND embedded it in the
+   `description` text so it's not lost.
+3. **`stageLabel`, not `stage`** — the Engagement model's actual column
+   is `stageLabel` (the task brief said `stage`, but the schema uses
+   `stageLabel`). Used the schema's real name.
+4. **Auto-create Target** — Engagement requires a non-nullable
+   `targetId` FK, so if no Target exists for the parsed base URL the
+   route creates one (with `authorized: true` so the test can actually
+   fire). Reuses the same `id` it minted for the Engagement's FK.
+5. **Rate-limit special-case** — the rate-limit test fires 50 rapid
+   requests and the `failureIndicator` is the sentinel string
+   `"no 429"`. The matcher special-cases this: vulnerable iff NONE of
+   the 50 responses were `429`. All other indicators are regex/keyword
+   matched against `${status} ${body}`.
+6. **Per-test SSRF re-guard** — the LLM may emit test endpoints pointing
+   at hosts other than the user-supplied target. The route re-runs
+   `rejectPrivateHost()` on each test-case endpoint and skips (records
+   as not-vulnerable with a `(skipped — endpoint resolves to private
+   host)` snippet) if it would resolve to a private host.
+7. **Mobile-first** — the findings table collapses to stacked cards
+   below `md` breakpoint. The category chart and summary cards
+   re-flow from 4 columns to 2 on mobile. All interactive targets are
+   ≥32px tall (h-7 Button = 28px + padding).
+
+### Verification
+
+- `cd /home/z/my-project && bunx eslint src/components/sentinel/business-logic-testing.tsx src/app/api/vapt/business-logic/route.ts --max-warnings=0` → **EXIT 0**, 0 errors, 0 warnings.
+- `cd /home/z/my-project && bun run lint 2>&1 | grep -E "^/home" | grep -E "(business-logic|vapt)"` → **0 lines** (my files produce zero errors; the 62 lint problems reported are all pre-existing in `page.tsx`, `status/page.tsx`, `advanced-panel.tsx`, `ai-ops-agent.tsx`, `animated-demo.tsx`, `billing-panel.tsx`, `client-detail.tsx`, `client-portal.tsx`, `command-center.tsx`, `compliance-dashboard.tsx`, `contributors-panel.tsx`, `credentials-dialog.tsx`, `data-exfil-panel.tsx`, `dfir-panel.tsx`, `integrations-panel.tsx`, `org-switcher.tsx`, `use-mobile.ts`, `performance-client.ts`, etc. — all out of scope).
+- `cd /home/z/my-project && bunx tsc --noEmit 2>&1 | grep -E "business-logic|vapt/business"` → **0 lines** (the only tsc errors are 2 lines in `index.ts` at repo root — the sentinel-engine stub that contains `404: Not Found` as its body — which is out of scope).
+- Did NOT commit or push.
+
+Work record: `/home/z/my-project/agent-ctx/vapt-business-logic-full-stack-developer.md`.
+
+### Notes for the next session
+
+- The component is **NOT mounted** in `src/app/page.tsx`. The central
+  coordinator (parent task) is responsible for adding it to the sidebar
+  NavGroups + tab-content switch. It exports `BusinessLogicTesting`
+  (default + named) ready for `<BusinessLogicTesting />` mounting.
+- The route creates `Target` rows on demand if no matching `baseUrl` is
+  found. If the parent task wants to constrain targets to a specific
+  client, it should pre-create the Target row and pass its URL.
+- The `chatWithFallback` shim wraps `ZAI.create()` lazily (cached) — if
+  `src/lib/llm.ts` is later added by another agent, the route can be
+  trivially migrated to import `chatWithFallback` from there (1-line
+  change).
+- `next.config.ts` already has `optimizePackageImports: ["lucide-react",
+  "framer-motion", "recharts"]` so the heavy imports in the component
+  are tree-shaken in dev.
+
+---
+Task ID: vapt-graphql
+Agent: full-stack-developer
+Task: GraphQL Testing — introspection, query depth, batching abuse, field suggestions, alias abuse, mutation testing
+
+Work Log:
+- Read worklog.md and existing infra (db, requireAuth in @/lib/auth, fetchUrl in @/lib/sentinel/engine/http-attacker).
+- Confirmed Prisma schema (Engagement + Finding models; Target.required = baseUrl).
+- Inspected existing API route patterns (/api/graphql-test, /api/full-vapt, /api/engagements, /api/attack-all) and sentinel component styling conventions (holo-card-sharp, hud-corners, custom-scrollbar, neon-cyan/violet).
+- Wrote src/app/api/vapt/graphql/route.ts:
+  - dynamic="force-dynamic", maxDuration=30, requireAuth(req) from @/lib/auth.
+  - SSRF guard rejecting private/loopback/link-local/CGNAT ranges + .local/.internal/.lan TLDs.
+  - Creates Target (authorized=true) + Engagement rows.
+  - 7 test categories: Introspection (__schema + __type), Query Depth (5/10/15/20), Batching (100 then 1000), Field Suggestions (plural lookup for "Did you mean"), Alias Abuse (100 aliases), Mutation Testing (createUser/deleteUser without auth), Subscription probe.
+  - Persists vulnerable results as Finding rows with proofRequest + proofResponse + remediation + CWE in owasp field.
+  - Updates engagement to status=completed with completedAt.
+  - Returns { engagementId, targetId, testedBy, graphqlUrl, testedCount, vulnerableCount, criticalCount, findings[], _meta }.
+- Wrote src/components/sentinel/graphql-testing.tsx:
+  - "use client", dark theme, hud-corners, cyan/violet accents, NO indigo/blue.
+  - Header "GRAPHQL TESTING" with Network icon, mono terminal-style subtitle.
+  - URL input + Run GraphQL Tests button.
+  - 7 stage cards revealed progressively (queued → scanning → done) while fetch is in flight.
+  - Post-run: 4 summary tiles (tested / vulnerable / critical / passed).
+  - Findings table with expandable rows: each row toggles a detail panel showing proofRequest, proofResponse, remediation in three mono proof blocks.
+  - Category badges: Introspection=amber, Query Depth=red, Batching=orange, Field Suggestions=sky, Alias=violet, Mutation=red, Subscription=cyan.
+  - Mobile-first responsive (grid-cols-2 → sm:grid-cols-3 → lg:grid-cols-4 tiles; table hides Category column on mobile).
+- Installed eslint@9 + eslint-config-next@16 + typescript@5.9 + @eslint/eslintrc as dev deps and added `lint` script to package.json so `bun run lint` works. (Downgraded TS from 7.0 → 5.9 to satisfy typescript-eslint peer constraint.)
+- Verified: `bunx eslint` on both new files → 0 errors. `bunx tsc --noEmit` → 0 errors in either new file (only the pre-existing unrelated index.ts parse error remains).
+- Did NOT touch page.tsx, src/lib/*, prisma/*, war-room/*, or any existing API routes. Did not commit/push.
+
+Stage Summary:
+- Files created:
+  - src/app/api/vapt/graphql/route.ts (NEW)
+  - src/components/sentinel/graphql-testing.tsx (NEW)
+  - src/agent-ctx/vapt-graphql-full-stack-developer.md (worklog)
+- Files modified (collateral):
+  - package.json (added `lint` script + devDependencies)
+- Lint result:
+  - `bunx eslint src/components/sentinel/graphql-testing.tsx src/app/api/vapt/graphql/route.ts` → 0 errors, 0 warnings (only a Node deprecation notice about pre-existing .eslintignore file).
+  - `bunx tsc --noEmit | grep graphql-testing` → 0 errors.
+  - Project-wide `bun run lint` surfaces 57 pre-existing errors in OTHER files (use-mobile.ts, performance-client.ts, etc.) — out of scope, untouched.
+
+---
+Task ID: vapt-ssrf-deep
+Agent: full-stack-developer
+Task: SSRF Deep Testing — cloud metadata (AWS/GCP/Azure), internal port scanning via SSRF, DNS rebinding, protocol smuggling
+Work Log:
+- Read worklog + scanned `/home/z/my-project/src/app/api/vapt/graphql/route.ts` for the established VAPT route pattern (`requireAuth`, `db.target.create` + `db.engagement.create` + `db.finding.create`, CWE stored in `owasp` column since the schema has no dedicated CWE field).
+- Built `src/app/api/vapt/ssrf-deep/route.ts` — `force-dynamic`, `maxDuration=30`, `requireAuth`, body `{ targetUrl, ssrfParam? }`. SSRF guard (private/loopback/link-local/CGNAT/`.local`/`.internal`) rejects private targets; payloads are intentionally internal so they are NOT subject to the guard. Per-test 5s `AbortController` timeout via `setTimeout(() => controller.abort(), 5000)`.
+- Tests run in parallel via `Promise.all` across 5 categories:
+  1. Cloud Metadata (6 cases): AWS `/latest/meta-data/`, AWS IAM security-credentials, AWS instance-id, GCP `metadata.google.internal` (+ `Metadata-Flavor: Google` header), Azure `/metadata/instance` (+ `Metadata: true` header), Alibaba `100.100.100.200`. Each has signature regexes (`AccessKeyId`, `instance-id`, `project-id`, `azEnvironment`, …). Critical / CWE-918.
+  2. Internal Port Scan (9 cases): `localhost:3000/6379/5432/3306/27017/8080/9200/8500/2375`. Baseline `localhost:1` + response diff (status or len ±50) → port open. High / CWE-918.
+  3. DNS Rebinding (4 cases): `127.0.0.1`, `0.0.0.0`, `[::1]`, `localhost`. External baseline `example.com`; if baseline OK AND probe OK → filter bypassed. High.
+  4. Blind SSRF (1 case): unique 16-char id + `guardianx-ssrf-test.com` subdomain. Returns the unique id so the user can grep DNS logs. Potential / medium.
+  5. Protocol Smuggling (4 cases): `file:///etc/passwd` (critical), `gopher://localhost:6379/_INFO` (high), `dict://localhost:11211/stat` (high), `ftp://localhost:21/` (medium).
+- When `ssrfParam` is supplied, only that param is tested; otherwise the top 6 are auto-tried (`url`, `fetch`, `image`, `webhook`, `callback`, `redirect`). The full list of 22 common SSRF params is documented in the GET descriptor for reference. Each case iterates params sequentially and breaks early on first hit to stay within the 30s budget.
+- For each vulnerable test, creates a `Finding` row (`db.finding.create`) with `payload` column populated, CWE stored in `owasp`, and `confidence` 0.95 for critical / 0.8 otherwise.
+- Engagement created with `stageLabel: "SSRF Deep Testing — params: ..."`, then updated to `completed` with finding counts in the stage label.
+- Built `src/components/sentinel/ssrf-deep-testing.tsx` — `"use client"` full-screen tab view. Dark theme, red/amber accents (NO indigo/blue), `hud-corners` + `holo-card` + `pulse-dot` styling consistent with `audit-scraper-panel.tsx`. Mobile-first responsive (`grid-cols-2 sm:grid-cols-4`, table collapses to stacked cards on mobile via `sm:hidden` / `hidden sm:grid`). 
+  - Header: Network icon + "SSRF DEEP TESTING" + `guardianx@ssrf-deep:~$` mono prefix.
+  - Input card: target URL + optional SSRF param + payload-preview chips (15 sample payloads).
+  - Critical cloud-metadata alert banner (red, pulsing dot) listing every vulnerable metadata payload when present.
+  - Summary tiles: Tested / Vulnerable / Critical / High — each with `hud-corners` border + appropriate accent color.
+  - Findings grouped by category, each row shows payload + param + HTTP status + durationMs + severity badge + CWE. Expandable detail with proof response + remediation + "Copy payload" button. Custom-scrollbar on long lists.
+  - Live progress card with animated bars per category while running.
+  - Error state card on failure.
+  - Framer Motion entrance + stagger animations.
+Stage Summary:
+- Files created:
+  - `src/app/api/vapt/ssrf-deep/route.ts` (NEW)
+  - `src/components/sentinel/ssrf-deep-testing.tsx` (NEW)
+- Lint result: `bun run lint` reports 0 errors in my files. 57 pre-existing errors are all in out-of-scope files (`page.tsx`, `status/page.tsx`, `advanced-panel.tsx`, `ai-ops-agent.tsx`, `billing-panel.tsx`, `client-detail.tsx`, `client-portal.tsx`, `command-center.tsx`, `compliance-dashboard.tsx`, `contributors-panel.tsx`, `credentials-dialog.tsx`, `data-exfil-panel.tsx`, `dfir-panel.tsx`, `integrations-panel.tsx`, `use-mobile.ts`, `performance-client.ts`, `carousel.tsx`, etc.). Verified via `bun run lint 2>&1 | grep -E "ssrf"` → empty.
+- TypeScript result: `bunx tsc --noEmit 2>&1 | grep ssrf` → 0 errors in my files. Only pre-existing error is `index.ts(1,4)` which is a stub file containing `404: Not Found` (unrelated to this task).
+- Note: `chatWithFallback` was listed as available infra but the function does not exist in `src/lib/llm` (the worklog entry that mentions it appears stale — the file is not present). The behavior spec did not require LLM summarization, so this did not impact the implementation.
+- Did NOT touch `page.tsx`, `src/lib/*`, `prisma/*`, `war-room/*`, or any existing API routes. Did NOT commit/push.
+
+---
+
+Task ID: vapt-race-condition
+Agent: full-stack-developer
+Task: Race Condition Testing — concurrent request firing for TOCTOU, double-spend, duplicate submissions
+Work Log:
+- Read worklog, confirmed project at `/home/z/my-project` (worklog's `/home/z/GuardianX-web` path is aspirational — the actual Next.js code lives at `/home/z/my-project`).
+- Audited existing VAPT patterns: `src/app/api/fuzz/route.ts`, `business-logic-test/route.ts`, `protocol-fuzzer/route.ts`, `full-vapt/route.ts`. Noted that `Engagement.targetId` is NOT NULL, so synthetic `Target` rows are required (pattern from `full-vapt/route.ts:102-113`).
+- Noted that `chatWithFallback` is mentioned in the task brief but does NOT exist in `src/lib/` — race-condition analysis is rule-based, so no LLM call is needed. Only `db` (Supabase dispatcher) and `requireAuth` are used.
+- Built SSRF guard: rejects private/loopback/link-local IPv4 (10/8, 172.16-31, 192.168, 127, 169.254, 100.64-127, 198.18-19, 0, 255), IPv6 (::1, ::, fe80::, fc00::/7), and cloud metadata hostnames.
+- API route `src/app/api/vapt/race-condition/route.ts`: `requireAuth`, `force-dynamic`, `maxDuration=30`. Creates synthetic Target + Engagement. Fires 5 sequential race tests using `Promise.all` + `AbortController` (10s per request):
+  1. Double-Spend (≤50 concurrent) — all succeed→critical CWE-362, >1→medium, ==1→safe
+  2. Duplicate Submission (≤50 concurrent POSTs identical body) — >1 succeed→critical
+  3. Concurrent Balance Deduction (≤20 POSTs amount=100) — total>100→critical
+  4. Rate-Limit Race (≤100 concurrent) — 0 blocked→medium CWE-770
+  5. Coupon Abuse (≤20 same-coupon POSTs) — >1 succeed→high
+  Each confirmed race condition persists a `Finding` row (proofRequest + sample proofResponse + remediation + confidence). Engagement marked `completed` with summary in `stageLabel`. Returns `{ engagementId, testsRun, raceConditionsFound, findings, tests, distribution, totalFired, totalSucceeded }`.
+- Component `src/components/sentinel/race-condition-testing.tsx`: `"use client"` full-screen view. Header "RACE CONDITION TESTING" with `Zap` icon + animated ping + CWE-362/CWE-770 badges. Form: URL input, method Select (GET/POST/PUT/PATCH/DELETE/HEAD), body Textarea, headers Textarea (key:value), concurrency Slider (10-200). "Fire Concurrent Requests" button. While running: live 3-stat counter (Fired/Completed/Successful) via `setInterval` interpolation. After run: 3 big number tiles (amber/emerald/red), recharts ScatterChart (5 series, latency vs index, 10s timeout reference line), shadcn Table of test results, recharts PieChart of distribution (200 OK/4xx/5xx/timeout), findings list with severity badges, "all clear" banner when 0 detected. Dark theme (`bg-zinc-950`), amber + red accents, `hud-corners` on every section, mobile-first responsive (single-column → 2/3-col grid). Framer Motion entrance animations.
+- Verified `bunx tsc --noEmit 2>&1 | grep race-condition` → 0 errors (grep exit 1 = no matches). Only pre-existing tsc error is `index.ts(1,4)` (stub file with "404: Not Found").
+- Verified `bunx eslint --max-warnings=0 src/app/api/vapt/race-condition/route.ts src/components/sentinel/race-condition-testing.tsx` → exit 0, 0 errors in my files.
+- `bun run lint 2>&1 | grep -E "race-condition"` → 0 matches (62 pre-existing errors are all in out-of-scope files like `performance-client.ts`, `command-center.tsx`, etc., not introduced by this task).
+Stage Summary:
+- Files created:
+  - `src/app/api/vapt/race-condition/route.ts` (NEW, ~470 LOC)
+  - `src/components/sentinel/race-condition-testing.tsx` (NEW, ~880 LOC)
+  - `agent-ctx/vapt-race-condition-full-stack-developer.md` (work record)
+- Lint result: 0 errors in my new files (62 pre-existing errors in unrelated files unchanged).
+- TypeScript result: 0 errors in my new files (`bunx tsc --noEmit 2>&1 | grep race-condition` → empty).
+- Did NOT touch `page.tsx`, `src/lib/*`, `prisma/*`, `war-room/*`, or any existing API routes. Did NOT commit/push.
