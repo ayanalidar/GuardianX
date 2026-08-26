@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
 import { CookieBanner } from "@/components/sentinel/cookie-banner";
+import { generateWatermarkComment } from "@/lib/holographic-watermark";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -85,6 +86,20 @@ export default function RootLayout({
         </ThemeProvider>
         <Toaster />
         <CookieBanner />
+        {/* GuardianX holographic watermark — cryptographic proof this page was
+            rendered by the real GuardianX server. Verify at /verify.
+            Format: guardianx:attested:<ISO ts>:<userId|anonymous>:<HMAC-SHA256 hash>. */}
+        <span
+          aria-hidden="true"
+          // Rendered as a hidden span containing the watermark comment so it
+          // survives React hydration. The actual `<!-- ... -->` HTML comment
+          // is injected via `dangerouslySetInnerHTML` so React doesn't strip
+          // it as an unknown DOM node.
+          dangerouslySetInnerHTML={{
+            __html: generateWatermarkComment(),
+          }}
+          style={{ display: "none" }}
+        />
       </body>
     </html>
   );

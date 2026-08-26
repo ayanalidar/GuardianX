@@ -80,6 +80,11 @@ import {
   ShieldAlert,
   ShieldCheck,
   ShieldHalf,
+  Clock,
+  Swords,
+  Lock,
+  Bug,
+  AlertTriangle,
   Sparkles,
   Users,
   UserCog,
@@ -96,8 +101,20 @@ import { AgentX } from "@/components/sentinel/agent-x";
 import { PredictiveForecast } from "@/components/sentinel/predictive-forecast";
 import { QuantumScanner } from "@/components/sentinel/quantum-scanner";
 import { ThreatConstellation } from "@/components/sentinel/threat-constellation";
+import { AdversarialAI } from "@/components/sentinel/adversarial-ai";
+import { AptPersonaEngine } from "@/components/sentinel/apt-persona-engine";
+import { TimeTravelDebugger } from "@/components/sentinel/time-travel-debugger";
+import { VRThreatWalkthrough } from "@/components/sentinel/vr-threat-walkthrough";
+import { MovingTargetDefense } from "@/components/sentinel/moving-target-defense";
+import { CanaryTokens } from "@/components/sentinel/canary-tokens";
+import { PromptInjectionScanner } from "@/components/sentinel/prompt-injection-scanner";
+import { DeepfakeSimulator } from "@/components/sentinel/deepfake-simulator";
+import { PayPerVuln } from "@/components/sentinel/pay-per-vuln";
+import { SecurityCommons } from "@/components/sentinel/security-commons";
+import { ZkProofs } from "@/components/sentinel/zk-proofs";
+import { SelfSecurityDashboard } from "@/components/sentinel/self-security-dashboard";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings" | "modules" | "forecast" | "quantum" | "constellation" | "agent-x";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings" | "modules" | "forecast" | "quantum" | "constellation" | "agent-x" | "adversarial" | "apt-persona" | "time-travel" | "vr-walkthrough" | "moving-target" | "canary" | "prompt-injection" | "deepfake" | "pay-per-vuln" | "commons" | "zk-proofs" | "self-security";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -352,6 +369,40 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
     [toast]
   );
 
+  // ── Agent X callbacks ────────────────────────────────────────────────
+  // PERF: these were previously inline closures passed to <AgentX>, which
+  // meant AgentX re-rendered on every parent re-render (every 1Hz clock
+  // tick, every patch-list refresh, etc.). Memoizing them + AgentX's own
+  // React.memo wrapper means AgentX now only re-renders when `tab`,
+  // `currentUser`, `codebases`, or `patches` actually change.
+  const handleAgentClose = useCallback(() => setTab("dashboard"), []);
+  const handleAgentNavigate = useCallback((t: string) => setTab(t as Tab), []);
+  const handleAgentScan = useCallback(
+    (name: string) => {
+      const cb = codebases.find((c) =>
+        c.name.toLowerCase().includes(name.toLowerCase())
+      );
+      if (cb) handleScan(cb);
+    },
+    [codebases, handleScan]
+  );
+  const handleAgentApprovePatch = useCallback(
+    (id: string) => {
+      const p = patches.find(
+        (x) => x.patch_id === id || x.patch_id.endsWith(id)
+      );
+      if (p) handleSelectPatch(p);
+    },
+    [patches, handleSelectPatch]
+  );
+  const handleAgentSearch = useCallback((q: string) => {
+    setQuery(q);
+    setTab("patches");
+  }, []);
+  const handleAgentOpenWarRoom = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("guardianx:open-war-room"));
+  }, []);
+
   // ── derived ───────────────────────────────────────────────────────────
   const visiblePatches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -433,6 +484,20 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             <NavGroup label="AI Assistant" color="emerald">
               <NavItem active={tab === "agent-x"} onClick={() => { setTab("agent-x"); setSidebarOpen(false); }} icon={Bot} label="Agent X" iconColor="text-emerald-400" accentColor="emerald" isNew />
             </NavGroup>
+            <NavGroup label="Innovations" color="cyan">
+              <NavItem active={tab === "adversarial"} onClick={() => { setTab("adversarial"); setSidebarOpen(false); }} icon={ShieldAlert} label="Adversarial AI" iconColor="text-red-400" accentColor="red" isNew />
+              <NavItem active={tab === "apt-persona"} onClick={() => { setTab("apt-persona"); setSidebarOpen(false); }} icon={Swords} label="APT Persona Engine" iconColor="text-amber-400" accentColor="amber" isNew />
+              <NavItem active={tab === "time-travel"} onClick={() => { setTab("time-travel"); setSidebarOpen(false); }} icon={Clock} label="Time-Travel Debugger" iconColor="text-cyan-400" accentColor="cyan" isNew />
+              <NavItem active={tab === "vr-walkthrough"} onClick={() => { setTab("vr-walkthrough"); setSidebarOpen(false); }} icon={Orbit} label="VR Threat Walkthrough" iconColor="text-violet-400" accentColor="violet" isNew />
+              <NavItem active={tab === "moving-target"} onClick={() => { setTab("moving-target"); setSidebarOpen(false); }} icon={ShieldCheck} label="Moving Target Defense" iconColor="text-emerald-400" accentColor="emerald" isNew />
+              <NavItem active={tab === "canary"} onClick={() => { setTab("canary"); setSidebarOpen(false); }} icon={Radar} label="Canary Tokens" iconColor="text-amber-400" accentColor="amber" isNew />
+              <NavItem active={tab === "prompt-injection"} onClick={() => { setTab("prompt-injection"); setSidebarOpen(false); }} icon={Bug} label="Prompt Injection Scanner" iconColor="text-red-400" accentColor="red" isNew />
+              <NavItem active={tab === "deepfake"} onClick={() => { setTab("deepfake"); setSidebarOpen(false); }} icon={AlertTriangle} label="Deepfake Simulator" iconColor="text-rose-400" accentColor="rose" isNew />
+              <NavItem active={tab === "pay-per-vuln"} onClick={() => { setTab("pay-per-vuln"); setSidebarOpen(false); }} icon={CreditCard} label="Pay-Per-Vuln" iconColor="text-emerald-400" accentColor="emerald" isNew />
+              <NavItem active={tab === "commons"} onClick={() => { setTab("commons"); setSidebarOpen(false); }} icon={Users} label="Security Commons" iconColor="text-cyan-400" accentColor="cyan" isNew />
+              <NavItem active={tab === "zk-proofs"} onClick={() => { setTab("zk-proofs"); setSidebarOpen(false); }} icon={Lock} label="ZK Proofs" iconColor="text-violet-400" accentColor="violet" isNew />
+              <NavItem active={tab === "self-security"} onClick={() => { setTab("self-security"); setSidebarOpen(false); }} icon={Shield} label="Self-Security" iconColor="text-emerald-400" accentColor="emerald" isNew />
+            </NavGroup>
             {currentUser?.role === "admin" && (
               <NavGroup label="Administration" color="emerald">
                 <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" accentColor="emerald" />
@@ -500,6 +565,18 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "constellation" ? "neon-emerald text-emerald-300" :
                   tab === "modules" ? "neon-amber text-amber-300" :
                   tab === "agent-x" ? "neon-emerald text-emerald-300" :
+                  tab === "adversarial" ? "neon-red text-red-300" :
+                  tab === "apt-persona" ? "neon-amber text-amber-300" :
+                  tab === "time-travel" ? "neon-cyan text-cyan-300" :
+                  tab === "vr-walkthrough" ? "neon-violet text-violet-300" :
+                  tab === "moving-target" ? "neon-emerald text-emerald-300" :
+                  tab === "canary" ? "neon-amber text-amber-300" :
+                  tab === "prompt-injection" ? "neon-red text-red-300" :
+                  tab === "deepfake" ? "neon-rose text-rose-300" :
+                  tab === "pay-per-vuln" ? "neon-emerald text-emerald-300" :
+                  tab === "commons" ? "neon-cyan text-cyan-300" :
+                  tab === "zk-proofs" ? "neon-violet text-violet-300" :
+                  tab === "self-security" ? "neon-emerald text-emerald-300" :
                   tab === "billing" ? "neon-emerald text-emerald-300" :
                   tab === "settings" ? "neon-emerald text-emerald-300" :
                   tab === "user-activity" ? "neon-emerald text-emerald-300" :
@@ -517,6 +594,18 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "constellation" ? "3D Threat Constellation" :
                    tab === "modules" ? "All Modules" :
                    tab === "agent-x" ? "Agent X" :
+                   tab === "adversarial" ? "Adversarial AI Self-Attack" :
+                   tab === "apt-persona" ? "APT Persona Engine" :
+                   tab === "time-travel" ? "Time-Travel Posture Debugger" :
+                   tab === "vr-walkthrough" ? "VR Threat Walkthrough" :
+                   tab === "moving-target" ? "Moving Target Defense" :
+                   tab === "canary" ? "Cryptographic Canary Tokens" :
+                   tab === "prompt-injection" ? "AI Prompt Injection Scanner" :
+                   tab === "deepfake" ? "Deepfake Phishing Simulator" :
+                   tab === "pay-per-vuln" ? "Pay-Per-Vulnerability" :
+                   tab === "commons" ? "Security Commons" :
+                   tab === "zk-proofs" ? "Zero-Knowledge Proofs" :
+                   tab === "self-security" ? "GuardianX Self-Security" :
                    tab === "patches" ? "Patch Review Queue" :
                    tab === "codebases" ? "Codebase Library" :
                    tab === "redagent" ? "RedAgent VAPT Engine" :
@@ -592,26 +681,39 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             ) : tab === "agent-x" ? (
               <AgentX
                 open={true}
-                onClose={() => setTab("dashboard")}
+                onClose={handleAgentClose}
                 currentTab={tab}
                 currentUser={currentUser}
-                onNavigate={(t) => setTab(t as Tab)}
-                onScan={(name) => {
-                  const cb = codebases.find((c) => c.name.toLowerCase().includes(name.toLowerCase()));
-                  if (cb) handleScan(cb);
-                }}
-                onApprovePatch={(id) => {
-                  const p = patches.find((x) => x.patch_id === id || x.patch_id.endsWith(id));
-                  if (p) handleSelectPatch(p);
-                }}
-                onSearch={(q) => {
-                  setQuery(q);
-                  setTab("patches");
-                }}
-                onOpenWarRoom={() => {
-                  window.dispatchEvent(new CustomEvent("guardianx:open-war-room"));
-                }}
+                onNavigate={handleAgentNavigate}
+                onScan={handleAgentScan}
+                onApprovePatch={handleAgentApprovePatch}
+                onSearch={handleAgentSearch}
+                onOpenWarRoom={handleAgentOpenWarRoom}
               />
+            ) : tab === "adversarial" ? (
+              <AdversarialAI />
+            ) : tab === "apt-persona" ? (
+              <AptPersonaEngine />
+            ) : tab === "time-travel" ? (
+              <TimeTravelDebugger />
+            ) : tab === "vr-walkthrough" ? (
+              <VRThreatWalkthrough />
+            ) : tab === "moving-target" ? (
+              <MovingTargetDefense />
+            ) : tab === "canary" ? (
+              <CanaryTokens />
+            ) : tab === "prompt-injection" ? (
+              <PromptInjectionScanner />
+            ) : tab === "deepfake" ? (
+              <DeepfakeSimulator />
+            ) : tab === "pay-per-vuln" ? (
+              <PayPerVuln />
+            ) : tab === "commons" ? (
+              <SecurityCommons />
+            ) : tab === "zk-proofs" ? (
+              <ZkProofs />
+            ) : tab === "self-security" ? (
+              <SelfSecurityDashboard />
             ) : (
               <>
                 <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>

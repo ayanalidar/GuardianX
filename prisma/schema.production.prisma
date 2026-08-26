@@ -246,8 +246,34 @@ model HoneypotHit {
   endpoint    String
   ipAddress   String
   userAgent   String
-  method      String
+  method      String   @default("GET")
   timestamp   DateTime @default(now())
+  // ── self-security-extend ────────────────────────────────────────────────
+  // Fields added for the self-security task (Honeypot-as-Defense innovation).
+  payload     String   @default("")
+  severity    String   @default("high")
+  detectedAt  DateTime @default(now())
+  blockedAt   DateTime?
+  status      String   @default("logged")
+
+  @@index([ipAddress])
+  @@index([detectedAt])
+}
+
+// ── Self-Security: Runtime Integrity Incidents ───────────────────────────────
+// Created whenever the middleware's runtime integrity check detects that one
+// or more critical source files have been tampered with. Mirrors the local
+// prisma/schema.prisma definition — do NOT diverge.
+model IntegrityIncident {
+  id            String   @id @default(cuid())
+  tamperedFiles String
+  detectedAt    DateTime @default(now())
+  resolvedAt    DateTime?
+  status        String   @default("open")
+  notes         String?
+
+  @@index([detectedAt])
+  @@index([status])
 }
 
 model WebhookConfig {
@@ -480,6 +506,34 @@ model Subscription {
   updatedAt            DateTime @updatedAt
 }
 
+// ── Deepfake Phishing Simulator ──────────────────────────────────────────────
+// Records each deepfake phishing simulation sent to an employee. The target
+// receives an email linking to /phishing/sim?id=... — when they click, the
+// page marks the row as `clicked: true, clickedAt: now()` and plays a TTS
+// audio of the phishing message (CEO impersonation). After 5 seconds the page
+// reveals "This was a simulation" and offers a 2-minute training redirect.
+// Tracked fields: sentAt (email dispatched), clickedAt (target landed on the
+// page), trainedAt (target completed training). status flows sent→clicked→
+// trained | dismissed. campaignId is optional (for grouping batches).
+model PhishingSimulation {
+  id           String    @id @default(cuid())
+  targetEmail  String
+  targetName   String
+  personaName  String    // "CEO Ayan Ali"
+  personaRole  String    // "Founder & CEO"
+  message      String    // the phishing message (also spoken by TTS)
+  audioUrl     String?   // generated TTS audio (data URL) — currently unused server-side
+  sentAt       DateTime  @default(now())
+  clickedAt    DateTime?
+  clicked      Boolean   @default(false)
+  trainedAt    DateTime?
+  status       String    @default("sent") // sent | clicked | trained | dismissed
+  campaignId   String?
+
+  @@index([targetEmail])
+  @@index([status])
+}
+
 // ── WebsiteScan (homepage "Scan Your Website For Free") ──────────────────────
 // Records every public scan run by a visitor from the homepage ScanWidget.
 // Each scan runs real HTTP recon (TLS/headers/SSL/security.txt/robots.txt
@@ -508,4 +562,140 @@ model WebsiteScan {
   @@index([createdAt])
   @@index([status])
   @@index([email])
+}
+
+// ── Moving Target Defense (innovation: auto-rotating secrets) ──────────────
+// Each row is a tracked secret (API key, DB URL, JWT secret, OAuth token)
+// whose value is regenerated on a schedule so any exfiltrated copy goes
+// stale within hours. `currentValue` is stored as-is (encryption at rest
+// is a future enhancement — the rotation logic itself is the defense).
+// `previousValue` is kept briefly for rollback. The `nextRotation` index
+// lets the sweep endpoint find every due secret in O(log n).
+model SecretRotation {
+  id                    String   @id @default(cuid())
+  name                  String   // e.g. "STRIPE_SECRET_KEY", "DATABASE_URL"
+  type                  String   // api_key | database_url | jwt_secret | oauth_token
+  currentValue          String   // the current value (encrypted at rest — store as-is for now)
+  previousValue         String?  // the previous value (for rollback)
+  rotationIntervalHours Int      @default(24)
+  lastRotated           DateTime @default(now())
+  nextRotation          DateTime
+  autoRotate            Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([nextRotation])
+}
+
+model RotationLog {
+  id          String   @id @default(cuid())
+  secretId    String
+  secretName  String
+  rotatedAt   DateTime @default(now())
+  success     Boolean
+  error       String?
+}
+
+// ── Cryptographic Canary Tokens (innovation: per-data leak tracing) ────────
+// Every sensitive resource (finding, credential, client data export, API
+// key) gets a unique canary token embedded invisibly. If ANY token is
+// observed in the wild (dark web, GitHub gist, pastebin, …), this endpoint
+// knows exactly which data path leaked it. Tokens are prefixed
+// `gx_canary_` + 16 random bytes hex so they're trivially greppable.
+model CanaryToken {
+  id            String   @id @default(cuid())
+  token         String   @unique // the actual canary string (crypto.randomBytes(16).hex)
+  resourceType  String   // finding | credential | client_data | api_key
+  resourceId    String   // the ID of the resource this token protects
+  label         String   // human-readable: "Customer DB export — CyberShield"
+  createdAt     DateTime @default(now())
+  triggeredAt   DateTime?
+  triggeredBy   String?  // IP / user agent / source
+  triggerSource String?  // "dark_web" | "github_gist" | "pastebin" | etc.
+  isActive      Boolean  @default(true)
+
+  @@index([token])
+  @@index([resourceId])
+}
+
+// ── Pay-Per-Vulnerability Ledger ─────────────────────────────────────────
+// Each finding found by GuardianX creates a ledger entry with the amount
+// the customer owes (in paise; ₹1 = 100 paise). Entries transition through
+// `owed → invoiced → paid` (or `waived` if the finding is disputed).
+model FindingsLedger {
+  id           String   @id @default(cuid())
+  userId       String
+  findingId    String
+  severity     String   // critical | high | medium | low | info
+  amount       Int      // in paise (₹1 = 100 paise)
+  scanId       String?
+  codebaseId   String?
+  status       String   @default("owed") // owed | invoiced | paid | waived
+  createdAt    DateTime @default(now())
+  invoicedAt   DateTime?
+
+  @@index([userId, status])
+  @@index([createdAt])
+}
+
+// ── Open-Source Security Commons ───────────────────────────────────────────
+// Community-contributed detection rules. Researchers submit regex/AST
+// patterns; GuardianX runs them during scans; authors earn a cut on hits.
+model CommunityRule {
+  id            String   @id @default(cuid())
+  name          String
+  description   String
+  pattern       String   // regex or AST pattern
+  severity      String   // critical | high | medium | low | info
+  cwe           String?
+  language      String
+  authorId      String
+  authorName    String
+  authorEmail   String
+  upvotes       Int      @default(0)
+  downloads     Int      @default(0)
+  findingsCount Int      @default(0)
+  earnings      Int      @default(0) // in paise
+  version       Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isActive      Boolean  @default(true)
+
+  @@index([authorId])
+  @@index([upvotes])
+}
+
+model RuleUpvote {
+  id        String   @id @default(cuid())
+  ruleId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([ruleId, userId])
+}
+
+// ── DetectionRule (Adversarial AI Self-Attack) ─────────────────────────────
+// Auto-generated detection rules produced by the Adversarial AI loop. Each
+// rule represents a blind spot GuardianX's existing scan logic missed — the
+// AI wrote this rule to close the gap. Stored patterns are either regex
+// (string) or a serialized AST matcher description; the scan pipeline reads
+// them at runtime. Manually-added rules also live here (autoGenerated=false).
+model DetectionRule {
+  id            String   @id @default(cuid())
+  name          String
+  description   String
+  pattern       String   // regex or AST pattern (string-serialized)
+  severity      String   // critical | high | medium | low
+  cwe           String?
+  language      String   // javascript | python | go | etc
+  autoGenerated Boolean  @default(false)
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isActive      Boolean  @default(true)
+  hitsCount     Int      @default(0) // how many findings this rule has produced
+
+  @@index([autoGenerated])
+  @@index([isActive])
+  @@index([language, severity])
 }

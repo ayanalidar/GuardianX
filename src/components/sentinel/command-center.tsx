@@ -206,6 +206,15 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
     <SignalBusProvider>
     <div className="relative">
       {/* ═══ CIRCUIT-BOARD BACKGROUND (covers whole Command Center) ═══ */}
+      {/* PERF: only mount while neither the War Room nor the Immersive View
+          fullscreen overlay is open — those overlays mount their *own*
+          CircuitBoard, so keeping this one alive at the same time would
+          leave two rAF loops + canvas pipelines burning CPU/GPU. The
+          CircuitBoard already pauses when off-screen (IntersectionObserver)
+          and when the tab is hidden (visibilitychange), but a fullscreen
+          overlay sits on top of the page rather than scrolling it out of
+          view, so IO can't help us here. */}
+      {!warRoom && !immersiveOpen && (
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
@@ -216,6 +225,7 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
             header + KPI strip get the full visual. */}
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/0 via-zinc-950/10 to-zinc-950/50" />
       </div>
+      )}
     <div className="space-y-4">
       {/* ═══ FUTURISTIC HEADER ═══ */}
       <div className="holo-card-sharp hud-corners relative overflow-hidden p-5">

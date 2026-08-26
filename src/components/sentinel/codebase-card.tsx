@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,7 +22,11 @@ interface CodebaseCardProps {
   busy?: boolean;
 }
 
-export function CodebaseCard({
+// Memoize so the parent re-rendering on unrelated state (search query typing,
+// sidebar toggle, periodic patch-list refresh) doesn't re-render every
+// codebase card. The callbacks are stable (useCallback in ConsoleView) and
+// `codebase` is per-item; only `busy` toggles globally during scans.
+export const CodebaseCard = memo(function CodebaseCard({
   codebase,
   onScan,
   onView,
@@ -97,4 +102,4 @@ export function CodebaseCard({
       </Card>
     </motion.div>
   );
-}
+});

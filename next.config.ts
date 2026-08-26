@@ -22,6 +22,19 @@ const nextConfig: NextConfig = {
       "react-markdown",
     ],
   },
+  // ── perf-optimize: strip console.* calls in production ─────────────────────
+  // The codebase uses `console.log`/`console.info`/`console.debug` for dev
+  // diagnostics (especially in the canvas + socket + agent-x code paths,
+  // which fire many times per second). In production these calls still cost
+  // a function-call + serialization per invocation and pollute the devtools
+  // console. `removeConsole` strips them at compile time. `console.error`
+  // and `console.warn` are preserved so real failures still surface.
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? { exclude: ["error", "warn"] }
+        : false,
+  },
 };
 
 export default nextConfig;

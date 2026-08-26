@@ -65,6 +65,7 @@
  */
 
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -289,7 +290,12 @@ const QUICK_ACTIONS: QuickAction[] = [
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function AgentX({
+// PERFORMANCE: `React.memo` wrapper so AgentX doesn't re-render on every
+// parent re-render (e.g. the 1Hz live clock in ConsoleView, the periodic
+// patch-list refresh, sidebar toggles). The props are stable in ConsoleView
+// (all callbacks are `useCallback`-wrapped; `currentTab`, `currentUser`, and
+// `open` are scalar). Only meaningful prop changes trigger a re-render.
+function AgentXInner({
   currentTab,
   currentUser,
   onNavigate,
@@ -1723,5 +1729,7 @@ function buildPostureSummary(data: AgentXBriefing): string {
   }
   return `Security posture is currently ${score}/100 (grade ${grade}).`;
 }
+
+export const AgentX = memo(AgentXInner);
 
 export default AgentX;
