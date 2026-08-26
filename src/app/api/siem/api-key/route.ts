@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { createHash, randomUUID } from "node:crypto";
+import { sha256hex, randomUUID } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -28,13 +28,13 @@ interface StoredKey {
   isActive: boolean;
 }
 
-function hashKey(plaintext: string): string {
-  return createHash("sha256").update(plaintext).digest("hex");
+async function hashKey(plaintext: string): Promise<string> {
+  return sha256hex(plaintext);
 }
 
-function makePlaintext(): string {
+async function makePlaintext(): Promise<string> {
   // 32 bytes of randomness, hex-encoded, with a recognizable prefix.
-  const rand = createHash("sha256").update(randomUUID() + Math.random()).digest("hex");
+  const rand = await sha256hex(randomUUID() + Math.random());
   return KEY_PREFIX + rand.slice(0, 40);
 }
 
@@ -70,8 +70,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const plaintext = makePlaintext();
-    const keyHash = hashKey(plaintext);
+    const plaintext = await makePlaintext();
+    const keyHash = await hashKey(plaintext);
     const keyPrefix = plaintext.slice(0, 12);
     const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : "default";
 
@@ -220,7 +220,7 @@ export async function validateClientApiKey(
 ): Promise<{ keyId: string; clientId: string; clientName?: string } | null> {
   if (!headerValue || !headerValue.startsWith(KEY_PREFIX)) return null;
 
-  const keyHash = hashKey(headerValue);
+  const keyHash = await hashKey(headerValue);
 
   let rows: Array<Record<string, unknown>> = [];
   try {

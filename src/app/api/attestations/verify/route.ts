@@ -71,7 +71,7 @@ export async function POST(req: Request) {
   }
 
   if (internalPatchId) {
-    const result = verifyAttestationForPatch(rows, internalPatchId);
+    const result = await verifyAttestationForPatch(rows, internalPatchId);
     return NextResponse.json({
       ...result,
       targetPatchId: patchId,
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const result = verifyAttestationChain(rows);
+  const result = await verifyAttestationChain(rows);
   return NextResponse.json(result);
 }
 
@@ -107,6 +107,6 @@ export async function GET(req: Request) {
     });
   }
 
-  const result = verifyAttestationChain(rows);
+  const result = await verifyAttestationChain(rows);
   return NextResponse.json(result);
 }

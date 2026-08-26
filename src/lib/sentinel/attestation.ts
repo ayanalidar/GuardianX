@@ -22,7 +22,7 @@
 //    returns whether every link is intact, the chain length, and (if broken)
 //    the patchId at which tampering was first detected.
 
-import { createHash } from "node:crypto";
+import { sha256hex } from "@/lib/crypto";
 
 // Genesis prevHash — the seed of the chain.
 export const GENESIS_PREV_HASH = "0";
@@ -74,15 +74,18 @@ export interface ChainVerification {
 // Compute the canonical hash for an attestation.
 // Mirrors the formula used by `/api/patches/[id]/approve` so existing
 // attestations verify without re-issuance.
-export function computeAttestationHash(
+//
+// ASYNC: backed by the Web Crypto API (`crypto.subtle.digest`). The hash
+// output is lowercase hex — identical to the previous Buffer-based
+// `digest("hex")` output, so existing attestations verify byte-for-byte
+// against the recomputed value.
+export async function computeAttestationHash(
   prevHash: string,
   patchInternalId: string,
   patchedCodeHash: string,
   timestamp: string
-): string {
-  return createHash("sha256")
-    .update(prevHash + patchInternalId + patchedCodeHash + timestamp)
-    .digest("hex");
+): Promise<string> {
+  return sha256hex(prevHash + patchInternalId + patchedCodeHash + timestamp);
 }
 
 // Parse the JSON `data` field of an attestation, defensively.
@@ -114,7 +117,7 @@ export function attestationTimestamp(
 // detected (if any).
 //
 // Accepts the raw rows from `db.attestation.findMany({ orderBy: { createdAt: "asc" } })`.
-export function verifyAttestationChain(rows: AttestationRow[]): ChainVerification {
+export async function verifyAttestationChain(rows: AttestationRow[]): Promise<ChainVerification> {
   const links: ChainLink[] = [];
   let prevHash = GENESIS_PREV_HASH;
   let tamperedAt: string | null = null;
@@ -129,7 +132,7 @@ export function verifyAttestationChain(rows: AttestationRow[]): ChainVerificatio
         ? row.createdAt.toISOString()
         : String(row.createdAt ?? "")
     );
-    const recomputedHash = computeAttestationHash(
+    const recomputedHash = await computeAttestationHash(
       row.prevHash,
       row.patchId,
       patchedCodeHash,
@@ -181,10 +184,10 @@ export function verifyAttestationChain(rows: AttestationRow[]): ChainVerificatio
 
 // Verify just up to (and including) a specific patchId. Used by the public
 // verify API to answer "is this specific patch's attestation still intact?".
-export function verifyAttestationForPatch(
+export async function verifyAttestationForPatch(
   rows: AttestationRow[],
   patchInternalId: string
-): ChainVerification & { found: boolean } {
+): Promise<ChainVerification & { found: boolean }> {
   const idx = rows.findIndex((r) => r.patchId === patchInternalId);
   if (idx === -1) {
     return {
@@ -200,7 +203,7 @@ export function verifyAttestationForPatch(
     };
   }
   const sub = rows.slice(0, idx + 1);
-  const v = verifyAttestationChain(sub);
+  const v = await verifyAttestationChain(sub);
   return { ...v, found: true };
 }
 
@@ -208,16 +211,14 @@ export function verifyAttestationForPatch(
 // Used by the approve route to ensure new attestations use the canonical
 // formula (the existing approve route already does this; this helper exists
 // so other callers — e.g. a future "re-attest" endpoint — stay consistent).
-export function issueAttestationHash(
+export async function issueAttestationHash(
   prevHash: string,
   patchInternalId: string,
   patchedCode: string,
   approvedAtIso: string
-): { hash: string; patchedCodeHash: string; data: string } {
-  const patchedCodeHash = createHash("sha256")
-    .update(patchedCode || "")
-    .digest("hex");
-  const hash = computeAttestationHash(
+): Promise<{ hash: string; patchedCodeHash: string; data: string }> {
+  const patchedCodeHash = await sha256hex(patchedCode || "");
+  const hash = await computeAttestationHash(
     prevHash,
     patchInternalId,
     patchedCodeHash,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { createHash, randomUUID } from "node:crypto";
+import { sha256hex, randomUUID } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +25,8 @@ interface StoredAgent {
   config: Record<string, unknown>;
 }
 
-function hashToken(plaintext: string): string {
-  return createHash("sha256").update(plaintext).digest("hex");
+async function hashToken(plaintext: string): Promise<string> {
+  return sha256hex(plaintext);
 }
 
 // POST /api/siem/agent - register a new SIEM agent.
@@ -79,8 +79,8 @@ export async function POST(req: Request) {
     }
 
     const agentId = randomUUID();
-    const agentToken = "gx_agent_" + createHash("sha256").update(agentId + Math.random()).digest("hex").slice(0, 40);
-    const tokenHash = hashToken(agentToken);
+    const agentToken = "gx_agent_" + (await sha256hex(agentId + Math.random())).slice(0, 40);
+    const tokenHash = await hashToken(agentToken);
     const agentVersion = typeof body.agentVersion === "string" ? body.agentVersion : "1.0.0";
     const config = body.config && typeof body.config === "object" ? body.config : {};
 

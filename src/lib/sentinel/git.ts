@@ -93,7 +93,7 @@ export async function cloneRepoWithCredential(
   const cred = await db.credential.findUnique({ where: { id: credentialId } });
   if (!cred) throw new Error("Credential not found");
 
-  const decrypted = decryptSecret({
+  const decrypted = await decryptSecret({
     cipher: cred.secretCipher,
     iv: cred.secretIv,
     tag: cred.secretTag,

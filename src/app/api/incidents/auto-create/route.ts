@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { randomUUID, sha1hex } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -38,9 +39,6 @@ export async function POST(req: Request) {
   if (!auth.ok) return auth.response;
 
   try {
-    const { createHash } = await import("node:crypto");
-    const { randomUUID } = await import("node:crypto");
-
     // 1. Fetch the latest anomaly detection results from ourselves.
     // Server-to-server fetch uses localhost:3000 (same as full-vapt pipeline).
     const anomalyRes = await fetch("http://localhost:3000/api/anomaly-detection", {
@@ -90,7 +88,7 @@ export async function POST(req: Request) {
       // 4. Deduplicate: synthesize a stable sourceId from the anomaly title so
       //    repeated runs do not file the same incident twice. We only skip if
       //    there is still an OPEN-ish incident for this sourceId.
-      const sourceId = createHash("sha1").update(anomaly.title).digest("hex").substring(0, 16);
+      const sourceId = (await sha1hex(anomaly.title)).substring(0, 16);
 
       let existing: Record<string, unknown> | null = null;
       try {

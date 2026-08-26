@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/db";
 import { getAuthenticatedUser, getVisibleClientIds } from "@/lib/ownership";
 import { sanitizeText } from "@/lib/sanitize";
+import { randomUUID } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -146,7 +147,6 @@ export async function POST(req: Request) {
     if (!access.ok) return access.response;
   }
 
-  const { randomUUID } = await import("node:crypto");
   const id = randomUUID();
 
   const { data, error } = await supabase.from("Codebase").insert({

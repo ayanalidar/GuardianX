@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";

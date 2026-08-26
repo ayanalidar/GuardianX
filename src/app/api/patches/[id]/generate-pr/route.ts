@@ -74,7 +74,7 @@ export async function POST(req: Request,
       dir = await mkdtemp(join(tmpdir(), "guardianx-pr-"));
 
       // Decrypt the token
-      const decrypted = decryptSecret({
+      const decrypted = await decryptSecret({
         cipher: matchingCred.secretCipher,
         iv: matchingCred.secretIv,
         tag: matchingCred.secretTag,

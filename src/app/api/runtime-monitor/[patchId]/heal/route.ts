@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/auth";
+import { sha256hex } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -36,19 +37,16 @@ export async function POST(req: Request,
   }
 
   // Create attestation for the healing
-  const { createHash } = await import("node:crypto");
   const latestAtt = await db.attestation.findFirst({ orderBy: { createdAt: "desc" } });
   const prevHash = (latestAtt?.hash as string) ?? "0";
   const approvedAt = (updated.approvedAt as Date).toISOString();
-  const patchedCodeHash = createHash("sha256").update((patch.patchedCode as string) || "").digest("hex");
+  const patchedCodeHash = await sha256hex((patch.patchedCode as string) || "");
   const data = JSON.stringify({
     patchId: patch.patchId, codebase: (patch.codebase as { name: string })?.name,
     title: patch.title, severity: patch.severity, approvedAt,
     patchedCodeHash, selfHealed: true,
   });
-  const hash = createHash("sha256")
-    .update(prevHash + (patch.id as string) + patchedCodeHash + approvedAt)
-    .digest("hex");
+  const hash = await sha256hex(prevHash + (patch.id as string) + patchedCodeHash + approvedAt);
   await db.attestation.create({ data: { patchId: patch.id, prevHash, hash, data } });
 
   return NextResponse.json({

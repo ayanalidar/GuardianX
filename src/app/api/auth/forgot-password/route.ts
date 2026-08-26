@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/db";
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 import { sendEmail } from "@/lib/email";
 import { passwordResetHtml, ONBOARDING_SUBJECTS } from "@/lib/email-templates/welcome";
 

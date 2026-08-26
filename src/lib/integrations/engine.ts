@@ -17,6 +17,7 @@
 // this module never fails to load even if that file is missing.
 
 import { db } from "@/lib/db";
+import { hmacSha256hex } from "@/lib/crypto";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type ConnectorCategory =
@@ -392,8 +393,7 @@ const builtInConnectors: ConnectorSchema[] = [
       const body = JSON.stringify(event);
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (config.secret) {
-        const { createHmac } = await import("node:crypto");
-        const sig = createHmac("sha256", String(config.secret)).update(body).digest("hex");
+        const sig = await hmacSha256hex(String(config.secret), body);
         headers["X-GuardianX-Signature"] = sig;
       }
       if (config.headers) {

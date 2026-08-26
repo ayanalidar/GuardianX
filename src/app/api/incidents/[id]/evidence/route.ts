@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { randomUUID, sha256hex } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -106,8 +107,6 @@ export async function POST(
       return NextResponse.json({ error: "Incident not found" }, { status: 404 });
     }
 
-    const { randomUUID, createHash } = await import("node:crypto");
-
     // Decode content to a Buffer. Accept either base64 (default for binary
     // evidence like pcaps / memory dumps) or raw text.
     let buf: Buffer;
@@ -122,7 +121,7 @@ export async function POST(
       }
     }
 
-    const sha256 = createHash("sha256").update(buf).digest("hex");
+    const sha256 = await sha256hex(buf);
     const fileSize = buf.length;
     const collector = (collectedBy as string) || auth.user.name;
     const now = new Date();

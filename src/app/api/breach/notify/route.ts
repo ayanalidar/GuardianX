@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { sendBulkEmail } from "@/lib/email";
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 

@@ -19,7 +19,7 @@
 //    is generated with `supersedes` set to the previous patchId, forming a
 //    version chain (Patch v1 → bypassed → Patch v2).
 
-import { randomBytes } from "node:crypto";
+import { randomHex } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import {
   analyzeCodebase,
@@ -89,7 +89,7 @@ async function nextPatchId(): Promise<string> {
   const year = new Date().getFullYear();
   const count = await db.patch.count();
   const num = String(count + 1).padStart(4, "0");
-  const suffix = randomBytes(2).toString("hex");
+  const suffix = randomHex(2);
   return `SP-${year}-${num}-${suffix}`;
 }
 

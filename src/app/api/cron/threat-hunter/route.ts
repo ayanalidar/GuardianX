@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
+import { randomUUID } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -43,7 +44,6 @@ export async function GET(req: Request) {
       }
     }
 
-    const { randomUUID } = await import("node:crypto");
     await db.auditLog.create({ data: { id: randomUUID(), action: "threat_hunter_cron", entity: "system", details: JSON.stringify({ triggered: triggered.length, clients: clients.length }) } });
 
     return NextResponse.json({ ok: true, triggered, summary: { sast: triggered.filter((t) => t.type === "SAST").length, dast: triggered.filter((t) => t.type === "DAST").length, clients: clients.length }, run_at: new Date().toISOString() });

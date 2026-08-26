@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { engineFireAndForget } from "@/lib/sentinel/engine-proxy";
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -63,7 +63,6 @@ export async function POST(req: Request) {
 
             // If no targets exist but client has a targetUrl, auto-create one
             if (targets.length === 0 && (client as Record<string, unknown>).targetUrl) {
-              const { randomUUID } = await import("node:crypto");
               const newTarget = await db.target.create({
                 data: {
                   id: randomUUID(),

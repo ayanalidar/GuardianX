@@ -52,7 +52,7 @@ export async function GET(req: Request) {
     };
   }>;
 
-  const verification = verifyAttestationChain(rows);
+  const verification = await verifyAttestationChain(rows);
 
   const exported = {
     schemaVersion: 1,

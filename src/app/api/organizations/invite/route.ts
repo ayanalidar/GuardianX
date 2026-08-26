@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 import { supabase } from "@/lib/db";
 import { getAuthenticatedUser } from "@/lib/ownership";
 import { auditLog } from "@/lib/audit";

@@ -30,7 +30,7 @@
 // key ordering in the wrapper. This matches the existing Generic Webhook
 // connector convention in src/lib/integrations/engine.ts.
 
-import { createHmac, randomBytes } from "node:crypto";
+import { hmacSha256hex, randomHex } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { auditLog } from "@/lib/audit";
 
@@ -56,7 +56,7 @@ const WEBHOOK_TIMEOUT_MS = 10_000;
  * a new WebhookConfig is created without an explicit secret.
  */
 export function generateWebhookSecret(): string {
-  return randomBytes(32).toString("hex");
+  return randomHex(32);
 }
 
 /**
@@ -76,9 +76,9 @@ function matchesEvent(eventsCsv: string | null | undefined, eventType: string): 
  * webhook's secret. Returns an empty string when no secret is configured
  * (the receiver should treat an empty signature as "unsigned").
  */
-function signEvent(event: SecurityEventPayload, secret: string): string {
+async function signEvent(event: SecurityEventPayload, secret: string): Promise<string> {
   if (!secret) return "";
-  return createHmac("sha256", secret).update(JSON.stringify(event)).digest("hex");
+  return hmacSha256hex(secret, JSON.stringify(event));
 }
 
 /**
@@ -97,7 +97,7 @@ export async function sendToWebhook(
   const webhookId = String(webhook.id || "");
   const secret = webhook.secret ? String(webhook.secret) : "";
   const timestamp = new Date().toISOString();
-  const signature = signEvent(event, secret);
+  const signature = await signEvent(event, secret);
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",

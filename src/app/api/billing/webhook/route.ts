@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   const rawBody = await req.text();
   const signature = req.headers.get("stripe-signature") || "";
 
-  const verification = verifyWebhookSignature(rawBody, signature);
+  const verification = await verifyWebhookSignature(rawBody, signature);
 
   if (!verification.ok) {
     // Distinguish "webhook not configured" (return 200 so Stripe stops

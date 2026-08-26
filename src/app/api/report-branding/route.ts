@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/auth";
+import { randomUUID } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,6 @@ export async function POST(req: Request) {
   const { clientId, logoUrl, accentColor, companyName, reportTitle, footerText } = body;
 
   try {
-    const { randomUUID } = await import("node:crypto");
     const config = JSON.stringify({
       clientId: clientId || null,
       logoUrl: logoUrl || "",

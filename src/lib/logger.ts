@@ -15,12 +15,13 @@
 // Edge runtime, and the browser. It never throws — a logging helper that
 // throws is worse than no logging at all.
 
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 
-// `node:crypto.randomUUID` is available in Node 16.7+ and in modern browsers.
-// On the Edge runtime `node:crypto` is polyfilled by Next.js. We fall back to
-// a Math.random-based generator if neither is available (extremely rare,
-// mostly very old runtimes) so the helper is total.
+// `randomUUID` is backed by the global Web Crypto API (`globalThis.crypto.randomUUID`),
+// available natively in Node 16.7+, modern browsers, and the Edge runtime
+// (Cloudflare Pages / Vercel Edge). We fall back to a Math.random-based
+// generator if neither is available (extremely rare, mostly very old
+// runtimes) so the helper is total.
 function uuid(): string {
   try {
     return randomUUID();

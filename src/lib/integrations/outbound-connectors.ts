@@ -10,6 +10,7 @@
 // timeout and structured error reporting.
 
 import type { ConnectorSchema, SecurityEvent, ConnectorSendResult } from "./engine";
+import { hmacSha256base64 } from "@/lib/crypto";
 
 // Helper: convert a SecurityEvent into a generic alert payload that
 // most notification/ITSM systems can consume.
@@ -247,11 +248,10 @@ export const outboundConnectors: ConnectorSchema[] = [
       const key = String(config.sharedKey || "");
       if (!wid || !key) return { ok: false, detail: "Missing workspaceId or sharedKey" };
       const body = JSON.stringify(toAlertPayload(event));
-      const { createHmac } = await import("node:crypto");
       const resource = `/api/logs`;
       const date = new Date().toUTCString();
       const stringToSign = `POST\n${body.length}\napplication/json\nx-ms-date:${date}\n${resource}`;
-      const signature = createHmac("sha256", Buffer.from(key, "base64")).update(stringToSign).digest("base64");
+      const signature = await hmacSha256base64(Buffer.from(key, "base64"), stringToSign);
       const res = await fetch(`https://${wid}.ods.opinsights.azure.com${resource}?api-version=2016-04-01`, {
         method: "POST",
         headers: {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getUserFromRequest } from "@/lib/auth";
+import { randomUUID } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,6 @@ export async function POST(req: Request,
     });
 
     // Log to audit trail
-    const { randomUUID } = await import("node:crypto");
     await db.auditLog.create({
       data: {
         id: randomUUID(),

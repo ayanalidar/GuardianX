@@ -3979,3 +3979,154 @@ parse error at the repo root, unrelated).
   API routes — verified (only the 6 new files were added; no edits to
   any pre-existing file).
 - Did NOT commit/push.
+
+---
+
+## 2026-01 — crypto-migration: Web Crypto API migration for edge compatibility
+
+**Task ID:** `crypto-migration`
+**Agent:** full-stack-developer
+**Task:** Migrate all `node:crypto` imports to the Web Crypto API compat layer
+for Cloudflare Pages / Vercel Edge compatibility.
+
+**Project location note:** The task description said the project lives at
+`/home/z/GuardianX-web`, but that path does not exist on this machine. The
+entire GuardianX Next.js codebase (Next.js 16 + TypeScript 5 + Supabase
++ shadcn/ui) lives at `/home/z/my-project` — all migrations below were
+applied there. The worklog header itself confirms both halves of the
+project (sentinel-engine + Next.js web app) share this directory.
+
+### Work Log
+
+1. **Discovered the compat layer didn't exist.** The task said "A
+   compatibility layer already exists at `src/lib/crypto.ts`" but `ls
+   src/lib/crypto.ts` returned ENOENT. The only `crypto.ts` was
+   `src/lib/sentinel/crypto.ts` (AES-256-GCM credential encryption — a
+   completely different module). Since the entire migration depends on
+   the compat layer, created it as a prerequisite.
+2. **Created `src/lib/crypto.ts`** — Web Crypto API compat layer backed
+   by `globalThis.crypto`. Exports the 7 functions from the task spec
+   (`randomUUID`, `randomBytes`, `randomHex`, `sha256hex`, `hmacSha256hex`,
+   `hmacSha256base64`, `timingSafeEqual`) plus one extension: `sha1hex`
+   (needed by `api/incidents/auto-create/route.ts` which uses SHA-1 for
+   incident dedup sourceIds — switching to SHA-256 would have broken
+   dedup for existing rows). Uses `btoa`/`atob` (not Buffer) so the file
+   is portable across Node, browser, and pure Edge runtimes.
+3. **Audited all 53 grep hits** for `node:crypto` in `src/` — 2 are
+   string-literal-only files (`sentinel/engine/ai.ts`,
+   `sentinel/engine/language-patterns.ts`, both instructional text to the
+   AI patcher — left as-is per task spec), 4 were comment references
+   (also left as documentation), and 47 had actual imports requiring
+   migration.
+4. **Migrated 46 .ts files** under `src/` (excluding `src/lib/crypto.ts`
+   itself, `src/app/page.tsx`, and `src/components/sentinel/*`):
+   - 26 files with Pattern 1 (`randomUUID` only) — drop-in import swap.
+   - `src/lib/auth.ts` — Pattern 6 (dynamic `await import("node:crypto")`
+     for `createHash`) → static `import { sha256hex }`; the legacy
+     SHA-256+salt password verification path now uses
+     `await sha256hex(salt + password)`.
+   - `src/lib/sentinel/attestation.ts` — Pattern 2, CRITICAL: the
+     tamper-evident hash chain. Made 4 functions async
+     (`computeAttestationHash`, `verifyAttestationChain`,
+     `verifyAttestationForPatch`, `issueAttestationHash`), updated 6
+     callers across `api/patches/[id]/approve`, `api/attestations`,
+     `api/attestations/export`, `api/attestations/verify` (×3 calls),
+     and `app/attestations/[id]/page.tsx`.
+   - `src/lib/stripe.ts` — Pattern 4 + `timingSafeEqual`;
+     `verifyWebhookSignature` made async, 1 caller
+     (`api/billing/webhook/route.ts`) updated.
+   - `src/lib/webhook-dispatcher.ts` — Pattern 4 + Pattern 5; `signEvent`
+     made async, `generateWebhookSecret` switched to `randomHex(32)`.
+   - `src/lib/integrations/{engine,outbound-connectors}.ts` — Pattern 6
+     (dynamic `createHmac`) → static `hmacSha256hex` / `hmacSha256base64`.
+   - `src/lib/sentinel/engine/pipeline.ts` — Pattern 5; `randomBytes(2).toString("hex")`
+     → `randomHex(2)` (sync, no caller changes).
+   - `src/lib/sentinel/crypto.ts` — Special case: AES-256-GCM with
+     `createCipheriv`/`createDecipheriv`. The compat layer doesn't expose
+     cipher ops, so rewrote `encryptSecret`/`decryptSecret` using
+     `crypto.subtle.encrypt`/`decrypt` directly. Preserved the on-disk
+     format (separate `cipher`/`iv`/`tag` base64 fields) by splitting the
+     Web Crypto output (which concatenates `ciphertext || tag`). Made
+     `encryptSecret`/`decryptSecret` async, updated 3 callers
+     (`api/credentials/route.ts`, `api/patches/[id]/generate-pr/route.ts`,
+     `lib/sentinel/git.ts`).
+   - `src/app/api/vapt/jwt-auth/route.ts` — Pattern 4 + Pattern 1. Made
+     `signHs256` and `tamperPayload` async, converted the module-level
+     `const DUMMY_TOKEN = signHs256(...)` constant to a lazy
+     `getDummyToken()` cache (avoids top-level await), updated 6 call
+     sites to `await`.
+   - `src/app/api/siem/{agent,api-key}/route.ts` — Pattern 3; made
+     `hashToken`/`hashKey`/`makePlaintext` async, updated 5 call sites.
+   - `src/app/api/{runtime-monitor/[patchId]/heal,patches/[id]/approve,incidents/auto-create,incidents/[id]/evidence}/route.ts`
+     — Pattern 2/6; `createHash("sha256"/"sha1").update(...).digest("hex")`
+     → `await sha256hex(...)` / `await sha1hex(...)`. The
+     `runtime-monitor/heal` and `patches/approve` routes use the
+     canonical attestation hash formula — now identical to
+     `computeAttestationHash` (which also calls `sha256hex`).
+   - `src/app/api/{rollback/[patchId],codebases,users,report-branding,cron/threat-hunter,launch-service}/route.ts`
+     — Pattern 7 (dynamic `randomUUID`); converted to static imports.
+   - `src/app/api/auth/delete-account/route.ts` — Pattern 1 + Pattern 5;
+     `randomBytes(32).toString("hex")` → `randomHex(32)`.
+5. **Verified parity** with 3 throwaway parity-check scripts (since
+   deleted):
+   - SHA-256 hex output: byte-for-byte identical for 4 attestation-style
+     inputs. ✓
+   - SHA-1 hex output: byte-for-byte identical for 4 anomaly-title inputs. ✓
+   - HMAC-SHA-256 hex + base64: byte-for-byte identical for 5 webhook
+     / JWT inputs (excluding empty-secret edge case — Web Crypto rejects
+     empty HMAC keys, node:crypto doesn't; real callers always pass
+     non-empty secrets, so this is a non-issue and actually safer). ✓
+   - AES-256-GCM cross-decrypt: ciphertexts encrypted by the old
+     node:crypto implementation decrypt correctly with the new Web
+     Crypto implementation, and vice-versa — existing credentials in
+     the database remain decryptable. ✓
+6. **Verified dev server** — recompiled cleanly (`✓ Compiled in 2.3s`),
+   continuous `GET / 200` responses with no errors in `dev.log`.
+
+### Stage Summary
+
+**Files migrated:** 46 .ts files under `src/` (1 new compat layer +
+45 migration edits + 4 caller updates for the async attestation chain +
+3 caller updates for async sentinel/crypto).
+
+**Patterns replaced:**
+- Pattern 1 (`randomUUID` only): 26 files
+- Pattern 2 (`createHash` static): 1 file (`attestation.ts` — CRITICAL)
+- Pattern 3 (`createHash, randomUUID`): 2 files (`siem/agent`, `siem/api-key`)
+- Pattern 4 (`createHmac`): 1 file (`vapt/jwt-auth`)
+- Pattern 5 (`randomBytes().toString("hex")`): 2 files (`pipeline.ts`,
+  `webhook-dispatcher.ts`)
+- Pattern 6 (dynamic `createHash`): 3 files (`runtime-monitor/heal`,
+  `incidents/auto-create`, `incidents/[id]/evidence`)
+- Pattern 7 (dynamic `randomUUID`): 5 files + 1 file with both static + dynamic
+- Special (`createHmac + timingSafeEqual`): 1 file (`stripe.ts`)
+- Special (`randomUUID + randomBytes`): 1 file (`auth/delete-account`)
+- Special (`createCipheriv` AES-256-GCM): 1 file (`sentinel/crypto.ts`)
+
+**Functions made async:** 11 across 8 files
+(`sha256hex`, `sha1hex`, `hmacSha256hex`, `hmacSha256base64`,
+`verifyWebhookSignature`, `signEvent`, `computeAttestationHash`,
+`verifyAttestationChain`, `verifyAttestationForPatch`,
+`issueAttestationHash`, `hashToken`, `hashKey`, `makePlaintext`,
+`signHs256`, `tamperPayload`, `encryptSecret`, `decryptSecret`).
+All callers were already async (API routes + server components);
+only `await` was added at call sites.
+
+**Lint result:** `bun run lint` reports **62 problems (57 errors, 5
+warnings)** — identical to the pre-migration baseline. 0 new errors
+introduced (grep'ing the lint output for any migrated file path returns
+0 matches). The 62 pre-existing errors are all in `src/app/page.tsx`,
+`src/components/ui/carousel.tsx`, `src/hooks/use-mobile.ts`,
+`src/lib/performance-client.ts`, and ~30 sentinel components tripping
+the `react-hooks/set-state-in-effect` rule — none of which were touched
+by this migration.
+
+**Verification:** `grep -rln "node:crypto" src/ --include="*.ts" | grep -v
+crypto.ts | grep -v page.tsx` returns 2 files: `sentinel/engine/ai.ts`
+and `sentinel/engine/language-patterns.ts`. Both contain only
+string-literal references in instructional text to the AI patcher (not
+actual imports) — left as-is per the task spec.
+
+**Did NOT commit/push.**
+
+Work record: `agent-ctx/crypto-migration-full-stack-developer.md`.

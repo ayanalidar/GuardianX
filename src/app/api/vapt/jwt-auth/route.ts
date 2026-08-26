@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createHmac } from "node:crypto";
-import { randomUUID } from "node:crypto";
+import { hmacSha256base64, randomUUID } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { fetchUrl } from "@/lib/sentinel/engine/http-attacker";
@@ -114,14 +113,14 @@ function decodeJwt(token: string): DecodedJwt | null {
   }
 }
 
-function signHs256(payload: JwtPayload, secret: string): string {
+async function signHs256(payload: JwtPayload, secret: string): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
   const h = base64UrlEncode(JSON.stringify(header));
   const p = base64UrlEncode(JSON.stringify(payload));
   const data = `${h}.${p}`;
-  const sig = createHmac("sha256", secret).update(data).digest();
-  const sigB64 = sig.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  return `${data}.${sigB64}`;
+  const sigB64 = await hmacSha256base64(secret, data);
+  const sigB64Url = sigB64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return `${data}.${sigB64Url}`;
 }
 
 function encodeJwtNone(payload: JwtPayload, algValue = "none"): string {
@@ -133,11 +132,11 @@ function encodeJwtNone(payload: JwtPayload, algValue = "none"): string {
   return `${h}.${p}.`;
 }
 
-function tamperPayload(
+async function tamperPayload(
   token: string,
   changes: Partial<JwtPayload>,
   secret: string,
-): string {
+): Promise<string> {
   const decoded = decodeJwt(token);
   const payload: JwtPayload = { ...(decoded?.payload ?? {}), ...changes };
   return signHs256(payload, secret);
@@ -157,10 +156,16 @@ const WEAK_SECRETS = [
   "test",
 ];
 
-const DUMMY_TOKEN = signHs256(
-  { sub: "user", role: "user", iat: Math.floor(Date.now() / 1000) },
-  "secret",
-);
+let _dummyTokenCache: string | null = null;
+async function getDummyToken(): Promise<string> {
+  if (_dummyTokenCache === null) {
+    _dummyTokenCache = await signHs256(
+      { sub: "user", role: "user", iat: Math.floor(Date.now() / 1000) },
+      "secret",
+    );
+  }
+  return _dummyTokenCache;
+}
 
 // ── HTTP send helpers ───────────────────────────────────────────────────────
 async function sendWithToken(
@@ -237,7 +242,7 @@ export async function POST(req: Request) {
   }
 
   // Use provided token, otherwise a dummy HS256 token with a weak secret
-  const baseToken = providedToken || DUMMY_TOKEN;
+  const baseToken = providedToken || await getDummyToken();
   const decoded = decodeJwt(baseToken);
 
   // Create an Engagement row. We need a Target row first (Engagement requires
@@ -352,14 +357,14 @@ export async function POST(req: Request) {
       // the HMAC secret, this will fail; but we still report the test was
       // performed. Real exploitation requires fetching the JWKS first.
       const basePayload = decoded?.payload ?? { sub: "user", role: "user" };
-      tampered = signHs256(basePayload, "public-key-placeholder");
+      tampered = await signHs256(basePayload, "public-key-placeholder");
       lastReq = `GET ${targetUrl}\nAuthorization: Bearer ${tampered}\n(Header alg flipped RS256→HS256)`;
       const res = await sendWithToken(targetUrl, tampered);
       lastResp = summarizeResponse(res.status, res.body);
       if (isAccepted(res.status, res.body)) vulnerable = true;
     } else {
       // Not an RS256 token — mark as not-applicable (still tested, not vulnerable)
-      tampered = signHs256(decoded?.payload ?? { sub: "user" }, "public-key-placeholder");
+      tampered = await signHs256(decoded?.payload ?? { sub: "user" }, "public-key-placeholder");
       lastReq = `GET ${targetUrl}\n(token alg=${alg ?? "unknown"} — RS256→HS256 confusion N/A)`;
       lastResp = "skipped: token does not use RS256/PS256";
     }
@@ -395,7 +400,7 @@ export async function POST(req: Request) {
     // Try signing with each weak secret; if any works, the original secret
     // was weak AND the server doesn't enforce exp.
     for (const secret of WEAK_SECRETS) {
-      const tampered = signHs256(expiredPayload, secret);
+      const tampered = await signHs256(expiredPayload, secret);
       lastToken = tampered;
       lastReq = `GET ${targetUrl}\nAuthorization: Bearer ${tampered}\n(exp set to 1h ago, secret="${secret}")`;
       const res = await sendWithToken(targetUrl, tampered);
@@ -431,7 +436,7 @@ export async function POST(req: Request) {
     let lastResp = "";
     let lastReq = "";
     for (const secret of WEAK_SECRETS) {
-      const tampered = signHs256(basePayload, secret);
+      const tampered = await signHs256(basePayload, secret);
       lastToken = tampered;
       lastReq = `GET ${targetUrl}\nAuthorization: Bearer ${tampered}\n(HS256 with secret="${secret}")`;
       const res = await sendWithToken(targetUrl, tampered);
@@ -470,8 +475,8 @@ export async function POST(req: Request) {
     let lastResp = "";
     let lastReq = "";
     for (const secret of WEAK_SECRETS) {
-      const tampered = tamperPayload(
-        signHs256(basePayload, secret),
+      const tampered = await tamperPayload(
+        await signHs256(basePayload, secret),
         { role: "admin", admin: true } as Partial<JwtPayload>,
         secret,
       );

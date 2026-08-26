@@ -3,6 +3,7 @@
 
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { sha256hex } from "@/lib/crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -65,8 +66,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
     // Legacy SHA-256+salt format (for existing users)
     const [salt, storedHash] = hash.split(":");
     if (!salt || !storedHash) return false;
-    const { createHash } = await import("node:crypto");
-    const hashedPassword = createHash("sha256").update(salt + password).digest("hex");
+    const hashedPassword = await sha256hex(salt + password);
     if (hashedPassword === storedHash) return true;
     return false;
   } catch {

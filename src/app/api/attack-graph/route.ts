@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 import ZAI from "z-ai-web-dev-sdk";
 import { getUserFromRequest } from "@/lib/auth";
 

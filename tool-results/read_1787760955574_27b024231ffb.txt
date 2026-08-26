@@ -1999,4 +1999,4 @@
   1999→  * Covers all 23 tabs with 3 context-aware suggestions + 3 quick actions per tab. Suggestions reference real state (active scan count, pending patch count, top patch ID + title, codebase-with-most-findings name, posture score, etc.).
   2000→
 
-[showing lines 1-2000 of 3702; use offset=2001 with limit to continue reading]
+[showing lines 1-2000 of 3982; use offset=2001 with limit to continue reading]

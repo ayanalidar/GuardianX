@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/db";
 import { requireAdmin, hashPassword } from "@/lib/auth";
+import { randomUUID } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Password must be 8-128 characters" }, { status: 400 });
   }
 
-  const { randomUUID } = await import("node:crypto");
   const validRoles = ["admin", "analyst", "viewer"];
   const userRole = validRoles.includes(role) ? role : "viewer";
 

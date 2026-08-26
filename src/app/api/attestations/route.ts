@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     patch?: { patchId: string | null; title: string | null; severity: string | null };
   }>;
 
-  const verification = verifyAttestationChain(rows);
+  const verification = await verifyAttestationChain(rows);
 
   const attestations = rows.map((a) => {
     const link = verification.links.find((l) => l.attestationId === a.id)!;

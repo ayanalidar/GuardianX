@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { createHash } from "node:crypto";
+import { sha256hex } from "@/lib/crypto";
 import { getUserFromRequest } from "@/lib/auth";
 import {
   GENESIS_PREV_HASH,
@@ -53,9 +53,7 @@ export async function POST(req: Request,
   });
   const prevHash = (latestAtt?.hash as string | undefined) ?? GENESIS_PREV_HASH;
   const approvedAt = (updated.approvedAt as Date).toISOString();
-  const patchedCodeHash = createHash("sha256")
-    .update((patch.patchedCode as string) || "")
-    .digest("hex");
+  const patchedCodeHash = await sha256hex((patch.patchedCode as string) || "");
 
   const data = JSON.stringify({
     patchId: patch.patchId,
@@ -71,7 +69,7 @@ export async function POST(req: Request,
     schemaVersion: 1,
   });
 
-  const hash = computeAttestationHash(prevHash, patch.id as string, patchedCodeHash, approvedAt);
+  const hash = await computeAttestationHash(prevHash, patch.id as string, patchedCodeHash, approvedAt);
 
   const att = await db.attestation.create({
     data: { patchId: patch.id, prevHash, hash, data },

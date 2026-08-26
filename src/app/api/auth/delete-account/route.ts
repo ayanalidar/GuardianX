@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/db";
 import { requireAuth, hashPassword, verifyPassword } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
-import { randomUUID, randomBytes } from "node:crypto";
+import { randomUUID, randomHex } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
     //   - The user can never log in again (password is random).
     //   - The original email is preserved only inside the audit log entry
     //     (which DPDPA § 31 allows for legitimate compliance record-keeping).
-    const randomPassword = randomBytes(32).toString("hex");
+    const randomPassword = randomHex(32);
     const anonymizedPasswordHash = await hashPassword(randomPassword);
 
     const nextTokenVersion =

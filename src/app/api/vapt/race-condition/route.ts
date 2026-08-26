@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 

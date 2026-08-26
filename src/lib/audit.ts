@@ -15,7 +15,7 @@
 //     createdAt DateTime @default(now())
 //   }
 
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 import { supabase } from "@/lib/db";
 
 /**

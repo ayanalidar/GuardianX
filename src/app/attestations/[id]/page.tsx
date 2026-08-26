@@ -63,7 +63,7 @@ export default async function AttestationPage({ params }: PageProps) {
     orderBy: { createdAt: "asc" },
   })) as unknown as AttestationRow[];
 
-  const verification = verifyAttestationChain(allRows);
+  const verification = await verifyAttestationChain(allRows);
 
   // Find this patch's specific link in the chain.
   const thisAttestation = patch.attestations[0] ?? null;

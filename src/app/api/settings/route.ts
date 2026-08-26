@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, enforceSessionRevocation } from "@/lib/auth";
 import { supabase } from "@/lib/db";
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/crypto";
 import { auditLog } from "@/lib/audit";
 import { sanitizeText, sanitizeEmail } from "@/lib/sanitize";
 import { withErrorHandler } from "@/lib/api-handler";

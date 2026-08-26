@@ -51,7 +51,7 @@ export async function POST(req: Request) {
   if (!target) return NextResponse.json({ error: "target required" }, { status: 400 });
   if (!token) return NextResponse.json({ error: "token required" }, { status: 400 });
 
-  const enc = encryptSecret(token);
+  const enc = await encryptSecret(token);
 
   const cred = await db.credential.create({
     data: {

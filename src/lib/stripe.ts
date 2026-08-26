@@ -24,13 +24,13 @@
 //      NOT accept JSON for the v1 form-encoded endpoints).
 //
 //   4. WEBHOOK SIGNATURE VERIFICATION — done manually with
-//      `node:crypto`'s `createHmac` against the raw request body. The
-//      Stripe-Signature header has the shape `t=TS,v1=HEX`. We
+//      the Web Crypto API's HMAC-SHA256 against the raw request body.
+//      The Stripe-Signature header has the shape `t=TS,v1=HEX`. We
 //      re-compute HMAC-SHA256(`${TS}.${rawBody}`) with
 //      `STRIPE_WEBHOOK_SECRET` and compare in constant time. A 5-min
 //      tolerance window blocks replay attacks.
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { hmacSha256hex, timingSafeEqual } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
@@ -379,10 +379,10 @@ interface WebhookVerifyResult {
  * as a 200 (to stop Stripe from retrying) because there's no point
  * retrying an endpoint that will never accept the event.
  */
-export function verifyWebhookSignature(
+export async function verifyWebhookSignature(
   rawBody: string,
   signatureHeader: string
-): WebhookVerifyResult {
+): Promise<WebhookVerifyResult> {
   if (!isStripeWebhookConfigured()) {
     return { ok: false, reason: "webhook_not_configured" };
   }
@@ -415,9 +415,7 @@ export function verifyWebhookSignature(
 
   // Compute the expected signature.
   const signedPayload = `${timestamp}.${rawBody}`;
-  const expected = createHmac("sha256", STRIPE_WEBHOOK_SECRET)
-    .update(signedPayload, "utf8")
-    .digest("hex");
+  const expected = await hmacSha256hex(STRIPE_WEBHOOK_SECRET, signedPayload);
 
   // Constant-time comparison to avoid timing-side-channel attacks.
   // Both must be the same length for timingSafeEqual.
