@@ -1,0 +1,28 @@
+FROM oven/bun:1.3-debian
+
+WORKDIR /app
+
+# Install curl for health check
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+# Copy package.json + install deps
+COPY package.json ./
+RUN bun install
+
+# Copy source code
+COPY tsconfig.json ./
+COPY index.ts ./
+COPY src ./src
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
+# Runtime config
+ENV NODE_ENV=production
+EXPOSE 3003
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=15s \
+  CMD curl -f http://localhost:${PORT:-3003}/healthz || exit 1
+
+# Start the engine (writes .z-ai-config from env, then starts)
+CMD ["sh", "./start.sh"]

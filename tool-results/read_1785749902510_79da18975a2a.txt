@@ -1,0 +1,1487 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback } from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import { Button } from "@/components/ui/button";
+     6→import { Input } from "@/components/ui/input";
+     7→import { Label } from "@/components/ui/label";
+     8→import { Badge } from "@/components/ui/badge";
+     9→import { Switch } from "@/components/ui/switch";
+    10→import { Skeleton } from "@/components/ui/skeleton";
+    11→import { useToast } from "@/hooks/use-toast";
+    12→import {
+    13→  Settings, Mail, MessageSquare, Phone, Send, Save, Eye, EyeOff,
+    14→  Loader2, Building2, Bell, ShieldCheck, Globe, AlertCircle,
+    15→  CheckCircle2, Server, Hash, KeyRound, User, Smartphone,
+    16→  Network, FileText, Sparkles, RefreshCw,
+    17→} from "lucide-react";
+    18→
+    19→// ── Types ────────────────────────────────────────────────────────────────────
+    20→type SettingKey =
+    21→  | "email_smtp"
+    22→  | "whatsapp"
+    23→  | "telegram"
+    24→  | "sms"
+    25→  | "general"
+    26→  | "notifications";
+    27→
+    28→interface SettingGroup {
+    29→  id: string;
+    30→  config: Record<string, unknown>;
+    31→  isActive: boolean;
+    32→  createdAt: string;
+    33→}
+    34→
+    35→type SettingsMap = Record<SettingKey, SettingGroup>;
+    36→
+    37→interface EmailConfig {
+    38→  host: string;
+    39→  port: string;
+    40→  user: string;
+    41→  password: string;
+    42→  fromEmail: string;
+    43→  fromName: string;
+    44→  enabled: boolean;
+    45→}
+    46→
+    47→interface WhatsAppConfig {
+    48→  phoneNumberId: string;
+    49→  accessToken: string;
+    50→  recipientPhone: string;
+    51→  enabled: boolean;
+    52→}
+    53→
+    54→interface TelegramConfig {
+    55→  botToken: string;
+    56→  chatId: string;
+    57→  enabled: boolean;
+    58→}
+    59→
+    60→interface SmsConfig {
+    61→  provider: "twilio" | "msg91";
+    62→  toNumber: string;
+    63→  accountSid: string;
+    64→  authToken: string;
+    65→  fromNumber: string;
+    66→  apiKey: string;
+    67→  sender: string;
+    68→  enabled: boolean;
+    69→}
+    70→
+    71→interface GeneralConfig {
+    72→  orgName: string;
+    73→  orgEmail: string;
+    74→  orgPhone: string;
+    75→  orgWebsite: string;
+    76→  logoUrl: string;
+    77→}
+    78→
+    79→type ChannelKey = "email" | "whatsapp" | "telegram" | "sms";
+    80→type EventTypeKey =
+    81→  | "critical_findings"
+    82→  | "scan_completed"
+    83→  | "incident_created"
+    84→  | "canary_triggered"
+    85→  | "patch_ready"
+    86→  | "daily_digest";
+    87→
+    88→interface NotificationsConfig {
+    89→  critical_findings: Record<ChannelKey, boolean>;
+    90→  scan_completed: Record<ChannelKey, boolean>;
+    91→  incident_created: Record<ChannelKey, boolean>;
+    92→  canary_triggered: Record<ChannelKey, boolean>;
+    93→  patch_ready: Record<ChannelKey, boolean>;
+    94→  daily_digest: Record<ChannelKey, boolean>;
+    95→}
+    96→
+    97→const DEFAULTS: SettingsMap = {
+    98→  email_smtp: {
+    99→    id: "",
+   100→    isActive: false,
+   101→    createdAt: "",
+   102→    config: {
+   103→      host: "",
+   104→      port: "587",
+   105→      user: "",
+   106→      password: "",
+   107→      fromEmail: "",
+   108→      fromName: "GuardianX",
+   109→      enabled: false,
+   110→    } as EmailConfig,
+   111→  },
+   112→  whatsapp: {
+   113→    id: "",
+   114→    isActive: false,
+   115→    createdAt: "",
+   116→    config: {
+   117→      phoneNumberId: "",
+   118→      accessToken: "",
+   119→      recipientPhone: "",
+   120→      enabled: false,
+   121→    } as WhatsAppConfig,
+   122→  },
+   123→  telegram: {
+   124→    id: "",
+   125→    isActive: false,
+   126→    createdAt: "",
+   127→    config: {
+   128→      botToken: "",
+   129→      chatId: "",
+   130→      enabled: false,
+   131→    } as TelegramConfig,
+   132→  },
+   133→  sms: {
+   134→    id: "",
+   135→    isActive: false,
+   136→    createdAt: "",
+   137→    config: {
+   138→      provider: "twilio",
+   139→      toNumber: "",
+   140→      accountSid: "",
+   141→      authToken: "",
+   142→      fromNumber: "",
+   143→      apiKey: "",
+   144→      sender: "",
+   145→      enabled: false,
+   146→    } as SmsConfig,
+   147→  },
+   148→  general: {
+   149→    id: "",
+   150→    isActive: false,
+   151→    createdAt: "",
+   152→    config: {
+   153→      orgName: "GuardianX",
+   154→      orgEmail: "hello@guardianx.in",
+   155→      orgPhone: "+91 70067 12347",
+   156→      orgWebsite: "https://www.guardianx.in",
+   157→      logoUrl: "/guardianx-logo.png",
+   158→    } as GeneralConfig,
+   159→  },
+   160→  notifications: {
+   161→    id: "",
+   162→    isActive: false,
+   163→    createdAt: "",
+   164→    config: {
+   165→      critical_findings: { email: true, whatsapp: false, telegram: false, sms: false },
+   166→      scan_completed: { email: true, whatsapp: false, telegram: true, sms: false },
+   167→      incident_created: { email: true, whatsapp: true, telegram: true, sms: true },
+   168→      canary_triggered: { email: true, whatsapp: true, telegram: true, sms: true },
+   169→      patch_ready: { email: true, whatsapp: false, telegram: false, sms: false },
+   170→      daily_digest: { email: true, whatsapp: false, telegram: false, sms: false },
+   171→    } as NotificationsConfig,
+   172→  },
+   173→};
+   174→
+   175→// ── Main component ──────────────────────────────────────────────────────────
+   176→export function SettingsPanel() {
+   177→  const [tab, setTab] = useState<
+   178→    "email" | "whatsapp" | "telegram" | "sms" | "general" | "notifications"
+   179→  >("email");
+   180→
+   181→  const TABS = [
+   182→    { id: "email", label: "Email (SMTP)", icon: Mail, color: "emerald" },
+   183→    { id: "whatsapp", label: "WhatsApp", icon: MessageSquare, color: "emerald" },
+   184→    { id: "telegram", label: "Telegram", icon: Send, color: "cyan" },
+   185→    { id: "sms", label: "SMS", icon: Phone, color: "amber" },
+   186→    { id: "general", label: "General", icon: Building2, color: "emerald" },
+   187→    { id: "notifications", label: "Routing", icon: Bell, color: "amber" },
+   188→  ] as const;
+   189→
+   190→  const colorClasses: Record<string, string> = {
+   191→    emerald: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40 neon-border-emerald",
+   192→    cyan: "bg-cyan-500/15 text-cyan-300 border-cyan-500/40 neon-border-cyan",
+   193→    amber: "bg-amber-500/15 text-amber-300 border-amber-500/40 neon-border-amber",
+   194→  };
+   195→
+   196→  return (
+   197→    <div className="space-y-5">
+   198→      {/* Header */}
+   199→      <div>
+   200→        <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+   201→          <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
+   202→          admin@guardianx:~$ settings --configure
+   203→        </div>
+   204→        <h2 className="flex items-center gap-2 text-xl font-bold text-zinc-50">
+   205→          <Settings className="size-5 text-emerald-400" />
+   206→          Platform Settings
+   207→          <span className="font-mono text-sm text-zinc-500">{"// Centralized channel & org config"}</span>
+   208→        </h2>
+   209→        <p className="mt-1 text-sm text-zinc-400">
+   210→          Configure outbound notification channels, organization profile, and per-event routing rules.
+   211→        </p>
+   212→      </div>
+   213→
+   214→      {/* Tab switcher */}
+   215→      <div className="holo-card-sharp hud-corners flex flex-wrap gap-1 p-1.5">
+   216→        {TABS.map((t) => {
+   217→          const Icon = t.icon;
+   218→          const isActive = tab === t.id;
+   219→          return (
+   220→            <button
+   221→              key={t.id}
+   222→              onClick={() => setTab(t.id)}
+   223→              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-all ${
+   224→                isActive
+   225→                  ? colorClasses[t.color]
+   226→                  : "border-transparent text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+   227→              }`}
+   228→            >
+   229→              <Icon className="size-4" />
+   230→              <span className="hidden sm:inline">{t.label}</span>
+   231→              <span className="sm:hidden">{t.label.split(" ")[0]}</span>
+   232→            </button>
+   233→          );
+   234→        })}
+   235→      </div>
+   236→
+   237→      {/* Tab content */}
+   238→      <AnimatePresence mode="wait">
+   239→        <motion.div
+   240→          key={tab}
+   241→          initial={{ opacity: 0, y: 8 }}
+   242→          animate={{ opacity: 1, y: 0 }}
+   243→          exit={{ opacity: 0, y: -8 }}
+   244→          transition={{ duration: 0.15 }}
+   245→        >
+   246→          {tab === "email" && <EmailTab />}
+   247→          {tab === "whatsapp" && <WhatsAppTab />}
+   248→          {tab === "telegram" && <TelegramTab />}
+   249→          {tab === "sms" && <SmsTab />}
+   250→          {tab === "general" && <GeneralTab />}
+   251→          {tab === "notifications" && <NotificationsTab />}
+   252→        </motion.div>
+   253→      </AnimatePresence>
+   254→    </div>
+   255→  );
+   256→}
+   257→
+   258→// ── Hook: load all settings once on mount ───────────────────────────────────
+   259→function useSettingsLoader() {
+   260→  const [settings, setSettings] = useState<SettingsMap>(DEFAULTS);
+   261→  const [loaded, setLoaded] = useState(false);
+   262→
+   263→  const load = useCallback(async () => {
+   264→    try {
+   265→      const res = await fetch("/api/settings");
+   266→      const data = await res.json();
+   267→      if (!res.ok) throw new Error(data.error || "Failed to load settings");
+   268→      const next: SettingsMap = { ...DEFAULTS };
+   269→      const incoming = (data.settings || {}) as Partial<SettingsMap>;
+   270→      (Object.keys(DEFAULTS) as SettingKey[]).forEach((k) => {
+   271→        const row = incoming[k];
+   272→        if (row && row.config && typeof row.config === "object") {
+   273→          // Strip the internal _key marker if it slipped through
+   274→          const clean = { ...row.config };
+   275→          delete (clean as Record<string, unknown>)._key;
+   276→          next[k] = {
+   277→            id: row.id || "",
+   278→            isActive: !!row.isActive,
+   279→            createdAt: row.createdAt || "",
+   280→            config: { ...(DEFAULTS[k].config as Record<string, unknown>), ...clean },
+   281→          };
+   282→        }
+   283→      });
+   284→      setSettings(next);
+   285→    } catch {
+   286→      // silently fall back to defaults
+   287→      setSettings(DEFAULTS);
+   288→    } finally {
+   289→      setLoaded(true);
+   290→    }
+   291→  }, []);
+   292→
+   293→  useEffect(() => {
+   294→    load();
+   295→  }, [load]);
+   296→
+   297→  return { settings, loaded, reload: load, setSettings };
+   298→}
+   299→
+   300→// ── Shared building blocks ──────────────────────────────────────────────────
+   301→function SettingsCard({
+   302→  icon: Icon,
+   303→  title,
+   304→  description,
+   305→  accent = "emerald",
+   306→  children,
+   307→  footer,
+   308→}: {
+   309→  icon: typeof Settings;
+   310→  title: string;
+   311→  description?: string;
+   312→  accent?: "emerald" | "cyan" | "amber" | "violet";
+   313→  children: React.ReactNode;
+   314→  footer?: React.ReactNode;
+   315→}) {
+   316→  const accentMap: Record<string, string> = {
+   317→    emerald: "text-emerald-400 border-emerald-500/20",
+   318→    cyan: "text-cyan-400 border-cyan-500/20",
+   319→    amber: "text-amber-400 border-amber-500/20",
+   320→    violet: "text-violet-400 border-violet-500/20",
+   321→  };
+   322→  return (
+   323→    <div className={`holo-card-sharp hud-corners border ${accentMap[accent]} p-5 sm:p-6`}>
+   324→      <div className="mb-4 flex items-start gap-3">
+   325→        <div className={`flex size-9 items-center justify-center rounded-md border bg-zinc-900/60 ${accentMap[accent]}`}>
+   326→          <Icon className="size-4" />
+   327→        </div>
+   328→        <div className="flex-1">
+   329→          <h3 className="text-base font-bold text-zinc-100">{title}</h3>
+   330→          {description && <p className="mt-0.5 text-xs text-zinc-400">{description}</p>}
+   331→        </div>
+   332→      </div>
+   333→      {children}
+   334→      {footer && <div className="mt-4 border-t border-zinc-800/60 pt-4">{footer}</div>}
+   335→    </div>
+   336→  );
+   337→}
+   338→
+   339→function Field({
+   340→  label,
+   341→  htmlFor,
+   342→  children,
+   343→  hint,
+   344→  className,
+   345→}: {
+   346→  label: string;
+   347→  htmlFor?: string;
+   348→  children: React.ReactNode;
+   349→  hint?: string;
+   350→  className?: string;
+   351→}) {
+   352→  return (
+   353→    <div className={className}>
+   354→      <Label htmlFor={htmlFor} className="text-xs font-medium text-zinc-400">
+   355→        {label}
+   356→      </Label>
+   357→      <div className="mt-1">{children}</div>
+   358→      {hint && <p className="mt-1 text-[10px] text-zinc-500">{hint}</p>}
+   359→    </div>
+   360→  );
+   361→}
+   362→
+   363→function PasswordField({
+   364→  id,
+   365→  value,
+   366→  onChange,
+   367→  placeholder,
+   368→}: {
+   369→  id: string;
+   370→  value: string;
+   371→  onChange: (v: string) => void;
+   372→  placeholder?: string;
+   373→}) {
+   374→  const [show, setShow] = useState(false);
+   375→  return (
+   376→    <div className="relative">
+   377→      <Input
+   378→        id={id}
+   379→        type={show ? "text" : "password"}
+   380→        value={value}
+   381→        onChange={(e) => onChange(e.target.value)}
+   382→        placeholder={placeholder}
+   383→        autoComplete="off"
+   384→        className="border-zinc-800 bg-zinc-900/60 pr-10 text-zinc-200 placeholder:text-zinc-500 focus-visible:border-emerald-500/50"
+   385→      />
+   386→      <button
+   387→        type="button"
+   388→        onClick={() => setShow((s) => !s)}
+   389→        aria-label={show ? "Hide password" : "Show password"}
+   390→        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 transition-colors hover:text-zinc-200"
+   391→      >
+   392→        {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+   393→      </button>
+   394→    </div>
+   395→  );
+   396→}
+   397→
+   398→function EnabledRow({
+   399→  checked,
+   400→  onChange,
+   401→  label = "Enabled",
+   402→  description,
+   403→}: {
+   404→  checked: boolean;
+   405→  onChange: (v: boolean) => void;
+   406→  label?: string;
+   407→  description?: string;
+   408→}) {
+   409→  return (
+   410→    <div className="flex items-center justify-between gap-3 rounded-md border border-zinc-800/60 bg-zinc-900/40 px-3 py-2.5">
+   411→      <div>
+   412→        <div className="text-sm font-medium text-zinc-200">{label}</div>
+   413→        {description && <div className="text-[10px] text-zinc-500">{description}</div>}
+   414→      </div>
+   415→      <Switch checked={checked} onCheckedChange={onChange} />
+   416→    </div>
+   417→  );
+   418→}
+   419→
+   420→function SaveButton({
+   421→  onClick,
+   422→  loading,
+   423→  label = "Save",
+   424→}: {
+   425→  onClick: () => void;
+   426→  loading: boolean;
+   427→  label?: string;
+   428→}) {
+   429→  return (
+   430→    <Button
+   431→      onClick={onClick}
+   432→      disabled={loading}
+   433→      className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border-emerald"
+   434→    >
+   435→      {loading ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+   436→      {label}
+   437→    </Button>
+   438→  );
+   439→}
+   440→
+   441→function TestButton({
+   442→  onClick,
+   443→  loading,
+   444→  label,
+   445→}: {
+   446→  onClick: () => void;
+   447→  loading: boolean;
+   448→  label: string;
+   449→}) {
+   450→  return (
+   451→    <Button
+   452→      onClick={onClick}
+   453→      disabled={loading}
+   454→      variant="outline"
+   455→      className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+   456→    >
+   457→      {loading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+   458→      {label}
+   459→    </Button>
+   460→  );
+   461→}
+   462→
+   463→const inputCls =
+   464→  "border-zinc-800 bg-zinc-900/60 text-zinc-200 placeholder:text-zinc-500 focus-visible:border-emerald-500/50";
+   465→const selectCls =
+   466→  "w-full rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-emerald-500/50 focus:outline-none";
+   467→
+   468→// ── Save & test helpers ─────────────────────────────────────────────────────
+   469→async function saveSetting(key: SettingKey, config: Record<string, unknown>, isActive: boolean) {
+   470→  const res = await fetch("/api/settings", {
+   471→    method: "POST",
+   472→    headers: { "Content-Type": "application/json" },
+   473→    body: JSON.stringify({ key, config, isActive }),
+   474→  });
+   475→  const data = await res.json();
+   476→  if (!res.ok) throw new Error(data.error || `Failed to save ${key}`);
+   477→  return data;
+   478→}
+   479→
+   480→async function testChannel(channel: string, config: Record<string, unknown>, testTarget: string) {
+   481→  const res = await fetch("/api/settings", {
+   482→    method: "PATCH",
+   483→    headers: { "Content-Type": "application/json" },
+   484→    body: JSON.stringify({ action: "test", channel, config, testTarget }),
+   485→  });
+   486→  const data = await res.json();
+   487→  if (!res.ok) {
+   488→    throw new Error(data.message || data.error || "Test failed");
+   489→  }
+   490→  return data as { success?: boolean; message?: string };
+   491→}
+   492→
+   493→// ════════════════════════════════════════════════════════════════════════════
+   494→// EMAIL TAB
+   495→// ════════════════════════════════════════════════════════════════════════════
+   496→function EmailTab() {
+   497→  const { toast } = useToast();
+   498→  const { settings, loaded } = useSettingsLoader();
+   499→
+   500→  const cfg = settings.email_smtp.config as EmailConfig;
+   501→  const [form, setForm] = useState<EmailConfig>(cfg);
+   502→  const [saving, setSaving] = useState(false);
+   503→  const [testing, setTesting] = useState(false);
+   504→  const [testEmail, setTestEmail] = useState("");
+   505→
+   506→  useEffect(() => {
+   507→    setForm(cfg);
+   508→  }, [loaded]);
+   509→
+   510→  const handleSave = async () => {
+   511→    setSaving(true);
+   512→    try {
+   513→      await saveSetting("email_smtp", { ...form }, form.enabled);
+   514→      toast({ title: "Email settings saved", description: "SMTP configuration stored successfully." });
+   515→    } catch (err) {
+   516→      toast({
+   517→        variant: "destructive",
+   518→        title: "Save failed",
+   519→        description: err instanceof Error ? err.message : "unknown error",
+   520→      });
+   521→    } finally {
+   522→      setSaving(false);
+   523→    }
+   524→  };
+   525→
+   526→  const handleTest = async () => {
+   527→    if (!testEmail.trim()) {
+   528→      toast({
+   529→        variant: "destructive",
+   530→        title: "Test target required",
+   531→        description: "Enter a recipient email address to send the test to.",
+   532→      });
+   533→      return;
+   534→    }
+   535→    setTesting(true);
+   536→    try {
+   537→      const result = await testChannel("email", { ...form }, testEmail.trim());
+   538→      if (result.success) {
+   539→        toast({
+   540→          title: "Test email sent",
+   541→          description: result.message || `Delivered to ${testEmail}`,
+   542→        });
+   543→      } else {
+   544→        toast({
+   545→          variant: "destructive",
+   546→          title: "Test email failed",
+   547→          description: result.message || "SMTP rejected the send.",
+   548→        });
+   549→      }
+   550→    } catch (err) {
+   551→      toast({
+   552→        variant: "destructive",
+   553→        title: "Test email failed",
+   554→        description: err instanceof Error ? err.message : "unknown error",
+   555→      });
+   556→    } finally {
+   557→      setTesting(false);
+   558→    }
+   559→  };
+   560→
+   561→  if (!loaded) return <SettingsSkeleton />;
+   562→
+   563→  return (
+   564→    <SettingsCard
+   565→      icon={Mail}
+   566→      title="Email (SMTP)"
+   567→      description="Outbound mail server used for incident digests, patch alerts, and daily reports."
+   568→      accent="emerald"
+   569→      footer={
+   570→        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+   571→          <div className="flex-1 sm:max-w-xs">
+   572→            <Field label="Send test email to" htmlFor="email-test-target">
+   573→              <Input
+   574→                id="email-test-target"
+   575→                type="email"
+   576→                value={testEmail}
+   577→                onChange={(e) => setTestEmail(e.target.value)}
+   578→                placeholder="user@example.com"
+   579→                className={inputCls}
+   580→              />
+   581→            </Field>
+   582→          </div>
+   583→          <div className="flex gap-2">
+   584→            <TestButton onClick={handleTest} loading={testing} label="Send Test Email" />
+   585→            <SaveButton onClick={handleSave} loading={saving} />
+   586→          </div>
+   587→        </div>
+   588→      }
+   589→    >
+   590→      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+   591→        <Field label="SMTP Host" htmlFor="smtp-host">
+   592→          <Input
+   593→            id="smtp-host"
+   594→            value={form.host}
+   595→            onChange={(e) => setForm({ ...form, host: e.target.value })}
+   596→            placeholder="smtp.gmail.com"
+   597→            className={inputCls}
+   598→          />
+   599→        </Field>
+   600→        <Field label="Port" htmlFor="smtp-port">
+   601→          <Input
+   602→            id="smtp-port"
+   603→            value={form.port}
+   604→            onChange={(e) => setForm({ ...form, port: e.target.value })}
+   605→            placeholder="587"
+   606→            className={inputCls}
+   607→          />
+   608→        </Field>
+   609→        <Field label="Username" htmlFor="smtp-user">
+   610→          <Input
+   611→            id="smtp-user"
+   612→            value={form.user}
+   613→            onChange={(e) => setForm({ ...form, user: e.target.value })}
+   614→            placeholder="user@example.com"
+   615→            className={inputCls}
+   616→          />
+   617→        </Field>
+   618→        <Field label="Password" htmlFor="smtp-pass">
+   619→          <PasswordField
+   620→            id="smtp-pass"
+   621→            value={form.password}
+   622→            onChange={(v) => setForm({ ...form, password: v })}
+   623→            placeholder="app-specific password"
+   624→          />
+   625→        </Field>
+   626→        <Field label="From Email" htmlFor="smtp-from-email">
+   627→          <Input
+   628→            id="smtp-from-email"
+   629→            type="email"
+   630→            value={form.fromEmail}
+   631→            onChange={(e) => setForm({ ...form, fromEmail: e.target.value })}
+   632→            placeholder="alerts@guardianx.in"
+   633→            className={inputCls}
+   634→          />
+   635→        </Field>
+   636→        <Field label="From Name" htmlFor="smtp-from-name">
+   637→          <Input
+   638→            id="smtp-from-name"
+   639→            value={form.fromName}
+   640→            onChange={(e) => setForm({ ...form, fromName: e.target.value })}
+   641→            placeholder="GuardianX Alerts"
+   642→            className={inputCls}
+   643→          />
+   644→        </Field>
+   645→        <div className="sm:col-span-2">
+   646→          <EnabledRow
+   647→            checked={form.enabled}
+   648→            onChange={(v) => setForm({ ...form, enabled: v })}
+   649→            label="Enable Email Channel"
+   650→            description="When off, no emails will be dispatched regardless of routing rules."
+   651→          />
+   652→        </div>
+   653→      </div>
+   654→    </SettingsCard>
+   655→  );
+   656→}
+   657→
+   658→// ════════════════════════════════════════════════════════════════════════════
+   659→// WHATSAPP TAB
+   660→// ════════════════════════════════════════════════════════════════════════════
+   661→function WhatsAppTab() {
+   662→  const { toast } = useToast();
+   663→  const { settings, loaded } = useSettingsLoader();
+   664→
+   665→  const cfg = settings.whatsapp.config as WhatsAppConfig;
+   666→  const [form, setForm] = useState<WhatsAppConfig>(cfg);
+   667→  const [saving, setSaving] = useState(false);
+   668→  const [testing, setTesting] = useState(false);
+   669→  const [testPhone, setTestPhone] = useState("");
+   670→
+   671→  useEffect(() => {
+   672→    setForm(cfg);
+   673→  }, [loaded]);
+   674→
+   675→  const handleSave = async () => {
+   676→    setSaving(true);
+   677→    try {
+   678→      await saveSetting("whatsapp", { ...form }, form.enabled);
+   679→      toast({ title: "WhatsApp settings saved", description: "Cloud API config stored successfully." });
+   680→    } catch (err) {
+   681→      toast({
+   682→        variant: "destructive",
+   683→        title: "Save failed",
+   684→        description: err instanceof Error ? err.message : "unknown error",
+   685→      });
+   686→    } finally {
+   687→      setSaving(false);
+   688→    }
+   689→  };
+   690→
+   691→  const handleTest = async () => {
+   692→    if (!testPhone.trim()) {
+   693→      toast({
+   694→        variant: "destructive",
+   695→        title: "Test target required",
+   696→        description: "Enter a recipient phone number (with country code, no +).",
+   697→      });
+   698→      return;
+   699→    }
+   700→    setTesting(true);
+   701→    try {
+   702→      const result = await testChannel("whatsapp", { ...form }, testPhone.trim());
+   703→      if (result.success) {
+   704→        toast({
+   705→          title: "WhatsApp test sent",
+   706→          description: result.message || `Delivered to ${testPhone}`,
+   707→        });
+   708→      } else {
+   709→        toast({
+   710→          variant: "destructive",
+   711→          title: "WhatsApp test failed",
+   712→          description: result.message || "Meta API rejected the send.",
+   713→        });
+   714→      }
+   715→    } catch (err) {
+   716→      toast({
+   717→        variant: "destructive",
+   718→        title: "WhatsApp test failed",
+   719→        description: err instanceof Error ? err.message : "unknown error",
+   720→      });
+   721→    } finally {
+   722→      setTesting(false);
+   723→    }
+   724→  };
+   725→
+   726→  if (!loaded) return <SettingsSkeleton />;
+   727→
+   728→  return (
+   729→    <SettingsCard
+   730→      icon={MessageSquare}
+   731→      title="WhatsApp Business"
+   732→      description="Send incident and alert messages via the WhatsApp Cloud API."
+   733→      accent="emerald"
+   734→      footer={
+   735→        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+   736→          <div className="flex-1 sm:max-w-xs">
+   737→            <Field label="Send test message to" htmlFor="wa-test-target">
+   738→              <Input
+   739→                id="wa-test-target"
+   740→                value={testPhone}
+   741→                onChange={(e) => setTestPhone(e.target.value)}
+   742→                placeholder="919876543210"
+   743→                className={inputCls}
+   744→              />
+   745→            </Field>
+   746→          </div>
+   747→          <div className="flex gap-2">
+   748→            <TestButton onClick={handleTest} loading={testing} label="Send Test Message" />
+   749→            <SaveButton onClick={handleSave} loading={saving} />
+   750→          </div>
+   751→        </div>
+   752→      }
+   753→    >
+   754→      <div className="mb-4 flex items-start gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-[11px] text-emerald-300/90">
+   755→        <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+   756→        <span>Get these from Meta Business Suite, then WhatsApp API.</span>
+   757→      </div>
+   758→      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+   759→        <Field label="Phone Number ID" htmlFor="wa-phone-id">
+   760→          <Input
+   761→            id="wa-phone-id"
+   762→            value={form.phoneNumberId}
+   763→            onChange={(e) => setForm({ ...form, phoneNumberId: e.target.value })}
+   764→            placeholder="123456789012345"
+   765→            className={inputCls}
+   766→          />
+   767→        </Field>
+   768→        <Field label="Default Recipient Phone" htmlFor="wa-recipient">
+   769→          <Input
+   770→            id="wa-recipient"
+   771→            value={form.recipientPhone}
+   772→            onChange={(e) => setForm({ ...form, recipientPhone: e.target.value })}
+   773→            placeholder="919876543210"
+   774→            className={inputCls}
+   775→          />
+   776→        </Field>
+   777→        <Field label="Access Token" htmlFor="wa-token" className="sm:col-span-2">
+   778→          <PasswordField
+   779→            id="wa-token"
+   780→            value={form.accessToken}
+   781→            onChange={(v) => setForm({ ...form, accessToken: v })}
+   782→            placeholder="EAAG..."
+   783→          />
+   784→        </Field>
+   785→        <div className="sm:col-span-2">
+   786→          <EnabledRow
+   787→            checked={form.enabled}
+   788→            onChange={(v) => setForm({ ...form, enabled: v })}
+   789→            label="Enable WhatsApp Channel"
+   790→            description="When off, no WhatsApp messages will be dispatched regardless of routing rules."
+   791→          />
+   792→        </div>
+   793→      </div>
+   794→    </SettingsCard>
+   795→  );
+   796→}
+   797→
+   798→// ════════════════════════════════════════════════════════════════════════════
+   799→// TELEGRAM TAB
+   800→// ════════════════════════════════════════════════════════════════════════════
+   801→function TelegramTab() {
+   802→  const { toast } = useToast();
+   803→  const { settings, loaded } = useSettingsLoader();
+   804→
+   805→  const cfg = settings.telegram.config as TelegramConfig;
+   806→  const [form, setForm] = useState<TelegramConfig>(cfg);
+   807→  const [saving, setSaving] = useState(false);
+   808→  const [testing, setTesting] = useState(false);
+   809→  const [testChat, setTestChat] = useState("");
+   810→
+   811→  useEffect(() => {
+   812→    setForm(cfg);
+   813→  }, [loaded]);
+   814→
+   815→  const handleSave = async () => {
+   816→    setSaving(true);
+   817→    try {
+   818→      await saveSetting("telegram", { ...form }, form.enabled);
+   819→      toast({ title: "Telegram settings saved", description: "Bot token and chat ID stored." });
+   820→    } catch (err) {
+   821→      toast({
+   822→        variant: "destructive",
+   823→        title: "Save failed",
+   824→        description: err instanceof Error ? err.message : "unknown error",
+   825→      });
+   826→    } finally {
+   827→      setSaving(false);
+   828→    }
+   829→  };
+   830→
+   831→  const handleTest = async () => {
+   832→    setTesting(true);
+   833→    try {
+   834→      const result = await testChannel("telegram", { ...form }, testChat.trim() || form.chatId);
+   835→      if (result.success) {
+   836→        toast({
+   837→          title: "Telegram test sent",
+   838→          description: result.message || "Message posted to chat.",
+   839→        });
+   840→      } else {
+   841→        toast({
+   842→          variant: "destructive",
+   843→          title: "Telegram test failed",
+   844→          description: result.message || "Bot API rejected the send.",
+   845→        });
+   846→      }
+   847→    } catch (err) {
+   848→      toast({
+   849→        variant: "destructive",
+   850→        title: "Telegram test failed",
+   851→        description: err instanceof Error ? err.message : "unknown error",
+   852→      });
+   853→    } finally {
+   854→      setTesting(false);
+   855→    }
+   856→  };
+   857→
+   858→  if (!loaded) return <SettingsSkeleton />;
+   859→
+   860→  return (
+   861→    <SettingsCard
+   862→      icon={Send}
+   863→      title="Telegram Bot"
+   864→      description="Push alerts to a Telegram chat using a BotFather-issued bot token."
+   865→      accent="cyan"
+   866→      footer={
+   867→        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+   868→          <div className="flex-1 sm:max-w-xs">
+   869→            <Field label="Send test to chat ID (optional)" htmlFor="tg-test-target">
+   870→              <Input
+   871→                id="tg-test-target"
+   872→                value={testChat}
+   873→                onChange={(e) => setTestChat(e.target.value)}
+   874→                placeholder={form.chatId || "-1001234567890"}
+   875→                className={inputCls}
+   876→              />
+   877→            </Field>
+   878→          </div>
+   879→          <div className="flex gap-2">
+   880→            <TestButton onClick={handleTest} loading={testing} label="Send Test Message" />
+   881→            <SaveButton onClick={handleSave} loading={saving} />
+   882→          </div>
+   883→        </div>
+   884→      }
+   885→    >
+   886→      <div className="mb-4 flex items-start gap-2 rounded-md border border-cyan-500/20 bg-cyan-500/5 px-3 py-2 text-[11px] text-cyan-300/90">
+   887→        <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+   888→        <span>Create a bot with @BotFather, then get the chat ID from @userinfobot.</span>
+   889→      </div>
+   890→      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+   891→        <Field label="Bot Token" htmlFor="tg-token" className="sm:col-span-2">
+   892→          <PasswordField
+   893→            id="tg-token"
+   894→            value={form.botToken}
+   895→            onChange={(v) => setForm({ ...form, botToken: v })}
+   896→            placeholder="123456789:ABCdefGHIjklMNOpqrSTUvwxYZ"
+   897→          />
+   898→        </Field>
+   899→        <Field label="Chat ID" htmlFor="tg-chat-id" className="sm:col-span-2">
+   900→          <Input
+   901→            id="tg-chat-id"
+   902→            value={form.chatId}
+   903→            onChange={(e) => setForm({ ...form, chatId: e.target.value })}
+   904→            placeholder="-1001234567890"
+   905→            className={inputCls}
+   906→          />
+   907→        </Field>
+   908→        <div className="sm:col-span-2">
+   909→          <EnabledRow
+   910→            checked={form.enabled}
+   911→            onChange={(v) => setForm({ ...form, enabled: v })}
+   912→            label="Enable Telegram Channel"
+   913→            description="When off, no Telegram messages will be dispatched regardless of routing rules."
+   914→          />
+   915→        </div>
+   916→      </div>
+   917→    </SettingsCard>
+   918→  );
+   919→}
+   920→
+   921→// ════════════════════════════════════════════════════════════════════════════
+   922→// SMS TAB
+   923→// ════════════════════════════════════════════════════════════════════════════
+   924→function SmsTab() {
+   925→  const { toast } = useToast();
+   926→  const { settings, loaded } = useSettingsLoader();
+   927→
+   928→  const cfg = settings.sms.config as SmsConfig;
+   929→  const [form, setForm] = useState<SmsConfig>(cfg);
+   930→  const [saving, setSaving] = useState(false);
+   931→  const [testing, setTesting] = useState(false);
+   932→  const [testNumber, setTestNumber] = useState("");
+   933→
+   934→  useEffect(() => {
+   935→    setForm(cfg);
+   936→  }, [loaded]);
+   937→
+   938→  const handleSave = async () => {
+   939→    setSaving(true);
+   940→    try {
+   941→      await saveSetting("sms", { ...form }, form.enabled);
+   942→      toast({
+   943→        title: "SMS settings saved",
+   944→        description: `${form.provider === "twilio" ? "Twilio" : "MSG91"} configuration stored.`,
+   945→      });
+   946→    } catch (err) {
+   947→      toast({
+   948→        variant: "destructive",
+   949→        title: "Save failed",
+   950→        description: err instanceof Error ? err.message : "unknown error",
+   951→      });
+   952→    } finally {
+   953→      setSaving(false);
+   954→    }
+   955→  };
+   956→
+   957→  const handleTest = async () => {
+   958→    if (!testNumber.trim()) {
+   959→      toast({
+   960→        variant: "destructive",
+   961→        title: "Test target required",
+   962→        description: "Enter a recipient phone number in E.164 format.",
+   963→      });
+   964→      return;
+   965→    }
+   966→    setTesting(true);
+   967→    try {
+   968→      const result = await testChannel("sms", { ...form }, testNumber.trim());
+   969→      if (result.success) {
+   970→        toast({
+   971→          title: "Test SMS sent",
+   972→          description: result.message || `Delivered to ${testNumber}`,
+   973→        });
+   974→      } else {
+   975→        toast({
+   976→          variant: "destructive",
+   977→          title: "Test SMS failed",
+   978→          description: result.message || "Provider rejected the send.",
+   979→        });
+   980→      }
+   981→    } catch (err) {
+   982→      toast({
+   983→        variant: "destructive",
+   984→        title: "Test SMS failed",
+   985→        description: err instanceof Error ? err.message : "unknown error",
+   986→      });
+   987→    } finally {
+   988→      setTesting(false);
+   989→    }
+   990→  };
+   991→
+   992→  if (!loaded) return <SettingsSkeleton />;
+   993→
+   994→  const isTwilio = form.provider === "twilio";
+   995→
+   996→  return (
+   997→    <SettingsCard
+   998→      icon={Phone}
+   999→      title="SMS Gateway"
+  1000→      description="Send critical alerts via SMS using Twilio or MSG91."
+  1001→      accent="amber"
+  1002→      footer={
+  1003→        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  1004→          <div className="flex-1 sm:max-w-xs">
+  1005→            <Field label="Send test SMS to" htmlFor="sms-test-target">
+  1006→              <Input
+  1007→                id="sms-test-target"
+  1008→                value={testNumber}
+  1009→                onChange={(e) => setTestNumber(e.target.value)}
+  1010→                placeholder="+919876543210"
+  1011→                className={inputCls}
+  1012→              />
+  1013→            </Field>
+  1014→          </div>
+  1015→          <div className="flex gap-2">
+  1016→            <TestButton onClick={handleTest} loading={testing} label="Send Test SMS" />
+  1017→            <SaveButton onClick={handleSave} loading={saving} />
+  1018→          </div>
+  1019→        </div>
+  1020→      }
+  1021→    >
+  1022→      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  1023→        <Field label="Provider" htmlFor="sms-provider">
+  1024→          <select
+  1025→            id="sms-provider"
+  1026→            value={form.provider}
+  1027→            onChange={(e) => setForm({ ...form, provider: e.target.value as "twilio" | "msg91" })}
+  1028→            className={selectCls}
+  1029→          >
+  1030→            <option value="twilio">Twilio</option>
+  1031→            <option value="msg91">MSG91</option>
+  1032→          </select>
+  1033→        </Field>
+  1034→        <Field label="Default To Number" htmlFor="sms-to">
+  1035→          <Input
+  1036→            id="sms-to"
+  1037→            value={form.toNumber}
+  1038→            onChange={(e) => setForm({ ...form, toNumber: e.target.value })}
+  1039→            placeholder="+919876543210"
+  1040→            className={inputCls}
+  1041→          />
+  1042→        </Field>
+  1043→
+  1044→        <AnimatePresence mode="wait">
+  1045→          {isTwilio ? (
+  1046→            <motion.div
+  1047→              key="twilio-fields"
+  1048→              initial={{ opacity: 0, height: 0 }}
+  1049→              animate={{ opacity: 1, height: "auto" }}
+  1050→              exit={{ opacity: 0, height: 0 }}
+  1051→              className="contents"
+  1052→            >
+  1053→              <Field label="Twilio Account SID" htmlFor="twilio-sid">
+  1054→                <Input
+  1055→                  id="twilio-sid"
+  1056→                  value={form.accountSid}
+  1057→                  onChange={(e) => setForm({ ...form, accountSid: e.target.value })}
+  1058→                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  1059→                  className={inputCls}
+  1060→                />
+  1061→              </Field>
+  1062→              <Field label="Twilio Auth Token" htmlFor="twilio-token">
+  1063→                <PasswordField
+  1064→                  id="twilio-token"
+  1065→                  value={form.authToken}
+  1066→                  onChange={(v) => setForm({ ...form, authToken: v })}
+  1067→                  placeholder="auth token"
+  1068→                />
+  1069→              </Field>
+  1070→              <Field label="Twilio From Number" htmlFor="twilio-from" className="sm:col-span-2">
+  1071→                <Input
+  1072→                  id="twilio-from"
+  1073→                  value={form.fromNumber}
+  1074→                  onChange={(e) => setForm({ ...form, fromNumber: e.target.value })}
+  1075→                  placeholder="+12345678901"
+  1076→                  className={inputCls}
+  1077→                />
+  1078→              </Field>
+  1079→            </motion.div>
+  1080→          ) : (
+  1081→            <motion.div
+  1082→              key="msg91-fields"
+  1083→              initial={{ opacity: 0, height: 0 }}
+  1084→              animate={{ opacity: 1, height: "auto" }}
+  1085→              exit={{ opacity: 0, height: 0 }}
+  1086→              className="contents"
+  1087→            >
+  1088→              <Field label="MSG91 API Key" htmlFor="msg91-key" className="sm:col-span-2">
+  1089→                <PasswordField
+  1090→                  id="msg91-key"
+  1091→                  value={form.apiKey}
+  1092→                  onChange={(v) => setForm({ ...form, apiKey: v })}
+  1093→                  placeholder="xxxxxxxxxxxxxxxxxxxxxxxx"
+  1094→                />
+  1095→              </Field>
+  1096→              <Field label="MSG91 Sender ID" htmlFor="msg91-sender" className="sm:col-span-2">
+  1097→                <Input
+  1098→                  id="msg91-sender"
+  1099→                  value={form.sender}
+  1100→                  onChange={(e) => setForm({ ...form, sender: e.target.value })}
+  1101→                  placeholder="GUARDX"
+  1102→                  className={inputCls}
+  1103→                />
+  1104→              </Field>
+  1105→            </motion.div>
+  1106→          )}
+  1107→        </AnimatePresence>
+  1108→
+  1109→        <div className="sm:col-span-2">
+  1110→          <EnabledRow
+  1111→            checked={form.enabled}
+  1112→            onChange={(v) => setForm({ ...form, enabled: v })}
+  1113→            label="Enable SMS Channel"
+  1114→            description="When off, no SMS messages will be dispatched regardless of routing rules."
+  1115→          />
+  1116→        </div>
+  1117→      </div>
+  1118→    </SettingsCard>
+  1119→  );
+  1120→}
+  1121→
+  1122→// ════════════════════════════════════════════════════════════════════════════
+  1123→// GENERAL TAB
+  1124→// ════════════════════════════════════════════════════════════════════════════
+  1125→function GeneralTab() {
+  1126→  const { toast } = useToast();
+  1127→  const { settings, loaded } = useSettingsLoader();
+  1128→
+  1129→  const cfg = settings.general.config as GeneralConfig;
+  1130→  const [form, setForm] = useState<GeneralConfig>(cfg);
+  1131→  const [saving, setSaving] = useState(false);
+  1132→
+  1133→  useEffect(() => {
+  1134→    setForm(cfg);
+  1135→  }, [loaded]);
+  1136→
+  1137→  const handleSave = async () => {
+  1138→    setSaving(true);
+  1139→    try {
+  1140→      await saveSetting("general", { ...form }, true);
+  1141→      toast({ title: "Organization settings saved", description: "Profile updated." });
+  1142→    } catch (err) {
+  1143→      toast({
+  1144→        variant: "destructive",
+  1145→        title: "Save failed",
+  1146→        description: err instanceof Error ? err.message : "unknown error",
+  1147→      });
+  1148→    } finally {
+  1149→      setSaving(false);
+  1150→    }
+  1151→  };
+  1152→
+  1153→  if (!loaded) return <SettingsSkeleton />;
+  1154→
+  1155→  return (
+  1156→    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+  1157→      <SettingsCard
+  1158→        icon={Building2}
+  1159→        title="Organization Profile"
+  1160→        description="Shown on reports, digest emails, and the client portal header."
+  1161→        accent="emerald"
+  1162→        footer={
+  1163→          <div className="flex justify-end">
+  1164→            <SaveButton onClick={handleSave} loading={saving} />
+  1165→          </div>
+  1166→        }
+  1167→      >
+  1168→        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  1169→          <Field label="Organization Name" htmlFor="org-name">
+  1170→            <Input
+  1171→              id="org-name"
+  1172→              value={form.orgName}
+  1173→              onChange={(e) => setForm({ ...form, orgName: e.target.value })}
+  1174→              placeholder="GuardianX"
+  1175→              className={inputCls}
+  1176→            />
+  1177→          </Field>
+  1178→          <Field label="Organization Email" htmlFor="org-email">
+  1179→            <Input
+  1180→              id="org-email"
+  1181→              type="email"
+  1182→              value={form.orgEmail}
+  1183→              onChange={(e) => setForm({ ...form, orgEmail: e.target.value })}
+  1184→              placeholder="hello@guardianx.in"
+  1185→              className={inputCls}
+  1186→            />
+  1187→          </Field>
+  1188→          <Field label="Organization Phone" htmlFor="org-phone">
+  1189→            <Input
+  1190→              id="org-phone"
+  1191→              value={form.orgPhone}
+  1192→              onChange={(e) => setForm({ ...form, orgPhone: e.target.value })}
+  1193→              placeholder="+91 70067 12347"
+  1194→              className={inputCls}
+  1195→            />
+  1196→          </Field>
+  1197→          <Field label="Organization Website" htmlFor="org-website">
+  1198→            <Input
+  1199→              id="org-website"
+  1200→              value={form.orgWebsite}
+  1201→              onChange={(e) => setForm({ ...form, orgWebsite: e.target.value })}
+  1202→              placeholder="https://www.guardianx.in"
+  1203→              className={inputCls}
+  1204→            />
+  1205→          </Field>
+  1206→          <Field label="Logo URL" htmlFor="org-logo" className="sm:col-span-2">
+  1207→            <Input
+  1208→              id="org-logo"
+  1209→              value={form.logoUrl}
+  1210→              onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+  1211→              placeholder="/guardianx-logo.png"
+  1212→              className={inputCls}
+  1213→            />
+  1214→          </Field>
+  1215→        </div>
+  1216→      </SettingsCard>
+  1217→
+  1218→      {/* Report preview */}
+  1219→      <div className="holo-card-sharp hud-corners border border-zinc-800 p-5">
+  1220→        <div className="mb-3 flex items-center gap-2">
+  1221→          <FileText className="size-4 text-emerald-400" />
+  1222→          <h3 className="text-sm font-bold text-zinc-100">Report Preview</h3>
+  1223→        </div>
+  1224→        <div className="overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/60">
+  1225→          <div className="flex items-center gap-3 border-b border-zinc-800 bg-zinc-900/80 px-4 py-3">
+  1226→            <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-emerald-500/30 bg-emerald-500/10">
+  1227→              {form.logoUrl ? (
+  1228→                <img
+  1229→                  src={form.logoUrl}
+  1230→                  alt={`${form.orgName || "Org"} logo`}
+  1231→                  className="size-full object-cover"
+  1232→                  onError={(e) => {
+  1233→                    (e.currentTarget as HTMLImageElement).style.display = "none";
+  1234→                  }}
+  1235→                />
+  1236→              ) : (
+  1237→                <Building2 className="size-5 text-emerald-400" />
+  1238→              )}
+  1239→            </div>
+  1240→            <div className="min-w-0">
+  1241→              <div className="truncate text-sm font-bold text-zinc-100">
+  1242→                {form.orgName || "GuardianX"}
+  1243→              </div>
+  1244→              <div className="truncate text-[10px] text-zinc-500">
+  1245→                Security Posture Report
+  1246→              </div>
+  1247→            </div>
+  1248→          </div>
+  1249→          <div className="space-y-2 px-4 py-4 text-[11px]">
+  1250→            <PreviewRow icon={Mail} label="Email" value={form.orgEmail} />
+  1251→            <PreviewRow icon={Phone} label="Phone" value={form.orgPhone} />
+  1252→            <PreviewRow icon={Globe} label="Website" value={form.orgWebsite} />
+  1253→          </div>
+  1254→          <div className="border-t border-zinc-800 bg-zinc-950/40 px-4 py-2 text-[10px] text-zinc-600">
+  1255→            Generated by GuardianX Autonomous Security Platform
+  1256→          </div>
+  1257→        </div>
+  1258→      </div>
+  1259→    </div>
+  1260→  );
+  1261→}
+  1262→
+  1263→function PreviewRow({
+  1264→  icon: Icon,
+  1265→  label,
+  1266→  value,
+  1267→}: {
+  1268→  icon: typeof Mail;
+  1269→  label: string;
+  1270→  value: string;
+  1271→}) {
+  1272→  return (
+  1273→    <div className="flex items-center gap-2">
+  1274→      <Icon className="size-3.5 text-zinc-500" />
+  1275→      <span className="w-14 shrink-0 text-zinc-500">{label}</span>
+  1276→      <span className="truncate text-zinc-300">{value || "not set"}</span>
+  1277→    </div>
+  1278→  );
+  1279→}
+  1280→
+  1281→// ════════════════════════════════════════════════════════════════════════════
+  1282→// NOTIFICATIONS ROUTING TAB
+  1283→// ════════════════════════════════════════════════════════════════════════════
+  1284→const EVENT_ROWS: { key: EventTypeKey; label: string; icon: typeof Bell; accent: string }[] = [
+  1285→  { key: "critical_findings", label: "Critical Findings", icon: ShieldCheck, accent: "text-red-400" },
+  1286→  { key: "scan_completed", label: "Scan Completed", icon: Network, accent: "text-cyan-400" },
+  1287→  { key: "incident_created", label: "Incident Created", icon: AlertCircle, accent: "text-amber-400" },
+  1288→  { key: "canary_triggered", label: "Canary Triggered", icon: Sparkles, accent: "text-rose-400" },
+  1289→  { key: "patch_ready", label: "Patch Ready", icon: ShieldCheck, accent: "text-emerald-400" },
+  1290→  { key: "daily_digest", label: "Daily Digest", icon: FileText, accent: "text-sky-400" },
+  1291→];
+  1292→
+  1293→const CHANNEL_COLS: { key: ChannelKey; label: string; icon: typeof Mail }[] = [
+  1294→  { key: "email", label: "Email", icon: Mail },
+  1295→  { key: "whatsapp", label: "WhatsApp", icon: MessageSquare },
+  1296→  { key: "telegram", label: "Telegram", icon: Send },
+  1297→  { key: "sms", label: "SMS", icon: Phone },
+  1298→];
+  1299→
+  1300→function NotificationsTab() {
+  1301→  const { toast } = useToast();
+  1302→  const { settings, loaded } = useSettingsLoader();
+  1303→
+  1304→  const cfg = settings.notifications.config as NotificationsConfig;
+  1305→  const [form, setForm] = useState<NotificationsConfig>(cfg);
+  1306→  const [saving, setSaving] = useState(false);
+  1307→
+  1308→  useEffect(() => {
+  1309→    setForm(cfg);
+  1310→  }, [loaded]);
+  1311→
+  1312→  const toggle = (eventKey: EventTypeKey, channel: ChannelKey, value: boolean) => {
+  1313→    setForm((prev) => ({
+  1314→      ...prev,
+  1315→      [eventKey]: { ...prev[eventKey], [channel]: value },
+  1316→    }));
+  1317→  };
+  1318→
+  1319→  const handleSave = async () => {
+  1320→    setSaving(true);
+  1321→    try {
+  1322→      await saveSetting("notifications", { ...form }, true);
+  1323→      toast({ title: "Routing rules saved", description: "Notification matrix updated." });
+  1324→    } catch (err) {
+  1325→      toast({
+  1326→        variant: "destructive",
+  1327→        title: "Save failed",
+  1328→        description: err instanceof Error ? err.message : "unknown error",
+  1329→      });
+  1330→    } finally {
+  1331→      setSaving(false);
+  1332→    }
+  1333→  };
+  1334→
+  1335→  if (!loaded) return <SettingsSkeleton />;
+  1336→
+  1337→  return (
+  1338→    <SettingsCard
+  1339→      icon={Bell}
+  1340→      title="Notification Routing"
+  1341→      description="When an event occurs, GuardianX will send notifications via all enabled channels."
+  1342→      accent="amber"
+  1343→      footer={
+  1344→        <div className="flex justify-end">
+  1345→          <SaveButton onClick={handleSave} loading={saving} label="Save Routing Rules" />
+  1346→        </div>
+  1347→      }
+  1348→    >
+  1349→      <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-300/90">
+  1350→        <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+  1351→        <span>
+  1352→          Routing rules are independent of channel configuration. A channel must be enabled and
+  1353→          configured on its own tab for messages to actually deliver.
+  1354→        </span>
+  1355→      </div>
+  1356→
+  1357→      {/* Desktop: matrix table */}
+  1358→      <div className="hidden overflow-hidden rounded-md border border-zinc-800 md:block">
+  1359→        <table className="w-full text-sm">
+  1360→          <thead>
+  1361→            <tr className="border-b border-zinc-800 bg-zinc-900/60">
+  1362→              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+  1363→                Event
+  1364→              </th>
+  1365→              {CHANNEL_COLS.map((c) => {
+  1366→                const Icon = c.icon;
+  1367→                return (
+  1368→                  <th key={c.key} className="px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+  1369→                    <div className="flex flex-col items-center gap-1">
+  1370→                      <Icon className="size-3.5 text-zinc-400" />
+  1371→                      <span>{c.label}</span>
+  1372→                    </div>
+  1373→                  </th>
+  1374→                );
+  1375→              })}
+  1376→            </tr>
+  1377→          </thead>
+  1378→          <tbody>
+  1379→            {EVENT_ROWS.map((row, idx) => {
+  1380→              const Icon = row.icon;
+  1381→              return (
+  1382→                <tr
+  1383→                  key={row.key}
+  1384→                  className={`border-b border-zinc-800/60 ${idx % 2 === 1 ? "bg-zinc-900/30" : ""}`}
+  1385→                >
+  1386→                  <td className="px-3 py-3">
+  1387→                    <div className="flex items-center gap-2">
+  1388→                      <Icon className={`size-4 ${row.accent}`} />
+  1389→                      <span className="font-medium text-zinc-200">{row.label}</span>
+  1390→                    </div>
+  1391→                  </td>
+  1392→                  {CHANNEL_COLS.map((c) => (
+  1393→                    <td key={c.key} className="px-3 py-3 text-center">
+  1394→                      <div className="flex justify-center">
+  1395→                        <Switch
+  1396→                          checked={!!form[row.key][c.key]}
+  1397→                          onCheckedChange={(v) => toggle(row.key, c.key, v)}
+  1398→                          aria-label={`${row.label} via ${c.label}`}
+  1399→                        />
+  1400→                      </div>
+  1401→                    </td>
+  1402→                  ))}
+  1403→                </tr>
+  1404→              );
+  1405→            })}
+  1406→          </tbody>
+  1407→        </table>
+  1408→      </div>
+  1409→
+  1410→      {/* Mobile: stacked cards */}
+  1411→      <div className="space-y-3 md:hidden">
+  1412→        {EVENT_ROWS.map((row) => {
+  1413→          const Icon = row.icon;
+  1414→          return (
+  1415→            <div key={row.key} className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+  1416→              <div className="mb-2 flex items-center gap-2">
+  1417→                <Icon className={`size-4 ${row.accent}`} />
+  1418→                <span className="text-sm font-semibold text-zinc-200">{row.label}</span>
+  1419→              </div>
+  1420→              <div className="grid grid-cols-2 gap-2">
+  1421→                {CHANNEL_COLS.map((c) => {
+  1422→                  const Icon2 = c.icon;
+  1423→                  return (
+  1424→                    <div
+  1425→                      key={c.key}
+  1426→                      className="flex items-center justify-between gap-2 rounded-md border border-zinc-800/60 bg-zinc-950/40 px-2.5 py-2"
+  1427→                    >
+  1428→                      <div className="flex items-center gap-1.5 text-xs text-zinc-300">
+  1429→                        <Icon2 className="size-3.5 text-zinc-400" />
+  1430→                        {c.label}
+  1431→                      </div>
+  1432→                      <Switch
+  1433→                        checked={!!form[row.key][c.key]}
+  1434→                        onCheckedChange={(v) => toggle(row.key, c.key, v)}
+  1435→                        aria-label={`${row.label} via ${c.label}`}
+  1436→                      />
+  1437→                    </div>
+  1438→                  );
+  1439→                })}
+  1440→              </div>
+  1441→            </div>
+  1442→          );
+  1443→        })}
+  1444→      </div>
+  1445→
+  1446→      {/* Summary footer */}
+  1447→      <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
+  1448→        <CheckCircle2 className="size-3.5 text-emerald-400" />
+  1449→        <span>
+  1450→          {EVENT_ROWS.reduce(
+  1451→            (acc, r) => acc + CHANNEL_COLS.filter((c) => form[r.key][c.key]).length,
+  1452→            0
+  1453→          )}{" "}
+  1454→          active routes across {EVENT_ROWS.length} event types and {CHANNEL_COLS.length} channels.
+  1455→        </span>
+  1456→      </div>
+  1457→    </SettingsCard>
+  1458→  );
+  1459→}
+  1460→
+  1461→// ── Skeleton loader ─────────────────────────────────────────────────────────
+  1462→function SettingsSkeleton() {
+  1463→  return (
+  1464→    <div className="holo-card-sharp hud-corners border border-zinc-800 p-6">
+  1465→      <div className="mb-4 flex items-center gap-3">
+  1466→        <Skeleton className="size-9 rounded-md bg-zinc-800/60" />
+  1467→        <div className="flex-1 space-y-2">
+  1468→          <Skeleton className="h-4 w-40 bg-zinc-800/60" />
+  1469→          <Skeleton className="h-3 w-64 bg-zinc-800/60" />
+  1470→        </div>
+  1471→      </div>
+  1472→      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  1473→        {Array.from({ length: 6 }).map((_, i) => (
+  1474→          <div key={i} className="space-y-2">
+  1475→            <Skeleton className="h-3 w-20 bg-zinc-800/60" />
+  1476→            <Skeleton className="h-9 w-full bg-zinc-800/60" />
+  1477→          </div>
+  1478→        ))}
+  1479→      </div>
+  1480→      <div className="mt-5 flex justify-end gap-2">
+  1481→        <Skeleton className="h-9 w-32 bg-zinc-800/60" />
+  1482→        <Skeleton className="h-9 w-24 bg-zinc-800/60" />
+  1483→      </div>
+  1484→    </div>
+  1485→  );
+  1486→}
+  1487→

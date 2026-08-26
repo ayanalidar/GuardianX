@@ -1,0 +1,82 @@
+name: Tests
+
+# Runs on every push to main and on every pull request. Catches regressions
+# in the RBAC ownership filtering, auth flows, email-template XSS escaping,
+# input sanitization, and password-strength scoring before they reach
+# production.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs on the same ref when a newer commit is pushed —
+# saves CI minutes on rapid-fire pushes.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint + Vitest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      # Fake-but-present env vars so `src/lib/db.ts` doesn't print its
+      # "[FATAL] Missing required environment variables" warning during
+      # the test run. The Supabase client is mocked at the
+      # `@supabase/supabase-js` level in every test file, so these values
+      # are NEVER used to make a real connection.
+      SUPABASE_URL: https://test.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      NEXT_PUBLIC_SUPABASE_URL: https://test.supabase.co
+      JWT_SECRET: guardianx-dev-secret-change-in-production
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            .next/cache
+          key: ${{ runner.os }}-node-${{ hashFiles('**/bun.lock', '**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run ESLint
+        run: bun run lint
+
+      - name: Run Vitest
+        run: bun run test
+        # The test suite targets <30s end-to-end. If a run ever exceeds
+        # 5 minutes, something is wrong (likely a stuck bcrypt call or an
+        # unawaited fire-and-forget). Fail the job rather than hang.
+        timeout-minutes: 5
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-output
+          path: |
+            .vitest-output/
+          retention-days: 7

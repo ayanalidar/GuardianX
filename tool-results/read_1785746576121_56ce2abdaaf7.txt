@@ -1,0 +1,704 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback } from "react";
+     4→     4→import { motion } from "framer-motion";
+     5→     5→import { Button } from "@/components/ui/button";
+     6→     6→import { Badge } from "@/components/ui/badge";
+     7→     7→import { useToast } from "@/hooks/use-toast";
+     8→     8→import {
+     9→     9→  ArrowLeft, Building2, Globe, GitBranch, Shield, Loader2, CheckCircle2,
+    10→    10→  Circle, AlertCircle, Phone, Mail, FileText, Crosshair, Bug, ShieldCheck,
+    11→    11→  Swords, Heart, Gavel, Plus, Boxes, Target, ExternalLink, X, Trash2, Rocket,
+    12→    12→} from "lucide-react";
+    13→    13→import { sentinelApi } from "@/lib/sentinel/api";
+    14→    14→import { pushTerminalLine } from "./live-exploit-terminal";
+    15→    15→
+    16→    16→interface Stage {
+    17→    17→  id: number;
+    18→    18→  key: string;
+    19→    19→  label: string;
+    20→    20→  desc: string;
+    21→    21→  status: "pending" | "in-progress" | "completed";
+    22→    22→  metrics: Record<string, unknown>;
+    23→    23→}
+    24→    24→
+    25→    25→interface ClientDetailData {
+    26→    26→  client: { id: string; name: string; status: string; authorized: boolean };
+    27→    27→  stages: Stage[];
+    28→    28→  progress: number;
+    29→    29→  current_stage: string;
+    30→    30→  summary: Record<string, number>;
+    31→    31→}
+    32→    32→
+    33→    33→interface ClientFullDetail {
+    34→    34→  id: string;
+    35→    35→  name: string;
+    36→    36→  description: string | null;
+    37→    37→  contact_name: string | null;
+    38→    38→  contact_email: string | null;
+    39→    39→  contact_phone: string | null;
+    40→    40→  target_url: string | null;
+    41→    41→  repo_url: string | null;
+    42→    42→  scope: string | null;
+    43→    43→  authorized: boolean;
+    44→    44→  frameworks: string[];
+    45→    45→  status: string;
+    46→    46→  codebases: { id: string; name: string; language: string; description: string | null }[];
+    47→    47→  targets: { id: string; name: string; base_url: string; authorized: boolean }[];
+    48→    48→}
+    49→    49→
+    50→    50→const STAGE_ICONS: Record<string, typeof Circle> = {
+    51→    51→  onboarding: Building2,
+    52→    52→  scanning: Bug,
+    53→    53→  testing: Crosshair,
+    54→    54→  patching: ShieldCheck,
+    55→    55→  verifying: Swords,
+    56→    56→  defending: Shield,
+    57→    57→  compliant: Gavel,
+    58→    58→};
+    59→    59→
+    60→    60→const STAGE_COLORS: Record<string, { text: string; bg: string; border: string; neon: string }> = {
+    61→    61→  onboarding: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40", neon: "neon-emerald" },
+    62→    62→  scanning:   { text: "text-cyan-400",    bg: "bg-cyan-500/10",    border: "border-cyan-500/40",    neon: "neon-cyan" },
+    63→    63→  testing:    { text: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/40",   neon: "neon-amber" },
+    64→    64→  patching:   { text: "text-violet-400",  bg: "bg-violet-500/10",  border: "border-violet-500/40",  neon: "neon-violet" },
+    65→    65→  verifying:  { text: "text-sky-400",     bg: "bg-sky-500/10",     border: "border-sky-500/40",     neon: "neon-sky" },
+    66→    66→  defending:  { text: "text-rose-400",    bg: "bg-rose-500/10",    border: "border-rose-500/40",    neon: "neon-rose" },
+    67→    67→  compliant:  { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40", neon: "neon-emerald" },
+    68→    68→};
+    69→    69→
+    70→    70→interface ClientDetailProps {
+    71→    71→  clientId: string;
+    72→    72→  onBack: () => void;
+    73→    73→  onNavigate: (tab: string) => void;
+    74→    74→}
+    75→    75→
+    76→    76→export function ClientDetail({ clientId, onBack }: ClientDetailProps) {
+    77→    77→  const { toast } = useToast();
+    78→    78→  const [detail, setDetail] = useState<ClientFullDetail | null>(null);
+    79→    79→  const [pipeline, setPipeline] = useState<ClientDetailData | null>(null);
+    80→    80→  const [loading, setLoading] = useState(true);
+    81→    81→  const [authorizing, setAuthorizing] = useState(false);
+    82→    82→  const [showAddCodebase, setShowAddCodebase] = useState(false);
+    83→    83→  const [showAddTarget, setShowAddTarget] = useState(false);
+    84→    84→  const [vaptRunning, setVaptRunning] = useState(false);
+    85→    85→  const [vaptResult, setVaptResult] = useState<any>(null);
+    86→    86→  const [deleting, setDeleting] = useState(false);
+    87→    87→
+    88→    88→  // Add codebase form state
+    89→    89→  const [cbName, setCbName] = useState("");
+    90→    90→  const [cbSource, setCbSource] = useState("");
+    91→    91→  const [cbDesc, setCbDesc] = useState("");
+    92→    92→  const [cbSaving, setCbSaving] = useState(false);
+    93→    93→
+    94→    94→  // Add target form state
+    95→    95→  const [tgtName, setTgtName] = useState("");
+    96→    96→  const [tgtUrl, setTgtUrl] = useState("");
+    97→    97→  const [tgtAuth, setTgtAuth] = useState(false);
+    98→    98→  const [tgtSaving, setTgtSaving] = useState(false);
+    99→    99→
+   100→   100→  const load = useCallback(async () => {
+   101→   101→    setLoading(true);
+   102→   102→    try {
+   103→   103→      const [dRes, pRes] = await Promise.all([
+   104→   104→        fetch(`/api/clients/${clientId}`),
+   105→   105→        fetch(`/api/clients/${clientId}/pipeline`),
+   106→   106→      ]);
+   107→   107→      const d = await dRes.json();
+   108→   108→      const p = await pRes.json();
+   109→   109→      if (!d.error) setDetail(d);
+   110→   110→      if (!p.error) setPipeline(p);
+   111→   111→    } catch {
+   112→   112→      // ignore
+   113→   113→    } finally {
+   114→   114→      setLoading(false);
+   115→   115→    }
+   116→   116→  }, [clientId]);
+   117→   117→
+   118→   118→  useEffect(() => {
+   119→   119→    load();
+   120→   120→  }, [load]);
+   121→   121→
+   122→   122→  const handleAddCodebase = async () => {
+   123→   123→    if (!cbName.trim() || !cbSource.trim()) return;
+   124→   124→    setCbSaving(true);
+   125→   125→    try {
+   126→   126→      await sentinelApi.createCodebase({
+   127→   127→        name: cbName.trim(),
+   128→   128→        sourceCode: cbSource,
+   129→   129→        description: cbDesc.trim() || undefined,
+   130→   130→        clientId: clientId,
+   131→   131→      });
+   132→   132→      toast({ title: "Codebase added!", description: cbName.trim() });
+   133→   133→      setCbName(""); setCbSource(""); setCbDesc("");
+   134→   134→      setShowAddCodebase(false);
+   135→   135→      load();
+   136→   136→    } catch (err) {
+   137→   137→      toast({ variant: "destructive", title: "Failed", description: err instanceof Error ? err.message : "unknown" });
+   138→   138→    } finally {
+   139→   139→      setCbSaving(false);
+   140→   140→    }
+   141→   141→  };
+   142→   142→
+   143→   143→  const handleAddTarget = async () => {
+   144→   144→    if (!tgtName.trim() || !tgtUrl.trim()) return;
+   145→   145→    setTgtSaving(true);
+   146→   146→    try {
+   147→   147→      await sentinelApi.addTarget({
+   148→   148→        name: tgtName.trim(),
+   149→   149→        baseUrl: tgtUrl.trim(),
+   150→   150→        authorized: tgtAuth,
+   151→   151→        clientId: clientId,
+   152→   152→      });
+   153→   153→      toast({ title: "Target added!", description: tgtName.trim() });
+   154→   154→      setTgtName(""); setTgtUrl(""); setTgtAuth(false);
+   155→   155→      setShowAddTarget(false);
+   156→   156→      load();
+   157→   157→    } catch (err) {
+   158→   158→      toast({ variant: "destructive", title: "Failed", description: err instanceof Error ? err.message : "unknown" });
+   159→   159→    } finally {
+   160→   160→      setTgtSaving(false);
+   161→   161→    }
+   162→   162→  };
+   163→   163→
+   164→   164→  const handleFullVapt = async () => {
+   165→   165→    setVaptRunning(true);
+   166→   166→    setVaptResult(null);
+   167→   167→    pushTerminalLine({ text: `$ guardianx full-vapt --client "${detail?.name}" --clientId ${clientId}`, type: "cmd" });
+   168→   168→    pushTerminalLine({ text: "[*] Initiating 7-stage pipeline: discover → recon → scan → test → patch → verify → defend", type: "out" });
+   169→   169→    try {
+   170→   170→      const res = await fetch("/api/full-vapt", {
+   171→   171→        method: "POST",
+   172→   172→        headers: { "Content-Type": "application/json" },
+   173→   173→        body: JSON.stringify({ clientId }),
+   174→   174→      });
+   175→   175→      const data = await res.json();
+   176→   176→      setVaptResult(data);
+   177→   177→      if (res.ok) {
+   178→   178→        pushTerminalLine({ text: `[+] Full VAPT launched, ${data.message || "pipeline running"}`, type: "success" });
+   179→   179→        toast({ title: "Full VAPT Launched!", description: data.message });
+   180→   180→      } else {
+   181→   181→        pushTerminalLine({ text: `[!] VAPT failed: ${data.error || "unknown error"}`, type: "err" });
+   182→   182→        toast({ variant: "destructive", title: "VAPT failed to start" });
+   183→   183→      }
+   184→   184→      load();
+   185→   185→    } catch (err) {
+   186→   186→      pushTerminalLine({ text: `[!] VAPT exception: ${err instanceof Error ? err.message : "unknown"}`, type: "err" });
+   187→   187→      toast({ variant: "destructive", title: "VAPT failed to start" });
+   188→   188→    }
+   189→   189→    setVaptRunning(false);
+   190→   190→  };
+   191→   191→
+   192→   192→  const handleDelete = async () => {
+   193→   193→    if (!confirm(`Delete "${detail?.name}"? This will remove the client and all associated data (codebases, targets, scans, findings). This cannot be undone.`)) return;
+   194→   194→    setDeleting(true);
+   195→   195→    try {
+   196→   196→      const res = await fetch(`/api/clients/${clientId}`, { method: "DELETE" });
+   197→   197→      if (res.ok) {
+   198→   198→        toast({ title: "Client deleted", description: detail?.name });
+   199→   199→        onBack();
+   200→   200→      } else {
+   201→   201→        toast({ variant: "destructive", title: "Delete failed" });
+   202→   202→      }
+   203→   203→    } catch {
+   204→   204→      toast({ variant: "destructive", title: "Delete failed" });
+   205→   205→    }
+   206→   206→    setDeleting(false);
+   207→   207→  };
+   208→   208→
+   209→   209→  const handleAuthorize = async () => {
+   210→   210→    setAuthorizing(true);
+   211→   211→    try {
+   212→   212→      const res = await fetch(`/api/clients/${clientId}`, {
+   213→   213→        method: "PATCH",
+   214→   214→        headers: { "Content-Type": "application/json" },
+   215→   215→        body: JSON.stringify({ authorized: !detail?.authorized }),
+   216→   216→      });
+   217→   217→      const data = await res.json();
+   218→   218→      if (!res.ok) throw new Error(data.error);
+   219→   219→      toast({
+   220→   220→        title: detail?.authorized ? "Authorization revoked" : "Client authorized",
+   221→   221→        description: detail?.authorized
+   222→   222→          ? "Testing is now blocked until re-authorized."
+   223→   223→          : "You can now run SAST + DAST scans on this client.",
+   224→   224→      });
+   225→   225→      load();
+   226→   226→    } catch (err) {
+   227→   227→      toast({
+   228→   228→        variant: "destructive",
+   229→   229→        title: "Failed",
+   230→   230→        description: err instanceof Error ? err.message : "unknown",
+   231→   231→      });
+   232→   232→    } finally {
+   233→   233→      setAuthorizing(false);
+   234→   234→    }
+   235→   235→  };
+   236→   236→
+   237→   237→  if (loading) {
+   238→   238→    return (
+   239→   239→      <div className="flex items-center justify-center py-20">
+   240→   240→        <Loader2 className="size-8 animate-spin text-emerald-400" />
+   241→   241→      </div>
+   242→   242→    );
+   243→   243→  }
+   244→   244→
+   245→   245→  if (!detail) {
+   246→   246→    return (
+   247→   247→      <div className="flex flex-col items-center justify-center py-20 text-center">
+   248→   248→        <AlertCircle className="size-12 text-red-400" />
+   249→   249→        <h3 className="mt-4 text-lg font-semibold text-zinc-200">Client not found</h3>
+   250→   250→        <Button onClick={onBack} className="mt-4 bg-emerald-600 text-white hover:bg-emerald-500">
+   251→   251→          <ArrowLeft className="size-4" /> Back to Clients
+   252→   252→        </Button>
+   253→   253→      </div>
+   254→   254→    );
+   255→   255→  }
+   256→   256→
+   257→   257→  return (
+   258→   258→    <div className="space-y-5">
+   259→   259→      {/* Header */}
+   260→   260→      <div className="flex items-start justify-between gap-4">
+   261→   261→        <div className="flex items-start gap-3">
+   262→   262→          <Button variant="ghost" size="icon" onClick={onBack} className="text-zinc-400 hover:text-emerald-400">
+   263→   263→            <ArrowLeft className="size-5" />
+   264→   264→          </Button>
+   265→   265→          <div>
+   266→   266→            <div className="flex items-center gap-2">
+   267→   267→              <h2 className="text-xl font-bold text-zinc-50 neon-emerald">{detail.name}</h2>
+   268→   268→              {detail.authorized ? (
+   269→   269→                <Badge className="border-emerald-500/30 bg-emerald-500/10 text-[10px] text-emerald-300">AUTHORIZED</Badge>
+   270→   270→              ) : (
+   271→   271→                <Badge className="border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-300">PENDING AUTH</Badge>
+   272→   272→              )}
+   273→   273→            </div>
+   274→   274→            {detail.description && (
+   275→   275→              <p className="mt-1 text-sm text-zinc-400">{detail.description}</p>
+   276→   276→            )}
+   277→   277→            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+   278→   278→              {detail.target_url && (
+   279→   279→                <a href={detail.target_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-cyan-400">
+   280→   280→                  <Globe className="size-3" /> {detail.target_url}
+   281→   281→                </a>
+   282→   282→              )}
+   283→   283→              {detail.repo_url && (
+   284→   284→                <a href={detail.repo_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-violet-400">
+   285→   285→                  <GitBranch className="size-3" /> {detail.repo_url}
+   286→   286→                </a>
+   287→   287→              )}
+   288→   288→              {detail.contact_email && (
+   289→   289→                <a href={`mailto:${detail.contact_email}`} className="flex items-center gap-1 hover:text-emerald-400">
+   290→   290→                  <Mail className="size-3" /> {detail.contact_email}
+   291→   291→                </a>
+   292→   292→              )}
+   293→   293→              {detail.contact_phone && (
+   294→   294→                <a href={`tel:${detail.contact_phone}`} className="flex items-center gap-1 hover:text-emerald-400">
+   295→   295→                  <Phone className="size-3" /> {detail.contact_phone}
+   296→   296→                </a>
+   297→   297→              )}
+   298→   298→            </div>
+   299→   299→          </div>
+   300→   300→        </div>
+   301→   301→        <div className="flex items-center gap-2">
+   302→   302→          <Button
+   303→   303→            onClick={handleFullVapt}
+   304→   304→            disabled={vaptRunning}
+   305→   305→            className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
+   306→   306→          >
+   307→   307→            {vaptRunning ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
+   308→   308→            <span className="hidden sm:inline">One-Click Full VAPT</span>
+   309→   309→          </Button>
+   310→   310→          <Button
+   311→   311→            onClick={handleAuthorize}
+   312→   312→            disabled={authorizing}
+   313→   313→            variant="outline"
+   314→   314→            className={
+   315→   315→              detail.authorized
+   316→   316→                ? "border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+   317→   317→                : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+   318→   318→            }
+   319→   319→          >
+   320→   320→            {authorizing ? <Loader2 className="size-4 animate-spin" /> : <Shield className="size-4" />}
+   321→   321→            {detail.authorized ? "Revoke Auth" : "Authorize"}
+   322→   322→          </Button>
+   323→   323→          <Button
+   324→   324→            onClick={handleDelete}
+   325→   325→            disabled={deleting}
+   326→   326→            variant="ghost"
+   327→   327→            size="icon"
+   328→   328→            className="text-zinc-500 hover:bg-red-500/10 hover:text-red-400"
+   329→   329→            title="Delete client"
+   330→   330→          >
+   331→   331→            {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+   332→   332→          </Button>
+   333→   333→        </div>
+   334→   334→      </div>
+   335→   335→
+   336→   336→      {/* Full VAPT result */}
+   337→   337→      {vaptResult && (
+   338→   338→        <div className="holo-card-sharp hud-corners border-emerald-500/30 p-4">
+   339→   339→          <h3 className="mb-2 text-sm font-bold text-emerald-300">Full VAPT Status</h3>
+   340→   340→          <div className="space-y-1">
+   341→   341→            {vaptResult.steps?.map((s: any, i: number) => (
+   342→   342→              <div key={i} className="flex items-center gap-2 text-xs">
+   343→   343→                <span className={`size-2 rounded-full ${s.status === "completed" ? "bg-emerald-500" : s.status === "running" ? "bg-cyan-500 animate-pulse" : "bg-zinc-600"}`} />
+   344→   344→                <span className="text-zinc-400 font-mono">{s.step}.</span>
+   345→   345→                <span className="text-zinc-200">{s.action}</span>
+   346→   346→                <span className="text-zinc-500">- {s.detail}</span>
+   347→   347→              </div>
+   348→   348→            ))}
+   349→   349→          </div>
+   350→   350→          <p className="mt-2 text-xs text-emerald-300">{vaptResult.message}</p>
+   351→   351→        </div>
+   352→   352→      )}
+   353→   353→
+   354→   354→      {/* Frameworks */}
+   355→   355→      {detail.frameworks.length > 0 && (
+   356→   356→        <div className="flex flex-wrap items-center gap-2">
+   357→   357→          <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">Compliance:</span>
+   358→   358→          {detail.frameworks.map((fw) => (
+   359→   359→            <Badge key={fw} className="border-purple-500/30 bg-purple-500/10 text-[10px] text-purple-300">{fw}</Badge>
+   360→   360→          ))}
+   361→   361→        </div>
+   362→   362→      )}
+   363→   363→
+   364→   364→      {/* Pipeline visualization */}
+   365→   365→      {pipeline && (
+   366→   366→        <div className="holo-card-sharp hud-corners p-5">
+   367→   367→          <div className="mb-4 flex items-center justify-between">
+   368→   368→            <h3 className="text-sm font-bold text-zinc-100 section-header">Security Pipeline</h3>
+   369→   369→            <div className="flex items-center gap-2">
+   370→   370→              <span className="font-mono text-xs text-zinc-500">Progress:</span>
+   371→   371→              <span className="font-bold text-emerald-400 neon-emerald">{pipeline.progress}%</span>
+   372→   372→            </div>
+   373→   373→          </div>
+   374→   374→
+   375→   375→          {/* Horizontal pipeline stepper, clickable to launch service */}
+   376→   376→          <div className="flex items-center gap-1 overflow-x-auto pb-2">
+   377→   377→            {pipeline.stages.map((stage, i) => {
+   378→   378→              const cfg = STAGE_COLORS[stage.key] || STAGE_COLORS.onboarding;
+   379→   379→              const Icon = STAGE_ICONS[stage.key] || Circle;
+   380→   380→              const serviceMap: Record<string, string> = {
+   381→   381→                scanning: "scan", testing: "test", patching: "patch",
+   382→   382→                verifying: "verify", defending: "defend", compliant: "comply",
+   383→   383→              };
+   384→   384→              const canLaunch = serviceMap[stage.key] && stage.status !== "completed" && detail.authorized;
+   385→   385→              return (
+   386→   386→                <div key={stage.id} className="flex items-center">
+   387→   387→                  <motion.button
+   388→   388→                    initial={{ opacity: 0, scale: 0.9 }}
+   389→   389→                    animate={{ opacity: 1, scale: 1 }}
+   390→   390→                    transition={{ delay: i * 0.08 }}
+   391→   391→                    onClick={async () => {
+   392→   392→                      if (!canLaunch) return;
+   393→   393→                      const service = serviceMap[stage.key];
+   394→   394→                      pushTerminalLine({ text: `$ guardianx launch --service ${service} --client "${detail?.name}"`, type: "cmd" });
+   395→   395→                      try {
+   396→   396→                        const res = await fetch("/api/launch-service", {
+   397→   397→                          method: "POST",
+   398→   398→                          headers: { "Content-Type": "application/json" },
+   399→   399→                          body: JSON.stringify({ service, clientIds: [clientId] }),
+   400→   400→                        });
+   401→   401→                        const data = await res.json();
+   402→   402→                        if (res.ok) {
+   403→   403→                          pushTerminalLine({ text: `[+] ${stage.label} launched, ${data.message || "ok"}`, type: "success" });
+   404→   404→                          toast({ title: `${stage.label} launched`, description: data.message });
+   405→   405→                        } else {
+   406→   406→                          pushTerminalLine({ text: `[!] ${stage.label} failed: ${data.error || "error"}`, type: "err" });
+   407→   407→                          toast({ variant: "destructive", title: "Launch failed" });
+   408→   408→                        }
+   409→   409→                        load();
+   410→   410→                      } catch (err) {
+   411→   411→                        pushTerminalLine({ text: `[!] ${stage.label} exception: ${err instanceof Error ? err.message : "unknown"}`, type: "err" });
+   412→   412→                        toast({ variant: "destructive", title: "Launch failed" });
+   413→   413→                      }
+   414→   414→                    }}
+   415→   415→                    disabled={!canLaunch}
+   416→   416→                    className={`flex min-w-[120px] flex-col items-center rounded-lg border ${cfg.border} ${cfg.bg} p-3 text-center transition-all ${canLaunch ? "cursor-pointer hover:scale-105 hover:border-emerald-500/60" : ""} disabled:cursor-not-allowed`}
+   417→   417→                    title={canLaunch ? `Click to launch ${stage.label}` : stage.status === "completed" ? "Completed" : "Not ready"}
+   418→   418→                  >
+   419→   419→                    <div className={`mb-1 flex size-8 items-center justify-center rounded-full border ${cfg.border} bg-zinc-950/60`}>
+   420→   420→                      {stage.status === "completed" ? (
+   421→   421→                        <CheckCircle2 className={`size-5 ${cfg.text}`} />
+   422→   422→                      ) : stage.status === "in-progress" ? (
+   423→   423→                        <Icon className={`size-4 ${cfg.text} animate-pulse`} />
+   424→   424→                      ) : (
+   425→   425→                        <Icon className="size-4 text-zinc-600" />
+   426→   426→                      )}
+   427→   427→                    </div>
+   428→   428→                    <div className={`text-[11px] font-bold ${stage.status !== "pending" ? cfg.text : "text-zinc-500"}`}>
+   429→   429→                      {i + 1}. {stage.label}
+   430→   430→                    </div>
+   431→   431→                    <div className="mt-0.5 text-[9px] text-zinc-600">{stage.desc}</div>
+   432→   432→                    {/* Metrics */}
+   433→   433→                    {stage.status !== "pending" && Object.keys(stage.metrics).length > 0 && (
+   434→   434→                      <div className="mt-1.5 flex flex-wrap justify-center gap-1">
+   435→   435→                        {Object.entries(stage.metrics).map(([k, v]) => (
+   436→   436→                          <span key={k} className="rounded bg-zinc-900/60 px-1 text-[8px] text-zinc-500">
+   437→   437→                            {k}: {String(v)}
+   438→   438→                          </span>
+   439→   439→                        ))}
+   440→   440→                      </div>
+   441→   441→                    )}
+   442→   442→                  </motion.button>
+   443→   443→                  {i < pipeline.stages.length - 1 && (
+   444→   444→                    <div className={`mx-0.5 h-0.5 w-4 ${stage.status === "completed" ? "bg-emerald-500" : "bg-zinc-800"}`} />
+   445→   445→                  )}
+   446→   446→                </div>
+   447→   447→              );
+   448→   448→            })}
+   449→   449→          </div>
+   450→   450→
+   451→   451→          {/* Summary bar */}
+   452→   452→          <div className="mt-4 grid grid-cols-2 gap-2 border-t border-zinc-800/60 pt-3 sm:grid-cols-4 lg:grid-cols-7">
+   453→   453→            <PipelineStat label="Codebases" value={pipeline.summary.codebases} color="text-sky-400" icon={Boxes} />
+   454→   454→            <PipelineStat label="Targets" value={pipeline.summary.targets} color="text-red-400" icon={Target} />
+   455→   455→            <PipelineStat label="Scans" value={pipeline.summary.scans} color="text-cyan-400" icon={Bug} />
+   456→   456→            <PipelineStat label="Patches" value={pipeline.summary.patches} color="text-emerald-400" icon={ShieldCheck} />
+   457→   457→            <PipelineStat label="Findings" value={pipeline.summary.findings} color="text-amber-400" icon={AlertCircle} />
+   458→   458→            <PipelineStat label="Critical" value={pipeline.summary.critical_findings} color="text-red-400" icon={AlertCircle} />
+   459→   459→            <PipelineStat label="Canaries" value={pipeline.summary.canaries} color="text-rose-400" icon={Shield} />
+   460→   460→          </div>
+   461→   461→        </div>
+   462→   462→      )}
+   463→   463→
+   464→   464→      {/* Assets */}
+   465→   465→      <div className="grid gap-4 lg:grid-cols-2">
+   466→   466→        {/* Codebases */}
+   467→   467→        <div className="holo-card-sharp hud-corners p-5">
+   468→   468→          <div className="mb-3 flex items-center justify-between">
+   469→   469→            <h3 className="text-sm font-bold text-zinc-100 section-header">Codebases (SAST)</h3>
+   470→   470→            <Button size="sm" variant="outline" onClick={() => setShowAddCodebase(true)} className="border-sky-500/30 bg-sky-500/5 text-sky-300 hover:bg-sky-500/10">
+   471→   471→              <Plus className="size-3" /> Add Codebase
+   472→   472→            </Button>
+   473→   473→          </div>
+   474→   474→          {detail.codebases.length === 0 ? (
+   475→   475→            <p className="py-6 text-center text-xs text-zinc-500">No codebases yet. Click "Add Codebase" to paste source code for SAST scanning.</p>
+   476→   476→          ) : (
+   477→   477→            <div className="space-y-2">
+   478→   478→              {detail.codebases.map((cb) => (
+   479→   479→                <div key={cb.id} className="flex items-center gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 p-2">
+   480→   480→                  <FileText className="size-4 text-sky-400" />
+   481→   481→                  <div className="min-w-0 flex-1">
+   482→   482→                    <div className="truncate text-xs font-medium text-zinc-200">{cb.name}</div>
+   483→   483→                    {cb.description && <div className="truncate text-[10px] text-zinc-500">{cb.description}</div>}
+   484→   484→                  </div>
+   485→   485→                  <Badge className="border-sky-500/30 bg-sky-500/10 text-[9px] text-sky-300">{cb.language}</Badge>
+   486→   486→                </div>
+   487→   487→              ))}
+   488→   488→            </div>
+   489→   489→          )}
+   490→   490→        </div>
+   491→   491→
+   492→   492→        {/* Targets */}
+   493→   493→        <div className="holo-card-sharp hud-corners p-5">
+   494→   494→          <div className="mb-3 flex items-center justify-between">
+   495→   495→            <h3 className="text-sm font-bold text-zinc-100 section-header">Live Targets (DAST)</h3>
+   496→   496→            <Button size="sm" variant="outline" onClick={() => setShowAddTarget(true)} className="border-red-500/30 bg-red-500/5 text-red-300 hover:bg-red-500/10">
+   497→   497→              <Plus className="size-3" /> Add Target
+   498→   498→            </Button>
+   499→   499→          </div>
+   500→   500→          {detail.targets.length === 0 ? (
+   501→   501→            <p className="py-6 text-center text-xs text-zinc-500">No targets yet. Click "Add Target" to add a live URL for DAST VAPT.</p>
+   502→   502→          ) : (
+   503→   503→            <div className="space-y-2">
+   504→   504→              {detail.targets.map((t) => (
+   505→   505→                <div key={t.id} className="flex items-center gap-2 rounded-md border border-red-500/20 bg-red-500/5 p-2">
+   506→   506→                  <Globe className="size-4 text-red-400" />
+   507→   507→                  <div className="min-w-0 flex-1">
+   508→   508→                    <div className="truncate text-xs font-medium text-zinc-200">{t.name}</div>
+   509→   509→                    <div className="truncate text-[10px] text-zinc-500">{t.base_url}</div>
+   510→   510→                  </div>
+   511→   511→                  {t.authorized ? (
+   512→   512→                    <Badge className="border-emerald-500/30 bg-emerald-500/10 text-[9px] text-emerald-300">AUTH</Badge>
+   513→   513→                  ) : (
+   514→   514→                    <Badge className="border-amber-500/30 bg-amber-500/10 text-[9px] text-amber-300">PENDING</Badge>
+   515→   515→                  )}
+   516→   516→                </div>
+   517→   517→              ))}
+   518→   518→            </div>
+   519→   519→          )}
+   520→   520→        </div>
+   521→   521→      </div>
+   522→   522→
+   523→   523→      {/* Quick actions per stage */}
+   524→   524→      <div className="holo-card-sharp hud-corners p-5">
+   525→   525→        <h3 className="mb-3 text-sm font-bold text-zinc-100 section-header">Pipeline Actions</h3>
+   526→   526→        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+   527→   527→          <ActionButton label="Run SAST Scan" desc="Scan all codebases" icon={Bug} color="cyan" onClick={async () => {
+   528→   528→            pushTerminalLine({ text: `$ guardianx sast --client "${detail?.name}" --codebases ${detail.codebases.length}`, type: "cmd" });
+   529→   529→            pushTerminalLine({ text: "[*] AI analyzing source code for vulnerabilities...", type: "out" });
+   530→   530→            const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "scan", clientIds: [clientId] }) });
+   531→   531→            const data = await res.json();
+   532→   532→            if (res.ok) pushTerminalLine({ text: `[+] SAST complete, ${data.message || "patches generated"}`, type: "success" });
+   533→   533→            else pushTerminalLine({ text: `[!] SAST failed: ${data.error || "error"}`, type: "err" });
+   534→   534→            toast({ title: "SAST launched", description: data.message });
+   535→   535→            load();
+   536→   536→          }} disabled={!detail.authorized || detail.codebases.length === 0} />
+   537→   537→          <ActionButton label="Run DAST VAPT" desc="Attack all targets" icon={Crosshair} color="red" onClick={async () => {
+   538→   538→            pushTerminalLine({ text: `$ redagent --target ${detail.targets[0]?.base_url || detail.target_url || "(no target)"} --mode aggressive`, type: "cmd" });
+   539→   539→            pushTerminalLine({ text: "[*] Crawling endpoints + testing injection vectors...", type: "out" });
+   540→   540→            const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "scan", clientIds: [clientId] }) });
+   541→   541→            const data = await res.json();
+   542→   542→            if (res.ok) pushTerminalLine({ text: `[+] DAST engagement complete, ${data.message || "findings saved"}`, type: "success" });
+   543→   543→            else pushTerminalLine({ text: `[!] DAST failed: ${data.error || "error"}`, type: "err" });
+   544→   544→            toast({ title: "DAST launched", description: data.message });
+   545→   545→            load();
+   546→   546→          }} disabled={!detail.authorized || detail.targets.length === 0} />
+   547→   547→          <ActionButton label="Auto-Remediate" desc="AI generates fix code" icon={ShieldCheck} color="violet" onClick={async () => {
+   548→   548→            const res = await fetch("/api/auto-remediation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId }) });
+   549→   549→            const data = await res.json();
+   550→   550→            toast({ title: "Remediation generated", description: data.message });
+   551→   551→          }} disabled={pipeline?.summary.findings === 0} />
+   552→   552→          <ActionButton label="Generate Report" desc="15-page PDF" icon={FileText} color="emerald" onClick={() => {
+   553→   553→            window.open(`/api/engagements/${detail.targets[0]?.id || ""}/report`, "_blank");
+   554→   554→          }} disabled={pipeline?.summary.findings === 0} />
+   555→   555→          <ActionButton label="Deploy Canaries" desc="Exfil defense" icon={Shield} color="rose" onClick={async () => {
+   556→   556→            pushTerminalLine({ text: `$ guardianx canary --deploy --client "${detail?.name}"`, type: "cmd" });
+   557→   557→            pushTerminalLine({ text: "[*] Injecting canary tokens into endpoints...", type: "out" });
+   558→   558→            const res = await fetch("/api/launch-service", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ service: "defend", clientIds: [clientId] }) });
+   559→   559→            const data = await res.json();
+   560→   560→            if (res.ok) pushTerminalLine({ text: `[+] Canaries deployed, ${data.message || "active"}`, type: "success" });
+   561→   561→            else pushTerminalLine({ text: `[!] Deploy failed: ${data.error || "error"}`, type: "err" });
+   562→   562→            toast({ title: "Canaries deployed", description: data.message });
+   563→   563→            load();
+   564→   564→          }} disabled={!detail.authorized || detail.targets.length === 0} />
+   565→   565→          <ActionButton label="Passive Recon" desc="SSL + headers + DNS" icon={Globe} color="cyan" onClick={async () => {
+   566→   566→            const res = await fetch("/api/passive-recon", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetUrl: detail.target_url }) });
+   567→   567→            const data = await res.json();
+   568→   568→            toast({ title: "Recon complete", description: data.message });
+   569→   569→          }} />
+   570→   570→          <ActionButton label="Auto-Discover" desc="Find assets from URL" icon={Boxes} color="sky" onClick={async () => {
+   571→   571→            const res = await fetch("/api/auto-discover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId }) });
+   572→   572→            const data = await res.json();
+   573→   573→            toast({ title: "Discovery complete", description: data.message });
+   574→   574→            load();
+   575→   575→          }} />
+   576→   576→          <ActionButton label="Exec Summary" desc="AI-written for C-suite" icon={FileText} color="amber" onClick={() => {
+   577→   577→            window.open(`/api/executive-summary?clientId=${clientId}`, "_blank");
+   578→   578→          }} />
+   579→   579→        </div>
+   580→   580→      </div>
+   581→   581→
+   582→   582→      {/* Scope */}
+   583→   583→      {detail.scope && (
+   584→   584→        <div className="holo-card-sharp hud-corners p-5">
+   585→   585→          <h3 className="mb-2 text-sm font-bold text-zinc-100 section-header">Engagement Scope</h3>
+   586→   586→          <p className="text-xs text-zinc-400">{detail.scope}</p>
+   587→   587→        </div>
+   588→   588→      )}
+   589→   589→
+   590→   590→      {/* Add Codebase Modal */}
+   591→   591→      {showAddCodebase && (
+   592→   592→        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={() => setShowAddCodebase(false)}>
+   593→   593→          <div className="holo-card-sharp hud-corners custom-scrollbar max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg p-6" onClick={(e) => e.stopPropagation()}>
+   594→   594→            <div className="mb-4 flex items-center justify-between">
+   595→   595→              <h2 className="text-lg font-bold text-zinc-50">Add Codebase (SAST)</h2>
+   596→   596→              <button onClick={() => setShowAddCodebase(false)} className="text-zinc-500 hover:text-red-400"><X className="size-5" /></button>
+   597→   597→            </div>
+   598→   598→            <div className="space-y-3">
+   599→   599→              <div>
+   600→   600→                <label className="text-xs text-zinc-400">Name *</label>
+   601→   601→                <input value={cbName} onChange={(e) => setCbName(e.target.value)} placeholder="auth-service.js"
+   602→   602→                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-sky-500/50 focus:outline-none" />
+   603→   603→              </div>
+   604→   604→              <div>
+   605→   605→                <label className="text-xs text-zinc-400">Description</label>
+   606→   606→                <input value={cbDesc} onChange={(e) => setCbDesc(e.target.value)} placeholder="Login module"
+   607→   607→                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-sky-500/50 focus:outline-none" />
+   608→   608→              </div>
+   609→   609→              <div>
+   610→   610→                <label className="text-xs text-zinc-400">Source Code *</label>
+   611→   611→                <textarea value={cbSource} onChange={(e) => setCbSource(e.target.value)} placeholder="Paste your source code here..."
+   612→   612→                  rows={8}
+   613→   613→                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 font-mono text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-sky-500/50 focus:outline-none" />
+   614→   614→              </div>
+   615→   615→            </div>
+   616→   616→            <div className="mt-4 flex justify-end gap-2">
+   617→   617→              <Button variant="outline" onClick={() => setShowAddCodebase(false)} className="border-zinc-700 bg-zinc-900 text-zinc-300">Cancel</Button>
+   618→   618→              <Button onClick={handleAddCodebase} disabled={!cbName.trim() || !cbSource.trim() || cbSaving} className="bg-sky-600 text-white hover:bg-sky-500">
+   619→   619→                {cbSaving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Add Codebase
+   620→   620→              </Button>
+   621→   621→            </div>
+   622→   622→          </div>
+   623→   623→        </div>
+   624→   624→      )}
+   625→   625→
+   626→   626→      {/* Add Target Modal */}
+   627→   627→      {showAddTarget && (
+   628→   628→        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={() => setShowAddTarget(false)}>
+   629→   629→          <div className="holo-card-sharp hud-corners w-full max-w-lg rounded-lg p-6" onClick={(e) => e.stopPropagation()}>
+   630→   630→            <div className="mb-4 flex items-center justify-between">
+   631→   631→              <h2 className="text-lg font-bold text-zinc-50">Add Target (DAST)</h2>
+   632→   632→              <button onClick={() => setShowAddTarget(false)} className="text-zinc-500 hover:text-red-400"><X className="size-5" /></button>
+   633→   633→            </div>
+   634→   634→            <div className="space-y-3">
+   635→   635→              <div>
+   636→   636→                <label className="text-xs text-zinc-400">Name *</label>
+   637→   637→                <input value={tgtName} onChange={(e) => setTgtName(e.target.value)} placeholder="GuardianX Website"
+   638→   638→                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-red-500/50 focus:outline-none" />
+   639→   639→              </div>
+   640→   640→              <div>
+   641→   641→                <label className="text-xs text-zinc-400">Target URL *</label>
+   642→   642→                <input value={tgtUrl} onChange={(e) => setTgtUrl(e.target.value)} placeholder="https://www.guardianx.in"
+   643→   643→                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-red-500/50 focus:outline-none" />
+   644→   644→              </div>
+   645→   645→              <label className="flex items-center gap-2 text-xs text-zinc-400">
+   646→   646→                <input type="checkbox" checked={tgtAuth} onChange={(e) => setTgtAuth(e.target.checked)} className="accent-emerald-500" />
+   647→   647→                I am authorized to test this target
+   648→   648→              </label>
+   649→   649→            </div>
+   650→   650→            <div className="mt-4 flex justify-end gap-2">
+   651→   651→              <Button variant="outline" onClick={() => setShowAddTarget(false)} className="border-zinc-700 bg-zinc-900 text-zinc-300">Cancel</Button>
+   652→   652→              <Button onClick={handleAddTarget} disabled={!tgtName.trim() || !tgtUrl.trim() || tgtSaving} className="bg-red-600 text-white hover:bg-red-500">
+   653→   653→                {tgtSaving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Add Target
+   654→   654→              </Button>
+   655→   655→            </div>
+   656→   656→          </div>
+   657→   657→        </div>
+   658→   658→      )}
+   659→   659→    </div>
+   660→   660→  );
+   661→   661→}
+   662→   662→
+   663→   663→function PipelineStat({ label, value, color, icon: Icon }: { label: string; value: number; color: string; icon: typeof Circle }) {
+   664→   664→  return (
+   665→   665→    <div className="flex flex-col items-center rounded-md border border-zinc-800 bg-zinc-900/40 p-2">
+   666→   666→      <Icon className={`size-3 ${color}`} />
+   667→   667→      <div className={`mt-1 text-sm font-bold ${color}`}>{value}</div>
+   668→   668→      <div className="text-[8px] uppercase tracking-wider text-zinc-600">{label}</div>
+   669→   669→    </div>
+   670→   670→  );
+   671→   671→}
+   672→   672→
+   673→   673→function ActionButton({
+   674→   674→  label, desc, icon: Icon, color, onClick, disabled,
+   675→   675→}: {
+   676→   676→  label: string;
+   677→   677→  desc: string;
+   678→   678→  icon: typeof Circle;
+   679→   679→  color: string;
+   680→   680→  onClick: () => void;
+   681→   681→  disabled?: boolean;
+   682→   682→}) {
+   683→   683→  const colorMap: Record<string, { text: string; border: string; bg: string; hover: string }> = {
+   684→   684→    cyan: { text: "text-cyan-400", border: "border-cyan-500/30", bg: "bg-cyan-500/5", hover: "hover:bg-cyan-500/10" },
+   685→   685→    red: { text: "text-red-400", border: "border-red-500/30", bg: "bg-red-500/5", hover: "hover:bg-red-500/10" },
+   686→   686→    emerald: { text: "text-emerald-400", border: "border-emerald-500/30", bg: "bg-emerald-500/5", hover: "hover:bg-emerald-500/10" },
+   687→   687→    rose: { text: "text-rose-400", border: "border-rose-500/30", bg: "bg-rose-500/5", hover: "hover:bg-rose-500/10" },
+   688→   688→  };
+   689→   689→  const c = colorMap[color] || colorMap.cyan;
+   690→   690→  return (
+   691→   691→    <button
+   692→   692→      onClick={onClick}
+   693→   693→      disabled={disabled}
+   694→   694→      className={`flex items-center gap-2 rounded-lg border ${c.border} ${c.bg} ${c.hover} p-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-40`}
+   695→   695→    >
+   696→   696→      <Icon className={`size-4 ${c.text}`} />
+   697→   697→      <div>
+   698→   698→        <div className="text-xs font-bold text-zinc-200">{label}</div>
+   699→   699→        <div className="text-[10px] text-zinc-500">{desc}</div>
+   700→   700→      </div>
+   701→   701→    </button>
+   702→   702→  );
+   703→   703→}
+   704→   704→

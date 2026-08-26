@@ -1,0 +1,1384 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback, useRef } from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import { Button } from "@/components/ui/button";
+     6→import { Input } from "@/components/ui/input";
+     7→import { Label } from "@/components/ui/label";
+     8→import { Badge } from "@/components/ui/badge";
+     9→import { Skeleton } from "@/components/ui/skeleton";
+    10→import { useToast } from "@/hooks/use-toast";
+    11→import { useVisiblePolling } from "@/hooks/use-visible-polling";
+    12→import {
+    13→  Plug, Database, Server, Bell, MessageSquare, Ticket, Cloud,
+    14→  ShieldCheck, GitBranch, Boxes, Activity, Clock, CheckCircle2,
+    15→  XCircle, Loader2, RefreshCw, Search, Plus, Play, Send, Trash2,
+    16→  Settings, Eye, AlertTriangle, Zap, Network, Globe, Fingerprint,
+    17→  Bug, FileText, Code, Package, Github, Atom, Cpu, Hash, Tag,
+    18→  ShieldAlert, Crosshair, ScanLine, Filter, ChevronRight, ChevronDown,
+    19→  ExternalLink, Copy, Sparkles, Brain, Biohazard, Radar, Eye as EyeIcon,
+    20→  ArrowRight, Ban, FileCode, Layers, Gauge, Download,
+    21→} from "lucide-react";
+    22→
+    23→// ── Types ────────────────────────────────────────────────────────────────────
+    24→type ConfigFieldType = "string" | "password" | "url" | "select" | "boolean" | "json";
+    25→type ConnectorCategory =
+    26→  | "SIEM & Monitoring"
+    27→  | "Alerting & Notification"
+    28→  | "Collaboration"
+    29→  | "ITSM & Ticketing"
+    30→  | "Cloud & Infrastructure"
+    31→  | "Compliance & Reporting"
+    32→  | "DevOps & CI/CD"
+    33→  | "Generic";
+    34→
+    35→interface ConfigField {
+    36→  key: string;
+    37→  label: string;
+    38→  type: ConfigFieldType;
+    39→  required: boolean;
+    40→  placeholder?: string;
+    41→  helpText?: string;
+    42→  options?: string[];
+    43→  defaultValue?: string | boolean;
+    44→}
+    45→
+    46→interface ConnectorSchema {
+    47→  id: string;
+    48→  name: string;
+    49→  category: ConnectorCategory;
+    50→  direction: "outbound" | "import" | "enrichment";
+    51→  description: string;
+    52→  icon?: string;
+    53→  configFields: ConfigField[];
+    54→  builtin: boolean;
+    55→}
+    56→
+    57→interface ForwardLogEntry {
+    58→  id: string;
+    59→  at: string;
+    60→  integrationId?: string;
+    61→  connectorId: string;
+    62→  eventType: string;
+    63→  severity: "info" | "low" | "medium" | "high" | "critical";
+    64→  title: string;
+    65→  result: {
+    66→    ok: boolean;
+    67→    status?: number;
+    68→    detail?: string;
+    69→    externalId?: string;
+    70→  };
+    71→}
+    72→
+    73→interface ImportedFinding {
+    74→  title: string;
+    75→  severity: "info" | "low" | "medium" | "high" | "critical";
+    76→  category: string;
+    77→  owasp?: string;
+    78→  endpoint: string;
+    79→  method?: string;
+    80→  description: string;
+    81→  proofRequest?: string;
+    82→  proofResponse?: string;
+    83→  payload?: string;
+    84→  confidence?: number;
+    85→  remediation?: string;
+    86→}
+    87→
+    88→interface ImportResult {
+    89→  tool: string;
+    90→  engagementId?: string;
+    91→  imported: number;
+    92→  skipped: number;
+    93→  errors: string[];
+    94→  findings: ImportedFinding[];
+    95→}
+    96→
+    97→interface EnrichmentResult {
+    98→  provider: string;
+    99→  ok: boolean;
+   100→  status?: number;
+   101→  detail?: string;
+   102→  reputation?: "clean" | "suspicious" | "malicious" | "unknown";
+   103→  score?: number;
+   104→  classifications?: string[];
+   105→  tags?: string[];
+   106→  relatedIOCs?: Array<{ type: string; value: string }>;
+   107→  latencyMs?: number;
+   108→}
+   109→
+   110→interface EnrichIOCResult {
+   111→  value: string;
+   112→  type: string;
+   113→  results: EnrichmentResult[];
+   114→  merged: {
+   115→    reputation: "clean" | "suspicious" | "malicious" | "unknown";
+   116→    maxScore: number;
+   117→    classifications: string[];
+   118→    tags: string[];
+   119→    relatedIOCs: Array<{ type: string; value: string }>;
+   120→  };
+   121→  durationMs: number;
+   122→}
+   123→
+   124→// ── Style maps ───────────────────────────────────────────────────────────────
+   125→const CATEGORY_META: Record<ConnectorCategory, { icon: typeof Plug; color: string; bg: string; border: string }> = {
+   126→  "SIEM & Monitoring":       { icon: Database,      color: "text-cyan-400",    bg: "bg-cyan-500/10",    border: "border-cyan-500/30" },
+   127→  "Alerting & Notification": { icon: Bell,          color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/30" },
+   128→  "Collaboration":           { icon: MessageSquare, color: "text-violet-400",  bg: "bg-violet-500/10",  border: "border-violet-500/30" },
+   129→  "ITSM & Ticketing":        { icon: Ticket,        color: "text-rose-400",    bg: "bg-rose-500/10",    border: "border-rose-500/30" },
+   130→  "Cloud & Infrastructure":  { icon: Cloud,         color: "text-sky-400",     bg: "bg-sky-500/10",     border: "border-sky-500/30" },
+   131→  "Compliance & Reporting":  { icon: ShieldCheck,   color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" },
+   132→  "DevOps & CI/CD":          { icon: GitBranch,     color: "text-orange-400",  bg: "bg-orange-500/10",  border: "border-orange-500/30" },
+   133→  "Generic":                 { icon: Boxes,         color: "text-zinc-400",    bg: "bg-zinc-500/10",    border: "border-zinc-500/30" },
+   134→};
+   135→
+   136→const CATEGORY_ORDER: ConnectorCategory[] = [
+   137→  "SIEM & Monitoring",
+   138→  "Alerting & Notification",
+   139→  "Collaboration",
+   140→  "ITSM & Ticketing",
+   141→  "Cloud & Infrastructure",
+   142→  "Compliance & Reporting",
+   143→  "DevOps & CI/CD",
+   144→  "Generic",
+   145→];
+   146→
+   147→const SEVERITY_STYLE: Record<string, { text: string; bg: string; border: string; dot: string }> = {
+   148→  critical: { text: "text-red-400",    bg: "bg-red-500/10",    border: "border-red-500/40",    dot: "bg-red-500" },
+   149→  high:     { text: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/40",  dot: "bg-amber-500" },
+   150→  medium:   { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/40", dot: "bg-yellow-500" },
+   151→  low:      { text: "text-sky-400",    bg: "bg-sky-500/10",    border: "border-sky-500/40",    dot: "bg-sky-500" },
+   152→  info:     { text: "text-zinc-400",   bg: "bg-zinc-500/10",   border: "border-zinc-500/40",   dot: "bg-zinc-500" },
+   153→};
+   154→
+   155→const REPUTATION_STYLE: Record<string, { text: string; bg: string; border: string }> = {
+   156→  clean:       { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40" },
+   157→  unknown:     { text: "text-zinc-400",    bg: "bg-zinc-500/10",    border: "border-zinc-500/40" },
+   158→  suspicious:  { text: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/40" },
+   159→  malicious:   { text: "text-red-400",     bg: "bg-red-500/10",     border: "border-red-500/40" },
+   160→};
+   161→
+   162→// Lucide icon name -> component map for connectors that specify an icon string
+   163→const ICON_MAP: Record<string, typeof Plug> = {
+   164→  Radar, Database, Server, Bell, MessageSquare, Ticket, Cloud, ShieldCheck,
+   165→  GitBranch, Boxes, Activity, Bug, FileText, Code, Package, Github, Atom, Cpu,
+   166→  Plug, Settings, Network, Globe, Fingerprint, Hash, Tag, ShieldAlert,
+   167→  Crosshair, Brain, Biohazard, Eye: EyeIcon,
+   168→};
+   169→
+   170→function getConnectorIcon(schema: ConnectorSchema): typeof Plug {
+   171→  if (schema.icon && ICON_MAP[schema.icon]) return ICON_MAP[schema.icon];
+   172→  const meta = CATEGORY_META[schema.category];
+   173→  return meta?.icon || Plug;
+   174→}
+   175→
+   176→// ── Helpers ──────────────────────────────────────────────────────────────────
+   177→function timeAgo(iso: string): string {
+   178→  if (!iso) return "-";
+   179→  const diff = Date.now() - new Date(iso).getTime();
+   180→  const sec = Math.floor(diff / 1000);
+   181→  if (sec < 60) return `${sec}s ago`;
+   182→  const min = Math.floor(sec / 60);
+   183→  if (min < 60) return `${min}m ago`;
+   184→  const hr = Math.floor(min / 60);
+   185→  if (hr < 24) return `${hr}h ago`;
+   186→  return new Date(iso).toLocaleDateString();
+   187→}
+   188→
+   189→function formatTimestamp(iso: string): string {
+   190→  if (!iso) return "-";
+   191→  try {
+   192→    return new Date(iso).toLocaleString("en-US", {
+   193→      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+   194→    });
+   195→  } catch {
+   196→    return iso;
+   197→  }
+   198→}
+   199→
+   200→// ════════════════════════════════════════════════════════════════════════════
+   201→// MAIN COMPONENT
+   202→// ════════════════════════════════════════════════════════════════════════════
+   203→export function IntegrationsPanel() {
+   204→  const [tab, setTab] = useState<"hub" | "log" | "import" | "threat">("hub");
+   205→
+   206→  return (
+   207→    <div className="space-y-5">
+   208→      {/* Header */}
+   209→      <div>
+   210→        <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+   211→          <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
+   212→          integrations@guardianx:~$ fan-out --all
+   213→        </div>
+   214→        <h2 className="flex items-center gap-2 text-xl font-bold text-zinc-50">
+   215→          <Plug className="size-5 text-emerald-400" />
+   216→          Integration Hub
+   217→          <span className="font-mono text-sm text-zinc-500">{"// Outbound + import + enrichment"}</span>
+   218→        </h2>
+   219→        <p className="mt-1 text-sm text-zinc-400">
+   220→          29 outbound connectors, 8 import parsers, 5 threat-intel providers. Fan out security events to every active destination.
+   221→        </p>
+   222→      </div>
+   223→
+   224→      {/* Tab switcher */}
+   225→      <div className="holo-card-sharp hud-corners flex flex-wrap gap-1 p-1.5">
+   226→        {([
+   227→          { id: "hub",    label: "Integrations Hub",  icon: Plug,         color: "emerald" },
+   228→          { id: "log",    label: "Forwarding Log",    icon: Activity,     color: "cyan" },
+   229→          { id: "import", label: "Import Findings",   icon: Download,     color: "amber" },
+   230→          { id: "threat", label: "Threat Intel",      icon: Brain,        color: "rose" },
+   231→        ] as const).map((t) => {
+   232→          const Icon = t.icon;
+   233→          const isActive = tab === t.id;
+   234→          const colorClasses: Record<string, string> = {
+   235→            emerald: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40 neon-border-emerald",
+   236→            cyan:    "bg-cyan-500/15 text-cyan-300 border-cyan-500/40 neon-border-cyan",
+   237→            amber:   "bg-amber-500/15 text-amber-300 border-amber-500/40 neon-border-amber",
+   238→            rose:    "bg-rose-500/15 text-rose-300 border-rose-500/40 neon-border-rose",
+   239→          };
+   240→          return (
+   241→            <button
+   242→              key={t.id}
+   243→              onClick={() => setTab(t.id)}
+   244→              className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all ${
+   245→                isActive ? colorClasses[t.color] : "border-transparent text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+   246→              }`}
+   247→            >
+   248→              <Icon className="size-4" />
+   249→              {t.label}
+   250→            </button>
+   251→          );
+   252→        })}
+   253→      </div>
+   254→
+   255→      {/* Tab content */}
+   256→      <AnimatePresence mode="wait">
+   257→        <motion.div
+   258→          key={tab}
+   259→          initial={{ opacity: 0, y: 8 }}
+   260→          animate={{ opacity: 1, y: 0 }}
+   261→          exit={{ opacity: 0, y: -8 }}
+   262→          transition={{ duration: 0.15 }}
+   263→        >
+   264→          {tab === "hub" && <IntegrationsHub />}
+   265→          {tab === "log" && <ForwardingLog />}
+   266→          {tab === "import" && <ImportFindings />}
+   267→          {tab === "threat" && <ThreatIntel />}
+   268→        </motion.div>
+   269→      </AnimatePresence>
+   270→    </div>
+   271→  );
+   272→}
+   273→
+   274→// ════════════════════════════════════════════════════════════════════════════
+   275→// INTEGRATIONS HUB TAB
+   276→// ════════════════════════════════════════════════════════════════════════════
+   277→function IntegrationsHub() {
+   278→  const { toast } = useToast();
+   279→  const [schemas, setSchemas] = useState<ConnectorSchema[]>([]);
+   280→  const [configured, setConfigured] = useState<Array<{ id: string; type: string; isActive: boolean; config: Record<string, unknown> }>>([]);
+   281→  const [loading, setLoading] = useState(true);
+   282→  const [search, setSearch] = useState("");
+   283→  const [configSchema, setConfigSchema] = useState<ConnectorSchema | null>(null);
+   284→  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
+   285→
+   286→  const load = useCallback(async () => {
+   287→    try {
+   288→      const [sRes, cRes] = await Promise.all([
+   289→        fetch(`/api/integrations?schemas=true`),
+   290→        fetch(`/api/integrations`),
+   291→      ]);
+   292→      const sData = await sRes.json();
+   293→      const cData = await cRes.json();
+   294→      if (!sRes.ok) throw new Error(sData.error || "Failed to load schemas");
+   295→      setSchemas(sData.schemas || []);
+   296→      // Configured integrations may be a bare array OR { integrations: [...] }
+   297→      const list = Array.isArray(cData) ? cData : (cData.integrations || []);
+   298→      setConfigured(list);
+   299→    } catch (err) {
+   300→      toast({
+   301→        variant: "destructive",
+   302→        title: "Failed to load integrations",
+   303→        description: err instanceof Error ? err.message : "unknown error",
+   304→      });
+   305→    } finally {
+   306→      setLoading(false);
+   307→    }
+   308→  }, [toast]);
+   309→
+   310→  useEffect(() => {
+   311→    load();
+   312→  }, [load]);
+   313→
+   314→  const toggleCat = (cat: string) => {
+   315→    const next = new Set(collapsedCats);
+   316→    if (next.has(cat)) next.delete(cat); else next.add(cat);
+   317→    setCollapsedCats(next);
+   318→  };
+   319→
+   320→  const isConfigured = (id: string) => configured.find((c) => c.type === id);
+   321→
+   322→  // Group by category
+   323→  const grouped: Record<string, ConnectorSchema[]> = {};
+   324→  for (const s of schemas) {
+   325→    if (!grouped[s.category]) grouped[s.category] = [];
+   326→    grouped[s.category].push(s);
+   327→  }
+   328→
+   329→  const filteredSchemas = schemas.filter((s) => {
+   330→    if (!search.trim()) return true;
+   331→    const q = search.toLowerCase();
+   332→    return s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q) || s.description.toLowerCase().includes(q);
+   333→  });
+   334→
+   335→  if (loading) {
+   336→    return (
+   337→      <div className="space-y-3">
+   338→        <Skeleton className="h-12 bg-zinc-900/40" />
+   339→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   340→          {Array.from({ length: 9 }).map((_, i) => <Skeleton key={i} className="h-32 bg-zinc-900/40" />)}
+   341→        </div>
+   342→      </div>
+   343→    );
+   344→  }
+   345→
+   346→  return (
+   347→    <div className="space-y-4">
+   348→      {/* Toolbar */}
+   349→      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+   350→        <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] text-zinc-500">
+   351→          <span className="flex items-center gap-1"><Plug className="size-3 text-emerald-400" /> {schemas.length} connectors</span>
+   352→          <span className="text-zinc-700">|</span>
+   353→          <span className="flex items-center gap-1"><CheckCircle2 className="size-3 text-emerald-400" /> {configured.length} configured</span>
+   354→          <span className="text-zinc-700">|</span>
+   355→          <span className="flex items-center gap-1"><Layers className="size-3 text-cyan-400" /> {CATEGORY_ORDER.filter((c) => grouped[c]?.length).length} categories</span>
+   356→        </div>
+   357→        <div className="flex items-center gap-2">
+   358→          <div className="relative w-full sm:w-64">
+   359→            <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-zinc-500" />
+   360→            <Input
+   361→              value={search}
+   362→              onChange={(e) => setSearch(e.target.value)}
+   363→              placeholder="Search connectors..."
+   364→              className="border-zinc-800 bg-zinc-900/60 pl-9 text-xs text-zinc-200 placeholder:text-zinc-500 focus-visible:border-emerald-500/50"
+   365→            />
+   366→          </div>
+   367→          <Button onClick={load} variant="outline" size="sm" className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+   368→            <RefreshCw className="size-3.5" />
+   369→          </Button>
+   370→        </div>
+   371→      </div>
+   372→
+   373→      {filteredSchemas.length === 0 ? (
+   374→        <div className="holo-card-sharp hud-corners flex flex-col items-center justify-center px-6 py-16 text-center">
+   375→          <div className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/30">
+   376→            <Plug className="size-7 text-emerald-400" />
+   377→          </div>
+   378→          <h3 className="mt-4 text-base font-semibold text-zinc-200">No connectors found</h3>
+   379→          <p className="mt-1 max-w-sm text-sm text-zinc-400">Try a different search or refresh the catalog.</p>
+   380→        </div>
+   381→      ) : (
+   382→        <div className="space-y-4">
+   383→          {CATEGORY_ORDER.map((cat) => {
+   384→            const catSchemas = (grouped[cat] || []).filter((s) => filteredSchemas.includes(s));
+   385→            if (catSchemas.length === 0) return null;
+   386→            const meta = CATEGORY_META[cat];
+   387→            const collapsed = collapsedCats.has(cat);
+   388→            const configuredInCat = catSchemas.filter((s) => isConfigured(s.id)).length;
+   389→            return (
+   390→              <div key={cat} className="holo-card-sharp hud-corners p-4">
+   391→                <button
+   392→                  onClick={() => toggleCat(cat)}
+   393→                  className="mb-3 flex w-full items-center gap-2 text-left"
+   394→                >
+   395→                  {collapsed ? <ChevronRight className="size-4 text-zinc-500" /> : <ChevronDown className="size-4 text-zinc-500" />}
+   396→                  <meta.icon className={`size-4 ${meta.color}`} />
+   397→                  <span className={`text-sm font-bold ${meta.color}`}>{cat}</span>
+   398→                  <span className="font-mono text-[10px] text-zinc-500">
+   399→                    ({configuredInCat}/{catSchemas.length} configured)
+   400→                  </span>
+   401→                </button>
+   402→                {!collapsed && (
+   403→                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   404→                    {catSchemas.map((schema, i) => {
+   405→                      const Icon = getConnectorIcon(schema);
+   406→                      const cfg = isConfigured(schema.id);
+   407→                      return (
+   408→                        <motion.div
+   409→                          key={schema.id}
+   410→                          initial={{ opacity: 0, y: 4 }}
+   411→                          animate={{ opacity: 1, y: 0 }}
+   412→                          transition={{ delay: Math.min(i * 0.03, 0.2) }}
+   413→                          className={`holo-card-sharp hud-corners group border p-3 transition-all hover:border-emerald-500/40 ${
+   414→                            cfg ? "border-emerald-500/30" : "border-zinc-800"
+   415→                          }`}
+   416→                        >
+   417→                          <div className="flex items-start justify-between gap-2">
+   418→                            <div className="flex items-center gap-2">
+   419→                              <div className={`flex size-8 items-center justify-center rounded-md border ${meta.border} ${meta.bg}`}>
+   420→                                <Icon className={`size-4 ${meta.color}`} />
+   421→                              </div>
+   422→                              <div className="min-w-0">
+   423→                                <div className="truncate text-xs font-bold text-zinc-100">{schema.name}</div>
+   424→                                <div className="font-mono text-[9px] text-zinc-500">{schema.id}</div>
+   425→                              </div>
+   426→                            </div>
+   427→                            {cfg ? (
+   428→                              <Badge variant="outline" className={`shrink-0 text-[9px] ${
+   429→                                cfg.isActive
+   430→                                  ? "border-emerald-500/40 text-emerald-300"
+   431→                                  : "border-zinc-600 text-zinc-500"
+   432→                              }`}>
+   433→                                {cfg.isActive ? "ACTIVE" : "PAUSED"}
+   434→                              </Badge>
+   435→                            ) : (
+   436→                              <Badge variant="outline" className="shrink-0 border-zinc-700 text-[9px] text-zinc-500">
+   437→                                {schema.builtin ? "BUILTIN" : "OUTBOUND"}
+   438→                              </Badge>
+   439→                            )}
+   440→                          </div>
+   441→                          <p className="mt-2 line-clamp-2 text-[11px] text-zinc-400">{schema.description}</p>
+   442→                          <div className="mt-2 flex items-center justify-between">
+   443→                            <span className="font-mono text-[9px] text-zinc-600">
+   444→                              {schema.configFields.length} config field(s)
+   445→                            </span>
+   446→                            <Button
+   447→                              size="sm"
+   448→                              variant="ghost"
+   449→                              onClick={() => setConfigSchema(schema)}
+   450→                              className="h-7 px-2 text-[10px] text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200"
+   451→                            >
+   452→                              <Settings className="size-3" />
+   453→                              {cfg ? "Edit" : "Configure"}
+   454→                            </Button>
+   455→                          </div>
+   456→                        </motion.div>
+   457→                      );
+   458→                    })}
+   459→                  </div>
+   460→                )}
+   461→              </div>
+   462→            );
+   463→          })}
+   464→        </div>
+   465→      )}
+   466→
+   467→      {configSchema && (
+   468→        <ConfigureConnectorModal
+   469→          schema={configSchema}
+   470→          existing={isConfigured(configSchema.id)}
+   471→          onClose={() => setConfigSchema(null)}
+   472→          onSaved={() => { setConfigSchema(null); load(); }}
+   473→        />
+   474→      )}
+   475→    </div>
+   476→  );
+   477→}
+   478→
+   479→// ── Configure Connector Modal ──
+   480→function ConfigureConnectorModal({
+   481→  schema, existing, onClose, onSaved,
+   482→}: {
+   483→  schema: ConnectorSchema;
+   484→  existing?: { id: string; type: string; isActive: boolean; config: Record<string, unknown> };
+   485→  onClose: () => void;
+   486→  onSaved: () => void;
+   487→}) {
+   488→  const { toast } = useToast();
+   489→  const [form, setForm] = useState<Record<string, string | boolean>>(() => {
+   490→    const init: Record<string, string | boolean> = {};
+   491→    for (const f of schema.configFields) {
+   492→      if (existing?.config?.[f.key] !== undefined) {
+   493→        init[f.key] = existing.config[f.key] as string | boolean;
+   494→      } else if (f.defaultValue !== undefined) {
+   495→        init[f.key] = f.defaultValue;
+   496→      } else if (f.type === "boolean") {
+   497→        init[f.key] = false;
+   498→      } else {
+   499→        init[f.key] = "";
+   500→      }
+   501→    }
+   502→    return init;
+   503→  });
+   504→  const [isActive, setIsActive] = useState(existing?.isActive !== false);
+   505→  const [testing, setTesting] = useState(false);
+   506→  const [saving, setSaving] = useState(false);
+   507→  const meta = CATEGORY_META[schema.category];
+   508→  const Icon = getConnectorIcon(schema);
+   509→
+   510→  const buildConfig = (): Record<string, unknown> => {
+   511→    const cfg: Record<string, unknown> = {};
+   512→    for (const f of schema.configFields) {
+   513→      const v = form[f.key];
+   514→      if (f.type === "json") {
+   515→        try { cfg[f.key] = v ? JSON.parse(v as string) : {}; } catch { cfg[f.key] = {}; }
+   516→      } else if (f.type === "boolean") {
+   517→        cfg[f.key] = Boolean(v);
+   518→      } else {
+   519→        cfg[f.key] = v;
+   520→      }
+   521→    }
+   522→    return cfg;
+   523→  };
+   524→
+   525→  const handleTest = async () => {
+   526→    setTesting(true);
+   527→    try {
+   528→      const res = await fetch(`/api/integrations`, {
+   529→        method: "POST",
+   530→        headers: { "Content-Type": "application/json" },
+   531→        body: JSON.stringify({ type: schema.id, config: buildConfig(), test: true }),
+   532→      });
+   533→      const data = await res.json();
+   534→      if (!res.ok && !data.ok) {
+   535→        throw new Error(data.error || data.result?.detail || "Test failed");
+   536→      }
+   537→      toast({
+   538→        title: data.ok ? "Test passed" : "Test completed",
+   539→        description: data.result?.detail || data.message || "Connector reached the upstream service.",
+   540→      });
+   541→    } catch (err) {
+   542→      toast({
+   543→        variant: "destructive",
+   544→        title: "Test failed",
+   545→        description: err instanceof Error ? err.message : "unknown error",
+   546→      });
+   547→    } finally {
+   548→      setTesting(false);
+   549→    }
+   550→  };
+   551→
+   552→  const handleSave = async () => {
+   553→    setSaving(true);
+   554→    try {
+   555→      // If existing, PATCH; else POST to create
+   556→      if (existing?.id) {
+   557→        const res = await fetch(`/api/integrations`, {
+   558→          method: "PATCH",
+   559→          headers: { "Content-Type": "application/json" },
+   560→          body: JSON.stringify({ id: existing.id, isActive, config: buildConfig() }),
+   561→        });
+   562→        const data = await res.json();
+   563→        if (!res.ok) throw new Error(data.error || "Update failed");
+   564→        toast({ title: "Integration updated", description: schema.name });
+   565→      } else {
+   566→        const res = await fetch(`/api/integrations`, {
+   567→          method: "POST",
+   568→          headers: { "Content-Type": "application/json" },
+   569→          body: JSON.stringify({ type: schema.id, config: buildConfig(), isActive }),
+   570→        });
+   571→        const data = await res.json();
+   572→        if (!res.ok) throw new Error(data.error || "Create failed");
+   573→        toast({ title: "Integration configured", description: schema.name });
+   574→      }
+   575→      onSaved();
+   576→    } catch (err) {
+   577→      toast({
+   578→        variant: "destructive",
+   579→        title: "Save failed",
+   580→        description: err instanceof Error ? err.message : "unknown error",
+   581→      });
+   582→    } finally {
+   583→      setSaving(false);
+   584→    }
+   585→  };
+   586→
+   587→  return (
+   588→    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+   589→      <motion.div
+   590→        initial={{ opacity: 0, scale: 0.95 }}
+   591→        animate={{ opacity: 1, scale: 1 }}
+   592→        onClick={(e) => e.stopPropagation()}
+   593→        className="holo-card-sharp hud-corners w-full max-w-lg rounded-lg p-6"
+   594→      >
+   595→        <div className="mb-4 flex items-center gap-2">
+   596→          <div className={`flex size-9 items-center justify-center rounded-md border ${meta.border} ${meta.bg}`}>
+   597→            <Icon className={`size-4 ${meta.color}`} />
+   598→          </div>
+   599→          <div>
+   600→            <h2 className="text-lg font-bold text-zinc-50">{schema.name}</h2>
+   601→            <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-500">
+   602→              <span>{schema.id}</span>
+   603→              <span className="text-zinc-700">|</span>
+   604→              <span>{schema.category}</span>
+   605→            </div>
+   606→          </div>
+   607→        </div>
+   608→
+   609→        <p className="mb-3 text-xs text-zinc-400">{schema.description}</p>
+   610→
+   611→        <div className="max-h-80 space-y-3 overflow-y-auto custom-scrollbar pr-1">
+   612→          {schema.configFields.length === 0 ? (
+   613→            <div className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3 text-center text-xs text-zinc-500">
+   614→              No configuration required for this connector.
+   615→            </div>
+   616→          ) : (
+   617→            schema.configFields.map((field) => (
+   618→              <div key={field.key}>
+   619→                <Label className="mb-1 flex items-center gap-1.5 text-xs text-zinc-300">
+   620→                  {field.label}
+   621→                  {field.required && <span className="text-red-400">*</span>}
+   622→                  <span className="ml-auto font-mono text-[9px] uppercase text-zinc-600">{field.type}</span>
+   623→                </Label>
+   624→                {field.type === "boolean" ? (
+   625→                  <button
+   626→                    onClick={() => setForm({ ...form, [field.key]: !form[field.key] })}
+   627→                    className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-xs transition-colors ${
+   628→                      form[field.key]
+   629→                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+   630→                        : "border-zinc-700 bg-zinc-900/60 text-zinc-400"
+   631→                    }`}
+   632→                  >
+   633→                    <span>{form[field.key] ? "Enabled" : "Disabled"}</span>
+   634→                    <div className={`flex h-4 w-7 items-center rounded-full px-0.5 transition-colors ${form[field.key] ? "bg-emerald-500" : "bg-zinc-700"}`}>
+   635→                      <div className={`size-3 rounded-full bg-white transition-transform ${form[field.key] ? "translate-x-3" : ""}`} />
+   636→                    </div>
+   637→                  </button>
+   638→                ) : field.type === "select" ? (
+   639→                  <select
+   640→                    value={form[field.key] as string}
+   641→                    onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
+   642→                    className="w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-emerald-500/50 focus:outline-none"
+   643→                  >
+   644→                    <option value="">Select...</option>
+   645→                    {(field.options || []).map((o) => <option key={o} value={o}>{o}</option>)}
+   646→                  </select>
+   647→                ) : field.type === "json" ? (
+   648→                  <textarea
+   649→                    value={form[field.key] as string}
+   650→                    onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
+   651→                    placeholder={field.placeholder || "{}"}
+   652→                    rows={3}
+   653→                    className="w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 font-mono text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-emerald-500/50 focus:outline-none"
+   654→                  />
+   655→                ) : (
+   656→                  <Input
+   657→                    type={field.type === "password" ? "password" : "text"}
+   658→                    value={form[field.key] as string}
+   659→                    onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
+   660→                    placeholder={field.placeholder || ""}
+   661→                    className="border-zinc-700 bg-zinc-900/60 text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:border-emerald-500/50"
+   662→                  />
+   663→                )}
+   664→                {field.helpText && (
+   665→                  <p className="mt-1 text-[10px] text-zinc-500">{field.helpText}</p>
+   666→                )}
+   667→              </div>
+   668→            ))
+   669→          )}
+   670→          {/* Active toggle */}
+   671→          <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+   672→            <div>
+   673→              <div className="text-xs font-semibold text-zinc-200">Active</div>
+   674→              <div className="text-[10px] text-zinc-500">Forward events to this connector when active</div>
+   675→            </div>
+   676→            <button
+   677→              onClick={() => setIsActive(!isActive)}
+   678→              className={`flex h-5 w-9 items-center rounded-full px-0.5 transition-colors ${isActive ? "bg-emerald-500" : "bg-zinc-700"}`}
+   679→            >
+   680→              <div className={`size-4 rounded-full bg-white transition-transform ${isActive ? "translate-x-4" : ""}`} />
+   681→            </button>
+   682→          </div>
+   683→        </div>
+   684→
+   685→        <div className="mt-5 flex justify-end gap-2">
+   686→          <Button variant="outline" onClick={onClose} className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+   687→            Cancel
+   688→          </Button>
+   689→          <Button
+   690→            onClick={handleTest}
+   691→            disabled={testing}
+   692→            variant="outline"
+   693→            className="border-cyan-500/40 bg-cyan-500/5 text-cyan-300 hover:bg-cyan-500/15"
+   694→          >
+   695→            {testing ? <Loader2 className="size-4 animate-spin" /> : <Zap className="size-4" />}
+   696→            Test
+   697→          </Button>
+   698→          <Button onClick={handleSave} disabled={saving} className="bg-emerald-600 text-white hover:bg-emerald-500">
+   699→            {saving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+   700→            {existing ? "Update" : "Configure"}
+   701→          </Button>
+   702→        </div>
+   703→      </motion.div>
+   704→    </div>
+   705→  );
+   706→}
+   707→
+   708→// ════════════════════════════════════════════════════════════════════════════
+   709→// FORWARDING LOG TAB
+   710→// ════════════════════════════════════════════════════════════════════════════
+   711→function ForwardingLog() {
+   712→  const { toast } = useToast();
+   713→  const [log, setLog] = useState<ForwardLogEntry[]>([]);
+   714→  const [loading, setLoading] = useState(true);
+   715→  const [filter, setFilter] = useState<"all" | "ok" | "fail">("all");
+   716→
+   717→  const load = useCallback(async () => {
+   718→    try {
+   719→      const res = await fetch(`/api/integrations?log=true`);
+   720→      const data = await res.json();
+   721→      if (!res.ok) throw new Error(data.error || "Failed to load log");
+   722→      setLog(data.log || []);
+   723→    } catch (err) {
+   724→      toast({
+   725→        variant: "destructive",
+   726→        title: "Failed to load forwarding log",
+   727→        description: err instanceof Error ? err.message : "unknown error",
+   728→      });
+   729→    } finally {
+   730→      setLoading(false);
+   731→    }
+   732→  }, [toast]);
+   733→
+   734→  useEffect(() => {
+   735→    load();
+   736→  }, [load]);
+   737→
+   738→  // Auto-refresh forwarding log every 30s (was 10s), paused while tab is hidden.
+   739→  useVisiblePolling(load, 30_000, { immediate: false });
+   740→
+   741→  const filtered = log.filter((e) => {
+   742→    if (filter === "all") return true;
+   743→    if (filter === "ok") return e.result.ok;
+   744→    return !e.result.ok;
+   745→  });
+   746→
+   747→  const stats = {
+   748→    total: log.length,
+   749→    ok: log.filter((e) => e.result.ok).length,
+   750→    fail: log.filter((e) => !e.result.ok).length,
+   751→  };
+   752→
+   753→  return (
+   754→    <div className="space-y-4">
+   755→      {/* Toolbar */}
+   756→      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+   757→        <div className="flex flex-wrap items-center gap-2">
+   758→          {([
+   759→            { id: "all", label: "All", count: stats.total, color: "text-zinc-300" },
+   760→            { id: "ok", label: "Success", count: stats.ok, color: "text-emerald-400" },
+   761→            { id: "fail", label: "Failed", count: stats.fail, color: "text-red-400" },
+   762→          ] as const).map((f) => (
+   763→            <button
+   764→              key={f.id}
+   765→              onClick={() => setFilter(f.id)}
+   766→              className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-all ${
+   767→                filter === f.id
+   768→                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+   769→                  : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+   770→              }`}
+   771→            >
+   772→              {f.label}
+   773→              <span className={`font-mono ${f.color}`}>{f.count}</span>
+   774→            </button>
+   775→          ))}
+   776→        </div>
+   777→        <Button onClick={load} variant="outline" size="sm" className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+   778→          <RefreshCw className="size-3.5" /> Refresh
+   779→        </Button>
+   780→      </div>
+   781→
+   782→      {/* Log */}
+   783→      {loading ? (
+   784→        <Skeleton className="h-64 bg-zinc-900/40" />
+   785→      ) : filtered.length === 0 ? (
+   786→        <div className="holo-card-sharp hud-corners flex flex-col items-center justify-center px-6 py-16 text-center">
+   787→          <div className="flex size-14 items-center justify-center rounded-full bg-cyan-500/10 ring-1 ring-cyan-500/30">
+   788→            <Activity className="size-7 text-cyan-400" />
+   789→          </div>
+   790→          <h3 className="mt-4 text-base font-semibold text-zinc-200">No forwarding events yet</h3>
+   791→          <p className="mt-1 max-w-sm text-sm text-zinc-400">
+   792→            The log captures the last 100 fan-out attempts. Trigger an event from the Integrations Hub or wait for the next incident/canary.
+   793→          </p>
+   794→        </div>
+   795→      ) : (
+   796→        <div className="holo-card-sharp hud-corners p-4">
+   797→          <div className="max-h-[600px] overflow-y-auto custom-scrollbar space-y-1.5">
+   798→            {filtered.map((entry) => {
+   799→              const sev = SEVERITY_STYLE[entry.severity] || SEVERITY_STYLE.info;
+   800→              const ok = entry.result.ok;
+   801→              return (
+   802→                <motion.div
+   803→                  key={entry.id}
+   804→                  initial={{ opacity: 0, x: -4 }}
+   805→                  animate={{ opacity: 1, x: 0 }}
+   806→                  className={`rounded-md border px-3 py-2 ${
+   807→                    ok ? "border-emerald-500/20 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5"
+   808→                  }`}
+   809→                >
+   810→                  <div className="flex items-center gap-2">
+   811→                    {ok
+   812→                      ? <CheckCircle2 className="size-3.5 shrink-0 text-emerald-400" />
+   813→                      : <XCircle className="size-3.5 shrink-0 text-red-400" />}
+   814→                    <span className={`size-2 shrink-0 rounded-full ${sev.dot}`} />
+   815→                    <span className="shrink-0 font-mono text-[10px] text-zinc-500">{formatTimestamp(entry.at)}</span>
+   816→                    <span className="line-clamp-1 flex-1 text-xs font-medium text-zinc-100">{entry.title}</span>
+   817→                    <Badge variant="outline" className={`shrink-0 text-[9px] uppercase ${sev.text} border-current`}>
+   818→                      {entry.severity}
+   819→                    </Badge>
+   820→                  </div>
+   821→                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono text-[10px] text-zinc-500">
+   822→                    <span className="flex items-center gap-1">
+   823→                      <Plug className="size-2.5" /> {entry.connectorId}
+   824→                    </span>
+   825→                    <span className="flex items-center gap-1">
+   826→                      <Tag className="size-2.5" /> {entry.eventType}
+   827→                    </span>
+   828→                    {entry.result.status && (
+   829→                      <span className={ok ? "text-emerald-400" : "text-red-400"}>
+   830→                        HTTP {entry.result.status}
+   831→                      </span>
+   832→                    )}
+   833→                    {entry.result.externalId && (
+   834→                      <span className="text-cyan-400">ext: {entry.result.externalId.slice(0, 24)}</span>
+   835→                    )}
+   836→                    {!ok && entry.result.detail && (
+   837→                      <span className="line-clamp-1 text-red-400/80">{entry.result.detail}</span>
+   838→                    )}
+   839→                  </div>
+   840→                </motion.div>
+   841→              );
+   842→            })}
+   843→          </div>
+   844→        </div>
+   845→      )}
+   846→    </div>
+   847→  );
+   848→}
+   849→
+   850→// ════════════════════════════════════════════════════════════════════════════
+   851→// IMPORT FINDINGS TAB
+   852→// ════════════════════════════════════════════════════════════════════════════
+   853→function ImportFindings() {
+   854→  const { toast } = useToast();
+   855→  const [connectors, setConnectors] = useState<Array<{ id: string; name: string; description: string; icon?: string; category: string }>>([]);
+   856→  const [loading, setLoading] = useState(true);
+   857→  const [selectedTool, setSelectedTool] = useState<string>("");
+   858→  const [rawData, setRawData] = useState("");
+   859→  const [engagementId, setEngagementId] = useState("");
+   860→  const [previewMode, setPreviewMode] = useState(true);
+   861→  const [importing, setImporting] = useState(false);
+   862→  const [result, setResult] = useState<ImportResult | null>(null);
+   863→
+   864→  const load = useCallback(async () => {
+   865→    try {
+   866→      const res = await fetch(`/api/imports`);
+   867→      const data = await res.json();
+   868→      if (!res.ok) throw new Error(data.error || "Failed to load import tools");
+   869→      setConnectors(data.connectors || []);
+   870→      if (data.connectors?.length && !selectedTool) {
+   871→        setSelectedTool(data.connectors[0].id);
+   872→      }
+   873→    } catch (err) {
+   874→      toast({
+   875→        variant: "destructive",
+   876→        title: "Failed to load import tools",
+   877→        description: err instanceof Error ? err.message : "unknown error",
+   878→      });
+   879→    } finally {
+   880→      setLoading(false);
+   881→    }
+   882→  }, [toast, selectedTool]);
+   883→
+   884→  useEffect(() => {
+   885→    load();
+   886→  }, [load]);
+   887→
+   888→  const handleImport = async () => {
+   889→    if (!selectedTool) {
+   890→      toast({ variant: "destructive", title: "Select a tool first" });
+   891→      return;
+   892→    }
+   893→    if (!rawData.trim()) {
+   894→      toast({ variant: "destructive", title: "Paste some raw data first" });
+   895→      return;
+   896→    }
+   897→    setImporting(true);
+   898→    setResult(null);
+   899→    try {
+   900→      let parsedData: unknown = rawData;
+   901→      // Try to parse as JSON first; if it fails, send as raw string (XML, JSONL, etc.)
+   902→      try {
+   903→        parsedData = JSON.parse(rawData);
+   904→      } catch {
+   905→        // Not JSON - send as raw text
+   906→      }
+   907→      const res = await fetch(`/api/imports`, {
+   908→        method: "POST",
+   909→        headers: { "Content-Type": "application/json" },
+   910→        body: JSON.stringify({
+   911→          tool: selectedTool,
+   912→          rawData: parsedData,
+   913→          engagementId: engagementId.trim() || undefined,
+   914→          preview: previewMode,
+   915→        }),
+   916→      });
+   917→      const data = await res.json();
+   918→      if (!res.ok) throw new Error(data.error || "Import failed");
+   919→      setResult(data as ImportResult);
+   920→      toast({
+   921→        title: previewMode ? "Preview ready" : "Import complete",
+   922→        description: `${data.findings?.length || 0} findings ${previewMode ? "parsed" : "imported"}.`,
+   923→      });
+   924→    } catch (err) {
+   925→      toast({
+   926→        variant: "destructive",
+   927→        title: "Import failed",
+   928→        description: err instanceof Error ? err.message : "unknown error",
+   929→      });
+   930→    } finally {
+   931→      setImporting(false);
+   932→    }
+   933→  };
+   934→
+   935→  const ICON_LOOKUP: Record<string, typeof Bug> = {
+   936→    Bug, Server, Atom, Code, Package, Github, FileText,
+   937→  };
+   938→
+   939→  return (
+   940→    <div className="space-y-4">
+   941→      {/* Tool selector */}
+   942→      <div className="holo-card-sharp hud-corners p-5">
+   943→        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-zinc-100">
+   944→          <Download className="size-4 text-amber-400" /> Scanner Tool
+   945→          <span className="font-mono text-[10px] text-zinc-500">{connectors.length} parsers</span>
+   946→        </h3>
+   947→        {loading ? (
+   948→          <Skeleton className="h-20 bg-zinc-900/40" />
+   949→        ) : (
+   950→          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+   951→            {connectors.map((c) => {
+   952→              const Icon = (c.icon && ICON_LOOKUP[c.icon]) || FileText;
+   953→              const active = selectedTool === c.id;
+   954→              return (
+   955→                <button
+   956→                  key={c.id}
+   957→                  onClick={() => setSelectedTool(c.id)}
+   958→                  className={`rounded-md border p-2.5 text-left transition-all ${
+   959→                    active
+   960→                      ? "border-amber-500/40 bg-amber-500/10 neon-border-amber"
+   961→                      : "border-zinc-800 bg-zinc-900/40 hover:bg-zinc-800/50 hover:border-zinc-700"
+   962→                  }`}
+   963→                >
+   964→                  <Icon className={`size-4 ${active ? "text-amber-300" : "text-zinc-400"}`} />
+   965→                  <div className="mt-1.5 text-[11px] font-bold text-zinc-200">{c.name}</div>
+   966→                  <div className="font-mono text-[9px] text-zinc-500">{c.id}</div>
+   967→                </button>
+   968→              );
+   969→            })}
+   970→          </div>
+   971→        )}
+   972→      </div>
+   973→
+   974→      {/* Raw data input */}
+   975→      <div className="holo-card-sharp hud-corners p-5">
+   976→        <div className="mb-3 flex items-center justify-between">
+   977→          <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+   978→            <FileCode className="size-4 text-amber-400" /> Raw Scanner Output
+   979→          </h3>
+   980→          <div className="flex items-center gap-2">
+   981→            <button
+   982→              onClick={() => setPreviewMode(!previewMode)}
+   983→              className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[10px] font-medium transition-colors ${
+   984→                previewMode
+   985→                  ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300"
+   986→                  : "border-zinc-700 bg-zinc-900/40 text-zinc-400"
+   987→              }`}
+   988→            >
+   989→              <Eye className="size-3" />
+   990→              {previewMode ? "Preview mode" : "Persist mode"}
+   991→            </button>
+   992→            <Button onClick={handleImport} disabled={importing} className="bg-amber-600 text-white hover:bg-amber-500 neon-border-amber">
+   993→              {importing ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+   994→              {previewMode ? "Parse Preview" : "Import Findings"}
+   995→            </Button>
+   996→          </div>
+   997→        </div>
+   998→
+   999→        <div className="grid gap-3 sm:grid-cols-[1fr_18rem]">
+  1000→          <div>
+  1001→            <Label className="mb-1 block text-[10px] uppercase tracking-wider text-zinc-500">Raw data (JSON / XML / JSONL)</Label>
+  1002→            <textarea
+  1003→              value={rawData}
+  1004→              onChange={(e) => setRawData(e.target.value)}
+  1005→              placeholder={`Paste ${connectors.find((c) => c.id === selectedTool)?.name || "scanner"} output here...\n\nJSON, XML, or JSONL accepted. The parser will normalize findings into the Finding schema.`}
+  1006→              rows={12}
+  1007→              className="w-full rounded-md border border-zinc-800 bg-zinc-950/60 px-3 py-2 font-mono text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-amber-500/50 focus:outline-none"
+  1008→            />
+  1009→            <div className="mt-1 flex items-center justify-between font-mono text-[9px] text-zinc-600">
+  1010→              <span>{rawData.length.toLocaleString()} chars</span>
+  1011→              <span>{rawData.split("\n").length} lines</span>
+  1012→            </div>
+  1013→          </div>
+  1014→          <div>
+  1015→            <Label className="mb-1 block text-[10px] uppercase tracking-wider text-zinc-500">Engagement ID (optional)</Label>
+  1016→            <Input
+  1017→              value={engagementId}
+  1018→              onChange={(e) => setEngagementId(e.target.value)}
+  1019→              placeholder="eng_..."
+  1020→              className="border-zinc-800 bg-zinc-900/60 font-mono text-xs text-zinc-200 placeholder:text-zinc-500 focus-visible:border-amber-500/50"
+  1021→            />
+  1022→            <div className="mt-4 rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+  1023→              <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+  1024→                <Sparkles className="size-3 text-amber-400" /> How it works
+  1025→              </div>
+  1026→              <ol className="space-y-1 text-[11px] text-zinc-500">
+  1027→                <li>1. Pick the scanner that produced the data.</li>
+  1028→                <li>2. Paste the raw XML/JSON/JSONL output.</li>
+  1029→                <li>3. Preview parses without persisting.</li>
+  1030→                <li>4. Disable preview to persist as Finding rows.</li>
+  1031→              </ol>
+  1032→            </div>
+  1033→          </div>
+  1034→        </div>
+  1035→      </div>
+  1036→
+  1037→      {/* Results */}
+  1038→      {result && (
+  1039→        <div className="holo-card-sharp hud-corners p-5">
+  1040→          <div className="mb-3 flex items-center justify-between">
+  1041→            <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+  1042→              <CheckCircle2 className="size-4 text-emerald-400" /> {previewMode ? "Preview Results" : "Import Results"}
+  1043→            </h3>
+  1044→            <div className="flex items-center gap-3 font-mono text-[10px] text-zinc-500">
+  1045→              <span className="text-emerald-400">{result.findings.length} parsed</span>
+  1046→              <span className="text-amber-400">{result.skipped} skipped</span>
+  1047→              {result.errors.length > 0 && <span className="text-red-400">{result.errors.length} errors</span>}
+  1048→            </div>
+  1049→          </div>
+  1050→
+  1051→          {result.errors.length > 0 && (
+  1052→            <div className="mb-3 rounded-md border border-red-500/30 bg-red-500/5 p-3">
+  1053→              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-red-400">Errors</div>
+  1054→              <ul className="space-y-0.5 text-[11px] text-red-300">
+  1055→                {result.errors.slice(0, 5).map((e, i) => <li key={i} className="font-mono">{e}</li>)}
+  1056→                {result.errors.length > 5 && <li className="text-zinc-500">...and {result.errors.length - 5} more</li>}
+  1057→              </ul>
+  1058→            </div>
+  1059→          )}
+  1060→
+  1061→          {result.findings.length === 0 ? (
+  1062→            <div className="py-8 text-center text-xs text-zinc-500">
+  1063→              No findings parsed. Verify the tool matches your data format.
+  1064→            </div>
+  1065→          ) : (
+  1066→            <div className="max-h-96 overflow-y-auto custom-scrollbar space-y-1.5">
+  1067→              {result.findings.map((f, i) => {
+  1068→                const sev = SEVERITY_STYLE[f.severity] || SEVERITY_STYLE.info;
+  1069→                return (
+  1070→                  <motion.div
+  1071→                    key={i}
+  1072→                    initial={{ opacity: 0, y: 2 }}
+  1073→                    animate={{ opacity: 1, y: 0 }}
+  1074→                    transition={{ delay: Math.min(i * 0.02, 0.3) }}
+  1075→                    className={`rounded-md border ${sev.border} ${sev.bg} px-3 py-2`}
+  1076→                  >
+  1077→                    <div className="flex items-center gap-2">
+  1078→                      <span className={`size-2 rounded-full ${sev.dot}`} />
+  1079→                      <span className="line-clamp-1 flex-1 text-xs font-semibold text-zinc-100">{f.title}</span>
+  1080→                      <Badge variant="outline" className={`shrink-0 text-[9px] uppercase ${sev.text} border-current`}>{f.severity}</Badge>
+  1081→                    </div>
+  1082→                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono text-[10px] text-zinc-500">
+  1083→                      <span className="flex items-center gap-1"><Tag className="size-2.5" /> {f.category}</span>
+  1084→                      {f.owasp && <span className="text-cyan-400">OWASP {f.owasp}</span>}
+  1085→                      {f.endpoint && <span className="flex items-center gap-1"><Network className="size-2.5" /> {f.endpoint}</span>}
+  1086→                      {f.method && <span className="text-amber-400">{f.method}</span>}
+  1087→                      {typeof f.confidence === "number" && <span className="text-violet-400">{f.confidence}%</span>}
+  1088→                    </div>
+  1089→                    {f.description && (
+  1090→                      <p className="mt-1 line-clamp-2 text-[11px] text-zinc-400">{f.description}</p>
+  1091→                    )}
+  1092→                  </motion.div>
+  1093→                );
+  1094→              })}
+  1095→            </div>
+  1096→          )}
+  1097→        </div>
+  1098→      )}
+  1099→    </div>
+  1100→  );
+  1101→}
+  1102→
+  1103→// ════════════════════════════════════════════════════════════════════════════
+  1104→// THREAT INTEL TAB
+  1105→// ════════════════════════════════════════════════════════════════════════════
+  1106→function ThreatIntel() {
+  1107→  const { toast } = useToast();
+  1108→  const [value, setValue] = useState("");
+  1109→  const [iocType, setIocType] = useState<"ip" | "hash" | "domain" | "url" | "email" | "user_agent">("ip");
+  1110→  const [enriching, setEnriching] = useState(false);
+  1111→  const [result, setResult] = useState<EnrichIOCResult | null>(null);
+  1112→
+  1113→  const IOC_TYPES: Array<{ id: typeof iocType; label: string; icon: typeof Network; placeholder: string }> = [
+  1114→    { id: "ip",         label: "IP Address",    icon: Network,     placeholder: "192.168.1.10 or 8.8.8.8" },
+  1115→    { id: "hash",       label: "File Hash",     icon: Fingerprint, placeholder: "SHA-256, SHA-1, or MD5" },
+  1116→    { id: "domain",     label: "Domain",        icon: Globe,       placeholder: "example.com" },
+  1117→    { id: "url",        label: "URL",           icon: ExternalLink,placeholder: "https://example.com/path" },
+  1118→    { id: "email",      label: "Email",         icon: Tag,         placeholder: "user@example.com" },
+  1119→    { id: "user_agent", label: "User Agent",    icon: Cpu,         placeholder: "Mozilla/5.0..." },
+  1120→  ];
+  1121→
+  1122→  const handleEnrich = async () => {
+  1123→    if (!value.trim()) {
+  1124→      toast({ variant: "destructive", title: "Enter an IOC value first" });
+  1125→      return;
+  1126→    }
+  1127→    setEnriching(true);
+  1128→    setResult(null);
+  1129→    try {
+  1130→      const res = await fetch(`/api/iocs/enrich`, {
+  1131→        method: "POST",
+  1132→        headers: { "Content-Type": "application/json" },
+  1133→        body: JSON.stringify({ value: value.trim(), type: iocType }),
+  1134→      });
+  1135→      const data = await res.json();
+  1136→      if (!res.ok) throw new Error(data.error || "Enrichment failed");
+  1137→      setResult(data as EnrichIOCResult);
+  1138→      toast({
+  1139→        title: "Enrichment complete",
+  1140→        description: `${data.results?.length || 0} providers queried, reputation: ${data.merged?.reputation || "unknown"}.`,
+  1141→      });
+  1142→    } catch (err) {
+  1143→      toast({
+  1144→        variant: "destructive",
+  1145→        title: "Enrichment failed",
+  1146→        description: err instanceof Error ? err.message : "unknown error",
+  1147→      });
+  1148→    } finally {
+  1149→      setEnriching(false);
+  1150→    }
+  1151→  };
+  1152→
+  1153→  const detectType = (v: string) => {
+  1154→    const s = v.trim();
+  1155→    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(s)) return "ip";
+  1156→    if (/^[a-f0-9]{32}$|^[a-f0-9]{40}$|^[a-f0-9]{64}$/i.test(s)) return "hash";
+  1157→    if (/^https?:\/\//i.test(s)) return "url";
+  1158→    if (/^[^@]+@[^@]+\.[^@]+$/.test(s)) return "email";
+  1159→    if (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(s)) return "domain";
+  1160→    return null;
+  1161→  };
+  1162→
+  1163→  const onValueChange = (v: string) => {
+  1164→    setValue(v);
+  1165→    const detected = detectType(v);
+  1166→    if (detected) setIocType(detected as typeof iocType);
+  1167→  };
+  1168→
+  1169→  const currentTypeMeta = IOC_TYPES.find((t) => t.id === iocType) || IOC_TYPES[0];
+  1170→
+  1171→  return (
+  1172→    <div className="space-y-4">
+  1173→      {/* IOC input */}
+  1174→      <div className="holo-card-sharp hud-corners p-5">
+  1175→        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-zinc-100">
+  1176→          <Brain className="size-4 text-rose-400" /> IOC Enrichment
+  1177→          <span className="font-mono text-[10px] text-zinc-500">5 providers (VirusTotal, AbuseIPDB, Shodan, AlienVault OTX, MISP)</span>
+  1178→        </h3>
+  1179→
+  1180→        {/* Type selector */}
+  1181→        <div className="mb-3 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+  1182→          {IOC_TYPES.map((t) => {
+  1183→            const Icon = t.icon;
+  1184→            const active = iocType === t.id;
+  1185→            return (
+  1186→              <button
+  1187→                key={t.id}
+  1188→                onClick={() => setIocType(t.id)}
+  1189→                className={`flex flex-col items-center gap-1 rounded-md border px-2 py-2 text-[10px] font-medium transition-all ${
+  1190→                  active
+  1191→                    ? "border-rose-500/40 bg-rose-500/10 text-rose-300 neon-border-rose"
+  1192→                    : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+  1193→                }`}
+  1194→              >
+  1195→                <Icon className="size-3.5" />
+  1196→                {t.label}
+  1197→              </button>
+  1198→            );
+  1199→          })}
+  1200→        </div>
+  1201→
+  1202→        <div className="flex gap-2">
+  1203→          <div className="relative flex-1">
+  1204→            <ScanLine className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+  1205→            <Input
+  1206→              value={value}
+  1207→              onChange={(e) => onValueChange(e.target.value)}
+  1208→              onKeyDown={(e) => e.key === "Enter" && handleEnrich()}
+  1209→              placeholder={currentTypeMeta.placeholder}
+  1210→              className="border-zinc-800 bg-zinc-900/60 pl-9 font-mono text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:border-rose-500/50"
+  1211→            />
+  1212→          </div>
+  1213→          <Button
+  1214→            onClick={handleEnrich}
+  1215→            disabled={enriching || !value.trim()}
+  1216→            className="bg-rose-600 text-white hover:bg-rose-500 neon-border-rose"
+  1217→          >
+  1218→            {enriching ? <Loader2 className="size-4 animate-spin" /> : <Biohazard className="size-4" />}
+  1219→            Enrich
+  1220→          </Button>
+  1221→        </div>
+  1222→        <div className="mt-1.5 font-mono text-[9px] text-zinc-600">
+  1223→          Type auto-detected from value format. The IOC is persisted to the IOC tracker with the merged reputation as confidence.
+  1224→        </div>
+  1225→      </div>
+  1226→
+  1227→      {/* Results */}
+  1228→      {enriching ? (
+  1229→        <div className="holo-card-sharp hud-corners flex flex-col items-center justify-center py-16">
+  1230→          <Loader2 className="size-8 animate-spin text-rose-400" />
+  1231→          <p className="mt-3 text-sm text-zinc-400">Querying threat intel providers...</p>
+  1232→        </div>
+  1233→      ) : result ? (
+  1234→        <div className="space-y-4">
+  1235→          {/* Merged verdict */}
+  1236→          <div className={`holo-card-sharp hud-corners border p-5 ${
+  1237→            REPUTATION_STYLE[result.merged.reputation].border
+  1238→          } ${REPUTATION_STYLE[result.merged.reputation].bg}`}>
+  1239→            <div className="flex items-start justify-between gap-3">
+  1240→              <div>
+  1241→                <div className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">Merged Verdict</div>
+  1242→                <div className={`mt-1 text-2xl font-bold ${REPUTATION_STYLE[result.merged.reputation].text}`}>
+  1243→                  {result.merged.reputation.toUpperCase()}
+  1244→                </div>
+  1245→                <div className="mt-0.5 font-mono text-xs text-zinc-400">{result.value}</div>
+  1246→              </div>
+  1247→              <div className="text-right">
+  1248→                <div className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">Max Score</div>
+  1249→                <div className={`mt-1 font-mono text-3xl font-bold ${
+  1250→                  result.merged.maxScore > 70 ? "text-red-400"
+  1251→                  : result.merged.maxScore > 30 ? "text-amber-400"
+  1252→                  : "text-emerald-400"
+  1253→                }`}>
+  1254→                  {result.merged.maxScore}
+  1255→                </div>
+  1256→                <div className="font-mono text-[9px] text-zinc-500">/100</div>
+  1257→              </div>
+  1258→            </div>
+  1259→
+  1260→            {/* Tags + classifications */}
+  1261→            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+  1262→              {result.merged.classifications.length > 0 && (
+  1263→                <div>
+  1264→                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Classifications</div>
+  1265→                  <div className="flex flex-wrap gap-1">
+  1266→                    {result.merged.classifications.slice(0, 8).map((c, i) => (
+  1267→                      <span key={i} className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-300">
+  1268→                        {c}
+  1269→                      </span>
+  1270→                    ))}
+  1271→                  </div>
+  1272→                </div>
+  1273→              )}
+  1274→              {result.merged.tags.length > 0 && (
+  1275→                <div>
+  1276→                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Tags</div>
+  1277→                  <div className="flex flex-wrap gap-1">
+  1278→                    {result.merged.tags.slice(0, 8).map((t, i) => (
+  1279→                      <span key={i} className="rounded-full border border-zinc-700 bg-zinc-800/50 px-2 py-0.5 text-[10px] text-zinc-300">
+  1280→                        {t}
+  1281→                      </span>
+  1282→                    ))}
+  1283→                  </div>
+  1284→                </div>
+  1285→              )}
+  1286→            </div>
+  1287→
+  1288→            {result.merged.relatedIOCs.length > 0 && (
+  1289→              <div className="mt-3 border-t border-zinc-700/50 pt-3">
+  1290→                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+  1291→                  Related IOCs ({result.merged.relatedIOCs.length})
+  1292→                </div>
+  1293→                <div className="flex flex-wrap gap-1.5">
+  1294→                  {result.merged.relatedIOCs.slice(0, 12).map((r, i) => (
+  1295→                    <code key={i} className="rounded bg-zinc-800/60 px-1.5 py-0.5 font-mono text-[10px] text-cyan-300">
+  1296→                      {r.type}: {r.value}
+  1297→                    </code>
+  1298→                  ))}
+  1299→                </div>
+  1300→              </div>
+  1301→            )}
+  1302→
+  1303→            <div className="mt-3 flex items-center justify-between font-mono text-[9px] text-zinc-500">
+  1304→              <span>{result.results.length} provider(s) queried</span>
+  1305→              <span>{result.durationMs}ms total</span>
+  1306→            </div>
+  1307→          </div>
+  1308→
+  1309→          {/* Per-provider results */}
+  1310→          <div className="holo-card-sharp hud-corners p-5">
+  1311→            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-zinc-100">
+  1312→              <Gauge className="size-4 text-rose-400" /> Per-Provider Results
+  1313→            </h3>
+  1314→            <div className="space-y-2">
+  1315→              {result.results.map((r, i) => {
+  1316→                const rep = r.reputation ? REPUTATION_STYLE[r.reputation] : null;
+  1317→                return (
+  1318→                  <motion.div
+  1319→                    key={i}
+  1320→                    initial={{ opacity: 0, y: 4 }}
+  1321→                    animate={{ opacity: 1, y: 0 }}
+  1322→                    transition={{ delay: Math.min(i * 0.05, 0.3) }}
+  1323→                    className={`rounded-md border p-3 ${
+  1324→                      r.ok
+  1325→                        ? rep ? `${rep.border} ${rep.bg}` : "border-zinc-800 bg-zinc-900/40"
+  1326→                        : "border-red-500/30 bg-red-500/5"
+  1327→                    }`}
+  1328→                  >
+  1329→                    <div className="flex items-center gap-2">
+  1330→                      {r.ok ? <CheckCircle2 className="size-3.5 text-emerald-400" /> : <XCircle className="size-3.5 text-red-400" />}
+  1331→                      <span className="font-mono text-xs font-bold text-zinc-200">{r.provider}</span>
+  1332→                      {r.reputation && (
+  1333→                        <Badge variant="outline" className={`text-[9px] uppercase ${rep?.text} border-current`}>
+  1334→                          {r.reputation}
+  1335→                        </Badge>
+  1336→                      )}
+  1337→                      {typeof r.score === "number" && (
+  1338→                        <Badge variant="outline" className="text-[9px] text-amber-300 border-current">
+  1339→                          score {r.score}
+  1340→                        </Badge>
+  1341→                      )}
+  1342→                      {r.status && (
+  1343→                        <span className="font-mono text-[9px] text-zinc-500">HTTP {r.status}</span>
+  1344→                      )}
+  1345→                      {r.latencyMs !== undefined && (
+  1346→                        <span className="ml-auto font-mono text-[9px] text-zinc-500">{r.latencyMs}ms</span>
+  1347→                      )}
+  1348→                    </div>
+  1349→                    {r.detail && (
+  1350→                      <div className={`mt-1 font-mono text-[10px] ${r.ok ? "text-zinc-400" : "text-red-300"}`}>
+  1351→                        {r.detail}
+  1352→                      </div>
+  1353→                    )}
+  1354→                    {(r.classifications?.length || r.tags?.length) ? (
+  1355→                      <div className="mt-1.5 flex flex-wrap gap-1">
+  1356→                        {(r.classifications || []).slice(0, 4).map((c, j) => (
+  1357→                          <span key={`c${j}`} className="rounded-full bg-rose-500/10 px-1.5 py-0.5 text-[9px] text-rose-300">{c}</span>
+  1358→                        ))}
+  1359→                        {(r.tags || []).slice(0, 4).map((t, j) => (
+  1360→                          <span key={`t${j}`} className="rounded-full bg-zinc-800/60 px-1.5 py-0.5 text-[9px] text-zinc-400">{t}</span>
+  1361→                        ))}
+  1362→                      </div>
+  1363→                    ) : null}
+  1364→                  </motion.div>
+  1365→                );
+  1366→              })}
+  1367→            </div>
+  1368→          </div>
+  1369→        </div>
+  1370→      ) : (
+  1371→        <div className="holo-card-sharp hud-corners flex flex-col items-center justify-center px-6 py-16 text-center">
+  1372→          <div className="flex size-14 items-center justify-center rounded-full bg-rose-500/10 ring-1 ring-rose-500/30">
+  1373→            <Brain className="size-7 text-rose-400" />
+  1374→          </div>
+  1375→          <h3 className="mt-4 text-base font-semibold text-zinc-200">Enrich an IOC</h3>
+  1376→          <p className="mt-1 max-w-md text-sm text-zinc-400">
+  1377→            Enter an IP, hash, domain, URL, email, or user-agent string. The system queries up to 5 threat-intel providers in parallel and merges the verdicts.
+  1378→          </p>
+  1379→        </div>
+  1380→      )}
+  1381→    </div>
+  1382→  );
+  1383→}
+  1384→

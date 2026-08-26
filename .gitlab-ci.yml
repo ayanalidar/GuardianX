@@ -1,0 +1,137 @@
+# GuardianX — GitLab CI/CD Pipeline
+# Pipeline: test → security → build → deploy
+# Target deployment: Cloudflare Pages (guardianx.cloud)
+# Mailbox/SMTP remains on Hostinger (hello@guardianx.in).
+
+stages:
+  - test
+  - security
+  - build
+  - deploy
+
+variables:
+  NODE_VERSION: "20"
+  # Bun cache — speeds up consecutive runs
+  BUN_INSTALL_CACHE_DIR: "$CI_PROJECT_DIR/.bun-cache"
+
+# Cache node_modules + bun cache between runs for faster CI
+cache:
+  key:
+    files:
+      - package.json
+      - bun.lock
+  paths:
+    - node_modules/
+    - .bun-cache/
+  policy: pull-push
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: test
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Lint + test
+test:
+  stage: test
+  image: node:20-slim
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git curl unzip
+    - npm install -g bun
+    - bun install --frozen-lockfile
+  script:
+    - bun run lint
+    - bun run test
+  only:
+    - main
+    - merge_requests
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: security
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Secret scanning
+secret_scanning:
+  stage: security
+  image: node:20-slim
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git curl
+    - npm install -g gitleaks
+  script:
+    - gitleaks detect --source . --report-path gl-secret-scanning-report.json
+  artifacts:
+    reports:
+      secret_detection: gl-secret-scanning-report.json
+    paths:
+      - gl-secret-scanning-report.json
+    expire_in: 1 week
+  only:
+    - main
+    - merge_requests
+
+# Dependency audit (advisory — does NOT fail the pipeline)
+dependency_audit:
+  stage: security
+  image: node:20-slim
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git curl unzip
+    - npm install -g bun
+    - bun install --frozen-lockfile
+  script:
+    - bun audit || true  # Don't fail the build, just report
+  artifacts:
+    paths:
+      - audit-report.txt
+    expire_in: 1 week
+    when: always
+  only:
+    - main
+    - merge_requests
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: build
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Build
+build:
+  stage: build
+  image: node:20-slim
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git curl unzip
+    - npm install -g bun
+    - bun install --frozen-lockfile
+  script:
+    - bun run build
+  artifacts:
+    paths:
+      - .next/
+    expire_in: 1 hour
+  only:
+    - main
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage: deploy
+# Cloudflare Pages deployment via wrangler.
+# Requires CI/CD variables: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID,
+# and CLOUDFLARE_PROJECT_NAME (default: guardianx).
+# ─────────────────────────────────────────────────────────────────────────────
+
+deploy:cloudflare-pages:
+  stage: deploy
+  image: node:20-slim
+  dependencies:
+    - build
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq curl unzip
+    - npm install -g wrangler
+  script:
+    - |
+      wrangler pages deploy .next \
+        --project-name="${CLOUDFLARE_PROJECT_NAME:-guardianx}" \
+        --branch="${CI_COMMIT_REF_NAME}" \
+        --commit-hash="${CI_COMMIT_SHA}" \
+        --commit-message="${CI_COMMIT_MESSAGE}"
+  environment:
+    name: production
+    url: https://guardianx.cloud
+  only:
+    - main
+  when: manual  # Promote to production on demand

@@ -1,0 +1,43 @@
+{
+  "name": "GuardianX",
+  "short_name": "GuardianX",
+  "description": "Autonomous Security Operations Platform — AI-driven SAST, DAST, exploit generation, and VAPT reporting",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape-primary",
+  "background_color": "#09090b",
+  "theme_color": "#10b981",
+  "scope": "/",
+  "categories": ["security", "productivity", "business"],
+  "icons": [
+    {
+      "src": "/guardianx-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/guardianx-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Command Center",
+      "url": "/?view=console&tab=dashboard",
+      "description": "Open the Command Center dashboard"
+    },
+    {
+      "name": "All Clients",
+      "url": "/?view=console&tab=clients",
+      "description": "View all client engagements"
+    },
+    {
+      "name": "RedAgent VAPT",
+      "url": "/?view=console&tab=redagent",
+      "description": "DAST penetration testing"
+    }
+  ]
+}

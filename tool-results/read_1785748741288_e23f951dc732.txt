@@ -1,0 +1,838 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+     4→     4→import { motion, AnimatePresence } from "framer-motion";
+     5→     5→import { useToast } from "@/hooks/use-toast";
+     6→     6→import { Button } from "@/components/ui/button";
+     7→     7→import { Input } from "@/components/ui/input";
+     8→     8→import { Badge } from "@/components/ui/badge";
+     9→     9→import { Skeleton } from "@/components/ui/skeleton";
+    10→    10→import { StatsBar } from "@/components/sentinel/stats-bar";
+    11→    11→import { PatchCard } from "@/components/sentinel/patch-card";
+    12→    12→import { PatchReviewDialog } from "@/components/sentinel/patch-review-dialog";
+    13→    13→import { CodebaseCard } from "@/components/sentinel/codebase-card";
+    14→    14→import {
+    15→    15→  CodebaseViewer,
+    16→    16→  AddCodebaseDialog,
+    17→    17→} from "@/components/sentinel/codebase-viewer";
+    18→    18→import { CredentialsDialog } from "@/components/sentinel/credentials-dialog";
+    19→    19→import { RedAgentPanel } from "@/components/sentinel/redagent-panel";
+    20→    20→import { MatrixRain } from "@/components/sentinel/matrix-rain";
+    21→    21→import { LandingPage } from "@/components/sentinel/landing-page";
+    22→    22→import { ComplianceDashboard } from "@/components/sentinel/compliance-dashboard";
+    23→    23→import { SocPanel } from "@/components/sentinel/soc-panel";
+    24→    24→import { DataExfilPanel } from "@/components/sentinel/data-exfil-panel";
+    25→    25→import { AuditScraperPanel } from "@/components/sentinel/audit-scraper-panel";
+    26→    26→import { AdvancedPanel } from "@/components/sentinel/advanced-panel";
+    27→    27→import { AuthPage } from "@/components/sentinel/auth-page";
+    28→    28→import { UserManagementPanel } from "@/components/sentinel/user-management-panel";
+    29→    29→import { DfirPanel } from "@/components/sentinel/dfir-panel";
+    30→    30→import { SiemPanel } from "@/components/sentinel/siem-panel";
+    31→    31→import { AiOpsAgent } from "@/components/sentinel/ai-ops-agent";
+    32→    32→import { IntegrationsPanel } from "@/components/sentinel/integrations-panel";
+    33→    33→import { ClientsDashboard } from "@/components/sentinel/clients-dashboard";
+    34→    34→import { ClientDetail } from "@/components/sentinel/client-detail";
+    35→    35→import { CommandCenter } from "@/components/sentinel/command-center";
+    36→    36→import { ActivePipelines } from "@/components/sentinel/active-pipelines";
+    37→    37→import { RnDLab } from "@/components/sentinel/rnd-lab";
+    38→    38→import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
+    39→    39→import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
+    40→    40→import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
+    41→    41→import { PipelineView } from "@/components/sentinel/pipeline-view";
+    42→    42→import { GuardianXLogo } from "@/components/sentinel/guardianx-logo";
+    43→    43→import { OnboardingWizard } from "@/components/sentinel/onboarding-wizard";
+    44→    44→import { usePipelineSocket } from "@/lib/sentinel/use-pipeline-socket";
+    45→    45→import {
+    46→    46→  sentinelApi,
+    47→    47→  type Codebase,
+    48→    48→  type PatchStats,
+    49→    49→  type PatchSummary,
+    50→    50→  type Scan,
+    51→    51→} from "@/lib/sentinel/api";
+    52→    52→import { severityRank } from "@/lib/sentinel/utils";
+    53→    53→import {
+    54→    54→  Activity,
+    55→    55→  Bot,
+    56→    56→  Boxes,
+    57→    57→  Building2,
+    58→    58→  Crosshair,
+    59→    59→  Database,
+    60→    60→  FlaskConical,
+    61→    61→  Gavel,
+    62→    62→  Inbox,
+    63→    63→  KeyRound,
+    64→    64→  LayoutDashboard,
+    65→    65→  Loader2,
+    66→    66→  LogOut,
+    67→    67→  Menu,
+    68→    68→  Plus,
+    69→    69→  Plug,
+    70→    70→  Radar,
+    71→    71→  RefreshCw,
+    72→    72→  Search,
+    73→    73→  ScanSearch,
+    74→    74→  Shield,
+    75→    75→  ShieldAlert,
+    76→    76→  ShieldCheck,
+    77→    77→  ShieldHalf,
+    78→    78→  Sparkles,
+    79→    79→  Users,
+    80→    80→  Zap,
+    81→    81→} from "lucide-react";
+    82→    82→
+    83→    83→type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "siem" | "aiops" | "integrations";
+    84→    84→type SortKey = "severity" | "recent";
+    85→    85→
+    86→    86→export default function Home() {
+    87→    87→  const [view, setView] = useState<"landing" | "console" | "auth">("landing");
+    88→    88→  const [currentUser, setCurrentUser] = useState<{ id: string; email: string; name: string; role: string } | null>(null);
+    89→    89→
+    90→    90→  useEffect(() => {
+    91→    91→    // Check for existing session
+    92→    92→    const savedUser = typeof window !== "undefined" ? localStorage.getItem("guardianx-user") : null;
+    93→    93→    const savedView = typeof window !== "undefined" ? localStorage.getItem("guardianx-view") : null;
+    94→    94→    if (savedUser) {
+    95→    95→      // eslint-disable-next-line react-hooks/set-state-in-effect
+    96→    96→      try { setCurrentUser(JSON.parse(savedUser)); } catch { /* ignore */ }
+    97→    97→    }
+    98→    98→    if (savedView === "console" && savedUser) {
+    99→    99→      setView("console");
+   100→   100→    }
+   101→   101→  }, []);
+   102→   102→  const enterConsole = () => {
+   103→   103→    setView("console");
+   104→   104→    localStorage.setItem("guardianx-view", "console");
+   105→   105→  };
+   106→   106→  const backToLanding = () => {
+   107→   107→    setView("landing");
+   108→   108→    localStorage.setItem("guardianx-view", "landing");
+   109→   109→  };
+   110→   110→  const goAuth = () => setView("auth");
+   111→   111→  const handleAuth = (user: { id: string; email: string; name: string; role: string }, _token: string) => {
+   112→   112→    setCurrentUser(user);
+   113→   113→    setView("console");
+   114→   114→  };
+   115→   115→  const handleLogout = () => {
+   116→   116→    localStorage.removeItem("guardianx-user");
+   117→   117→    localStorage.removeItem("guardianx-token");
+   118→   118→    localStorage.setItem("guardianx-view", "landing");
+   119→   119→    setCurrentUser(null);
+   120→   120→    setView("landing");
+   121→   121→  };
+   122→   122→
+   123→   123→  if (view === "auth") {
+   124→   124→    return <AuthPage onAuth={handleAuth} />;
+   125→   125→  }
+   126→   126→  if (view === "landing") {
+   127→   127→    return <LandingPage onEnter={goAuth} />;
+   128→   128→  }
+   129→   129→  return <ConsoleView onBackToLanding={backToLanding} currentUser={currentUser} onLogout={handleLogout} />;
+   130→   130→}
+   131→   131→
+   132→   132→function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
+   133→   133→  onBackToLanding: () => void;
+   134→   134→  currentUser: { id: string; email: string; name: string; role: string } | null;
+   135→   135→  onLogout: () => void;
+   136→   136→}) {
+   137→   137→  // live clock for the HUD
+   138→   138→  const [clock, setClock] = useState("--:--:--");
+   139→   139→  useEffect(() => {
+   140→   140→    const id = setInterval(() => {
+   141→   141→      setClock(new Date().toLocaleTimeString("en-US", { hour12: false }));
+   142→   142→    }, 1000);
+   143→   143→    return () => clearInterval(id);
+   144→   144→  }, []);
+   145→   145→
+   146→   146→  const backToLanding = onBackToLanding;
+   147→   147→  const { toast } = useToast();
+   148→   148→  const [tab, setTab] = useState<Tab>("dashboard");
+   149→   149→  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+   150→   150→  const [patches, setPatches] = useState<PatchSummary[]>([]);
+   151→   151→  const [codebases, setCodebases] = useState<Codebase[]>([]);
+   152→   152→  const [stats, setStats] = useState<PatchStats | null>(null);
+   153→   153→  const [loading, setLoading] = useState(true);
+   154→   154→  const [refreshing, setRefreshing] = useState(false);
+   155→   155→  const [statsLoading, setStatsLoading] = useState(true);
+   156→   156→  const [query, setQuery] = useState("");
+   157→   157→  const [sortKey, setSortKey] = useState<SortKey>("severity");
+   158→   158→  const [selectedPatch, setSelectedPatch] = useState<PatchSummary | null>(null);
+   159→   159→  const [dialogOpen, setDialogOpen] = useState(false);
+   160→   160→  const [viewCodebase, setViewCodebase] = useState<Codebase | null>(null);
+   161→   161→  const [viewerOpen, setViewerOpen] = useState(false);
+   162→   162→  const [addOpen, setAddOpen] = useState(false);
+   163→   163→  const [credsOpen, setCredsOpen] = useState(false);
+   164→   164→  const [sidebarOpen, setSidebarOpen] = useState(false);
+   165→   165→
+   166→   166→  // live scan state
+   167→   167→  const [activeScan, setActiveScan] = useState<Scan | null>(null);
+   168→   168→  const [scanning, setScanning] = useState(false);
+   169→   169→  const [scansTick, setScansTick] = useState(0);
+   170→   170→
+   171→   171→  const { connected, events } = usePipelineSocket({
+   172→   172→    scanId: activeScan?.id ?? null,
+   173→   173→  });
+   174→   174→
+   175→   175→  // ── data loaders ──────────────────────────────────────────────────────
+   176→   176→  const loadAll = useCallback(
+   177→   177→    async (opts?: { silent?: boolean }) => {
+   178→   178→      if (opts?.silent) setRefreshing(true);
+   179→   179→      try {
+   180→   180→        const [p, c, s] = await Promise.all([
+   181→   181→          sentinelApi.listPending(),
+   182→   182→          sentinelApi.listCodebases(),
+   183→   183→          sentinelApi.stats(),
+   184→   184→        ]);
+   185→   185→        setPatches(p);
+   186→   186→        setCodebases(c);
+   187→   187→        setStats(s);
+   188→   188→      } catch (err) {
+   189→   189→        toast({
+   190→   190→          variant: "destructive",
+   191→   191→          title: "Failed to load data",
+   192→   192→          description: err instanceof Error ? err.message : "Backend unreachable.",
+   193→   193→        });
+   194→   194→      } finally {
+   195→   195→        setLoading(false);
+   196→   196→        setRefreshing(false);
+   197→   197→        setStatsLoading(false);
+   198→   198→      }
+   199→   199→    },
+   200→   200→    [toast]
+   201→   201→  );
+   202→   202→
+   203→   203→  useEffect(() => {
+   204→   204→    loadAll();
+   205→   205→  }, [loadAll]);
+   206→   206→
+   207→   207→  // poll the active scan's status while it's running
+   208→   208→  useEffect(() => {
+   209→   209→    if (!scanning || !activeScan) return;
+   210→   210→    const id = setInterval(async () => {
+   211→   211→      try {
+   212→   212→        const scans = await sentinelApi.listScans();
+   213→   213→        const found = scans.find((s) => s.id === activeScan.id);
+   214→   214→        if (found) {
+   215→   215→          setActiveScan(found);
+   216→   216→          if (found.status === "completed" || found.status === "failed") {
+   217→   217→            setScanning(false);
+   218→   218→            loadAll({ silent: true });
+   219→   219→            toast({
+   220→   220→              title:
+   221→   221→                found.status === "completed"
+   222→   222→                  ? "Scan complete"
+   223→   223→                  : "Scan failed",
+   224→   224→              description:
+   225→   225→                found.status === "completed"
+   226→   226→                  ? `${found.patch_count} patch(es) ready for review.`
+   227→   227→                  : found.stage_label ?? "Pipeline error.",
+   228→   228→            });
+   229→   229→          }
+   230→   230→        }
+   231→   231→      } catch {
+   232→   232→        /* ignore */
+   233→   233→      }
+   234→   234→    }, 2000);
+   235→   235→    return () => clearInterval(id);
+   236→   236→  }, [scanning, activeScan, loadAll, toast]);
+   237→   237→
+   238→   238→  // refresh patch list periodically so newly generated patches show up
+   239→   239→  const lastPatchRefresh = useRef(0);
+   240→   240→  useEffect(() => {
+   241→   241→    const id = setInterval(() => {
+   242→   242→      // Only auto-refresh patches if there's no active scan (the scan poll
+   243→   243→      // handles refreshes during scanning).
+   244→   244→      if (!scanning && Date.now() - lastPatchRefresh.current > 15_000) {
+   245→   245→        lastPatchRefresh.current = Date.now();
+   246→   246→        sentinelApi
+   247→   247→          .listPending()
+   248→   248→          .then(setPatches)
+   249→   249→          .catch(() => null);
+   250→   250→      }
+   251→   251→    }, 10_000);
+   252→   252→    return () => clearInterval(id);
+   253→   253→  }, [scanning]);
+   254→   254→
+   255→   255→  // ── actions ───────────────────────────────────────────────────────────
+   256→   256→  const handleScan = useCallback(
+   257→   257→    async (cb: Codebase) => {
+   258→   258→      setScanning(true);
+   259→   259→      setTab("patches");
+   260→   260→      try {
+   261→   261→        const { scanId } = await sentinelApi.startScan(cb.id);
+   262→   262→        const scans = await sentinelApi.listScans();
+   263→   263→        const found = scans.find((s) => s.id === scanId);
+   264→   264→        setActiveScan(found ?? { id: scanId, status: "queued", stage_label: "Queued", started_at: new Date().toISOString(), completed_at: null, codebase: { id: cb.id, name: cb.name }, patch_count: 0 });
+   265→   265→        setScansTick((t) => t + 1);
+   266→   266→        toast({
+   267→   267→          title: "Scan started",
+   268→   268→          description: `Autonomous pipeline is analyzing ${cb.name}.`,
+   269→   269→        });
+   270→   270→      } catch (err) {
+   271→   271→        setScanning(false);
+   272→   272→        toast({
+   273→   273→          variant: "destructive",
+   274→   274→          title: "Failed to start scan",
+   275→   275→          description: err instanceof Error ? err.message : "unknown error",
+   276→   276→        });
+   277→   277→      }
+   278→   278→    },
+   279→   279→    [toast]
+   280→   280→  );
+   281→   281→
+   282→   282→  const handleSelectPatch = useCallback((p: PatchSummary) => {
+   283→   283→    setSelectedPatch(p);
+   284→   284→    setDialogOpen(true);
+   285→   285→  }, []);
+   286→   286→
+   287→   287→  const handleResolved = useCallback(
+   288→   288→    (patchId: string, action: "approved" | "rejected") => {
+   289→   289→      setPatches((prev) => prev.filter((p) => p.patch_id !== patchId));
+   290→   290→      setStats(null);
+   291→   291→      setStatsLoading(true);
+   292→   292→      sentinelApi
+   293→   293→        .stats()
+   294→   294→        .then(setStats)
+   295→   295→        .finally(() => setStatsLoading(false));
+   296→   296→      void action;
+   297→   297→    },
+   298→   298→    []
+   299→   299→  );
+   300→   300→
+   301→   301→  const handleDeleteCodebase = useCallback(
+   302→   302→    async (cb: Codebase) => {
+   303→   303→      try {
+   304→   304→        await sentinelApi.deleteCodebase(cb.id);
+   305→   305→        setCodebases((prev) => prev.filter((c) => c.id !== cb.id));
+   306→   306→        toast({ title: "Codebase deleted", description: cb.name });
+   307→   307→      } catch (err) {
+   308→   308→        toast({
+   309→   309→          variant: "destructive",
+   310→   310→          title: "Delete failed",
+   311→   311→          description: err instanceof Error ? err.message : "unknown",
+   312→   312→        });
+   313→   313→      }
+   314→   314→    },
+   315→   315→    [toast]
+   316→   316→  );
+   317→   317→
+   318→   318→  // ── derived ───────────────────────────────────────────────────────────
+   319→   319→  const visiblePatches = useMemo(() => {
+   320→   320→    const q = query.trim().toLowerCase();
+   321→   321→    const filtered = q
+   322→   322→      ? patches.filter(
+   323→   323→          (p) =>
+   324→   324→            p.title.toLowerCase().includes(q) ||
+   325→   325→            p.patch_id.toLowerCase().includes(q) ||
+   326→   326→            (p.cve?.toLowerCase().includes(q) ?? false) ||
+   327→   327→            p.affected_file.toLowerCase().includes(q) ||
+   328→   328→            p.codebase_name.toLowerCase().includes(q) ||
+   329→   329→            p.ai_explanation.toLowerCase().includes(q)
+   330→   330→        )
+   331→   331→      : patches;
+   332→   332→    return [...filtered].sort((a, b) => {
+   333→   333→      if (sortKey === "severity") {
+   334→   334→        const r = severityRank(a.severity) - severityRank(b.severity);
+   335→   335→        if (r !== 0) return r;
+   336→   336→      }
+   337→   337→      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+   338→   338→    });
+   339→   339→  }, [patches, query, sortKey]);
+   340→   340→
+   341→   341→  return (
+   342→   342→    <div className="scanlines cyber-vignette min-h-screen bg-zinc-950 text-zinc-100">
+   343→   343→      {/* matrix rain + cyber grid background */}
+   344→   344→      <MatrixRain />
+   345→   345→      <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-60" />
+   346→   346→
+   347→   347→      {/* ambient backdrop */}
+   348→   348→      <div
+   349→   349→        aria-hidden
+   350→   350→        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+   351→   351→      >
+   352→   352→        <div className="absolute -top-40 left-1/2 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
+   353→   353→        <div className="absolute top-1/3 -right-40 h-80 w-80 rounded-full bg-cyan-700/10 blur-3xl" />
+   354→   354→      </div>
+   355→   355→
+   356→   356→      <div className="relative z-10 flex min-h-screen">
+   357→   357→        {/* SIDEBAR */}
+   358→   358→        <aside className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-emerald-500/15 bg-zinc-950/95 backdrop-blur-md transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}>
+   359→   359→          <button type="button" onClick={backToLanding} className="flex items-center gap-2.5 border-b border-emerald-500/15 px-4 py-4 transition-opacity hover:opacity-80" title="Back to landing page">
+   360→   360→            <GuardianXLogo size={44} />
+   361→   361→            <div className="leading-tight text-left">
+   362→   362→              <span className="text-sm font-bold tracking-tight text-zinc-50 neon-emerald">Guardian<span className="text-emerald-400">X</span></span>
+   363→   363→              <div className="font-mono text-[9px] uppercase tracking-widest text-emerald-500/50">SOC Lab</div>
+   364→   364→            </div>
+   365→   365→            {/* Mobile-only close button so users don't have to tap the overlay */}
+   366→   366→            <button
+   367→   367→              type="button"
+   368→   368→              onClick={(e) => { e.stopPropagation(); setSidebarOpen(false); }}
+   369→   369→              aria-label="Close sidebar"
+   370→   370→              className="ml-auto rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 md:hidden"
+   371→   371→            >
+   372→   372→              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-5">
+   373→   373→                <line x1="18" y1="6" x2="6" y2="18" />
+   374→   374→                <line x1="6" y1="6" x2="18" y2="18" />
+   375→   375→              </svg>
+   376→   376→            </button>
+   377→   377→          </button>
+   378→   378→          <nav className="custom-scrollbar flex-1 overflow-y-auto p-2">
+   379→   379→            <NavGroup label="Dashboard" color="emerald">
+   380→   380→              <NavItem active={tab === "dashboard"} onClick={() => { setTab("dashboard"); setSelectedClientId(null); setSidebarOpen(false); }} icon={LayoutDashboard} label="Overview" accentColor="emerald" iconColor="text-emerald-400" />
+   381→   381→              <NavItem active={tab === "clients"} onClick={() => { setTab("clients"); setSelectedClientId(null); setSidebarOpen(false); }} icon={Building2} label="All Clients" accentColor="emerald" iconColor="text-emerald-400" />
+   382→   382→              <NavItem active={tab === "pipelines"} onClick={() => { setTab("pipelines"); setSelectedClientId(null); setSidebarOpen(false); }} icon={Activity} label="Pipelines" accentColor="emerald" iconColor="text-emerald-400" />
+   383→   383→            </NavGroup>
+   384→   384→            <NavGroup label="Tools" color="cyan">
+   385→   385→              <NavItem active={tab === "patches"} onClick={() => { setTab("patches"); setSidebarOpen(false); }} icon={ShieldAlert} label="Patch Queue" badge={patches.length || undefined} badgeColor="emerald" accentColor="emerald" />
+   386→   386→              <NavItem active={tab === "codebases"} onClick={() => { setTab("codebases"); setSidebarOpen(false); }} icon={Boxes} label="Codebases" badge={codebases.length || undefined} badgeColor="sky" accentColor="sky" iconColor="text-sky-400" />
+   387→   387→              <NavItem active={tab === "redagent"} onClick={() => { setTab("redagent"); setSidebarOpen(false); }} icon={Crosshair} label="RedAgent VAPT" iconColor="text-red-400" accentColor="red" />
+   388→   388→              <NavItem active={tab === "compliance"} onClick={() => { setTab("compliance"); setSidebarOpen(false); }} icon={Gavel} label="Compliance" iconColor="text-purple-400" accentColor="purple" />
+   389→   389→              <NavItem active={tab === "soc"} onClick={() => { setTab("soc"); setSidebarOpen(false); }} icon={Radar} label="SOC & DevSecOps" iconColor="text-cyan-400" accentColor="cyan" />
+   390→   390→              <NavItem active={tab === "exfil"} onClick={() => { setTab("exfil"); setSidebarOpen(false); }} icon={Shield} label="Exfil Defense" iconColor="text-rose-400" accentColor="rose" />
+   391→   391→              <NavItem active={tab === "scraper"} onClick={() => { setTab("scraper"); setSidebarOpen(false); }} icon={ScanSearch} label="Audit Scraper" iconColor="text-violet-400" accentColor="violet" />
+   392→   392→              <NavItem active={tab === "dfir"} onClick={() => { setTab("dfir"); setSidebarOpen(false); }} icon={ShieldAlert} label="DFIR Command" iconColor="text-red-400" accentColor="red" />
+   393→   393→              <NavItem active={tab === "siem"} onClick={() => { setTab("siem"); setSidebarOpen(false); }} icon={Database} label="SIEM Console" iconColor="text-cyan-400" accentColor="cyan" />
+   394→   394→              <NavItem active={tab === "aiops"} onClick={() => { setTab("aiops"); setSidebarOpen(false); }} icon={Bot} label="AI Ops Agent" iconColor="text-emerald-400" accentColor="emerald" />
+   395→   395→              <NavItem active={tab === "integrations"} onClick={() => { setTab("integrations"); setSidebarOpen(false); }} icon={Plug} label="Integration Hub" iconColor="text-emerald-400" accentColor="emerald" />
+   396→   396→            </NavGroup>
+   397→   397→            <NavGroup label="Advanced" color="amber">
+   398→   398→              <NavItem active={tab === "rnd"} onClick={() => { setTab("rnd"); setSidebarOpen(false); }} icon={FlaskConical} label="R&D Lab" iconColor="text-violet-400" accentColor="violet" />
+   399→   399→              <NavItem active={tab === "advanced"} onClick={() => { setTab("advanced"); setSidebarOpen(false); }} icon={Sparkles} label="Advanced Platform" iconColor="text-amber-400" accentColor="amber" />
+   400→   400→            </NavGroup>
+   401→   401→            {currentUser?.role === "admin" && (
+   402→   402→              <NavGroup label="Administration" color="emerald">
+   403→   403→                <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" accentColor="emerald" />
+   404→   404→              </NavGroup>
+   405→   405→            )}
+   406→   406→          </nav>
+   407→   407→          <div className="border-t border-emerald-500/15 p-3">
+   408→   408→            <div className="mb-2 flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs">
+   409→   409→              <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
+   410→   410→              <span className="font-mono text-emerald-300">SYS ONLINE</span>
+   411→   411→              <span className="ml-auto font-mono text-emerald-400/60">{clock}</span>
+   412→   412→            </div>
+   413→   413→            <div className="flex gap-2">
+   414→   414→              <Button size="sm" variant="outline" onClick={() => loadAll({ silent: true })} disabled={refreshing} className="flex-1 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
+   415→   415→                {refreshing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+   416→   416→                <span className="ml-1 hidden sm:inline">Refresh</span>
+   417→   417→              </Button>
+   418→   418→              <Button size="sm" variant="outline" onClick={() => setCredsOpen(true)} className="flex-1 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
+   419→   419→                <KeyRound className="size-3.5" />
+   420→   420→                <span className="ml-1 hidden sm:inline">Creds</span>
+   421→   421→              </Button>
+   422→   422→            </div>
+   423→   423→            {currentUser && (
+   424→   424→              <div className="mt-2 flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 p-2">
+   425→   425→                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-xs font-bold text-emerald-400">
+   426→   426→                  {currentUser.name.charAt(0).toUpperCase()}
+   427→   427→                </div>
+   428→   428→                <div className="min-w-0 flex-1">
+   429→   429→                  <div className="truncate text-[10px] font-medium text-zinc-300">{currentUser.name}</div>
+   430→   430→                  <div className="truncate text-[8px] text-zinc-500">{currentUser.role.toUpperCase()}</div>
+   431→   431→                </div>
+   432→   432→                <Button size="icon" variant="ghost" onClick={onLogout} className="size-7 shrink-0 text-zinc-500 hover:bg-red-500/10 hover:text-red-400" title="Logout">
+   433→   433→                  <LogOut className="size-3.5" />
+   434→   434→                </Button>
+   435→   435→              </div>
+   436→   436→            )}
+   437→   437→          </div>
+   438→   438→        </aside>
+   439→   439→        {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={() => setSidebarOpen(false)} />}
+   440→   440→        {/* MAIN CONTENT */}
+   441→   441→        <div className="flex flex-1 flex-col md:ml-64">
+   442→   442→          <header className="sticky top-0 z-30 border-b border-emerald-500/20 bg-zinc-950/90 backdrop-blur-md">
+   443→   443→            <div className="flex h-14 items-center justify-between px-4 sm:px-6">
+   444→   444→              <div className="flex items-center gap-3">
+   445→   445→                <button
+   446→   446→                  onClick={() => setSidebarOpen(true)}
+   447→   447→                  aria-label="Open navigation menu"
+   448→   448→                  className="-ml-1 flex size-9 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800/60 hover:text-emerald-400 md:hidden"
+   449→   449→                >
+   450→   450→                  <Menu className="size-5" />
+   451→   451→                </button>
+   452→   452→                <h1 className={`text-sm font-bold sm:text-base ${
+   453→   453→                  tab === "dashboard" ? "neon-emerald text-emerald-300" :
+   454→   454→                  tab === "clients" ? "neon-emerald text-emerald-300" :
+   455→   455→                  tab === "patches" ? "neon-emerald text-emerald-300" :
+   456→   456→                  tab === "codebases" ? "neon-sky text-sky-300" :
+   457→   457→                  tab === "redagent" ? "neon-red text-red-300" :
+   458→   458→                  tab === "compliance" ? "neon-purple text-purple-300" :
+   459→   459→                  tab === "soc" ? "neon-cyan text-cyan-300" :
+   460→   460→                  tab === "exfil" ? "neon-rose text-rose-300" :
+   461→   461→                  tab === "scraper" ? "neon-violet text-violet-300" :
+   462→   462→                  tab === "dfir" ? "neon-red text-red-300" :
+   463→   463→                  tab === "siem" ? "neon-cyan text-cyan-300" :
+   464→   464→                  tab === "aiops" ? "neon-emerald text-emerald-300" :
+   465→   465→                  tab === "integrations" ? "neon-emerald text-emerald-300" :
+   466→   466→                  tab === "rnd" ? "neon-violet text-violet-300" :
+   467→   467→                  tab === "users" ? "neon-emerald text-emerald-300" :
+   468→   468→                  "neon-amber text-amber-300"
+   469→   469→                }`}>
+   470→   470→                  {tab === "dashboard" ? "Command Overview" :
+   471→   471→                   tab === "clients" ? (selectedClientId ? "Client Pipeline" : "Client Engagements") :
+   472→   472→                   tab === "pipelines" ? "Active Pipelines" :
+   473→   473→                   tab === "rnd" ? "R&D Lab" :
+   474→   474→                   tab === "patches" ? "Patch Review Queue" :
+   475→   475→                   tab === "codebases" ? "Codebase Library" :
+   476→   476→                   tab === "redagent" ? "RedAgent VAPT Engine" :
+   477→   477→                   tab === "compliance" ? "GRC & Compliance Center" :
+   478→   478→                   tab === "soc" ? "SOC & DevSecOps Center" :
+   479→   479→                   tab === "exfil" ? "Data Exfiltration Defense" :
+   480→   480→                   tab === "scraper" ? "Web Scraping Audit Engine" :
+   481→   481→                   tab === "dfir" ? "DFIR Command Center" :
+   482→   482→                   tab === "siem" ? "SIEM Console" :
+   483→   483→                   tab === "aiops" ? "AI Ops Agent" :
+   484→   484→                   tab === "integrations" ? "Integration Hub" :
+   485→   485→                   tab === "users" ? "User Management" :
+   486→   486→                   "Advanced Security Platform"}
+   487→   487→                </h1>
+   488→   488→              </div>
+   489→   489→              <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-mono text-xs">
+   490→   490→                <span className={`size-1.5 rounded-full ${connected ? "bg-emerald-500 pulse-dot" : "bg-amber-500 animate-pulse"}`} />
+   491→   491→                <span className={connected ? "text-emerald-300" : "text-amber-300"}>{connected ? "LIVE" : "…"}</span>
+   492→   492→              </div>
+   493→   493→            </div>
+   494→   494→          </header>
+   495→   495→          <main className="flex-1 p-4 sm:p-6">
+   496→   496→            {tab === "dashboard" ? (
+   497→   497→              <CommandCenter
+   498→   498→                onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }}
+   499→   499→                onAddClient={() => setTab("clients")}
+   500→   500→              />
+   501→   501→            ) : tab === "clients" && selectedClientId ? (
+   502→   502→              <ClientDetail clientId={selectedClientId} onBack={() => setSelectedClientId(null)} onNavigate={(t) => setTab(t as Tab)} />
+   503→   503→            ) : tab === "clients" ? (
+   504→   504→              <ClientsDashboard onSelectClient={(id) => setSelectedClientId(id)} />
+   505→   505→            ) : tab === "pipelines" ? (
+   506→   506→              <ActivePipelines onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }} onAddClient={() => setTab("clients")} />
+   507→   507→            ) : tab === "rnd" ? (
+   508→   508→              <RnDLab />
+   509→   509→            ) : (
+   510→   510→              <>
+   511→   511→                <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>
+   512→   512→                  <StatsBar stats={stats} loading={statsLoading} />
+   513→   513→                </section>
+   514→   514→                <section className="mb-5 grid grid-cols-1 gap-4 fade-in-up lg:grid-cols-3" style={{ animationDelay: "0.15s" }}>
+   515→   515→                  <PostureScoreCard />
+   516→   516→                  <ThreatIntelPanel />
+   517→   517→                  <RuntimeMonitor />
+   518→   518→                </section>
+   519→   519→                {tab === "redagent" ? (
+   520→   520→                  <RedAgentPanel />
+   521→   521→                ) : tab === "compliance" ? (
+   522→   522→                  <ComplianceDashboard />
+   523→   523→                ) : tab === "soc" ? (
+   524→   524→                  <SocPanel />
+   525→   525→                ) : tab === "exfil" ? (
+   526→   526→                  <DataExfilPanel />
+   527→   527→                ) : tab === "scraper" ? (
+   528→   528→                  <AuditScraperPanel />
+   529→   529→                ) : tab === "dfir" ? (
+   530→   530→                  <DfirPanel />
+   531→   531→                ) : tab === "siem" ? (
+   532→   532→                  <SiemPanel />
+   533→   533→                ) : tab === "aiops" ? (
+   534→   534→                  <AiOpsAgent />
+   535→   535→                ) : tab === "integrations" ? (
+   536→   536→                  <IntegrationsPanel />
+   537→   537→                ) : tab === "advanced" ? (
+   538→   538→                  <AdvancedPanel />
+   539→   539→                ) : tab === "users" ? (
+   540→   540→                  <UserManagementPanel />
+   541→   541→                ) : (
+   542→   542→              <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_22rem]">
+   543→   543→                <section>
+   544→   544→                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+   545→   545→                    <div className="inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1 text-xs">
+   546→   546→                      <TabButton active={tab === "patches"} onClick={() => setTab("patches")}>
+   547→   547→                        <ShieldAlert className="size-3.5" /> Patches
+   548→   548→                        {patches.length > 0 && <span className="ml-1 rounded-full bg-emerald-500/20 px-1.5 text-[10px] text-emerald-300">{patches.length}</span>}
+   549→   549→                      </TabButton>
+   550→   550→                      <TabButton active={tab === "codebases"} onClick={() => setTab("codebases")}>
+   551→   551→                        <Boxes className="size-3.5" /> Codebases
+   552→   552→                        {codebases.length > 0 && <span className="ml-1 rounded-full bg-sky-500/20 px-1.5 text-[10px] text-sky-300">{codebases.length}</span>}
+   553→   553→                      </TabButton>
+   554→   554→                    </div>
+   555→   555→                    {tab === "patches" ? (
+   556→   556→                      <div className="flex items-center gap-2">
+   557→   557→                        <div className="relative w-full sm:w-56">
+   558→   558→                          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+   559→   559→                          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search patches…" className="border-zinc-800 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-500 focus-visible:border-emerald-500/50" />
+   560→   560→                        </div>
+   561→   561→                        <div className="hidden items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1 text-xs sm:flex">
+   562→   562→                          <SortToggle active={sortKey === "severity"} onClick={() => setSortKey("severity")}>Severity</SortToggle>
+   563→   563→                          <SortToggle active={sortKey === "recent"} onClick={() => setSortKey("recent")}>Recent</SortToggle>
+   564→   564→                        </div>
+   565→   565→                      </div>
+   566→   566→                    ) : (
+   567→   567→                      <Button size="sm" onClick={() => setAddOpen(true)} className="bg-emerald-600 text-white hover:bg-emerald-500"><Plus className="size-4" /> Add Codebase</Button>
+   568→   568→                    )}
+   569→   569→                  </div>
+   570→   570→                  {tab === "patches" ? (
+   571→   571→                    loading ? <PatchListSkeleton /> :
+   572→   572→                    visiblePatches.length === 0 ? (
+   573→   573→                      <EmptyState title={query ? "No patches match your search" : "No patches pending"} body={query ? `No results for "${query}".` : "Run a scan on a codebase to generate patches."} icon={Inbox}
+   574→   574→                        action={!query ? <Button size="sm" variant="outline" onClick={() => setTab("codebases")} className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"><Boxes className="size-4" /> Browse Codebases</Button> : null} />
+   575→   575→                    ) : (
+   576→   576→                      <div className="space-y-3">
+   577→   577→                        <AnimatePresence mode="popLayout">
+   578→   578→                          {visiblePatches.map((p) => (
+   579→   579→                            <motion.div key={p.patch_id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.18 }}>
+   580→   580→                              <PatchCard patch={p} onSelect={handleSelectPatch} />
+   581→   581→                            </motion.div>
+   582→   582→                          ))}
+   583→   583→                        </AnimatePresence>
+   584→   584→                      </div>
+   585→   585→                    )
+   586→   586→                  ) : loading ? <CodebaseGridSkeleton /> :
+   587→   587→                  codebases.length === 0 ? (
+   588→   588→                    <EmptyState title="No codebases yet" body="Add a codebase with vulnerable code." icon={Boxes}
+   589→   589→                      action={<Button size="sm" onClick={() => setAddOpen(true)} className="bg-emerald-600 text-white hover:bg-emerald-500"><Plus className="size-4" /> Add Codebase</Button>} />
+   590→   590→                  ) : (
+   591→   591→                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+   592→   592→                      <AnimatePresence mode="popLayout">
+   593→   593→                        {codebases.map((cb) => (
+   594→   594→                          <CodebaseCard key={cb.id} codebase={cb} onScan={handleScan} onView={(c) => { setViewCodebase(c); setViewerOpen(true); }} onDelete={handleDeleteCodebase} busy={scanning} />
+   595→   595→                        ))}
+   596→   596→                      </AnimatePresence>
+   597→   597→                    </div>
+   598→   598→                  )}
+   599→   599→                </section>
+   600→   600→                <aside className="lg:sticky lg:top-20 lg:self-start">
+   601→   601→                  <PipelineView events={events} connected={connected} active={scanning} scanStatus={activeScan?.status} stageLabel={activeScan?.stage_label} />
+   602→   602→                </aside>
+   603→   603→              </div>
+   604→   604→                )}
+   605→   605→              </>
+   606→   606→            )}
+   607→   607→          </main>
+   608→   608→          <footer className="mt-auto border-t border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
+   609→   609→            <div className="flex flex-col items-center justify-between gap-3 px-4 py-4 text-xs text-zinc-400 sm:flex-row sm:px-6">
+   610→   610→              <div className="flex items-center gap-2">
+   611→   611→                <GuardianXLogo size={24} />
+   612→   612→                <span>GuardianX · Autonomous Security Operations Platform</span>
+   613→   613→              </div>
+   614→   614→              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+   615→   615→                <a href="https://www.guardianx.in" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-emerald-400">www.guardianx.in</a>
+   616→   616→                <a href="mailto:hello@guardianx.in" className="transition-colors hover:text-emerald-400">hello@guardianx.in</a>
+   617→   617→                <a href="tel:+917006712347" className="transition-colors hover:text-emerald-400">+91 70067 12347</a>
+   618→   618→              </div>
+   619→   619→            </div>
+   620→   620→          </footer>
+   621→   621→        </div>
+   622→   622→      </div>
+   623→   623→
+   624→   624→      {/* dialogs */}
+   625→   625→      <PatchReviewDialog
+   626→   626→        patch={selectedPatch}
+   627→   627→        open={dialogOpen}
+   628→   628→        onOpenChange={setDialogOpen}
+   629→   629→        onResolved={handleResolved}
+   630→   630→      />
+   631→   631→      <CodebaseViewer
+   632→   632→        codebase={viewCodebase}
+   633→   633→        open={viewerOpen}
+   634→   634→        onOpenChange={setViewerOpen}
+   635→   635→        onScan={(cb) => {
+   636→   636→          setViewerOpen(false);
+   637→   637→          void handleScan(cb);
+   638→   638→        }}
+   639→   639→      />
+   640→   640→      <AddCodebaseDialog
+   641→   641→        open={addOpen}
+   642→   642→        onOpenChange={setAddOpen}
+   643→   643→        onCreated={() => loadAll({ silent: true })}
+   644→   644→        onOpenCredentials={() => {
+   645→   645→          setAddOpen(false);
+   646→   646→          setCredsOpen(true);
+   647→   647→        }}
+   648→   648→      />
+   649→   649→      <CredentialsDialog
+   650→   650→        open={credsOpen}
+   651→   651→        onOpenChange={setCredsOpen}
+   652→   652→        onChanged={() => loadAll({ silent: true })}
+   653→   653→      />
+   654→   654→
+   655→   655→      {/* First-time admin onboarding wizard. The component self-guards with
+   656→   656→          localStorage (guardianx-onboarded), so it only renders the modal
+   657→   657→          the very first time an admin signs in. */}
+   658→   658→      {currentUser?.role === "admin" && <OnboardingWizard />}
+   659→   659→    </div>
+   660→   660→  );
+   661→   661→}
+   662→   662→
+   663→   663→function TabButton({
+   664→   664→  active,
+   665→   665→  onClick,
+   666→   666→  children,
+   667→   667→}: {
+   668→   668→  active: boolean;
+   669→   669→  onClick: () => void;
+   670→   670→  children: React.ReactNode;
+   671→   671→}) {
+   672→   672→  return (
+   673→   673→    <button
+   674→   674→      type="button"
+   675→   675→      onClick={onClick}
+   676→   676→      className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+   677→   677→        active
+   678→   678→          ? "bg-emerald-500/15 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.2)] ring-1 ring-emerald-500/30"
+   679→   679→          : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+   680→   680→      }`}
+   681→   681→    >
+   682→   682→      {children}
+   683→   683→    </button>
+   684→   684→  );
+   685→   685→}
+   686→   686→
+   687→   687→function SortToggle({
+   688→   688→  active,
+   689→   689→  onClick,
+   690→   690→  children,
+   691→   691→}: {
+   692→   692→  active: boolean;
+   693→   693→  onClick: () => void;
+   694→   694→  children: React.ReactNode;
+   695→   695→}) {
+   696→   696→  return (
+   697→   697→    <button
+   698→   698→      type="button"
+   699→   699→      onClick={onClick}
+   700→   700→      className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+   701→   701→        active ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"
+   702→   702→      }`}
+   703→   703→    >
+   704→   704→      {children}
+   705→   705→    </button>
+   706→   706→  );
+   707→   707→}
+   708→   708→
+   709→   709→function PatchListSkeleton() {
+   710→   710→  return (
+   711→   711→    <div className="space-y-3">
+   712→   712→      {Array.from({ length: 3 }).map((_, i) => (
+   713→   713→        <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+   714→   714→          <div className="flex items-start justify-between gap-4">
+   715→   715→            <div className="flex-1 space-y-3">
+   716→   716→              <div className="flex gap-2">
+   717→   717→                <Skeleton className="h-5 w-20 bg-zinc-800" />
+   718→   718→                <Skeleton className="h-5 w-24 bg-zinc-800" />
+   719→   719→                <Skeleton className="h-5 w-16 bg-zinc-800" />
+   720→   720→              </div>
+   721→   721→              <Skeleton className="h-5 w-3/4 bg-zinc-800" />
+   722→   722→              <Skeleton className="h-4 w-full bg-zinc-800" />
+   723→   723→            </div>
+   724→   724→            <Skeleton className="h-6 w-28 bg-zinc-800" />
+   725→   725→          </div>
+   726→   726→        </div>
+   727→   727→      ))}
+   728→   728→    </div>
+   729→   729→  );
+   730→   730→}
+   731→   731→
+   732→   732→function CodebaseGridSkeleton() {
+   733→   733→  return (
+   734→   734→    <div className="grid gap-3 sm:grid-cols-2">
+   735→   735→      {Array.from({ length: 4 }).map((_, i) => (
+   736→   736→        <Skeleton key={i} className="h-32 bg-zinc-800/60" />
+   737→   737→      ))}
+   738→   738→    </div>
+   739→   739→  );
+   740→   740→}
+   741→   741→
+   742→   742→function EmptyState({
+   743→   743→  title,
+   744→   744→  body,
+   745→   745→  icon: Icon,
+   746→   746→  action,
+   747→   747→}: {
+   748→   748→  title: string;
+   749→   749→  body: string;
+   750→   750→  icon: React.ComponentType<{ className?: string }>;
+   751→   751→  action?: React.ReactNode;
+   752→   752→}) {
+   753→   753→  return (
+   754→   754→    <motion.div
+   755→   755→      initial={{ opacity: 0, y: 8 }}
+   756→   756→      animate={{ opacity: 1, y: 0 }}
+   757→   757→      className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 px-6 py-16 text-center"
+   758→   758→    >
+   759→   759→      <div className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/30">
+   760→   760→        <Icon className="size-7 text-emerald-400" />
+   761→   761→      </div>
+   762→   762→      <h3 className="mt-4 text-base font-semibold text-zinc-200">{title}</h3>
+   763→   763→      <p className="mt-1 max-w-sm text-sm text-zinc-400">{body}</p>
+   764→   764→      {action && <div className="mt-4">{action}</div>}
+   765→   765→    </motion.div>
+   766→   766→  );
+   767→   767→}
+   768→   768→
+   769→   769→function NavGroup({ label, children, color = "emerald" }: { label: string; children: React.ReactNode; color?: string }) {
+   770→   770→  const colorMap: Record<string, string> = {
+   771→   771→    emerald: "text-emerald-500/60",
+   772→   772→    sky: "text-sky-500/60",
+   773→   773→    red: "text-red-500/60",
+   774→   774→    cyan: "text-cyan-500/60",
+   775→   775→    purple: "text-purple-500/60",
+   776→   776→    rose: "text-rose-500/60",
+   777→   777→    violet: "text-violet-500/60",
+   778→   778→    amber: "text-amber-500/60",
+   779→   779→  };
+   780→   780→  return (
+   781→   781→    <div className="mb-3">
+   782→   782→      <div className={`section-header px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest ${colorMap[color] || colorMap.emerald}`}>{label}</div>
+   783→   783→      <div className="space-y-0.5">{children}</div>
+   784→   784→    </div>
+   785→   785→  );
+   786→   786→}
+   787→   787→
+   788→   788→function NavItem({
+   789→   789→  active,
+   790→   790→  onClick,
+   791→   791→  icon: Icon,
+   792→   792→  label,
+   793→   793→  badge,
+   794→   794→  badgeColor = "emerald",
+   795→   795→  iconColor,
+   796→   796→  accentColor = "emerald",
+   797→   797→}: {
+   798→   798→  active: boolean;
+   799→   799→  onClick: () => void;
+   800→   800→  icon: React.ComponentType<{ className?: string }>;
+   801→   801→  label: string;
+   802→   802→  badge?: number;
+   803→   803→  badgeColor?: "emerald" | "sky" | "red" | "cyan" | "purple" | "rose" | "violet" | "amber";
+   804→   804→  iconColor?: string;
+   805→   805→  accentColor?: "emerald" | "sky" | "red" | "cyan" | "purple" | "rose" | "violet" | "amber";
+   806→   806→}) {
+   807→   807→  const accentMap: Record<string, { bg: string; text: string; ring: string; dot: string; badgeBg: string; badgeText: string }> = {
+   808→   808→    emerald: { bg: "bg-emerald-500/10", text: "text-emerald-300", ring: "shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4),0_0_12px_rgba(16,185,129,0.15)]", dot: "bg-emerald-500", badgeBg: "bg-emerald-500/20", badgeText: "text-emerald-300" },
+   809→   809→    sky:     { bg: "bg-sky-500/10",     text: "text-sky-300",     ring: "shadow-[inset_0_0_0_1px_rgba(14,165,233,0.4),0_0_12px_rgba(14,165,233,0.15)]",     dot: "bg-sky-500",     badgeBg: "bg-sky-500/20",     badgeText: "text-sky-300" },
+   810→   810→    red:     { bg: "bg-red-500/10",     text: "text-red-300",     ring: "shadow-[inset_0_0_0_1px_rgba(239,68,68,0.4),0_0_12px_rgba(239,68,68,0.15)]",     dot: "bg-red-500",     badgeBg: "bg-red-500/20",     badgeText: "text-red-300" },
+   811→   811→    cyan:    { bg: "bg-cyan-500/10",    text: "text-cyan-300",    ring: "shadow-[inset_0_0_0_1px_rgba(6,182,212,0.4),0_0_12px_rgba(6,182,212,0.15)]",    dot: "bg-cyan-500",    badgeBg: "bg-cyan-500/20",    badgeText: "text-cyan-300" },
+   812→   812→    purple:  { bg: "bg-purple-500/10",  text: "text-purple-300",  ring: "shadow-[inset_0_0_0_1px_rgba(168,85,247,0.4),0_0_12px_rgba(168,85,247,0.15)]",  dot: "bg-purple-500",  badgeBg: "bg-purple-500/20",  badgeText: "text-purple-300" },
+   813→   813→    rose:    { bg: "bg-rose-500/10",    text: "text-rose-300",    ring: "shadow-[inset_0_0_0_1px_rgba(244,63,94,0.4),0_0_12px_rgba(244,63,94,0.15)]",    dot: "bg-rose-500",    badgeBg: "bg-rose-500/20",    badgeText: "text-rose-300" },
+   814→   814→    violet:  { bg: "bg-violet-500/10",  text: "text-violet-300",  ring: "shadow-[inset_0_0_0_1px_rgba(139,92,246,0.4),0_0_12px_rgba(139,92,246,0.15)]",  dot: "bg-violet-500",  badgeBg: "bg-violet-500/20",  badgeText: "text-violet-300" },
+   815→   815→    amber:   { bg: "bg-amber-500/10",   text: "text-amber-300",   ring: "shadow-[inset_0_0_0_1px_rgba(245,158,11,0.4),0_0_12px_rgba(245,158,11,0.15)]",   dot: "bg-amber-500",   badgeBg: "bg-amber-500/20",   badgeText: "text-amber-300" },
+   816→   816→  };
+   817→   817→  const a = accentMap[accentColor] || accentMap.emerald;
+   818→   818→  const badgeA = accentMap[badgeColor] || accentMap.emerald;
+   819→   819→  return (
+   820→   820→    <button
+   821→   821→      type="button"
+   822→   822→      onClick={onClick}
+   823→   823→      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-200 ${
+   824→   824→        active
+   825→   825→          ? `${a.bg} ${a.text} ${a.ring}`
+   826→   826→          : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
+   827→   827→      }`}
+   828→   828→    >
+   829→   829→      <Icon className={`size-4 shrink-0 ${active ? iconColor ?? a.text : iconColor ?? "text-zinc-500"}`} />
+   830→   830→      <span className="flex-1 text-left font-medium">{label}</span>
+   831→   831→      {badge !== undefined && badge > 0 && (
+   832→   832→        <span className={`rounded-full px-1.5 text-[10px] font-bold ${badgeA.badgeBg} ${badgeA.badgeText}`}>{badge}</span>
+   833→   833→      )}
+   834→   834→      {active && <span className={`ml-auto size-1.5 rounded-full ${a.dot} pulse-dot`} />}
+   835→   835→    </button>
+   836→   836→  );
+   837→   837→}
+   838→   838→

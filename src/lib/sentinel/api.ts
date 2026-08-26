@@ -1,0 +1,1032 @@
+// Shared types and API client for the GuardianX autonomous pipeline.
+
+export type Severity = "critical" | "high" | "medium" | "low";
+export type PatchStatus = "pending" | "approved" | "rejected";
+
+export interface Codebase {
+  id: string;
+  name: string;
+  language: string;
+  description: string | null;
+  created_at: string;
+  patch_count: number;
+}
+
+export interface CodebaseDetail extends Codebase {
+  source_code: string;
+  scans: {
+    id: string;
+    status: string;
+    stage_label: string | null;
+    started_at: string;
+    completed_at: string | null;
+    patch_count: number;
+  }[];
+  patches: {
+    patchId: string;
+    title: string;
+    severity: Severity;
+    status: PatchStatus;
+    sandboxPassed: boolean;
+  }[];
+}
+
+export interface Scan {
+  id: string;
+  status: string;
+  stage_label: string | null;
+  started_at: string;
+  completed_at: string | null;
+  codebase: { id: string; name: string };
+  patch_count: number;
+}
+
+export interface PatchSummary {
+  patch_id: string;
+  internal_id: string;
+  codebase_name: string;
+  title: string;
+  severity: Severity;
+  cve: string | null;
+  affected_file: string;
+  ai_explanation: string;
+  confidence: number;
+  sandbox_passed: boolean;
+  has_exploit: boolean;
+  exploit_confirmed: boolean;
+  adversarial_rounds: number;
+  adversarial_won: boolean;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+}
+
+export interface ExploitRunResult {
+  success: boolean;
+  blocked: boolean;
+  detail: string;
+  logs: string;
+  durationMs?: number;
+}
+
+export interface AdversarialRound {
+  round: number;
+  attackerTechnique: string;
+  attackerReasoning: string;
+  strategyId?: string;
+  bypassFound: boolean;
+  bypassResult: {
+    success: boolean;
+    detail: string;
+    logs: string;
+  } | null;
+  defender: {
+    technique: string;
+    reasoning: string;
+    patchedCode: string;
+  } | null;
+  defenseVerification: {
+    originalBlocked: boolean;
+    bypassBlocked: boolean;
+    originalLogs: string | null;
+    bypassLogs: string;
+  } | null;
+  outcome:
+    | "attacker-won"
+    | "defender-won"
+    | "partial"
+    | "attacker-conceded"
+    | "bypass-unconfirmed"
+    | "inconclusive";
+}
+
+// ── auto-remediation-enhance: structured patch explanation + confidence breakdown
+export interface PatchExplanation {
+  cweId: string | null;
+  vulnClass: string;
+  fixStrategy: string;
+  behaviorChange: string;
+}
+
+export interface ConfidenceBreakdown {
+  sandboxPassed: number;      // 0 or 40
+  redTeamBlocked: number;     // 0 or 30
+  owaspPatterns: number;      // 0..15
+  noNewVulns: number;         // 0 or 15
+  total: number;              // 0..100
+}
+
+export interface MultiVectorSandboxSummary {
+  overallPassed: boolean;
+  summary: {
+    total: number;
+    blocked: number;
+    bypassed: number;
+    inconclusive: number;
+    errors: number;
+  };
+  performance: {
+    originalMs: number;
+    patchedMs: number;
+    ratio: number;
+    passed: boolean;
+    detail: string;
+  } | null;
+  sideEffect: {
+    passed: boolean;
+    detail: string;
+    logs: string;
+  } | null;
+}
+
+export interface PatchDetail extends PatchSummary {
+  codebase: { id: string; name: string };
+  ai_reasoning: string;
+  original_code: string;
+  patched_code: string;
+  diff_payload: string;
+  test_code: string;
+  sandbox_logs: string;
+  status: PatchStatus;
+  approved_at: string | null;
+  // exploit playground
+  exploit_code: string | null;
+  exploit_original_result: ExploitRunResult | null;
+  exploit_patched_result: ExploitRunResult | null;
+  // adversarial arena
+  adversarial_rounds: number;
+  adversarial_won: boolean;
+  adversarial_transcript: AdversarialRound[];
+  chat: ChatMessage[];
+  // ── auto-remediation-enhance ─────────────────────────────────────────
+  language?: string;
+  patch_explanation?: PatchExplanation | null;
+  confidence_breakdown?: ConfidenceBreakdown | null;
+  multi_vector_sandbox?: MultiVectorSandboxSummary | null;
+  supersedes?: string | null;
+}
+
+export interface RunExploitResponse {
+  target: "original" | "patched";
+  success: boolean;
+  blocked: boolean;
+  detail: string;
+  exit_code: number | null;
+  duration_ms: number;
+  timed_out: boolean;
+  stdout: string;
+  stderr: string;
+  logs: string;
+}
+
+// ── Credentials ────────────────────────────────────────────────────────────
+export interface Credential {
+  id: string;
+  label: string;
+  kind: "github" | "gitlab" | "git";
+  target: string;
+  username: string | null;
+  created_at: string;
+  last_used_at: string | null;
+  audit_count: number;
+}
+
+export interface GitFile {
+  path: string;
+  size: number;
+}
+
+export interface ExploreResult {
+  repo_url: string;
+  file_count: number;
+  files: GitFile[];
+}
+
+// ── RedAgent VAPT ───────────────────────────────────────────────────────────
+export interface Target {
+  id: string;
+  name: string;
+  base_url: string;
+  auth_header_set: boolean;
+  notes: string | null;
+  authorized: boolean;
+  created_at: string;
+  engagement_count: number;
+}
+
+export interface Engagement {
+  id: string;
+  status: string;
+  stage_label: string | null;
+  started_at: string;
+  completed_at: string | null;
+  target: { name: string; baseUrl: string };
+  finding_count: number;
+}
+
+export interface Finding {
+  id: string;
+  title: string;
+  severity: Severity | "info";
+  category: string;
+  owasp: string | null;
+  endpoint: string;
+  method: string;
+  description: string;
+  proof_request: string;
+  proof_response: string;
+  payload: string | null;
+  confidence: number;
+  remediation: string | null;
+  created_at: string;
+}
+
+export interface RedAgentEvent {
+  engagementId: string;
+  stage: string;
+  message: string;
+  level: "info" | "success" | "warning" | "error";
+  meta?: Record<string, unknown> | null;
+  ts: string;
+}
+
+// ── PostureScore ────────────────────────────────────────────────────────────
+export interface CodebaseScore {
+  codebase_id: string;
+  codebase_name: string;
+  score: number;
+  grade: string;
+  color: string;
+  total_patches: number;
+  pending: number;
+  approved: number;
+  pending_critical: number;
+  pending_high: number;
+  sandbox_pass_rate: number;
+  adversarial_win_rate: number;
+}
+export interface PostureScore {
+  overall: number;
+  overall_grade: string;
+  codebases: CodebaseScore[];
+}
+
+// ── Attestations ────────────────────────────────────────────────────────────
+export interface Attestation {
+  id: string;
+  patch_id: string;
+  title: string;
+  severity: string;
+  prev_hash: string;
+  hash: string;
+  hash_ok: boolean;
+  link_ok: boolean;
+  created_at: string;
+  data: { patchId: string; codebase: string; title: string; severity: string; approvedAt: string; patchedCodeHash: string; selfHealed?: boolean };
+}
+export interface AttestationLedger {
+  chain_valid: boolean;
+  count: number;
+  genesis_hash: string | null;
+  latest_hash: string | null;
+  attestations: Attestation[];
+}
+
+// ── Threat Intel ────────────────────────────────────────────────────────────
+export interface ThreatItem {
+  title: string;
+  url: string;
+  source: string;
+  date: string;
+  snippet: string;
+  cve: string | null;
+  related_codebases: string[];
+  relevance: "high" | "info";
+}
+export interface ThreatIntel {
+  threat_count: number;
+  high_relevance: number;
+  fetched_at: string;
+  threats: ThreatItem[];
+}
+
+// ── AI Copilot ──────────────────────────────────────────────────────────────
+export interface CopilotResult {
+  action: string;
+  code: string | null;
+  explanation: string;
+  suggestions: string[];
+}
+
+// ── Runtime Monitor ─────────────────────────────────────────────────────────
+export interface RuntimeFunction {
+  patch_id: string;
+  title: string;
+  severity: string;
+  codebase: string;
+  affected_file: string;
+  runtime_status: "healed" | "vulnerable";
+  sandbox_passed: boolean;
+  exploit_proven: boolean;
+  attack_attempts: number;
+  blocked_attacks: number;
+  last_incident: string | null;
+}
+export interface RuntimeStatus {
+  runtime_health: "secure" | "at-risk" | "critical";
+  monitored_functions: number;
+  vulnerable_functions: number;
+  healed_functions: number;
+  total_attack_attempts: number;
+  total_attacks_blocked: number;
+  auto_heal_enabled: boolean;
+  functions: RuntimeFunction[];
+}
+
+// ── Compliance ──────────────────────────────────────────────────────────────
+export interface FrameworkSection {
+  section: string;
+  title: string;
+  status: "compliant" | "violated" | "at-risk" | "pending-review" | "not-assessed";
+}
+export interface Framework {
+  name: string;
+  full_name: string;
+  score: number;
+  status: "compliant" | "at-risk" | "non-compliant";
+  icon: string;
+  color: string;
+  mapped_findings: number;
+  sections: FrameworkSection[];
+}
+export interface ComplianceStatus {
+  overall_score: number;
+  overall_status: string;
+  total_findings: number;
+  critical_open: number;
+  high_open: number;
+  frameworks: Framework[];
+  dpdpa_findings: Array<{ issue_id: string; title: string; severity: string; source: string; target: string; dpdpa_section: string; dpdpa_title: string; dpdpa_requirement: string; status: string }>;
+  breach_notification_required: boolean;
+  mapped_issues: unknown[];
+  // NEW (enhanced DPDPA dashboard) — deep dive into the selected framework
+  framework_detail?: FrameworkDetail;
+  score_breakdown?: ScoreBreakdown;
+  available_frameworks?: FrameworkId[];
+  selected_framework?: FrameworkId;
+  cached?: boolean;
+  cached_at?: string;
+  cached_until?: string;
+}
+
+// ── Enhanced compliance framework detail ───────────────────────────────────
+export type FrameworkId = "DPDPA" | "ISO27001" | "SOC2";
+export type CheckStatus = "pass" | "fail" | "manual";
+export type ComplianceLevel = "compliant" | "at-risk" | "non-compliant";
+
+export interface AutomatedCheckResult {
+  id: string;
+  checkType: string;
+  description: string;
+  status: CheckStatus;
+  evidence: string;
+  collectedAt: string;
+}
+
+export interface ControlStatus {
+  id: string;
+  title: string;
+  ref: string;
+  status: CheckStatus;
+  score: number;
+  evidence: AutomatedCheckResult[];
+  requiredEvidence: string[];
+  recommendations: string[];
+  lastChecked: string;
+}
+
+export interface SectionStatus {
+  id: string;
+  section: string;
+  title: string;
+  description: string;
+  status: CheckStatus;
+  score: number;
+  controls: ControlStatus[];
+  lastChecked: string;
+}
+
+export interface FrameworkDetail {
+  id: FrameworkId;
+  name: string;
+  fullName: string;
+  description: string;
+  score: number;
+  level: ComplianceLevel;
+  sections: SectionStatus[];
+  lastChecked: string;
+}
+
+export interface ScoreBreakdown {
+  score: number;
+  level: ComplianceLevel;
+  automatedPassRate: number;
+  manualScore: number;
+  remediationScore: number;
+  gaps: string[];
+  recommendations: string[];
+}
+
+export interface GapItem {
+  sectionId: string;
+  section: string;
+  sectionTitle: string;
+  controlId: string;
+  controlTitle: string;
+  gap: string;
+  impact: "high" | "medium" | "low";
+  effort: "low" | "medium" | "high";
+  recommendation: string;
+}
+
+export interface GapAnalysisResponse {
+  framework: FrameworkId;
+  score: number;
+  level: ComplianceLevel;
+  total_gaps: number;
+  high_impact: number;
+  medium_impact: number;
+  low_impact: number;
+  quick_wins: number;
+  automated_pass_rate: number;
+  manual_score: number;
+  remediation_score: number;
+  gaps: GapItem[];
+  recommendations: string[];
+  generated_at: string;
+}
+
+// ── Data Privacy ────────────────────────────────────────────────────────────
+export interface PrivacyRisk {
+  risk_type: string;
+  dpdpa_section: string;
+  severity: string;
+  description: string;
+  source: string;
+  recommendation: string;
+}
+export interface DataPrivacyStatus {
+  privacy_score: number;
+  privacy_status: string;
+  total_risks: number;
+  critical_risks: number;
+  high_risks: number;
+  medium_risks: number;
+  dpdpa_sections_assessed: string[];
+  risks: PrivacyRisk[];
+}
+
+// ── Breach Notification ─────────────────────────────────────────────────────
+export interface BreachNotification {
+  target: string;
+  target_url: string;
+  breach_detected: boolean;
+  notification_required: boolean;
+  first_detected: string;
+  hours_since_detection: number;
+  hours_remaining: number;
+  is_overdue: boolean;
+  breach_severity: string;
+  finding_count: number;
+  data_types_compromised: string[];
+  notification_draft: { to: string; subject: string; date: string; body: string };
+}
+export interface BreachNotificationStatus {
+  breach_detected: boolean;
+  notification_required: boolean;
+  notification_count?: number;
+  any_overdue?: boolean;
+  message?: string;
+  notifications?: BreachNotification[];
+}
+
+// ── Dark Web Monitoring ─────────────────────────────────────────────────────
+export interface DarkWebExposure {
+  title: string;
+  url: string;
+  source: string;
+  date: string;
+  snippet: string;
+  data_types: string[];
+  severity: string;
+  verified_source: boolean;
+}
+export interface DarkWebStatus {
+  monitoring_active: boolean;
+  exposure_count: number;
+  critical_exposures: number;
+  last_scan: string;
+  search_terms?: string;
+  exposures: DarkWebExposure[];
+  error?: string;
+}
+
+// ── Security KPIs ───────────────────────────────────────────────────────────
+export interface SecurityKpis {
+  mttd_seconds: number | null;
+  mttr_hours: number | null;
+  patch_latency_hours: number | null;
+  vuln_density_per_kloc: number;
+  sandbox_pass_rate: number;
+  adversarial_win_rate: number;
+  resolution_rate: number;
+  avg_confidence: number;
+  total_vulns: number;
+  pending_vulns: number;
+  resolved_vulns: number;
+  severity_breakdown: { critical: number; high: number; medium: number; low: number; info: number };
+  total_lines_scanned: number;
+  codebases_scanned: number;
+  scans_completed: number;
+  trend: Array<{ day: string; vulns: number; resolved: number }>;
+  kpi_score: number;
+}
+
+// ── Attack Surface ──────────────────────────────────────────────────────────
+export interface ExposedService {
+  path: string;
+  label: string;
+  status: number;
+  found: boolean;
+  responseSize: number;
+}
+export interface OpenPort {
+  port: number;
+  label: string;
+  open: boolean;
+  status: number;
+}
+export interface SecurityHeaderCheck {
+  header: string;
+  present: boolean;
+  label: string;
+}
+export interface AttackSurfaceStatus {
+  target: string;
+  base_url: string;
+  scan_time: string;
+  exposed_services: number;
+  open_ports: number;
+  missing_security_headers: number;
+  services: ExposedService[];
+  all_services: ExposedService[];
+  open_ports_list: OpenPort[];
+  security_headers: SecurityHeaderCheck[];
+  risk_level: string;
+  summary: string;
+}
+
+// ── SCA Scanner ─────────────────────────────────────────────────────────────
+export interface ScaDependency {
+  name: string;
+  vulnerable: boolean;
+}
+export interface ScaVulnerability {
+  dependency: string;
+  cve: string | null;
+  severity: string;
+  title: string;
+  url: string;
+  fixed_in: string | null;
+}
+export interface ScaScanResult {
+  codebase?: string;
+  codebase_id?: string;
+  total_dependencies?: number;
+  scanned_dependencies?: number;
+  vulnerabilities_found?: number;
+  critical?: number;
+  high?: number;
+  sca_score?: number;
+  dependencies?: ScaDependency[];
+  vulnerabilities?: ScaVulnerability[];
+  message?: string;
+  codebases?: Array<{ codebase_id: string; codebase_name: string; dependencies: string[] }>;
+  total_deps?: number;
+}
+
+// ── Patch History ───────────────────────────────────────────────────────────
+export interface PatchVersion {
+  version: number;
+  label: string;
+  source: string;
+  technique: string | null;
+  reasoning: string | null;
+  timestamp: string;
+  code_hash: string;
+  code_preview: string;
+}
+export interface PatchHistory {
+  patch_id: string;
+  title: string;
+  codebase: string;
+  adversarial_rounds: number;
+  adversarial_won: boolean;
+  total_versions: number;
+  versions: PatchVersion[];
+}
+
+// ── Patch Lineage (auto-remediation-enhance) ────────────────────────────────
+// A patch may be superseded by a newer one when an attacker later finds a
+// bypass. The lineage walks the `supersedes` field back to the root patch
+// and returns the full chain (v1 → bypassed → v2 → ... → current).
+export interface LineageEntry {
+  patchId: string;
+  internalId: string;
+  title: string;
+  severity: string;
+  cve: string | null;
+  status: string;
+  confidence: number;
+  language: string;
+  createdAt: string;
+  approvedAt: string | null;
+  adversarialRounds: number;
+  adversarialWon: boolean;
+  supersedes: string | null;
+  patchExplanation: {
+    cweId: string | null;
+    vulnClass: string;
+    fixStrategy: string;
+    behaviorChange: string;
+  } | null;
+  supersededBy: string | null;
+  supersededByReason: string | null;
+}
+export interface PatchLineage {
+  patch_id: string;
+  title: string;
+  lineage_depth: number;
+  is_current: boolean;
+  lineage: LineageEntry[];
+}
+
+// ── PR Artifacts ────────────────────────────────────────────────────────────
+export interface PrArtifacts {
+  patch_id: string;
+  branch_name: string;
+  commit_message: string;
+  diff: string;
+  files_changed: number;
+  additions: number;
+  deletions: number;
+  patched_code: string;
+  instructions: string;
+  auto_push_available: boolean;
+  message: string;
+}
+
+// ── Data Exfiltration Defense ───────────────────────────────────────────────
+export interface CanaryRecord {
+  id: string;
+  label: string;
+  canary_type: string;
+  canary_value: string;
+  injected_endpoint: string;
+  is_active: boolean;
+  detected: boolean;
+  detected_at: string | null;
+  detected_on: string | null;
+  created_at: string;
+}
+export interface CanaryStatus {
+  total_canaries: number;
+  active_canaries: number;
+  detected_canaries: number;
+  canaries: CanaryRecord[];
+}
+
+export interface SuspiciousIp {
+  ip: string;
+  requestCount: number;
+  uniqueEndpoints: number;
+  lastAccess: string;
+  scrapingScore: number;
+  isBot: boolean;
+}
+export interface DataFlowStatus {
+  total_requests: number;
+  total_data_transferred: number;
+  unique_ips: number;
+  unique_endpoints: number;
+  honeypot_hits: number;
+  suspicious_ips: number;
+  monitoring_window_minutes: number;
+  requests_per_minute: number;
+  top_endpoints: Array<{ endpoint: string; count: number }>;
+  suspicious_ips_list: SuspiciousIp[];
+  honeypot_hits_list: Array<{ endpoint: string; ipAddress: string; userAgent: string; method: string; timestamp: string }>;
+  recent_requests: Array<{ ipAddress: string; method: string; endpoint: string; statusCode: number; responseSize: number; timestamp: string }>;
+}
+
+export interface PatchStats {
+  pending: number;
+  approved: number;
+  rejected: number;
+  critical_pending: number;
+  total: number;
+  codebases: number;
+  scans: number;
+}
+
+export interface PipelineEvent {
+  scanId: string;
+  stage: string;
+  message: string;
+  level: "info" | "success" | "warning" | "error";
+  meta?: Record<string, unknown> | null;
+  ts: string;
+}
+
+async function http<T>(url: string, init?: RequestInit): Promise<T> {
+  // Get JWT token from localStorage (set on login)
+  const token = typeof window !== "undefined" ? localStorage.getItem("guardianx-token") : null;
+
+  const res = await fetch(url, {
+    ...init,
+    credentials: "same-origin", // send HTTP-only cookie
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  // Handle 401, token expired, redirect to login
+  if (res.status === 401 && typeof window !== "undefined") {
+    localStorage.removeItem("guardianx-user");
+    localStorage.removeItem("guardianx-token");
+    localStorage.setItem("guardianx-view", "auth");
+    window.location.reload();
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) {
+    throw new Error(data?.error ?? `Request failed (${res.status})`);
+  }
+  return data as T;
+}
+
+export const sentinelApi = {
+  // codebases
+  listCodebases: () => http<Codebase[]>("/api/codebases"),
+  getCodebase: (id: string) => http<CodebaseDetail>(`/api/codebases/${id}`),
+  createCodebase: (data: {
+    name: string;
+    sourceCode: string;
+    language?: string;
+    description?: string;
+    clientId?: string;
+  }) =>
+    http<Codebase>("/api/codebases", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deleteCodebase: (id: string) =>
+    http<{ ok: boolean }>(`/api/codebases/${id}`, { method: "DELETE" }),
+
+  // scans
+  listScans: () => http<Scan[]>("/api/scans"),
+  startScan: (codebaseId: string) =>
+    http<{ scanId: string; status: string }>("/api/scans", {
+      method: "POST",
+      body: JSON.stringify({ codebaseId }),
+    }),
+  getScanEvents: (scanId: string) =>
+    http<PipelineEvent[]>(`/api/scans/${scanId}/events`),
+
+  // patches
+  listPending: () => http<PatchSummary[]>("/api/patches/pending"),
+  getPatch: (patchId: string) =>
+    http<PatchDetail>(`/api/patches/${encodeURIComponent(patchId)}`),
+  approve: (patchId: string) =>
+    http<{ patch_id: string; status: string; message: string }>(
+      `/api/patches/${encodeURIComponent(patchId)}/approve`,
+      { method: "POST" }
+    ),
+  reject: (patchId: string) =>
+    http<{ patch_id: string; status: string; message: string }>(
+      `/api/patches/${encodeURIComponent(patchId)}/reject`,
+      { method: "POST" }
+    ),
+  chat: (patchId: string, message: string) =>
+    http<{ role: "assistant"; content: string; created_at: string }>(
+      `/api/patches/${encodeURIComponent(patchId)}/chat`,
+      { method: "POST", body: JSON.stringify({ message }) }
+    ),
+  runExploit: (patchId: string, target: "original" | "patched") =>
+    http<RunExploitResponse>(
+      `/api/patches/${encodeURIComponent(patchId)}/run-exploit`,
+      { method: "POST", body: JSON.stringify({ target }) }
+    ),
+
+  // credentials (metadata only, secrets never leave the server)
+  listCredentials: () => http<Credential[]>("/api/credentials"),
+  addCredential: (data: {
+    label: string;
+    kind: "github" | "gitlab" | "git";
+    target: string;
+    token: string;
+    username?: string;
+  }) =>
+    http<{ id: string; message: string }>("/api/credentials", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deleteCredential: (id: string) =>
+    http<{ ok: boolean; message: string }>(`/api/credentials/${id}`, {
+      method: "DELETE",
+    }),
+
+  // git integration
+  exploreRepo: (credentialId: string, repoUrl: string) =>
+    http<ExploreResult>("/api/git/explore", {
+      method: "POST",
+      body: JSON.stringify({ credentialId, repoUrl }),
+    }),
+  importFile: (
+    credentialId: string,
+    repoUrl: string,
+    filePath: string,
+    name?: string
+  ) =>
+    http<{ id: string; name: string; message: string; source_lines: number }>(
+      "/api/git/import",
+      {
+        method: "POST",
+        body: JSON.stringify({ credentialId, repoUrl, filePath, name }),
+      }
+    ),
+
+  // stats
+  stats: () => http<PatchStats>("/api/stats"),
+
+  // RedAgent VAPT, targets
+  listTargets: () => http<Target[]>("/api/targets"),
+  addTarget: (data: {
+    name: string;
+    baseUrl: string;
+    authHeader?: string;
+    notes?: string;
+    authorized?: boolean;
+    clientId?: string;
+  }) =>
+    http<{ id: string; message: string }>("/api/targets", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  authorizeTarget: (id: string) =>
+    http<{ id: string; authorized: boolean }>(`/api/targets/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ authorized: true }),
+    }),
+  deleteTarget: (id: string) =>
+    http<{ ok: boolean }>(`/api/targets/${id}`, { method: "DELETE" }),
+
+  // RedAgent, engagements
+  listEngagements: () => http<Engagement[]>("/api/engagements"),
+  startEngagement: (targetId: string) =>
+    http<{ engagementId: string; status: string }>("/api/engagements", {
+      method: "POST",
+      body: JSON.stringify({ targetId }),
+    }),
+  getEngagementEvents: (engagementId: string) =>
+    http<RedAgentEvent[]>(`/api/engagements/${engagementId}/events`),
+  getFindings: (engagementId: string) =>
+    http<Finding[]>(`/api/engagements/${engagementId}/findings`),
+  reportUrl: (engagementId: string) =>
+    `/api/engagements/${engagementId}/report`,
+
+  // PostureScore
+  postureScore: () => http<PostureScore>("/api/posture-score"),
+
+  // Attestations
+  attestations: () => http<AttestationLedger>("/api/attestations"),
+
+  // Threat Intel
+  threatIntel: () => http<ThreatIntel>("/api/threat-intel"),
+
+  // AI Remediation Copilot
+  copilot: (patchId: string, action: "generate-fix" | "explain" | "hardened-fix", instruction?: string) =>
+    http<CopilotResult>(`/api/patches/${encodeURIComponent(patchId)}/copilot`, {
+      method: "POST",
+      body: JSON.stringify({ action, instruction }),
+    }),
+
+  // Self-Healing Runtime
+  runtimeMonitor: () => http<RuntimeStatus>("/api/runtime-monitor"),
+  runtimeHeal: (patchId: string) =>
+    http<{ patch_id: string; runtime_status: string; message: string }>(
+      `/api/runtime-monitor/${encodeURIComponent(patchId)}/heal`,
+      { method: "POST" }
+    ),
+
+  // Compliance + Privacy
+  compliance: (framework?: FrameworkId) =>
+    http<ComplianceStatus>(`/api/compliance${framework ? `?framework=${framework}` : ""}`),
+  gapAnalysis: (framework?: FrameworkId) =>
+    http<GapAnalysisResponse>(`/api/compliance/gap-analysis${framework ? `?framework=${framework}` : ""}`),
+  complianceExportUrl: (framework: FrameworkId, format: "html" | "json" = "html") =>
+    `/api/compliance/export?framework=${framework}&format=${format}`,
+  dataPrivacy: () => http<DataPrivacyStatus>("/api/data-privacy"),
+  breachNotification: () => http<BreachNotificationStatus>("/api/breach-notification"),
+
+  // SOC / DevSecOps
+  darkWeb: () => http<DarkWebStatus>("/api/dark-web"),
+  securityKpis: () => http<SecurityKpis>("/api/security-kpis"),
+  attackSurface: (targetId?: string) =>
+    http<AttackSurfaceStatus>(`/api/attack-surface${targetId ? `?targetId=${targetId}` : ""}`),
+
+  // Testing & Patching
+  scaScan: (codebaseId?: string) =>
+    http<ScaScanResult>(`/api/sca-scan${codebaseId ? `?codebaseId=${codebaseId}` : ""}`),
+  patchHistory: (patchId: string) =>
+    http<PatchHistory>(`/api/patches/${encodeURIComponent(patchId)}/history`),
+  patchLineage: (patchId: string) =>
+    http<PatchLineage>(`/api/patches/${encodeURIComponent(patchId)}/lineage`),
+  runTest: (patchId: string, target?: "patched" | "original") =>
+    http<{
+      ok: boolean;
+      patch_id: string;
+      target: string;
+      passed: boolean;
+      exit_code: number | null;
+      stdout: string;
+      stderr: string;
+      logs: string;
+      duration_ms: number;
+      timed_out: boolean;
+    }>(`/api/patches/${encodeURIComponent(patchId)}/test`, {
+      method: "POST",
+      body: JSON.stringify({ target: target ?? "patched" }),
+    }),
+  rollbackPatch: (patchId: string, reason?: string) =>
+    http<{ patch_id: string; status: string; message: string }>(
+      `/api/patches/${encodeURIComponent(patchId)}/rollback`,
+      { method: "POST", body: JSON.stringify({ reason }) }
+    ),
+  generatePr: (patchId: string) =>
+    http<PrArtifacts>(`/api/patches/${encodeURIComponent(patchId)}/generate-pr`, { method: "POST" }),
+
+  // Data Exfiltration Defense
+  canaries: () => http<CanaryStatus>("/api/canaries"),
+  checkCanaries: () => http<{ checked: number; detected: number; message: string }>("/api/canaries/check", { method: "POST" }),
+  dataFlowMonitor: () => http<DataFlowStatus>("/api/data-flow/monitor"),
+
+  // T1: CI/CD, Alerting, Schedules, Attack Chains, Heatmap, Exec Dashboard
+  cicdScan: (codebaseId: string, meta?: Record<string, string>) =>
+    http<{ scanId: string; status: string }>("/api/ci-cd/scan", { method: "POST", body: JSON.stringify({ codebaseId, ...meta }) }),
+  cicdStatus: (scanId: string) => http<{ scanId: string; status: string; blockMerge: boolean; reason: string }>(`/api/ci-cd/scan?scanId=${scanId}`),
+  webhooks: () => http<unknown[]>("/api/webhooks"),
+  addWebhook: (data: { name: string; url: string; events: string[]; secret?: string }) =>
+    http<{ id: string }>("/api/webhooks", { method: "POST", body: JSON.stringify(data) }),
+  alerts: () => http<unknown[]>("/api/alerts"),
+  addAlert: (data: { name: string; condition: string; channel: string; channelConfig: Record<string, unknown> }) =>
+    http<{ id: string }>("/api/alerts", { method: "POST", body: JSON.stringify(data) }),
+  scheduledScans: () => http<unknown[]>("/api/scheduled-scans"),
+  addScheduledScan: (data: { name: string; scanType: string; codebaseId?: string; targetId?: string; cronExpr: string }) =>
+    http<{ id: string }>("/api/scheduled-scans", { method: "POST", body: JSON.stringify(data) }),
+  attackChains: () => http<unknown[]>("/api/attack-chains"),
+  synthesizeChains: () => http<{ chains: unknown[]; total: number }>("/api/attack-chains", { method: "POST" }),
+  heatmap: () => http<unknown>("/api/heatmap"),
+  execDashboard: () => http<unknown>("/api/executive-dashboard"),
+
+  // T2: Fuzzing, Business Logic, Correlation, RBAC
+  fuzz: (targetUrl: string, endpoint: string, method: string) =>
+    http<unknown>("/api/fuzz", { method: "POST", body: JSON.stringify({ targetUrl, endpoint, method }) }),
+  businessLogicTest: (targetUrl: string) =>
+    http<unknown>("/api/business-logic-test", { method: "POST", body: JSON.stringify({ targetUrl }) }),
+  correlation: () => http<unknown>("/api/correlation"),
+  orgs: () => http<unknown[]>("/api/orgs"),
+
+  // T3: Integrations, GraphQL, WebSocket, K8s, Audit Log
+  integrations: () => http<unknown[]>("/api/integrations"),
+  addIntegration: (type: string, config: Record<string, unknown>) =>
+    http<{ id: string }>("/api/integrations", { method: "POST", body: JSON.stringify({ type, config }) }),
+  exportSIEM: (format: string) =>
+    http<unknown>(`/api/integrations`, { method: "PATCH", body: JSON.stringify({ format }) }),
+  graphqlTest: (targetUrl: string) =>
+    http<unknown>("/api/graphql-test", { method: "POST", body: JSON.stringify({ targetUrl }) }),
+  wsTest: (targetUrl: string) =>
+    http<unknown>("/api/ws-test", { method: "POST", body: JSON.stringify({ targetUrl }) }),
+  k8sScan: (manifest: string) =>
+    http<unknown>("/api/k8s-scan", { method: "POST", body: JSON.stringify({ manifest }) }),
+  auditLog: (limit?: number) =>
+    http<unknown[]>(`/api/audit-log${limit ? `?limit=${limit}` : ""}`),
+};

@@ -1,0 +1,920 @@
+🚀 Sending vision chat request...
+✅ File saved to: /tmp/vlm-redesign.json
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuardianX Command Center</title>
+    <style>
+        :root {
+            --bg-dark: #050a0f;
+            --bg-panel: #0b1218;
+            --border-color: #1e3a3a;
+            --text-main: #cceedd;
+            --text-dim: #5a7a75;
+            --accent-cyan: #00ffcc;
+            --accent-green: #00ff66;
+            --accent-red: #ff3344;
+            --accent-yellow: #ffcc00;
+            --accent-purple: #aa55ff;
+            --font-mono: 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            line-height: 1.4;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 240px;
+            background-color: rgba(11, 18, 24, 0.95);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .logo-area {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .brand-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--accent-cyan);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .brand-sub {
+            color: var(--text-dim);
+            font-size: 9px;
+            letter-spacing: 4px;
+        }
+
+        .nav-section-title {
+            color: var(--text-dim);
+            font-size: 10px;
+            text-transform: uppercase;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            padding-left: 5px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+            color: var(--text-dim);
+        }
+
+        .nav-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            background-color: rgba(0, 204, 153, 0.1);
+            color: var(--accent-cyan);
+            border-left: 2px solid var(--accent-cyan);
+        }
+
+        .badge {
+            background: var(--accent-green);
+            color: #000;
+            font-size: 9px;
+            padding: 1px 5px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 4px;
+        }
+        .avatar {
+            width: 30px;
+            height: 30px;
+            background: #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        /* --- Main Content --- */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Header */
+        header {
+            padding: 15px 25px;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        h1.page-title {
+            font-size: 24px;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+        }
+        .page-subtitle {
+            color: var(--text-dim);
+            font-size: 10px;
+            letter-spacing: 2px;
+            margin-top: 4px;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .threat-level-box {
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 0 10px rgba(255, 51, 68, 0.2);
+        }
+        .bar-chart-mini {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+            height: 14px;
+        }
+        .bar-seg { width: 3px; background: var(--accent-red); opacity: 0.7; }
+        .bar-seg:nth-child(even) { opacity: 1; height: 100%; }
+        .bar-seg:nth-child(odd) { height: 60%; }
+
+        .clock {
+            color: var(--accent-green);
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+        .btn-primary { 
+            background: rgba(0, 255, 102, 0.1); 
+            border-color: var(--accent-green); 
+            color: var(--accent-green); 
+        }
+        .btn-purple { 
+            background: rgba(170, 85, 255, 0.1); 
+            border-color: var(--accent-purple); 
+            color: var(--accent-purple); 
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        .stat-icon { font-size: 14px; margin-bottom: 5px; color: var(--text-dim); }
+        .stat-val { font-size: 18px; font-weight: bold; }
+        .stat-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; }
+        .stat-card.critical .stat-val { color: var(--accent-red); }
+        .stat-card.active .stat-val { color: var(--accent-cyan); }
+        .stat-card.pending .stat-val { color: var(--accent-yellow); }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 0;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .scope-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-green);
+            font-weight: bold;
+            border: 1px solid var(--accent-green);
+            padding: 4px 10px;
+            border-radius: 4px;
+            background: rgba(0, 255, 102, 0.05);
+        }
+        .ops-group {
+            display: flex;
+            gap: 8px;
+        }
+        .op-btn {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+        }
+        .op-btn.attack { border-color: var(--accent-red); color: var(--accent-red); background: rgba(255,51,68,0.05); }
+        .op-btn.auto { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+        .op-btn.hunter { border-color: var(--accent-blue, #0088ff); color: var(--accent-blue, #0088ff); }
+        .op-btn.approve { border-color: var(--accent-yellow); color: var(--accent-yellow); }
+
+        /* --- Grid Layout (The Core Request) --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Side by side */
+            gap: 20px;
+            padding: 0 25px 40px 25px;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .panel-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.02);
+        }
+        .panel-title {
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-status {
+            font-size: 9px;
+            color: var(--accent-green);
+            text-transform: uppercase;
+        }
+
+        .panel-body {
+            padding: 15px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        /* Terminal Specifics */
+        .terminal-line {
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 11px;
+        }
+        .ts { color: var(--text-dim); margin-right: 8px; }
+        .tag-ok { color: var(--accent-green); }
+        .tag-warn { color: var(--accent-yellow); }
+        .tag-err { color: var(--accent-red); font-weight: bold; }
+        .cmd-text { color: var(--text-main); }
+        .highlight-red { color: var(--accent-red); text-shadow: 0 0 5px rgba(255,51,68,0.5); }
+
+        /* Topology Specifics */
+        .topology-viz {
+            height: 200px;
+            position: relative;
+            background: radial-gradient(circle at center, rgba(0,255,204,0.05) 0%, transparent 70%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .node-center {
+            width: 60px;
+            height: 60px;
+            border: 2px solid var(--accent-cyan);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(0,255,204,0.2);
+            z-index: 2;
+            font-size: 10px;
+            color: var(--accent-cyan);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,255,204,0.4); } 70% { box-shadow: 0 0 0 15px rgba(0,255,204,0); } 100% { box-shadow: 0 0 0 0 rgba(0,255,204,0); } }
+        
+        .orbit-node {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            background: var(--bg-panel);
+            border: 1px solid var(--text-dim);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: var(--text-dim);
+        }
+        .orbit-node.n1 { top: 20%; left: 20%; border-color: var(--accent-red); color: var(--accent-red); }
+        .orbit-node.n2 { top: 20%; right: 20%; border-color: var(--accent-yellow); color: var(--accent-yellow); }
+        .orbit-node.n3 { bottom: 20%; left: 25%; border-color: var(--accent-purple); color: var(--accent-purple); }
+        .orbit-node.n4 { bottom: 20%; right: 25%; border-color: var(--accent-blue, #0088ff); color: var(--accent-blue, #0088ff); }
+
+        .legend {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+            font-size: 9px;
+            color: var(--text-dim);
+        }
+        .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px;}
+
+        /* Process Tree Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .data-table th { text-align: left; color: var(--text-dim); font-weight: normal; padding: 5px; border-bottom: 1px solid var(--border-color); }
+        .data-table td { padding: 6px 5px; border-bottom: 1px solid rgba(255,255,255,0.02); vertical-align: middle; }
+        .row-danger td:first-child { border-left: 2px solid var(--accent-red); }
+        .progress-bar-bg { width: 60px; height: 4px; background: #222; border-radius: 2px; overflow: hidden; display: inline-block; vertical-align: middle;}
+        .progress-fill { height: 100%; background: var(--accent-red); }
+
+        /* Heatmap */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-top: 10px;
+        }
+        .heat-cell {
+            aspect-ratio: 1;
+            background: #111;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: #fff;
+        }
+        .heat-cell.hot { background: var(--accent-red); box-shadow: 0 0 5px var(--accent-red); }
+        .heat-cell.warm { background: rgba(255, 100, 50, 0.6); }
+        .heat-cell.cool { background: rgba(0, 136, 255, 0.4); }
+
+        /* Live Feed List */
+        .feed-list { list-style: none; }
+        .feed-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            gap: 10px;
+            font-size: 11px;
+        }
+        .feed-time { color: var(--text-dim); white-space: nowrap; }
+        .feed-icon { width: 14px; text-align: center; }
+        .feed-msg { color: var(--text-main); }
+
+        /* Right Column AI Panels */
+        .ai-panel {
+            background: rgba(255,255,255,0.02);
+            border: 1px dashed var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .ai-header { font-size: 10px; color: var(--accent-purple); margin-bottom: 8px; display:flex; justify-content:space-between; }
+        .risk-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11px; }
+        .risk-score { font-weight: bold; font-size: 14px; }
+        .risk-bar { flex-grow: 1; height: 4px; background: #222; margin: 0 10px; border-radius: 2px; }
+        .risk-fill { height: 100%; background: var(--accent-cyan); }
+
+        /* Footer */
+        footer {
+            padding: 10px 25px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-dim);
+            font-size: 10px;
+            background: var(--bg-panel);
+        }
+
+        /* Responsive tweaks for the "cleaner" look */
+        @media (max-width: 1200px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="logo-area">
+            <div class="brand-name">GuardianX</div>
+            <div class="brand-sub">Autonomous Security Ops</div>
+        </div>
+
+        <div class="nav-section-title">Dashboard</div>
+        <div class="nav-item active">
+            <span>⦿ Overview</span>
+        </div>
+
+        <div class="nav-section-title">Management</div>
+        <div class="nav-item"><span>👥 All Clients</span></div>
+        <div class="nav-item"><span>🔀 Pipelines</span></div>
+        
+        <div class="nav-section-title">Tools</div>
+        <div class="nav-item">
+            <span>🛠 Patch Queue</span>
+            <span class="badge">6</span>
+        </div>
+        <div class="nav-item">
+            <span>💻 Codebases</span>
+            <span class="badge" style="background:#aa55ff;">7</span>
+        </div>
+        <div class="nav-item"><span>⚠️ RedAgent VAPT</span></div>
+        <div class="nav-item"><span>✅ Compliance</span></div>
+        <div class="nav-item"><span>☁️ SOC & DevSecOps</span></div>
+
+        <div class="sidebar-footer">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
+                <span>SYS ONLINE</span>
+                <span style="color:var(--accent-green)">07:38:57</span>
+            </div>
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <button class="btn" style="flex:1; font-size:9px;">↻ Refresh</button>
+                <button class="btn" style="flex:1; font-size:9px;">🔑 Creds</button>
+            </div>
+            <div class="user-profile">
+                <div class="avatar">N</div>
+                <div>
+                    <div style="font-size:10px;">Test User</div>
+                    <div style="font-size:9px; color:var(--text-dim);">VIEWER</div>
+                </div>
+                <div style="margin-left:auto;">➜</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        
+        <!-- HEADER -->
+        <header>
+            <div class="header-top">
+                <div>
+                    <h1 class="page-title">Command Center</h1>
+                    <div class="page-subtitle">// REAL-TIME SECURITY OPERATIONS // ALL CLIENTS // ALL SERVICES</div>
+                </div>
+                
+                <div class="status-bar">
+                    <div class="threat-level-box">
+                        <span>⚠ CRITICAL</span>
+                        <div class="bar-chart-mini">
+                            <div class="bar-seg"></div><div class="bar-seg"></div><div class="bar-seg"></div>
+                            <div class="bar-seg"></div><div class="bar-seg"></div><div class="bar-seg"></div>
+                        </div>
+                    </div>
+                    <div class="clock">07:38:57</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-purple">🤖 Guardian AI</button>
+                        <button class="btn">⚡ War Room</button>
+                        <button class="btn btn-primary">+ Add Client</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATS -->
+            <div class="stats-row">
+                <div class="stat-card active">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-val">7</div>
+                    <div class="stat-label">Clients</div>
+                </div>
+                <div class="stat-card active">
+                    <div class="stat-icon">〰️</div>
+                    <div class="stat-val">4</div>
+                    <div class="stat-label">Active</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">❄️</div>
+                    <div class="stat-val">1</div>
+                    <div class="stat-label">Scans</div>
+                </div>
+                <div class="stat-card" style="color:var(--accent-purple)">
+                    <div class="stat-icon">🩹</div>
+                    <div class="stat-val">13</div>
+                    <div class="stat-label">Patches</div>
+                </div>
+                <div class="stat-card pending">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-val">6</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+                <div class="stat-card critical">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-val">3</div>
+                    <div class="stat-label">Findings</div>
+                </div>
+                 <div class="stat-card critical">
+                    <div class="stat-icon">⚠</div>
+                    <div class="stat-val">2</div>
+                    <div class="stat-label">Critical</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✓</div>
+                    <div class="stat-val">1</div>
+                    <div class="stat-label">Compliant</div>
+                </div>
+            </div>
+
+            <!-- TOOLBAR -->
+            <div class="toolbar">
+                <div class="scope-selector">
+                    <span>// SCOPE:</span>
+                    <span>🌐 ALL CLIENTS</span>
+                </div>
+                <div style="color:var(--text-dim)">// OPS:</div>
+                <div class="ops-group">
+                    <button class="op-btn attack">⚔ Attack Selected</button>
+                    <button class="op-btn auto">⟲ Auto-Remediate</button>
+                    <button class="op-btn hunter">🕵 Threat Hunter</button>
+                    <button class="op-btn approve">✔ Auto-Approve</button>
+                </div>
+                <div style="margin-left:auto; display:flex; gap:5px;">
+                     <button class="op-btn" style="border-color:var(--accent-blue,#0088ff); color:var(--accent-blue,#0088ff)">📥 Digest</button>
+                     <button class="op-btn" style="border-color:var(--accent-purple); color:var(--accent-purple)">🔍 Audit</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- DASHBOARD GRID -->
+        <div class="dashboard-grid">
+
+            <!-- LEFT COLUMN -->
+            
+            <!-- Panel 1: Terminal -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-title" style="color:var(--accent-green)">
+                        <span>_</span> LIVE EXPLOIT TERMINAL
+                    </div>
+                    <div class="panel-status">● EXECUTING</div>
+                </div>
+                <div class="panel-body" style="background:#000; border-radius:4px; padding:10px; border:1px solid #333;">
+                    <div class="terminal-line"><span class="ts">07:38:44</span> [+] Patch generated: SP-2026-GL0-001</div>
+                    <div class="terminal-line"><span class="ts">07:38:45</span> [*] Running sandbox test...</div>
+                    <div class="terminal-line"><span class="ts">07:38:46</span> [+] Sandbox PASSED — all tests green</div>
+                    <div class="terminal-line"><span class="ts">07:38:47</span> [*] Generating exploit PoC...</div>
+                    <div class="terminal-line"><span class="ts">07:38:48</span> [+] Exploit PoC ready — patch proven to block it</div>
+                    <div class="terminal-line"><span class="ts">07:38:53</span> $ redagent --sweep --target https://erp.intech.io</div>
+                    <div class="terminal-line"><span class="ts">07:38:54</span> [*] Scanning for sensitive data exposure...</div>
+                    <div class="terminal-line"><span class="ts">07:38:56</span> [+] Probing /env...</div>
+                    <div class="terminal-line"><span class="ts">07:38:56</span> [<span class="tag-err">!! CRITICAL</span>] ./env exposed - <span class="highlight-red">DB_PASSWORD=****</span></div>
+                    <div class="terminal-line"><span class="ts">07:38:57</span> [*] Probing /.git/config...</div>
+                    
+                    <div style="margin-top:15px; border-top:1px solid #222; padding-top:5px; display:flex; justify-content:space-between; color:#555; font-size:9px;">
+                        <span>redagent v2.0.6 • quantum engine</span>
+                        <span>28 lines</span>
+                    </div>
+                </div>
+            </section>
+
+             <!-- Panel 2: Process Tree -->
+             <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-title" style="color:var(--accent-cyan)">
+                        <span>⚙</span> PROCESS TREE
+                    </div>
+                    <div>CPU: 73.9% | MEM: 480MB</div>
+                </div>
+                <div class="panel-body">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Type</th>
+                                <th>Stage</th>
+                                <th>Client</th>
+                                <th>I/O</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>sys-1</td>
+                                <td><span style="color:var(--accent-green)">SYSTEM</span></td>
+                                <td>[ ] HTTP + ...</td>
+                                <td>2.4</td>
+                                <td>128M</td>
+                            </tr>
+                             <tr>
+                                <td>sys-2</td>
+                                <td><span style="color:var(--accent-green)">SYSTEM</span></td>
+                                <td>[ ] HTTPS ...</td>
+                                <td>0.1</td>
+                                <td>32M</td>
+                            </tr>
+                            <tr class="row-danger">
+                                <td>dast-17d6of..</td>
+                                <td><span style="color:var(--accent-red)">DAST</span></td>
+                                <td>[Unassigne...]</td>
+                                <td>
+                                    <span style="color:var(--accent-red)">71.4</span>
+                                    <div class="progress-bar-bg"><div class="progress-fill" style="width:71%"></div></div>
+                                </td>
+                                <td>454708635</td>
+                            </tr>
+                            <tr>
+                                <td>sast-5faaad..</td>
+                                <td><span style="color:var(--accent-yellow)">SAST</span></td>
+                                <td>[Unassigne...]</td>
+                                <td>0.0</td>
+                                <td>10M</td>
+                            </tr>
+                            <tr>
+                                <td>patch-patch..</td>
+                                <td><span style="color:var(--accent-yellow)">PATCH</span></td>
+                                <td>[Stark Ind...]</td>
+                                <td>0.0</td>
+                                <td>8M</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Panel 3: Live Feed -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-title" style="color:var(--accent-green)">
+                        <span>_</span> LIVE FEED
+                    </div>
+                    <div class="panel-status">● STREAMING</div>
+                </div>
+                <div class="panel-body">
+                    <ul class="feed-list">
+                        <li class="feed-item">
+                            <span class="feed-time">07:16:15</span>
+                            <span class="feed-icon tag-ok">OK</span>
+                            <span class="feed-msg">[System] Cryptographic attestation added to hash chain – patch patch-umbrella-1</span>
+                        </li>
+                         <li class="feed-item">
+                            <span class="feed-time">07:16:15</span>
+                            <span class="feed-icon tag-warn">OK</span>
+                            <span class="feed-msg">[Umbrella Health] Patch deployed to runtime: Insecure Deserialization</span>
+                        </li>
+                         <li class="feed-item">
+                            <span class="feed-time">07:16:14</span>
+                            <span class="feed-icon tag-ok">OK</span>
+                            <span class="feed-msg">[System] Cryptographic attestation added to hash chain – patch intech-1</span>
+                        </li>
+                         <li class="feed-item">
+                            <span class="feed-time">07:16:13</span>
+                            <span class="feed-icon tag-ok">OK</span>
+                            <span class="feed-msg">[Intech LLC] Patch deployed to runtime: Path Traversal in File Loader</span>
+                        </li>
+                         <li class="feed-item">
+                            <span class="feed-time">07:16:12</span>
+                            <span class="feed-icon tag-ok">OK</span>
+                            <span class="feed-msg">[Globex Corporation] Patch deployed to runtime: SQL Injection</span>
+                        </li>
+                        <li class="feed-item">
+                            <span class="feed-time">06:59:43</span>
+                            <span class="feed-icon tag-warn">※</span>
+                            <span class="feed-msg">[Stark Industries] Scan finished — completed</span>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+
+            <!-- RIGHT COLUMN -->
+
+            <!-- Panel 4: Topology -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-title" style="color:var(--accent-cyan)">
+                        <span>◈</span> NETWORK TOPOLOGY
+                    </div>
+                    <div class="panel-status">● LIVE MAP</div>
+                </div>
+                <div class="panel-body">
+                    <div class="topology-viz">
+                        <div class="node-center">CORE<br>NODE</div>
+                        <div class="orbit-node n1">ERP</div>
+                        <div class="orbit-node n2">WEB</div>
+                        <div class="orbit-node n3">DB</div>
+                        <div class="orbit-node n4">API</div>
+                        
+                        <!-- SVG Lines connecting nodes would go here in a real app, using absolute positioning -->
+                        <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;" viewBox="0 0 200 150">
+                            <line x1="100" y1="75" x2="40" y2="35" stroke="#ff334450" stroke-width="1"/>
+                            <line x1="100" y1="75" x2="160" y2="35" stroke="#ffcc0050" stroke-width="1"/>
+                            <line x1="100" y1="75" x2="50" y2="115" stroke="#aa55ff50" stroke-width="1"/>
+                            <line x1="100" y1="75" x2="150" y2="115" stroke="#0088ff50" stroke-width="1"/>
+                        </svg>
+                    </div>
+                    <div class="legend">
+                        <span><span class="dot" style="background:var(--accent-green)"></span>COMPLIANT</span>
+                        <span><span class="dot" style="background:var(--accent-red)"></span>DEFENDING</span>
+                        <span><span class="dot" style="background:var(--accent-yellow)"></span>TESTING</span>
+                        <span><span class="dot" style="background:var(--accent-purple)"></span>ATTACKING</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panel 5: Heatmap -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-title" style="color:var(--accent-red)">
+                        <span>🔥</span> ATTACK HEATMAP
+                    </div>
+                    <div>T-DAY</div>
+                </div>
+                <div class="panel-body">
+                    <div class="heatmap-grid">
+                        <div class="heat-cell cool">Su<br>1</div>
+                        <div class="heat-cell cool">Mo<br>1</div>
+                        <div class="heat-cell warm">Tu<br>2</div>
+                        <div class="heat-cell warm">We<br>3</div>
+                        <div class="heat-cell warm">Th<br>4</div>
+                        <div class="heat-cell hot">Fr<br>12</div>
+                        <div class="heat-cell hot" style="grid-column: span 1;">Sa<br>32</div>
+                        
+                        <!-- Filling rest with empty/dark cells for visual structure -->
+                        <div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div>
+                        <div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div><div class="heat-cell" style="opacity:0.3"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:9px; color:var(--text-dim);">
+                        <span>SAFE</span><span>ELEVATED</span><span style="color:var(--accent-red)">CRITICAL</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI PANELS STACKED ON RIGHT (Visual representation of 'AI Panels on Right') -->
+            <!-- Note: In a strict 2-col grid, these might be inside a sub-column or below Topology/Heatmap if we want exact fidelity to screenshot which has many panels on right. 
+                 I will place them as separate panels in the second column area or create a container for them.
+                 Screenshot shows Right Col has: Topology, Heatmap, System Status, Threat Level, Anomaly, Risk Score.
+                 I will stack them vertically in the right column logic.
+            -->
+
+            <div style="display:flex; flex-direction:column; gap:20px;">
+                <!-- System Status Mini -->
+                <div class="ai-panel" style="border-style:solid; border-color:var(--border-color);">
+                    <div class="panel-title" style="font-size:10px; margin-bottom:8px;"><span>📡</span> SYSTEM STATUS</div>
+                    <div style="font-size:10px; display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span>Vercel API</span> <span style="color:var(--accent-green)">ONLINE</span>
+                    </div>
+                    <div style="font-size:10px; display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span>Railway Engine</span> <span style="color:var(--accent-green)">ONLINE</span>
+                    </div>
+                    <div style="font-size:10px; display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span>Supabase DB</span> <span style="color:var(--accent-green)">ONLINE</span>
+                    </div>
+                </div>
+
+                <!-- Threat Level Chart -->
+                <div class="ai-panel" style="border-style:solid; border-color:var(--border-color);">
+                    <div class="panel-title" style="font-size:10px; margin-bottom:8px; color:var(--accent-red)"><span>⚠</span> THREAT LEVEL <span style="float:right;color:white">100/100</span></div>
+                    <div style="height:60px; display:flex; align-items:flex-end; gap:2px;">
+                        <!-- Fake bar chart -->
+                        <div style="flex:1; background:var(--accent-red); height:20%"></div>
+                        <div style="flex:1; background:var(--accent-red); height:30%"></div>
+                        <div style="flex:1; background:var(--accent-red); height:45%"></div>
+                        <div style="flex:1; background:var(--accent-red); height:50%"></div>
+                        <div style="flex:1; background:var(--accent-red); height:65%"></div>
+                        <div style="flex:1; background:var(--accent-red); height:80%"></div>
+                        <div style="flex:1; background:var(--accent-red); height:90%"></div>
+                        <div style="flex:1; background:var(--accent-red); height:100%"></div>
+                    </div>
+                </div>
+
+                 <!-- Predictive Risk -->
+                 <div class="ai-panel" style="border-style:solid; border-color:var(--border-color); flex-grow:1;">
+                    <div class="panel-title" style="font-size:10px; margin-bottom:10px;"><span>↗</span> PREDICTIVE RISK SCORE <span style="float:right;font-size:9px;color:var(--text-dim)">AT MODEL</span></div>
+                    
+                    <div class="risk-row">
+                        <span>Stark Industries</span>
+                        <span class="risk-score" style="color:var(--accent-cyan)">39</span>
+                    </div>
+                    <div class="risk-bar"><div class="risk-fill" style="width:39%"></div></div>
+                    <div style="font-size:9px; color:var(--text-dim); margin-bottom:10px;">- 1 critical findings</div>
+
+                    <div class="risk-row">
+                        <span>Wayne Enterprises</span>
+                        <span class="risk-score" style="color:var(--accent-cyan)">20</span>
+                    </div>
+                    <div class="risk-bar"><div class="risk-fill" style="width:20%"></div></div>
+                    <div style="font-size:9px; color:var(--text-dim); margin-bottom:10px;">- not authorized for testing</div>
+
+                    <div class="risk-row">
+                        <span>Globex Corp</span>
+                        <span class="risk-score" style="color:var(--accent-green)">4</span>
+                    </div>
+                    <div class="risk-bar"><div class="risk-fill" style="width:4%; background:var(--accent-green)"></div></div>
+                </div>
+            </div>
+
+        </div>
+
+        <footer>
+            <div>© GuardianX · Autonomous Security Operations Platform</div>
+            <div>www.guardianx.in · hello@guardianx.in · +91 70067 12347</div>
+        </footer>
+    </main>
+</body>
+</html>
+```

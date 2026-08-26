@@ -1,0 +1,831 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback, useRef } from "react";
+     4→     4→import { motion, AnimatePresence } from "framer-motion";
+     5→     5→import { Button } from "@/components/ui/button";
+     6→     6→import { Badge } from "@/components/ui/badge";
+     7→     7→import {
+     8→     8→  Building2, Globe, Shield, Loader2, CheckCircle2,
+     9→     9→  AlertCircle, Activity, Bug, Crosshair, ShieldCheck,
+    10→    10→  Swords, Gavel, Zap, Radar, Eye, Clock,
+    11→    11→  Plus, Skull, Cpu, Lock, Terminal, Server, Database,
+    12→    12→  Wifi, Gauge, AlertTriangle, ChevronRight, Maximize2, Bot, Swords as SwordIcon,
+    13→    13→  RotateCcw, Shield as ShieldIcon, FlaskConical, FileDown, Mail, Webhook, Rocket,
+    14→    14→} from "lucide-react";
+    15→    15→import { Sparkline, AttackHeatmap } from "./sparkline";
+    16→    16→import { NetworkTopology } from "./network-topology";
+    17→    17→import { ProcessTree } from "./process-tree";
+    18→    18→import { ThreatBriefing, AnomalyDetection, PredictiveRiskScore } from "./ai-panels";
+    19→    19→import { LiveExploitTerminal } from "./live-exploit-terminal";
+    20→    20→import { GuardianChat } from "./guardian-chat";
+    21→    21→import { ServiceLauncher } from "./service-launcher";
+    22→    22→import { ServiceStatusChips } from "./service-status-chips";
+    23→    23→
+    24→    24→interface ClientSummary {
+    25→    25→  id: string;
+    26→    26→  name: string;
+    27→    27→  description: string | null;
+    28→    28→  target_url: string | null;
+    29→    29→  repo_url: string | null;
+    30→    30→  authorized: boolean;
+    31→    31→  frameworks: string[];
+    32→    32→  status: string;
+    33→    33→  created_at: string;
+    34→    34→  stats: {
+    35→    35→    codebases: number;
+    36→    36→    targets: number;
+    37→    37→    patches: number;
+    38→    38→    pending_patches: number;
+    39→    39→    approved_patches: number;
+    40→    40→    critical_patches: number;
+    41→    41→    findings: number;
+    42→    42→    critical_findings: number;
+    43→    43→  };
+    44→    44→}
+    45→    45→
+    46→    46→interface FeedEvent {
+    47→    47→  id: string;
+    48→    48→  type: "scan" | "engagement" | "patch" | "finding" | "canary" | "attestation" | "system";
+    49→    49→  action: string;
+    50→    50→  client: string;
+    51→    51→  detail: string;
+    52→    52→  severity: "info" | "success" | "warning" | "error";
+    53→    53→  ts: string;
+    54→    54→}
+    55→    55→
+    56→    56→interface ActivityFeed {
+    57→    57→  events: FeedEvent[];
+    58→    58→  active_processes: {
+    59→    59→    sast_scans: number;
+    60→    60→    dast_engagements: number;
+    61→    61→    pending_patches: number;
+    62→    62→    total_active: number;
+    63→    63→  };
+    64→    64→  active_details: {
+    65→    65→    scans: { id: string; status: string; stage: string; codebase: string }[];
+    66→    66→    engagements: { id: string; status: string; stage: string; target: string }[];
+    67→    67→  };
+    68→    68→  stats: { total_events: number; critical: number; warnings: number; successes: number };
+    69→    69→}
+    70→    70→
+    71→    71→const PIPELINE_STAGES = [
+    72→    72→  { key: "onboarding", label: "ONBOARD", icon: Building2, color: "emerald" },
+    73→    73→  { key: "scanning", label: "SCAN", icon: Bug, color: "cyan" },
+    74→    74→  { key: "testing", label: "TEST", icon: Crosshair, color: "amber" },
+    75→    75→  { key: "patching", label: "PATCH", icon: ShieldCheck, color: "violet" },
+    76→    76→  { key: "verifying", label: "VERIFY", icon: Swords, color: "sky" },
+    77→    77→  { key: "defending", label: "DEFEND", icon: Shield, color: "rose" },
+    78→    78→  { key: "compliant", label: "COMPLY", icon: Gavel, color: "emerald" },
+    79→    79→];
+    80→    80→
+    81→    81→const COLOR_MAP: Record<string, { text: string; bg: string; border: string; dot: string; hex: string }> = {
+    82→    82→  emerald: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40", dot: "bg-emerald-500", hex: "#10b981" },
+    83→    83→  cyan: { text: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/40", dot: "bg-cyan-500", hex: "#06b6d4" },
+    84→    84→  amber: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/40", dot: "bg-amber-500", hex: "#f59e0b" },
+    85→    85→  violet: { text: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/40", dot: "bg-violet-500", hex: "#8b5cf6" },
+    86→    86→  sky: { text: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/40", dot: "bg-sky-500", hex: "#0ea5e9" },
+    87→    87→  rose: { text: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/40", dot: "bg-rose-500", hex: "#f43f5e" },
+    88→    88→  red: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/40", dot: "bg-red-500", hex: "#ef4444" },
+    89→    89→};
+    90→    90→
+    91→    91→const EVENT_ICONS: Record<string, typeof Bug> = {
+    92→    92→  scan: Bug,
+    93→    93→  engagement: Crosshair,
+    94→    94→  patch: ShieldCheck,
+    95→    95→  finding: Skull,
+    96→    96→  canary: Shield,
+    97→    97→  attestation: Lock,
+    98→    98→  system: Server,
+    99→    99→};
+   100→   100→
+   101→   101→interface CommandCenterProps {
+   102→   102→  onSelectClient: (id: string) => void;
+   103→   103→  onAddClient: () => void;
+   104→   104→}
+   105→   105→
+   106→   106→export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProps) {
+   107→   107→  const [clients, setClients] = useState<ClientSummary[]>([]);
+   108→   108→  const [feed, setFeed] = useState<ActivityFeed | null>(null);
+   109→   109→  const [loading, setLoading] = useState(true);
+   110→   110→  const [clock, setClock] = useState(new Date());
+   111→   111→  const [threatLevel, setThreatLevel] = useState(0);
+   112→   112→  const [warRoom, setWarRoom] = useState(false);
+   113→   113→  const [chatOpen, setChatOpen] = useState(false);
+   114→   114→  const [opsLoading, setOpsLoading] = useState<string | null>(null);
+   115→   115→  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]); // multi-select for parallel ops
+   116→   116→  const [showClientSelector, setShowClientSelector] = useState(false);
+   117→   117→  const [launcherOpen, setLauncherOpen] = useState(false);
+   118→   118→  const [launcherClients, setLauncherClients] = useState<string[]>([]);
+   119→   119→  const logRef = useRef<HTMLDivElement>(null);
+   120→   120→
+   121→   121→  // Live clock
+   122→   122→  useEffect(() => {
+   123→   123→    const id = setInterval(() => setClock(new Date()), 1000);
+   124→   124→    return () => clearInterval(id);
+   125→   125→  }, []);
+   126→   126→
+   127→   127→  const load = useCallback(async () => {
+   128→   128→    try {
+   129→   129→      const [cRes, fRes] = await Promise.all([
+   130→   130→        fetch("/api/clients"),
+   131→   131→        fetch("/api/activity-feed"),
+   132→   132→      ]);
+   133→   133→      const c = await cRes.json();
+   134→   134→      const f = await fRes.json();
+   135→   135→      if (Array.isArray(c)) setClients(c);
+   136→   136→      if (f && !f.error) setFeed(f);
+   137→   137→
+   138→   138→      // Compute threat level from critical findings + active processes
+   139→   139→      if (f && !f.error) {
+   140→   140→        const criticalCount = f.stats.critical;
+   141→   141→        const activeCount = f.active_processes.total_active;
+   142→   142→        // Threat level: 0-100, scaled from critical findings + active processes
+   143→   143→        setThreatLevel(Math.min(100, criticalCount * 8 + activeCount * 5));
+   144→   144→      }
+   145→   145→    } catch {
+   146→   146→      // ignore
+   147→   147→    } finally {
+   148→   148→      setLoading(false);
+   149→   149→    }
+   150→   150→  }, []);
+   151→   151→
+   152→   152→  useEffect(() => {
+   153→   153→    load();
+   154→   154→    const id = setInterval(load, 15000); // refresh every 15s (was 5s, too aggressive)
+   155→   155→    return () => clearInterval(id);
+   156→   156→  }, [load]);
+   157→   157→
+   158→   158→  // Compute aggregate stats
+   159→   159→  const stats = {
+   160→   160→    total_clients: clients.length,
+   161→   161→    active_pipelines: clients.filter((c) => c.status !== "onboarding" && c.status !== "compliant").length,
+   162→   162→    total_scans: feed?.active_processes.sast_scans || 0,
+   163→   163→    total_patches: clients.reduce((s, c) => s + c.stats.patches, 0),
+   164→   164→    pending_patches: clients.reduce((s, c) => s + c.stats.pending_patches, 0),
+   165→   165→    total_findings: clients.reduce((s, c) => s + c.stats.findings, 0),
+   166→   166→    critical_findings: clients.reduce((s, c) => s + c.stats.critical_findings, 0),
+   167→   167→    compliant_clients: clients.filter((c) => c.status === "compliant").length,
+   168→   168→  };
+   169→   169→
+   170→   170→  const threatColor = threatLevel >= 60 ? "red" : threatLevel >= 30 ? "amber" : "emerald";
+   171→   171→  const threatCfg = COLOR_MAP[threatColor];
+   172→   172→
+   173→   173→  return (
+   174→   174→    <div className="space-y-4">
+   175→   175→      {/* ═══ FUTURISTIC HEADER ═══ */}
+   176→   176→      <div className="holo-card-sharp hud-corners relative overflow-hidden p-5">
+   177→   177→        <div aria-hidden className="cyber-grid pointer-events-none absolute inset-0 opacity-30" />
+   178→   178→        <div aria-hidden className="pointer-events-none absolute inset-0">
+   179→   179→          <div className="absolute -top-20 left-1/3 h-40 w-96 -translate-x-1/2 rounded-full bg-emerald-500/15 blur-3xl" />
+   180→   180→          <div className="absolute -bottom-10 right-0 h-32 w-64 rounded-full bg-red-500/10 blur-3xl" />
+   181→   181→        </div>
+   182→   182→        <div className="relative flex flex-wrap items-center justify-between gap-4">
+   183→   183→          <div className="flex items-center gap-3">
+   184→   184→            <div className="relative">
+   185→   185→              <div className="flex size-12 items-center justify-center rounded-lg border border-emerald-500/50 bg-emerald-500/10 neon-border">
+   186→   186→                <Radar className="size-6 text-emerald-400" />
+   187→   187→              </div>
+   188→   188→              <span className="absolute -right-1 -top-1 size-3 rounded-full bg-emerald-500 pulse-dot" />
+   189→   189→            </div>
+   190→   190→            <div>
+   191→   191→              <h2 className="text-2xl font-bold tracking-tight text-zinc-50">
+   192→   192→                <span className="neon-emerald">COMMAND</span>{" "}
+   193→   193→                <span className="neon-cyan">CENTER</span>
+   194→   194→              </h2>
+   195→   195→              <p className="font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
+   196→   196→                {"// real-time security operations // all clients // all services"}
+   197→   197→              </p>
+   198→   198→            </div>
+   199→   199→          </div>
+   200→   200→
+   201→   201→          <div className="flex items-center gap-3">
+   202→   202→            {/* Threat level gauge */}
+   203→   203→            <div className={`flex items-center gap-2 rounded-lg border ${threatCfg.border} ${threatCfg.bg} px-3 py-2`}>
+   204→   204→              <Gauge className={`size-4 ${threatCfg.text} ${threatLevel >= 30 ? "animate-pulse" : ""}`} />
+   205→   205→              <div>
+   206→   206→                <div className="font-mono text-[8px] uppercase tracking-wider text-zinc-500">Threat Level</div>
+   207→   207→                <div className={`font-mono text-sm font-bold ${threatCfg.text}`}>
+   208→   208→                  {threatLevel >= 60 ? "CRITICAL" : threatLevel >= 30 ? "ELEVATED" : "GUARDED"}
+   209→   209→                </div>
+   210→   210→              </div>
+   211→   211→              <div className="flex flex-col gap-0.5">
+   212→   212→                {[...Array(10)].map((_, i) => (
+   213→   213→                  <div
+   214→   214→                    key={i}
+   215→   215→                    className={`h-1 w-3 rounded-sm ${
+   216→   216→                      i < Math.floor(threatLevel / 10) ? threatCfg.dot : "bg-zinc-800"
+   217→   217→                    }`}
+   218→   218→                  />
+   219→   219→                ))}
+   220→   220→              </div>
+   221→   221→            </div>
+   222→   222→
+   223→   223→            {/* Live clock */}
+   224→   224→            <div className="rounded-lg border border-emerald-500/30 bg-zinc-950/80 px-3 py-2 font-mono">
+   225→   225→              <div className="text-[8px] uppercase tracking-wider text-emerald-500/60">SYS TIME</div>
+   226→   226→              <div className="text-sm font-bold text-emerald-300 neon-emerald">
+   227→   227→                {clock.toLocaleTimeString("en-US", { hour12: false })}
+   228→   228→              </div>
+   229→   229→            </div>
+   230→   230→
+   231→   231→            <Button
+   232→   232→              onClick={() => setChatOpen(true)}
+   233→   233→              variant="outline"
+   234→   234→              className="border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 neon-border-violet"
+   235→   235→            >
+   236→   236→              <Bot className="size-4" /> <span className="hidden sm:inline">Guardian AI</span>
+   237→   237→            </Button>
+   238→   238→            <Button
+   239→   239→              onClick={() => setWarRoom(true)}
+   240→   240→              variant="outline"
+   241→   241→              className="border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 neon-border-cyan"
+   242→   242→            >
+   243→   243→              <Maximize2 className="size-4" /> <span className="hidden sm:inline">War Room</span>
+   244→   244→            </Button>
+   245→   245→            <Button
+   246→   246→              onClick={() => { setLauncherClients(selectedClientIds); setLauncherOpen(true); }}
+   247→   247→              className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
+   248→   248→            >
+   249→   249→              <Rocket className="size-4" /> <span className="hidden sm:inline">Launch Service</span>
+   250→   250→            </Button>
+   251→   251→            <Button onClick={onAddClient} variant="outline" className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+   252→   252→              <Plus className="size-4" /> <span className="hidden sm:inline">Add Client</span>
+   253→   253→            </Button>
+   254→   254→          </div>
+   255→   255→        </div>
+   256→   256→      </div>
+   257→   257→
+   258→   258→      {/* ═══ KPI STRIP, terminal-style with sparklines ═══ */}
+   259→   259→      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+   260→   260→        <KpiCard label="CLIENTS" value={stats.total_clients} icon={Building2} color="emerald" />
+   261→   261→        <KpiCard label="ACTIVE" value={stats.active_pipelines} icon={Activity} color="cyan" pulse={stats.active_pipelines > 0} sparkMetric="scans" />
+   262→   262→        <KpiCard label="SCANS" value={feed?.active_processes.sast_scans ?? 0} icon={Bug} color="cyan" pulse={(feed?.active_processes.sast_scans ?? 0) > 0} sparkMetric="scans" />
+   263→   263→        <KpiCard label="PATCHES" value={stats.total_patches} icon={ShieldCheck} color="violet" sparkMetric="patches" />
+   264→   264→        <KpiCard label="PENDING" value={stats.pending_patches} icon={AlertCircle} color="amber" pulse={stats.pending_patches > 0} sparkMetric="patches" />
+   265→   265→        <KpiCard label="FINDINGS" value={stats.total_findings} icon={Skull} color="red" sparkMetric="findings" />
+   266→   266→        <KpiCard label="CRITICAL" value={stats.critical_findings} icon={AlertTriangle} color="red" pulse={stats.critical_findings > 0} sparkMetric="critical" />
+   267→   267→        <KpiCard label="COMPLIANT" value={stats.compliant_clients} icon={CheckCircle2} color="emerald" />
+   268→   268→      </div>
+   269→   269→
+   270→   270→      {/* ═══ CLIENT CONTEXT SELECTOR + OPERATIONS TOOLBAR ═══ */}
+   271→   271→      <div className="holo-card-sharp hud-corners p-3">
+   272→   272→        <div className="flex flex-wrap items-center gap-2">
+   273→   273→          <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">{"// Scope:"}</span>
+   274→   274→          {/* Client selector dropdown */}
+   275→   275→          <button
+   276→   276→            onClick={() => setShowClientSelector(!showClientSelector)}
+   277→   277→            className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 transition-all hover:bg-emerald-500/20"
+   278→   278→          >
+   279→   279→            <Building2 className="size-3" />
+   280→   280→            {selectedClientIds.length === 0 ? "ALL CLIENTS" : `${selectedClientIds.length} SELECTED`}
+   281→   281→          </button>
+   282→   282→          {selectedClientIds.length > 0 && (
+   283→   283→            <button
+   284→   284→              onClick={() => setSelectedClientIds([])}
+   285→   285→              className="text-[10px] text-zinc-500 hover:text-red-400"
+   286→   286→            >
+   287→   287→              ✕ clear
+   288→   288→            </button>
+   289→   289→          )}
+   290→   290→
+   291→   291→          <span className="mx-1 text-zinc-700">│</span>
+   292→   292→          <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">{"// Ops:"}</span>
+   293→   293→          <OpsButton
+   294→   294→            label="Attack Selected"
+   295→   295→            icon={SwordIcon}
+   296→   296→            color="red"
+   297→   297→            loading={opsLoading === "attack-all"}
+   298→   298→            disabled={!!opsLoading}
+   299→   299→            onClick={async () => {
+   300→   300→              setOpsLoading("attack-all");
+   301→   301→              try {
+   302→   302→                const body = selectedClientIds.length > 0 ? JSON.stringify({ clientIds: selectedClientIds }) : "{}";
+   303→   303→                const res = await fetch("/api/attack-all", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+   304→   304→                const data = await res.json();
+   305→   305→                alert(data.message || "Attack launched");
+   306→   306→              } catch { alert("Failed to launch"); }
+   307→   307→              setOpsLoading(null);
+   308→   308→            }}
+   309→   309→          />
+   310→   310→          <OpsButton
+   311→   311→            label="Auto-Remediate"
+   312→   312→            icon={ShieldIcon}
+   313→   313→            color="emerald"
+   314→   314→            loading={opsLoading === "auto-remediate"}
+   315→   315→            disabled={!!opsLoading}
+   316→   316→            onClick={async () => {
+   317→   317→              setOpsLoading("auto-remediate");
+   318→   318→              try {
+   319→   319→                const body = selectedClientIds.length > 0
+   320→   320→                  ? JSON.stringify({ clientId: selectedClientIds[0], severity: "critical" })
+   321→   321→                  : JSON.stringify({ severity: "critical" });
+   322→   322→                const res = await fetch("/api/auto-remediation", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+   323→   323→                const data = await res.json();
+   324→   324→                alert(data.message || "Auto-remediation complete");
+   325→   325→              } catch { alert("Failed"); }
+   326→   326→              setOpsLoading(null);
+   327→   327→            }}
+   328→   328→          />
+   329→   329→          <OpsButton
+   330→   330→            label="Threat Hunter"
+   331→   331→            icon={Radar}
+   332→   332→            color="cyan"
+   333→   333→            loading={opsLoading === "threat-hunter"}
+   334→   334→            disabled={!!opsLoading}
+   335→   335→            onClick={async () => {
+   336→   336→              setOpsLoading("threat-hunter");
+   337→   337→              try {
+   338→   338→                const res = await fetch("/api/threat-hunter", { method: "POST" });
+   339→   339→                const data = await res.json();
+   340→   340→                alert(data.message || "Threat Hunter dispatched");
+   341→   341→              } catch { alert("Failed"); }
+   342→   342→              setOpsLoading(null);
+   343→   343→            }}
+   344→   344→          />
+   345→   345→          <OpsButton
+   346→   346→            label="Auto-Approve"
+   347→   347→            icon={CheckCircle2}
+   348→   348→            color="amber"
+   349→   349→            loading={opsLoading === "auto-approve"}
+   350→   350→            disabled={!!opsLoading}
+   351→   351→            onClick={async () => {
+   352→   352→              setOpsLoading("auto-approve");
+   353→   353→              try {
+   354→   354→                const res = await fetch("/api/auto-approve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ maxSeverity: "medium" }) });
+   355→   355→                const data = await res.json();
+   356→   356→                alert(data.message || "Auto-approve complete");
+   357→   357→              } catch { alert("Failed"); }
+   358→   358→              setOpsLoading(null);
+   359→   359→            }}
+   360→   360→          />
+   361→   361→          <div className="ml-auto flex gap-1.5">
+   362→   362→            <a href="/api/email-digest" target="_blank" rel="noopener noreferrer">
+   363→   363→              <OpsButton label="Digest" icon={Mail} color="sky" onClick={() => {}} />
+   364→   364→            </a>
+   365→   365→            <a href="/api/audit-export" target="_blank" rel="noopener noreferrer">
+   366→   366→              <OpsButton label="Audit" icon={FileDown} color="violet" onClick={() => {}} />
+   367→   367→            </a>
+   368→   368→            <a href="/api/sla-tracking" target="_blank" rel="noopener noreferrer">
+   369→   369→              <OpsButton label="SLA" icon={Gauge} color="rose" onClick={() => {}} />
+   370→   370→            </a>
+   371→   371→            <a href="/api/analytics" target="_blank" rel="noopener noreferrer">
+   372→   372→              <OpsButton label="Analytics" icon={Activity} color="emerald" onClick={() => {}} />
+   373→   373→            </a>
+   374→   374→          </div>
+   375→   375→        </div>
+   376→   376→
+   377→   377→        {/* Client selector dropdown */}
+   378→   378→        {showClientSelector && (
+   379→   379→          <div className="mt-2 grid gap-1.5 border-t border-zinc-800 pt-2 sm:grid-cols-2 lg:grid-cols-3">
+   380→   380→            {clients.map((c) => (
+   381→   381→              <label
+   382→   382→                key={c.id}
+   383→   383→                className={`flex cursor-pointer items-center gap-2 rounded border p-2 text-xs transition-all ${
+   384→   384→                  selectedClientIds.includes(c.id)
+   385→   385→                    ? "border-emerald-500/50 bg-emerald-500/10"
+   386→   386→                    : "border-zinc-700 bg-zinc-900/50 hover:border-zinc-600"
+   387→   387→                }`}
+   388→   388→              >
+   389→   389→                <input
+   390→   390→                  type="checkbox"
+   391→   391→                  checked={selectedClientIds.includes(c.id)}
+   392→   392→                  onChange={(e) => {
+   393→   393→                    if (e.target.checked) {
+   394→   394→                      setSelectedClientIds([...selectedClientIds, c.id]);
+   395→   395→                    } else {
+   396→   396→                      setSelectedClientIds(selectedClientIds.filter((id) => id !== c.id));
+   397→   397→                    }
+   398→   398→                  }}
+   399→   399→                  className="accent-emerald-500"
+   400→   400→                />
+   401→   401→                <span className="truncate text-zinc-300">{c.name}</span>
+   402→   402→                <span className={`ml-auto text-[9px] ${c.stats.critical_findings > 0 ? "text-red-400" : "text-zinc-600"}`}>
+   403→   403→                  {c.stats.critical_findings > 0 ? `⚠${c.stats.critical_findings}` : c.status.toUpperCase()}
+   404→   404→                </span>
+   405→   405→              </label>
+   406→   406→            ))}
+   407→   407→          </div>
+   408→   408→        )}
+   409→   409→      </div>
+   410→   410→
+   411→   411→      {/* ═══ LIVE EXPLOIT TERMINAL + NETWORK TOPOLOGY (side-by-side, compact) ═══ */}
+   412→   412→      <div className="grid gap-3 lg:grid-cols-2">
+   413→   413→        <LiveExploitTerminal />
+   414→   414→        <NetworkTopology onSelectClient={onSelectClient} />
+   415→   415→      </div>
+   416→   416→
+   417→   417→      {/* ═══ PROCESS TREE + ATTACK HEATMAP ═══ */}
+   418→   418→      <div className="grid gap-3 lg:grid-cols-2">
+   419→   419→        <ProcessTree />
+   420→   420→        <AttackHeatmap />
+   421→   421→      </div>
+   422→   422→
+   423→   423→      {/* ═══ RIGHT SIDEBAR: Live Feed + AI Panels ═══ */}
+   424→   424→      <div className="grid gap-3 lg:grid-cols-[1fr_20rem]">
+   425→   425→        {/* LEFT: Live Feed (wider) */}
+   426→   426→        <aside className="space-y-3 min-w-0">
+   427→   427→          {/* ═══ LIVE TERMINAL FEED ═══ */}
+   428→   428→          <div className="holo-card-sharp hud-corners flex flex-col p-4">
+   429→   429→            <div className="mb-3 flex items-center justify-between">
+   430→   430→              <h3 className="section-header text-sm font-bold text-cyan-300">
+   431→   431→                <Terminal className="inline size-4 mr-1" />
+   432→   432→                LIVE FEED
+   433→   433→              </h3>
+   434→   434→              <div className="flex items-center gap-1.5">
+   435→   435→                <span className="size-1.5 rounded-full bg-cyan-500 animate-pulse" />
+   436→   436→                <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-400">STREAMING</span>
+   437→   437→              </div>
+   438→   438→            </div>
+   439→   439→
+   440→   440→            {/* Terminal-style event log */}
+   441→   441→            <div
+   442→   442→              ref={logRef}
+   443→   443→              className="custom-scrollbar max-h-[420px] space-y-1 overflow-y-auto pr-1 font-mono text-[11px]"
+   444→   444→            >
+   445→   445→              <AnimatePresence mode="popLayout">
+   446→   446→                {(!feed || feed.events.length === 0) ? (
+   447→   447→                  <div className="py-8 text-center text-zinc-600">
+   448→   448→                    <Eye className="mx-auto size-5" />
+   449→   449→                    <p className="mt-1">Waiting for events…</p>
+   450→   450→                  </div>
+   451→   451→                ) : (
+   452→   452→                  feed.events.map((evt) => {
+   453→   453→                    const sevColor = evt.severity === "error" ? "red" : evt.severity === "warning" ? "amber" : evt.severity === "success" ? "emerald" : "cyan";
+   454→   454→                    const cfg = COLOR_MAP[sevColor];
+   455→   455→                    const Icon = EVENT_ICONS[evt.type] || Activity;
+   456→   456→                    const time = new Date(evt.ts).toLocaleTimeString("en-US", { hour12: false });
+   457→   457→                    return (
+   458→   458→                      <motion.div
+   459→   459→                        key={evt.id}
+   460→   460→                        layout
+   461→   461→                        initial={{ opacity: 0, x: -15, backgroundColor: "rgba(6, 182, 212, 0.2)" }}
+   462→   462→                        animate={{ opacity: 1, x: 0, backgroundColor: "rgba(0, 0, 0, 0)" }}
+   463→   463→                        exit={{ opacity: 0 }}
+   464→   464→                        transition={{ duration: 0.4 }}
+   465→   465→                        className="flex items-start gap-1.5 rounded p-1"
+   466→   466→                      >
+   467→   467→                        <span className="shrink-0 text-zinc-600">{time}</span>
+   468→   468→                        <Icon className={`mt-0.5 size-3 shrink-0 ${cfg.text}`} />
+   469→   469→                        <span className={`shrink-0 font-bold ${cfg.text}`}>
+   470→   470→                          {evt.severity === "error" ? "ERR" : evt.severity === "warning" ? "WRN" : evt.severity === "success" ? "OK " : "INF"}
+   471→   471→                        </span>
+   472→   472→                        <span className="min-w-0 flex-1">
+   473→   473→                          <span className="text-zinc-500">[{evt.client}]</span>{" "}
+   474→   474→                          <span className="text-zinc-300">{evt.detail}</span>
+   475→   475→                        </span>
+   476→   476→                      </motion.div>
+   477→   477→                    );
+   478→   478→                  })
+   479→   479→                )}
+   480→   480→              </AnimatePresence>
+   481→   481→            </div>
+   482→   482→
+   483→   483→            {/* Feed stats bar */}
+   484→   484→            {feed && (
+   485→   485→              <div className="mt-3 flex items-center justify-between border-t border-zinc-800 pt-2 font-mono text-[10px]">
+   486→   486→                <span className="text-zinc-500">
+   487→   487→                  <span className="text-red-400">{feed.stats.critical}</span> ERR ·
+   488→   488→                  <span className="text-amber-400"> {feed.stats.warnings}</span> WRN ·
+   489→   489→                  <span className="text-emerald-400"> {feed.stats.successes}</span> OK
+   490→   490→                </span>
+   491→   491→                <span className="text-zinc-600">{feed.stats.total_events} events</span>
+   492→   492→              </div>
+   493→   493→            )}
+   494→   494→          </div>
+   495→   495→
+   496→   496→          {/* ═══ AI THREAT BRIEFING ═══ */}
+   497→   497→          <ThreatBriefing />
+   498→   498→        </aside>
+   499→   499→
+   500→   500→        {/* RIGHT: System Status + Threat Level + Anomaly + Risk Score */}
+   501→   501→        <aside className="space-y-3 min-w-0">
+   502→   502→          {/* ═══ SYSTEM STATUS ═══ */}
+   503→   503→          <div className="holo-card-sharp hud-corners p-4">
+   504→   504→            <h3 className="mb-3 section-header text-sm font-bold text-emerald-300">
+   505→   505→              <Server className="inline size-4 mr-1" />
+   506→   506→              SYSTEM STATUS
+   507→   507→            </h3>
+   508→   508→            <div className="space-y-2 text-xs">
+   509→   509→              <SystemRow icon={Server} label="Vercel API" status="online" detail="100ms" />
+   510→   510→              <SystemRow icon={Cpu} label="Railway Engine" status="online" detail="bun + python3" />
+   511→   511→              <SystemRow icon={Database} label="Supabase DB" status="online" detail="HTTPS/443" />
+   512→   512→              <SystemRow icon={Wifi} label="Socket.io Relay" status={(feed?.active_processes.total_active ?? 0) > 0 ? "active" : "online"} detail="real-time" />
+   513→   513→            </div>
+   514→   514→          </div>
+   515→   515→
+   516→   516→          {/* ═══ THREAT INDICATOR ═══ */}
+   517→   517→          <div className={`holo-card-sharp hud-corners border ${threatCfg.border} p-4`}>
+   518→   518→            <div className="mb-2 flex items-center justify-between">
+   519→   519→              <h3 className={`section-header text-sm font-bold ${threatCfg.text}`}>
+   520→   520→                <AlertTriangle className="inline size-4 mr-1" />
+   521→   521→                THREAT LEVEL
+   522→   522→              </h3>
+   523→   523→              <span className={`font-mono text-xs font-bold ${threatCfg.text} ${threatLevel >= 30 ? "animate-pulse" : ""}`}>
+   524→   524→                {threatLevel}/100
+   525→   525→              </span>
+   526→   526→            </div>
+   527→   527→            <div className="flex h-20 items-end gap-0.5">
+   528→   528→              {[...Array(20)].map((_, i) => (
+   529→   529→                <div
+   530→   530→                  key={i}
+   531→   531→                  className={`flex-1 rounded-t ${
+   532→   532→                    i < Math.floor(threatLevel / 5) ? threatCfg.dot : "bg-zinc-800"
+   533→   533→                  }`}
+   534→   534→                  style={{ height: `${20 + i * 4}%`, opacity: i < Math.floor(threatLevel / 5) ? 1 : 0.3 }}
+   535→   535→                />
+   536→   536→              ))}
+   537→   537→            </div>
+   538→   538→            <div className="mt-2 flex justify-between font-mono text-[9px] text-zinc-600">
+   539→   539→              <span>SAFE</span>
+   540→   540→              <span>ELEVATED</span>
+   541→   541→              <span>CRITICAL</span>
+   542→   542→            </div>
+   543→   543→          </div>
+   544→   544→
+   545→   545→          {/* ═══ ANOMALY DETECTION ═══ */}
+   546→   546→          <AnomalyDetection />
+   547→   547→
+   548→   548→          {/* ═══ PREDICTIVE RISK SCORE ═══ */}
+   549→   549→          <PredictiveRiskScore />
+   550→   550→        </aside>
+   551→   551→      </div>
+   552→   552→
+   553→   553→      {/* ═══ WAR ROOM MODE (fullscreen overlay) ═══ */}
+   554→   554→      {warRoom && (
+   555→   555→        <WarRoomMode
+   556→   556→          clients={clients}
+   557→   557→          feed={feed}
+   558→   558→          threatLevel={threatLevel}
+   559→   559→          clock={clock}
+   560→   560→          onClose={() => setWarRoom(false)}
+   561→   561→          onSelectClient={(id) => { setWarRoom(false); onSelectClient(id); }}
+   562→   562→        />
+   563→   563→      )}
+   564→   564→
+   565→   565→      {/* ═══ SERVICE STATUS CHIPS (running services bar) ═══ */}
+   566→   566→      <ServiceStatusChips />
+   567→   567→
+   568→   568→      {/* ═══ GUARDIAN AI CHAT SIDEBAR ═══ */}
+   569→   569→      {chatOpen && <GuardianChat open={chatOpen} onClose={() => setChatOpen(false)} />}
+   570→   570→
+   571→   571→      {/* ═══ SERVICE LAUNCHER MODAL ═══ */}
+   572→   572→      <ServiceLauncher
+   573→   573→        open={launcherOpen}
+   574→   574→        onClose={() => setLauncherOpen(false)}
+   575→   575→        preselectedClientIds={launcherClients}
+   576→   576→      />
+   577→   577→    </div>
+   578→   578→  );
+   579→   579→}
+   580→   580→
+   581→   581→// ── Ops Button ──────────────────────────────────────────────────────────────
+   582→   582→function OpsButton({ label, icon: Icon, color, loading, disabled, onClick }: {
+   583→   583→  label: string;
+   584→   584→  icon: typeof Activity;
+   585→   585→  color: string;
+   586→   586→  loading?: boolean;
+   587→   587→  disabled?: boolean;
+   588→   588→  onClick: () => void;
+   589→   589→}) {
+   590→   590→  const colorMap: Record<string, { text: string; border: string; bg: string; hover: string }> = {
+   591→   591→    red: { text: "text-red-400", border: "border-red-500/40", bg: "bg-red-500/10", hover: "hover:bg-red-500/20" },
+   592→   592→    emerald: { text: "text-emerald-400", border: "border-emerald-500/40", bg: "bg-emerald-500/10", hover: "hover:bg-emerald-500/20" },
+   593→   593→    cyan: { text: "text-cyan-400", border: "border-cyan-500/40", bg: "bg-cyan-500/10", hover: "hover:bg-cyan-500/20" },
+   594→   594→    amber: { text: "text-amber-400", border: "border-amber-500/40", bg: "bg-amber-500/10", hover: "hover:bg-amber-500/20" },
+   595→   595→    sky: { text: "text-sky-400", border: "border-sky-500/40", bg: "bg-sky-500/10", hover: "hover:bg-sky-500/20" },
+   596→   596→    violet: { text: "text-violet-400", border: "border-violet-500/40", bg: "bg-violet-500/10", hover: "hover:bg-violet-500/20" },
+   597→   597→    rose: { text: "text-rose-400", border: "border-rose-500/40", bg: "bg-rose-500/10", hover: "hover:bg-rose-500/20" },
+   598→   598→  };
+   599→   599→  const c = colorMap[color] || colorMap.emerald;
+   600→   600→  return (
+   601→   601→    <button
+   602→   602→      onClick={onClick}
+   603→   603→      disabled={disabled || loading}
+   604→   604→      className={`inline-flex items-center gap-1.5 rounded-md border ${c.border} ${c.bg} ${c.hover} px-3 py-1.5 text-xs font-medium ${c.text} transition-all disabled:opacity-40 disabled:cursor-not-allowed`}
+   605→   605→    >
+   606→   606→      {loading ? <Loader2 className="size-3 animate-spin" /> : <Icon className="size-3" />}
+   607→   607→      <span className="hidden sm:inline">{label}</span>
+   608→   608→    </button>
+   609→   609→  );
+   610→   610→}
+   611→   611→
+   612→   612→// ── War Room Mode ───────────────────────────────────────────────────────────
+   613→   613→function WarRoomMode({ clients, feed, threatLevel, clock, onClose, onSelectClient }: {
+   614→   614→  clients: ClientSummary[];
+   615→   615→  feed: ActivityFeed | null;
+   616→   616→  threatLevel: number;
+   617→   617→  clock: Date;
+   618→   618→  onClose: () => void;
+   619→   619→  onSelectClient: (id: string) => void;
+   620→   620→}) {
+   621→   621→  const [viewIndex, setViewIndex] = useState(0);
+   622→   622→
+   623→   623→  // Auto-cycle through views every 10 seconds
+   624→   624→  useEffect(() => {
+   625→   625→    const id = setInterval(() => setViewIndex((i) => (i + 1) % 3), 10000);
+   626→   626→    return () => clearInterval(id);
+   627→   627→  }, []);
+   628→   628→
+   629→   629→  const threatColor = threatLevel >= 60 ? "red" : threatLevel >= 30 ? "amber" : "emerald";
+   630→   630→  const threatCfg = COLOR_MAP[threatColor];
+   631→   631→  const stats = {
+   632→   632→    clients: clients.length,
+   633→   633→    active: clients.filter((c) => c.status !== "onboarding" && c.status !== "compliant").length,
+   634→   634→    findings: clients.reduce((s, c) => s + c.stats.findings, 0),
+   635→   635→    critical: clients.reduce((s, c) => s + c.stats.critical_findings, 0),
+   636→   636→    patches: clients.reduce((s, c) => s + c.stats.patches, 0),
+   637→   637→  };
+   638→   638→
+   639→   639→  return (
+   640→   640→    <motion.div
+   641→   641→      initial={{ opacity: 0 }}
+   642→   642→      animate={{ opacity: 1 }}
+   643→   643→      exit={{ opacity: 0 }}
+   644→   644→      className="fixed inset-0 z-[100] bg-zinc-950/98 p-4 overflow-y-auto"
+   645→   645→    >
+   646→   646→      <div className="scanlines cyber-vignette absolute inset-0 pointer-events-none" />
+   647→   647→      <div className="relative">
+   648→   648→        {/* Header */}
+   649→   649→        <div className="flex items-center justify-between mb-6">
+   650→   650→          <div className="flex items-center gap-4">
+   651→   651→            <h1 className="text-4xl font-bold tracking-tight">
+   652→   652→              <span className="neon-emerald">WAR</span>{" "}
+   653→   653→              <span className="neon-red">ROOM</span>
+   654→   654→            </h1>
+   655→   655→            <div className={`rounded-lg border ${threatCfg.border} ${threatCfg.bg} px-4 py-2`}>
+   656→   656→              <span className={`font-mono text-2xl font-bold ${threatCfg.text}`}>
+   657→   657→                {threatLevel >= 60 ? "CRITICAL" : threatLevel >= 30 ? "ELEVATED" : "GUARDED"}
+   658→   658→              </span>
+   659→   659→            </div>
+   660→   660→          </div>
+   661→   661→          <div className="flex items-center gap-4">
+   662→   662→            <div className="text-right">
+   663→   663→              <div className="font-mono text-3xl font-bold text-emerald-300 neon-emerald">
+   664→   664→                {clock.toLocaleTimeString("en-US", { hour12: false })}
+   665→   665→              </div>
+   666→   666→              <div className="font-mono text-xs text-zinc-500">{clock.toLocaleDateString()}</div>
+   667→   667→            </div>
+   668→   668→            <Button onClick={onClose} variant="outline" className="border-zinc-700 bg-zinc-900 text-zinc-300">
+   669→   669→              Exit War Room
+   670→   670→            </Button>
+   671→   671→          </div>
+   672→   672→        </div>
+   673→   673→
+   674→   674→        {/* Giant KPI row */}
+   675→   675→        <div className="grid grid-cols-5 gap-4 mb-6">
+   676→   676→          {[
+   677→   677→            { label: "CLIENTS", value: stats.clients, color: "emerald" },
+   678→   678→            { label: "ACTIVE", value: stats.active, color: "cyan" },
+   679→   679→            { label: "PATCHES", value: stats.patches, color: "violet" },
+   680→   680→            { label: "FINDINGS", value: stats.findings, color: "amber" },
+   681→   681→            { label: "CRITICAL", value: stats.critical, color: "red" },
+   682→   682→          ].map((kpi) => {
+   683→   683→            const cfg = COLOR_MAP[kpi.color];
+   684→   684→            return (
+   685→   685→              <div key={kpi.label} className={`holo-card-sharp hud-corners border ${cfg.border} p-6 text-center`}>
+   686→   686→                <div className={`text-5xl font-bold font-mono ${cfg.text}`}>{kpi.value}</div>
+   687→   687→                <div className="mt-2 text-sm font-mono uppercase tracking-widest text-zinc-500">{kpi.label}</div>
+   688→   688→              </div>
+   689→   689→            );
+   690→   690→          })}
+   691→   691→        </div>
+   692→   692→
+   693→   693→        {/* Auto-cycling content */}
+   694→   694→        <div className="grid gap-4 lg:grid-cols-2">
+   695→   695→          {viewIndex === 0 && (
+   696→   696→            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-2">
+   697→   697→              <h2 className="mb-3 text-xl font-bold text-emerald-300">CLIENT PIPELINE STATUS</h2>
+   698→   698→              <div className="grid gap-2 md:grid-cols-2">
+   699→   699→                {clients.map((c) => (
+   700→   700→                  <div key={c.id} onClick={() => onSelectClient(c.id)} className="holo-card-sharp hud-corners cursor-pointer p-4">
+   701→   701→                    <div className="flex items-center justify-between">
+   702→   702→                      <span className="text-lg font-bold text-zinc-100">{c.name}</span>
+   703→   703→                      <span className={`font-mono text-sm ${c.status === "compliant" ? "text-emerald-400" : "text-cyan-400"}`}>
+   704→   704→                        [{c.status.toUpperCase()}]
+   705→   705→                      </span>
+   706→   706→                    </div>
+   707→   707→                    <div className="mt-2 flex gap-3 text-sm">
+   708→   708→                      <span className="text-sky-400">{c.stats.codebases} repos</span>
+   709→   709→                      <span className="text-emerald-400">{c.stats.patches} patches</span>
+   710→   710→                      <span className="text-amber-400">{c.stats.findings} findings</span>
+   711→   711→                      {c.stats.critical_findings > 0 && <span className="text-red-400 font-bold">⚠ {c.stats.critical_findings} CRITICAL</span>}
+   712→   712→                    </div>
+   713→   713→                  </div>
+   714→   714→                ))}
+   715→   715→              </div>
+   716→   716→            </motion.div>
+   717→   717→          )}
+   718→   718→          {viewIndex === 1 && (
+   719→   719→            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-2">
+   720→   720→              <h2 className="mb-3 text-xl font-bold text-cyan-300">LIVE ACTIVITY FEED</h2>
+   721→   721→              <div className="holo-card-sharp hud-corners p-4 max-h-96 overflow-y-auto custom-scrollbar font-mono text-sm">
+   722→   722→                {feed?.events.slice(0, 20).map((evt) => {
+   723→   723→                  const cfg = COLOR_MAP[evt.severity === "error" ? "red" : evt.severity === "warning" ? "amber" : evt.severity === "success" ? "emerald" : "cyan"];
+   724→   724→                  return (
+   725→   725→                    <div key={evt.id} className="flex gap-2 py-1">
+   726→   726→                      <span className="text-zinc-600">{new Date(evt.ts).toLocaleTimeString("en-US", { hour12: false })}</span>
+   727→   727→                      <span className={`font-bold ${cfg.text}`}>{evt.severity === "error" ? "ERR" : evt.severity === "warning" ? "WRN" : evt.severity === "success" ? "OK" : "INF"}</span>
+   728→   728→                      <span className="text-zinc-500">[{evt.client}]</span>
+   729→   729→                      <span className="text-zinc-300">{evt.detail}</span>
+   730→   730→                    </div>
+   731→   731→                  );
+   732→   732→                })}
+   733→   733→              </div>
+   734→   734→            </motion.div>
+   735→   735→          )}
+   736→   736→          {viewIndex === 2 && (
+   737→   737→            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-2">
+   738→   738→              <h2 className="mb-3 text-xl font-bold text-rose-300">THREAT LEVEL MONITOR</h2>
+   739→   739→              <div className="holo-card-sharp hud-corners p-8 text-center">
+   740→   740→                <div className={`text-9xl font-bold font-mono ${threatCfg.text} ${threatLevel >= 30 ? "animate-pulse" : ""}`}>
+   741→   741→                  {threatLevel}
+   742→   742→                </div>
+   743→   743→                <div className={`mt-4 text-3xl font-bold ${threatCfg.text}`}>
+   744→   744→                  {threatLevel >= 60 ? "CRITICAL THREAT" : threatLevel >= 30 ? "ELEVATED RISK" : "GUARDED STATUS"}
+   745→   745→                </div>
+   746→   746→                <div className="mt-4 flex justify-center gap-1">
+   747→   747→                  {[...Array(20)].map((_, i) => (
+   748→   748→                    <div key={i} className={`h-8 w-4 rounded ${i < Math.floor(threatLevel / 5) ? threatCfg.dot : "bg-zinc-800"}`} />
+   749→   749→                  ))}
+   750→   750→                </div>
+   751→   751→              </div>
+   752→   752→            </motion.div>
+   753→   753→          )}
+   754→   754→        </div>
+   755→   755→
+   756→   756→        <div className="mt-4 text-center font-mono text-xs text-zinc-600">
+   757→   757→          Auto-cycling views every 10s · View {viewIndex + 1}/3 · Press ESC or click Exit to leave
+   758→   758→        </div>
+   759→   759→      </div>
+   760→   760→    </motion.div>
+   761→   761→  );
+   762→   762→}
+   763→   763→
+   764→   764→// ── Helper: determine stage status from client data ────────────────────────
+   765→   765→function getStageStatus(client: ClientSummary, stageKey: string): "pending" | "in-progress" | "completed" {
+   766→   766→  const s = client.stats;
+   767→   767→  switch (stageKey) {
+   768→   768→    case "onboarding":
+   769→   769→      return (s.codebases > 0 || s.targets > 0) && client.authorized ? "completed" : (s.codebases > 0 || s.targets > 0) ? "in-progress" : "pending";
+   770→   770→    case "scanning":
+   771→   771→      return s.patches > 0 || s.findings > 0 ? "completed" : client.status === "scanning" ? "in-progress" : "pending";
+   772→   772→    case "testing":
+   773→   773→      return s.findings > 0 ? "completed" : client.status === "testing" ? "in-progress" : "pending";
+   774→   774→    case "patching":
+   775→   775→      return s.approved_patches > 0 ? "completed" : s.pending_patches > 0 ? "in-progress" : "pending";
+   776→   776→    case "verifying":
+   777→   777→      return s.approved_patches > 0 ? "completed" : "pending";
+   778→   778→    case "defending":
+   779→   779→      return client.status === "defending" || client.status === "compliant" ? "completed" : "pending";
+   780→   780→    case "compliant":
+   781→   781→      return client.status === "compliant" ? "completed" : "pending";
+   782→   782→    default:
+   783→   783→      return "pending";
+   784→   784→  }
+   785→   785→}
+   786→   786→
+   787→   787→// ── KPI Card, terminal style with sparkline ───────────────────────────────
+   788→   788→function KpiCard({ label, value, icon: Icon, color, pulse, sparkMetric }: {
+   789→   789→  label: string;
+   790→   790→  value: number;
+   791→   791→  icon: typeof Activity;
+   792→   792→  color: string;
+   793→   793→  pulse?: boolean;
+   794→   794→  sparkMetric?: "scans" | "patches" | "findings" | "critical";
+   795→   795→}) {
+   796→   796→  const cfg = COLOR_MAP[color] || COLOR_MAP.emerald;
+   797→   797→  return (
+   798→   798→    <div className={`holo-card-sharp hud-corners flex flex-col items-center justify-center border ${cfg.border} p-2`}>
+   799→   799→      <div className="flex items-center gap-1">
+   800→   800→        <Icon className={`size-3 ${cfg.text} ${pulse ? "animate-pulse" : ""}`} />
+   801→   801→        {sparkMetric && <Sparkline metric={sparkMetric} color={color} />}
+   802→   802→      </div>
+   803→   803→      <div className={`mt-0.5 text-lg font-bold font-mono ${cfg.text}`}>{value}</div>
+   804→   804→      <div className="text-[8px] font-mono uppercase tracking-wider text-zinc-500">{label}</div>
+   805→   805→    </div>
+   806→   806→  );
+   807→   807→}
+   808→   808→
+   809→   809→// ── System Status Row ──────────────────────────────────────────────────────
+   810→   810→function SystemRow({ icon: Icon, label, status, detail }: {
+   811→   811→  icon: typeof Server;
+   812→   812→  label: string;
+   813→   813→  status: "online" | "active" | "offline";
+   814→   814→  detail?: string;
+   815→   815→}) {
+   816→   816→  const cfg = status === "online" ? COLOR_MAP.emerald : status === "active" ? COLOR_MAP.cyan : COLOR_MAP.red;
+   817→   817→  return (
+   818→   818→    <div className="flex items-center justify-between">
+   819→   819→      <div className="flex items-center gap-2">
+   820→   820→        <Icon className="size-3 text-zinc-500" />
+   821→   821→        <span className="text-zinc-400">{label}</span>
+   822→   822→      </div>
+   823→   823→      <div className="flex items-center gap-2">
+   824→   824→        {detail && <span className="font-mono text-[9px] text-zinc-600">{detail}</span>}
+   825→   825→        <span className={`size-1.5 rounded-full ${cfg.dot} ${status !== "offline" ? "pulse-dot" : ""}`} />
+   826→   826→        <span className={`font-mono text-[10px] font-bold ${cfg.text}`}>{status.toUpperCase()}</span>
+   827→   827→      </div>
+   828→   828→    </div>
+   829→   829→  );
+   830→   830→}
+   831→   831→

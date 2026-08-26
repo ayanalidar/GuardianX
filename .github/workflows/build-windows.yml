@@ -1,0 +1,66 @@
+name: Build Windows Installer
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm install
+
+      - name: Build Windows installer
+        working-directory: desktop
+        run: npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: GuardianX-Windows-Installer
+          path: |
+            desktop/dist/*.exe
+          retention-days: 90
+
+      - name: Create GitHub Release with installer
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/dist/*.exe
+          name: GuardianX ${{ github.ref_name }}
+          body: |
+            ## GuardianX ${{ github.ref_name }}
+
+            ### Downloads
+            - **GuardianX-Setup-${{ github.ref_name }}.exe** — Windows installer (recommended)
+            - **GuardianX-Portable-${{ github.ref_name }}.exe** — Portable version (no install needed)
+
+            ### Install
+            1. Download the installer (.exe)
+            2. Double-click to run
+            3. Follow the setup wizard
+            4. GuardianX launches automatically
+
+            ### Requirements
+            - Windows 10 or later
+            - Internet connection (the app loads from the cloud)
+
+            ---
+            © 2026 GuardianX · www.guardianx.cloud · hello@guardianx.in
+          draft: false
+          prerelease: false

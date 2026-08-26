@@ -1,0 +1,145 @@
+"use client";
+
+import { memo } from "react";
+import { Badge } from "@/components/ui/badge";
+import {
+  severityStyles,
+  formatRelativeTime,
+} from "@/lib/sentinel/utils";
+import type { PatchSummary } from "@/lib/sentinel/api";
+import {
+  Bug,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Crosshair,
+  FileCode2,
+  ShieldX,
+  Sparkles,
+  Swords,
+} from "lucide-react";
+import { motion } from "framer-motion";
+
+interface PatchCardProps {
+  patch: PatchSummary;
+  onSelect: (patch: PatchSummary) => void;
+}
+
+function ConfidencePill({ value }: { value: number }) {
+  const pct = Math.round(value * 100);
+  const color =
+    pct >= 80
+      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+      : pct >= 60
+        ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+        : "border-red-500/40 bg-red-500/10 text-red-300";
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${color}`}
+    >
+      <Sparkles className="size-2.5" />
+      {pct}% confidence
+    </span>
+  );
+}
+
+// Memoize so the parent re-rendering on unrelated state (search query typing,
+// sidebar toggle) doesn't re-render every patch card. The `onSelect` prop is
+// stable (useCallback in ConsoleView) and `patch` is per-item.
+export const PatchCard = memo(function PatchCard({ patch, onSelect }: PatchCardProps) {
+  const style = severityStyles[patch.severity];
+
+  return (
+    <motion.button
+      type="button"
+      onClick={() => onSelect(patch)}
+      whileHover={{ y: -2 }}
+      transition={{ type: "spring", stiffness: 300, damping: 22 }}
+      className={`group relative w-full text-left rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 sm:p-5 backdrop-blur-sm transition-colors hover:bg-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${style.ring}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant="outline"
+              className={`gap-1 border ${style.badge}`}
+            >
+              <span className={`size-1.5 rounded-full ${style.dot}`} />
+              {style.label}
+            </Badge>
+            {patch.cve ? (
+              <Badge
+                variant="outline"
+                className="gap-1 border-zinc-700 bg-zinc-800/50 text-zinc-300"
+              >
+                <Bug className="size-3" />
+                {patch.cve}
+              </Badge>
+            ) : null}
+            <span className="font-mono text-[11px] text-zinc-400">
+              {patch.patch_id}
+            </span>
+            <span className="rounded-full border border-zinc-700 bg-zinc-800/40 px-2 py-0.5 text-[10px] text-zinc-400">
+              {patch.codebase_name}
+            </span>
+          </div>
+
+          <h3 className="truncate text-base font-semibold text-zinc-100">
+            {patch.title}
+          </h3>
+
+          <p className="line-clamp-2 text-sm text-zinc-400">
+            {patch.ai_explanation}
+          </p>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-[11px] text-zinc-400">
+            <span className="inline-flex items-center gap-1 font-mono">
+              <FileCode2 className="size-3" />
+              {patch.affected_file}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Clock className="size-3" />
+              {formatRelativeTime(patch.created_at)}
+            </span>
+            <ConfidencePill value={patch.confidence} />
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <div className="flex flex-col items-end gap-1.5">
+            {patch.sandbox_passed ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                <CheckCircle2 className="size-3" />
+                Sandbox Passed
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-red-300">
+                <ShieldX className="size-3" />
+                Sandbox Failed
+              </span>
+            )}
+            {patch.exploit_confirmed && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-red-300">
+                <Crosshair className="size-2.5" />
+                Exploit proven
+              </span>
+            )}
+            {patch.adversarial_rounds > 0 && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+                  patch.adversarial_won
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                    : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                }`}
+              >
+                <Swords className="size-2.5" />
+                {patch.adversarial_won ? "Defended" : `R${patch.adversarial_rounds}`}
+              </span>
+            )}
+          </div>
+          <ChevronRight className="size-4 text-zinc-500 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-400" />
+        </div>
+      </div>
+    </motion.button>
+  );
+});

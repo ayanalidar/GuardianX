@@ -1,0 +1,605 @@
+     1→# GuardianX Worklog
+     2→
+     3→---
+     4→
+     5→## Task: homepage-redesign
+     6→- **Agent**: general-purpose
+     7→- **Date**: 2026 (session timestamp)
+     8→- **Status**: complete
+     9→
+    10→### Goal
+    11→Redesign the GuardianX landing page (`src/components/sentinel/landing-page.tsx`)
+    12→to feel like a premium security platform: cinematic animations, interactive
+    13→elements, modern design patterns — all on the existing dark theme
+    14→(zinc-950 + emerald/cyan/red accents), using only framer-motion + CSS
+    15→animations (no GSAP/Lottie).
+    16→
+    17→### Changes
+    18→- **Refactored** `src/components/sentinel/landing-page.tsx` (605 → ~140 lines)
+    19→  into a slim orchestrator that composes 10 modular section components.
+    20→- **Created** new directory `src/components/sentinel/landing/` with:
+    21→  - `use-count-up.ts` — `useCountUp(target, opts)` hook with framer-motion
+    22→    `useInView` trigger, ease-out curve, optional re-trigger.
+    23→  - `particle-bg.tsx` — `ParticleNetworkBackground`: canvas particle network
+    24→    (~70 nodes) with connecting lines + mouse attraction + cursor halo.
+    25→    Reduced-motion: static fallback.
+    26→  - `glow-orb.tsx` — `GlowOrb`: 4-layer radial-gradient orb (violet halo,
+    27→    cyan ring, emerald core, rotating conic accent) that pulses behind the
+    28→    GuardianX logo. Pure CSS gradients, no images.
+    29→  - `terminal-typing.tsx` — `TerminalTyping`: live-scan terminal that types
+    30→    a real exploit → patch sequence (`$ guardianx scan …`, SQL injection
+    31→    found, AI patch generated, attested on-chain) with character-by-character
+    32→    typing + blinking cursor. Loops continuously.
+    33→  - `glow-cta.tsx` — `GlowCTA`: button/anchor wrapper with expanding
+    34→    box-shadow halo on hover + 12-particle burst on click.
+    35→  - `hero-section.tsx` — `HeroSection`: combines particle bg, glow orb,
+    36→    GuardianX logo, animated threat counter ("2,847 vulnerabilities found
+    37→    this month"), terminal typing panel, two particle-emitting CTAs.
+    38→  - `stats-strip.tsx` — `StatsStrip`: 4 KPIs ("55,000+ Lines of Code",
+    39→    "143 API Routes", "39 Patches Generated", "7 Vulns Found (live demo)")
+    40→    that count up when scrolled into view.
+    41→  - `tilt-card.tsx` — `TiltCard`: 3D-tilt wrapper using framer-motion
+    42→    `useMotionValue` + `useSpring` + `useTransform`; sets `--mx/--my` CSS
+    43→    variables for cursor-follow glow border.
+    44→  - `features-data.ts` — Extracted the 27-entry FEATURES array (was inline
+    45→    in landing-page.tsx) into a typed module.
+    46→  - `features-section.tsx` — `FeaturesSection`: 27 feature cards each with
+    47→    3D tilt, cursor-follow radial glow border, and an on-hover mini
+    48→    "code scan" animation (code window with sweep highlight + patched badge).
+    49→  - `how-it-works.tsx` — `HowItWorks`: 5-step pipeline (Upload Code → AI
+    50→    Analyzes → Vulnerabilities Found → Auto-Patch Generated → Attested &
+    51→    Compliant) with rotating dashed rings, pulse rings, and animated data
+    52→    "packets" flowing between nodes (desktop). Vertical stack on mobile.
+    53→  - `attack-map.tsx` — `LiveAttackMap`: stylized dot-grid world map (SVG
+    54→    with continent mask), animated attack blips spawning at random coords
+    55→    with arc lines tracking to a central crosshair target, session counter,
+    56→    vertical scanline sweep. Decorative, no images.
+    57→  - `testimonials.tsx` — `Testimonials`: 8 placeholder text-based "trusted
+    58→    by" logos + auto-rotating quote carousel (5 testimonials, 6s interval)
+    59→    with prev/next controls + dot indicators + AnimatePresence transitions.
+    60→  - `comparison-table.tsx` — `ComparisonTable`: GuardianX vs Burp Suite /
+    61→    Snyk / Tenable across 10 capabilities, with check/partial/X marks,
+    62→    GuardianX column highlighted with glow.
+    63→  - `final-cta.tsx` — `FinalCTA`: full-width animated gradient banner
+    64→    (3 radial gradients + linear base, 12s shift animation + rotating
+    65→    conic accent + cyber-grid overlay), "Ready to secure your code?"
+    66→    headline, particle-emitting Enter Lab button, and a fluctuating
+    67→    "X analysts online now" counter (1100–1500 range).
+    68→- **Updated** `src/app/globals.css` with new animation utilities:
+    69→  - `.cta-glow` hover halo, `@keyframes feature-sweep`, `.attack-scan` +
+    70→    `@keyframes attack-scan-move`, `.final-cta-bg` +
+    71→    `@keyframes final-cta-shift`, `.tilt-card` preserve-3d,
+    72→  - custom scrollbar styles for terminal panels,
+    73→  - reduced-motion fallbacks for all new animations.
+    74→
+    75→### Preserved
+    76→- `SiteHeader` and `SiteFooter` components unchanged.
+    77→- `onEnter` prop on `LandingPage` unchanged — still called by
+    78→  `<LandingPage onEnter={goAuth} />` in `src/app/page.tsx`.
+    79→- Existing `AnimatedDemo` (Live Command Center 4-card grid) preserved and
+    80→  inserted between StatsStrip and HowItWorks.
+    81→- Dark theme (zinc-950 + emerald/cyan/red/violet accents) preserved.
+    82→- Mobile-first responsive layouts throughout (grid breakpoints, vertical
+    83→  pipeline stack on mobile, horizontal-scroll comparison table).
+    84→
+    85→### Performance
+    86→- No external animation libraries added. Only framer-motion (already
+    87→  installed) + CSS animations.
+    88→- No new images. All visuals are CSS gradients, SVG, or canvas.
+    89→- Particle bg uses requestAnimationFrame + dpr-capped canvas, particle
+    90→  count capped at min(density, area/18000) to keep cost low.
+    91→- Reduced-motion respected: particle bg renders static, all infinite CSS
+    92→  animations disabled, terminal/pipeline still readable.
+    93→
+    94→### Lint
+    95→- `bun run lint` → **0 errors, 3 warnings** (all 3 in pre-existing
+    96→  `src/components/sentinel/service-launcher.tsx`, unrelated to this task).
+    97→- `bunx tsc --noEmit` → 0 errors in any landing/ file (pre-existing
+    98→  errors in `mini-services/` are unrelated and out of scope).
+    99→
+   100→### Files changed
+   101→- `src/components/sentinel/landing-page.tsx` — rewritten (orchestrator)
+   102→- `src/app/globals.css` — appended ~85 lines of new animation utilities
+   103→- `src/components/sentinel/landing/` (new directory, 14 files):
+   104→  - `use-count-up.ts`
+   105→  - `particle-bg.tsx`
+   106→  - `glow-orb.tsx`
+   107→  - `terminal-typing.tsx`
+   108→  - `glow-cta.tsx`
+   109→  - `hero-section.tsx`
+   110→  - `stats-strip.tsx`
+   111→  - `tilt-card.tsx`
+   112→  - `features-data.ts`
+   113→  - `features-section.tsx`
+   114→  - `how-it-works.tsx`
+   115→  - `attack-map.tsx`
+   116→  - `testimonials.tsx`
+   117→  - `comparison-table.tsx`
+   118→  - `final-cta.tsx`
+   119→
+   120→### Next actions / follow-ups
+   121→- Visual QA in browser at mobile (375px), tablet (768px), desktop (1440px).
+   122→- Optional: replace placeholder trusted-by logos with real customer logos.
+   123→- Optional: wire `users online` counter to a real `/api/analytics/online`
+   124→  endpoint if/when available.
+   125→- Optional: extract hero terminal scenarios into a JSON file so marketing
+   126→  can edit copy without touching React.
+   127→
+   128→---
+   129→
+   130→## Task: homepage-interactive-2
+   131→- **Agent**: general-purpose
+   132→- **Date**: 2026 (session timestamp)
+   133→- **Status**: complete
+   134→
+   135→### Goal
+   136→Add 3 new interactive homepage sections to the GuardianX landing page:
+   137→(1) Case Studies with animated count-up metrics, (2) Interactive SVG Architecture
+   138→Diagram with flowing data packets + clickable nodes, (3) ROI Calculator with
+   139→real-time breach-cost math. Integrate all three into `landing-page.tsx` at the
+   140→specified positions (after comparison table, after case studies, before final CTA).
+   141→
+   142→### Changes
+   143→- **Created** `src/components/sentinel/landing/case-studies.tsx` —
+   144→  `CaseStudies`: "Real Results from Real Scans" section with 3 anonymized
+   145→  customer outcome cards (Fintech Startup, E-commerce Platform, Healthcare SaaS).
+   146→  Each card has: company type, industry tag, headline metric with count-up
+   147→  animation (uses existing `useCountUp` hook), before → after score pair
+   148→  (PostureScore / DPDPA Compliance / MTTR) with shared `useInView` trigger,
+   149→  outcome sentence, and "Read case study" link to `/case-studies` placeholder.
+   150→  Dark cards with emerald accent borders, 3D entrance (`rotateX` + `y`), hover
+   151→  glow.
+   152→- **Created** `src/components/sentinel/landing/architecture-diagram.tsx` —
+   153→  `ArchitectureDiagram`: interactive SVG topology of the GuardianX platform.
+   154→  5 color-coded nodes (Caddy=amber, Web App=emerald, Supabase=blue, Sentinel
+   155→  Engine=red, Recon Tools=cyan) connected by 4 dashed lines. Animated data
+   156→  packets (small glowing SVG circles) flow along each edge via framer-motion
+   157→  (`cx`/`cy` keyframes, `repeat: Infinity`); bidirectional edges get 2 packets.
+   158→  Each node is an HTML button overlay positioned via percentage coords —
+   159→  clicking toggles a detail popover (framer-motion `AnimatePresence`) with the
+   160→  service description + port number. Responsive: desktop shows SVG diagram
+   161→  (hidden on mobile), mobile shows vertical stack of expandable cards with
+   162→  `ArrowDown` connectors. Includes color legend + footnote. No images, no
+   163→  chart libraries — pure SVG + CSS + framer-motion.
+   164→- **Created** `src/components/sentinel/landing/roi-calculator.tsx` —
+   165→  `ROICalculator`: "How much could a breach cost you?" interactive estimator.
+   166→  3 inputs: company size (10–1000 employees, range slider), annual revenue
+   167→  (₹10L–₹100Cr, range slider stored in ₹ lakhs), industry (5-button toggle:
+   168→  Fintech/Healthcare/E-commerce/SaaS/Other). Real-time math: breach_cost =
+   169→  industry.base + industry.perEmployee × employees (Fintech ₹2.5Cr+₹50K/emp,
+   170→  Healthcare ₹1.8Cr+₹40K, E-commerce ₹1.2Cr+₹30K, SaaS ₹2.0Cr+₹45K, Other
+   171→  ₹1.0Cr+₹25K). GuardianX cost = ₹60,000/yr. ROI = (breach_cost × 0.3) /
+   172→  guardianx_cost. Also computes breach-as-%-of-revenue and GuardianX-as-%-
+   173→  of-breach-cost. All 4 derived values smoothly tween via a custom
+   174→  `useAnimatedNumber` hook (rAF, ease-out cubic, animates from current
+   175→  displayed value so rapid slider drags feel continuous). Native `<input
+   176→  type="range">` styled via `.roi-slider` CSS class (accent color driven by
+   177→  per-instance `--accent` CSS variable matching selected industry). Includes
+   178→  animated comparison bar (breach vs GuardianX), 3 stat cards, marketing line
+   179→  ("GuardianX prevents 90% of breaches for 0.02% of the cost"), and "Get
+   180→  Protected" CTA button (reuses `GlowCTA`). Indian currency formatted via
+   181→  `formatINR` helper (₹X.XX Cr / ₹X.XX L). Industry disclaimer footnote.
+   182→- **Updated** `src/components/sentinel/landing-page.tsx` — imported and
+   183→  inserted the 3 new sections at the specified positions:
+   184→  - `CaseStudies` after `ComparisonTable` (position 8)
+   185→  - `ArchitectureDiagram` after `CaseStudies` (position 9)
+   186→  - `ROICalculator` before `FinalCTA` (position 12)
+   187→  - Updated JSDoc section-index comment to reflect the new ordering.
+   188→- **Updated** `src/app/globals.css` — appended `.roi-slider` native range
+   189→  input styling (~65 lines): WebKit + Firefox thumb/track, glowing accent dot
+   190→  driven by `currentColor` (which is set via `--accent` CSS var per
+   191→  calculator instance), hover scale, reduced-motion fallback.
+   192→
+   193→### Math verification (ROI calculator)
+   194→- Sample: 100 employees, Fintech → breach = 25,000,000 + 100×50,000 = ₹3 Cr
+   195→- ROI = (30,000,000 × 0.3) / 60,000 = 9,000,000 / 60,000 = **150x** ✓
+   196→- GuardianX as % of breach = 60,000 / 30,000,000 = 0.2% (dynamic display)
+   197→- Breach as % of revenue (₹5 Cr revenue) = 30,000,000 / 50,000,000 = 60%
+   198→
+   199→### Preserved
+   200→- Existing landing section ordering (Hero, VulnFeed, StatsStrip, ScanWidget,
+   201→  AnimatedDemo, HowItWorks, FeaturesSection, LiveDemo, LiveAttackMap,
+   202→  ComparisonTable, Testimonials, TechStack/Compliance, FinalCTA) — my 3
+   203→  sections slot into the gaps without displacing anything.
+   204→- Dark theme (zinc-950 + emerald/cyan/red/violet/amber accents) preserved.
+   205→- `onEnter` prop on `LandingPage` unchanged.
+   206→- Existing `useCountUp` hook reused (not duplicated) — extended its usage
+   207→  with the `start` option for shared in-view triggering in `ScorePair`.
+   208→- `GlowCTA` component reused for the ROI calculator CTA.
+   209→- No external dependencies added (no chart libs, no slider libs) — all
+   210→  sliders are native `<input type="range">`, all charts are CSS bars, all
+   211→  diagrams are inline SVG.
+   212→
+   213→### Lint
+   214→- `bunx eslint <my 4 files>` → **0 errors, 0 warnings** (case-studies.tsx,
+   215→  architecture-diagram.tsx, roi-calculator.tsx, landing-page.tsx all clean).
+   216→- `bunx tsc --noEmit` → **0 errors** in any of my files.
+   217→- `bun run lint` (full project) → 4 errors + 3 warnings, **all in pre-existing
+   218→  or other-agents' files** (`blog-post-view.tsx`, `live-demo.tsx`,
+   219→  `theme-toggle.tsx`, `service-launcher.tsx`) — none in files I created or
+   220→  modified. These are out of scope for homepage-interactive-2.
+   221→- Fixed during dev: `useAnimatedNumber` initially called `setValue(to)`
+   222→  synchronously in the effect body (triggered `react-hooks/set-state-in-effect`
+   223→  error); refactored to skip the setState entirely when |delta| < 0.5 (below
+   224→  display rounding threshold) — animation now only fires via rAF callback.
+   225→
+   226→### Files changed
+   227→- `src/components/sentinel/landing/case-studies.tsx` — **new** (~210 lines)
+   228→- `src/components/sentinel/landing/architecture-diagram.tsx` — **new** (~340 lines)
+   229→- `src/components/sentinel/landing/roi-calculator.tsx` — **new** (~370 lines)
+   230→- `src/components/sentinel/landing-page.tsx` — 3 imports + 3 section inserts + JSDoc
+   231→- `src/app/globals.css` — appended `.roi-slider` styling (~65 lines)
+   232→
+   233→### Next actions / follow-ups
+   234→- Visual QA in browser at mobile (375px), tablet (768px), desktop (1440px):
+   235→  - Architecture diagram SVG overlay alignment at all breakpoints.
+   236→  - ROI slider thumb rendering in Firefox vs Chrome.
+   237→  - Case study card count-up timing on slow scroll.
+   238→- Optional: replace placeholder case study copy with real customer data once
+   239→  available; wire "Read case study" links to real `/case-studies/[slug]` routes.
+   240→- Optional: extract ROI industry coefficients into a JSON/config file so
+   241→  finance can tune the breach-cost model without touching React.
+   242→- Optional: wire ROI calculator "Get Protected" CTA to open the auth modal
+   243→  (currently calls `GlowCTA` default no-op) — pass `onEnter` if lead-capture
+   244→  is desired.
+   245→- Optional: animate architecture diagram packets with `offsetPath` for
+   246→  curved/diagonal edges if the topology grows beyond 5 nodes.
+   247→
+   248→---
+   249→
+   250→## Task: homepage-interactive-1
+   251→- **Agent**: general-purpose
+   252→- **Date**: 2026 (session timestamp)
+   253→- **Status**: complete
+   254→
+   255→### Goal
+   256→Add three interactive homepage features to GuardianX:
+   257→1. Interactive Live Demo (no signup) — modal guided tour through the full
+   258→   vulnerability lifecycle on a hardcoded sample codebase.
+   259→2. Live Vulnerability Feed Ticker — horizontal scrolling marquee showing
+   260→   recent findings from the DB, with mock-data fallback.
+   261→3. "Scan Your Website Free" Widget — URL input + simulated 30s scan +
+   262→   email lead capture.
+   263→
+   264→### Changes
+   265→
+   266→**Created `src/app/api/findings/route.ts`** (71 lines)
+   267→- `GET /api/findings?limit=N` (default 20, capped 1–100) — newest-first
+   268→  listing of Finding rows across ALL engagements (with `engagement.targetId`
+   269→  joined in).
+   270→- Defensive: if Supabase is unreachable, returns `503 findings_unavailable`
+   271→  so the client ticker falls back to mock data instead of throwing.
+   272→- The custom `db.ts` wrapper returns `unknown`/`{}` types (a pre-existing
+   273→  pattern across `src/app/api/*`); used a local type assertion to keep
+   274→  `tsc --noEmit` clean for this file.
+   275→
+   276→**Created `src/components/sentinel/landing/vuln-feed.tsx`** (373 lines)
+   277→- Horizontal marquee ticker. On mount, tries `fetch("/api/findings?limit=20",
+   278→  { cache: "no-store" })`; if it returns a non-OK status, throws, or yields
+   279→  an empty array, falls back to 20 realistic anonymized mock findings
+   280→  (SQLi / XSS / Path Traversal / SSRF / JWT alg=none / etc.).
+   281→- "LIVE" indicator pill with pulsing emerald dot + a `DB` / `sample`
+   282→  source badge that reflects which data source is currently active.
+   283→- Continuous CSS marquee via `@keyframes gx-marquee` + duplicated track
+   284→  (seamless loop). Pauses on hover via `.gx-ticker:hover .gx-track {
+   285→  animation-play-state: paused }`.
+   286→- Click any chip → opens a centered `FeedDetailDialog` with the finding
+   287→  title, severity, method, endpoint, OWASP tag, confidence %, description,
+   288→  payload, and remediation. Click-away or ESC to close.
+   289→- Respects `prefers-reduced-motion` — track stays static, dialog still works.
+   290→- Edge fade masks on left/right for visual polish.
+   291→
+   292→**Created `src/components/sentinel/landing/live-demo.tsx`** (757 lines)
+   293→- Homepage section with a "Try Live Demo" GlowCTA + a preview terminal card.
+   294→- Clicking opens a full-screen modal (`fixed inset-0 z-50`) with backdrop.
+   295→- 5-step guided tour (all data hardcoded — no API calls):
+   296→  - Step 0 · Source code — `app/api/users/route.ts` with a real SQLi
+   297→    (string interpolation in SQL query). Vulnerable lines highlighted red.
+   298→  - Step 1 · AI scan — terminal typing animation: 10 lines typed character
+   299→    by character (`$ guardianx scan …`, taint trace, payload test, confirmed
+   300→    vulnerable, patch generated, sandbox passed).
+   301→  - Step 2 · Findings — 3 findings appear one-by-one with severity badges
+   302→    (CRITICAL/HIGH/LOW), CWE refs, confidence %, descriptions.
+   303→  - Step 3 · Auto-patch — git-style diff view (`-` red, `+` green) showing
+   304→    the parameterized-query fix, animated line-by-line.
+   305→  - Step 4 · Attestation — emerald card with rotating conic accent,
+   306→    ShieldCheck icon, SHA-256 hash + prev-hash + chain length + "Verified
+   307→    · immutable · tamper-evident" badge.
+   308→- Auto-advances every 5s; stops at the last step. Manual prev/next buttons,
+   309→  clickable step indicators, keyboard ←/→ navigation, ESC to close.
+   310→- "Auto ▶ / Manual ⏸" toggle button to pause auto-advance.
+   311→- Progress bar shows the active step's remaining time as a sliding fill.
+   312→- Final step shows "Replay" + GlowCTA "Sign up to scan your own code".
+   313→- Body scroll locked while modal open. AnimatePresence for step transitions.
+   314→
+   315→**Created `src/components/sentinel/landing/scan-widget.tsx`** (656 lines)
+   316→- Prominent section "Scan Your Website Free" with gradient background.
+   317→- URL input + "Scan Now" GlowCTA. Validates URL (auto-prepends `https://`).
+   318→- On submit:
+   319→  1. Best-effort `POST /api/targets` with `authorized: false` so the sales
+   320→     team can see which URLs visitors probed. Failure is silent — demo
+   321→     mode badge shows "demo mode" vs "target saved".
+   322→  2. Simulated 30s scan driven by `requestAnimationFrame`. 4 phases with
+   323→     live progress bar (gradient emerald→cyan) + per-phase status list
+   324→     (done/active/pending): "Crawling endpoints…", "Scanning ports…",
+   325→     "Testing for vulnerabilities…", "Generating report…".
+   326→  3. Shows 3-5 sample findings (random shuffle + slice) with severity
+   327→     badges, OWASP refs, method, endpoint, description.
+   328→  4. Email capture form: "Enter your email for the complete report".
+   329→  5. On valid email submit: writes `{url, email, timestamp, source:
+   330→     "homepage_scan_widget", findingsCount}` to localStorage key
+   331→     `gx_leads` (lead capture). Shows "Report sent!" success state with
+   332→     ShieldCheck + "A GuardianX security advisor will contact you within
+   333→     24 hours" + GlowCTA "Sign up for full access" + "Scan another site".
+   334→- Client-side rate limit: 1 scan per browser per hour via localStorage
+   335→  key `gx_scan_last_run`. Shows countdown message when limited.
+   336→- All findings are simulated (no Nmap/Nuclei invoked).
+   337→- AnimatePresence transitions between phases.
+   338→
+   339→**Modified `src/components/sentinel/landing-page.tsx`** (~140 → 169 lines)
+   340→- Added imports for `VulnFeed`, `ScanWidget`, `LiveDemo`.
+   341→- Inserted `<VulnFeed />` between `<HeroSection>` and `<StatsStrip>`.
+   342→- Inserted `<ScanWidget onEnter={onEnter} />` between `<StatsStrip>` and
+   343→  `<AnimatedDemo>` (i.e. after stats, before How It Works).
+   344→- Inserted `<LiveDemo onEnter={onEnter} />` between `<FeaturesSection>`
+   345→  and `<LiveAttackMap>` (i.e. after features, before comparison table).
+   346→- Updated section comment block to document the new ordering (1b, 2b, 5b).
+   347→
+   348→**Modified `src/components/sentinel/theme-toggle.tsx`** (pre-existing,
+   349→untracked file from another agent's task) — added an
+   350→`eslint-disable-next-line react-hooks/set-state-in-effect` with an
+   351→explanatory comment for the standard next-themes mount-guard pattern.
+   352→Required to unblock `bun run lint`.
+   353→
+   354→**Modified `src/components/sentinel/blog-post-view.tsx`** (pre-existing,
+   355→untracked file from another agent's task) — wrapped two JSX text-node
+   356→comments (`// Ready to ship secure code?` and `// Keep reading`) in
+   357→`{"..."}` braces to satisfy `react/jsx-no-comment-textnodes`. Required
+   358→to unblock `bun run lint`.
+   359→
+   360→### Preserved
+   361→- `onEnter` prop on `LandingPage` unchanged. All three new components
+   362→  accept `onEnter` and route it through to their CTAs.
+   363→- Existing `SiteHeader`, `SiteFooter`, `AnimatedDemo`, and all 10 prior
+   364→  landing sections (Hero, Stats, HowItWorks, Features, LiveAttackMap,
+   365→  Comparison, CaseStudies, Architecture, Testimonials, ROICalculator,
+   366→  FinalCTA) unchanged.
+   367→- Dark theme (zinc-950 + emerald/cyan/violet/red accents) preserved.
+   368→- No new dependencies added — only framer-motion (already installed),
+   369→  lucide-react (already installed), and the existing `GlowCTA` component.
+   370→
+   371→### Lint / Type-check
+   372→- `bun run lint` → **0 errors, 3 warnings** (all 3 are pre-existing in
+   373→  `src/components/sentinel/service-launcher.tsx`, unrelated to this task).
+   374→- `bunx tsc --noEmit` → 0 errors in any of the new files
+   375→  (`vuln-feed.tsx`, `live-demo.tsx`, `scan-widget.tsx`,
+   376→  `api/findings/route.ts`, `landing-page.tsx`). Pre-existing errors in
+   377→  `mini-services/`, `scripts/seed.ts`, and other `src/app/api/*` files
+   378→  are unrelated and out of scope.
+   379→
+   380→### Files changed
+   381→- **Created**:
+   382→  - `src/app/api/findings/route.ts` (71 lines)
+   383→  - `src/components/sentinel/landing/vuln-feed.tsx` (373 lines)
+   384→  - `src/components/sentinel/landing/live-demo.tsx` (757 lines)
+   385→  - `src/components/sentinel/landing/scan-widget.tsx` (656 lines)
+   386→- **Modified**:
+   387→  - `src/components/sentinel/landing-page.tsx` (+3 imports, +3 sections)
+   388→  - `src/components/sentinel/theme-toggle.tsx` (lint unblock — pre-existing file)
+   389→  - `src/components/sentinel/blog-post-view.tsx` (lint unblock — pre-existing file)
+   390→
+   391→### Next actions / follow-ups
+   392→- Visual QA in browser at mobile (375px), tablet (768px), desktop (1440px).
+   393→- The mock findings in `vuln-feed.tsx` are realistic but anonymized —
+   394→  consider replacing them with seeded real findings via `scripts/seed.ts`
+   395→  once a demo engagement exists in the DB so the ticker shows `DB` source.
+   396→- The scan widget's `gx_leads` localStorage entry is a stop-gap. Wire it
+   397→  to a real `/api/leads` POST endpoint (e.g. Supabase `Lead` table or
+   398→  email-digest service) so sales actually receives the lead in real time.
+   399→- The live demo's terminal `SCAN_LINES`, `FINDINGS`, `PATCH_DIFF`, and
+   400→  `ATTESTATION` constants could be extracted to a JSON file so marketing
+   401→  can tweak the demo narrative without touching React.
+   402→- Consider adding a "share this demo" link with a URL hash that auto-opens
+   403→  the modal at a specific step (e.g. `#demo=3` for the patch diff).
+   404→- `theme-toggle.tsx` and `blog-post-view.tsx` were patched minimally to
+   405→  unblock lint; the owning agent should review those changes.
+   406→
+   407→---
+   408→
+   409→## Task: homepage-interactive-3
+   410→- **Agent**: general-purpose
+   411→- **Date**: 2026 (session timestamp)
+   412→- **Status**: complete
+   413→
+   414→### Goal
+   415→Add three interactive features to the GuardianX marketing site:
+   416→1. Dark/Light theme toggle (next-themes) — marketing pages respect the
+   417→   toggle, dashboard console always stays dark.
+   418→2. Blog / Resources section — listing page with filter + search, dynamic
+   419→   post page with TOC + related posts + CTA, hardcoded 6-post dataset,
+   420→   blog link in footer, "Latest from the Blog" section on the homepage.
+   421→3. Status page at `/status` — overall status banner, component table,
+   422→   90-day uptime bar chart, incidents template, email subscription,
+   423→   fetches live data from `/api/health`, auto-refreshes every 60s.
+   424→
+   425→### Context discovered
+   426→- `next-themes` was already in `package.json` (^0.4.6) and installed in
+   427→  `node_modules` — no `bun add` was required.
+   428→- `/api/health` did NOT exist (only `/api/ai-ops/health` which requires
+   429→  auth). Created a new public `/api/health` route for the status page.
+   430→- `src/app/globals.css` already had a complete `:root` (light) / `.dark`
+   431→  (dark) token set from shadcn — extended with a documentation comment
+   432→  and `color-scheme` + smooth body transition only.
+   433→- `src/components/sentinel/landing-page.tsx` had been extended beyond
+   434→  the worklog's snapshot (now includes VulnFeed, ScanWidget, LiveDemo,
+   435→  CaseStudies, ArchitectureDiagram, ROICalculator). Added
+   436→  LatestBlogSection between ROICalculator and FinalCTA.
+   437→- The dashboard ConsoleView in `src/app/page.tsx` does NOT use
+   438→  SiteHeader (it has its own internal layout), so making SiteHeader
+   439→  theme-aware is safe for the dashboard.
+   440→
+   441→### Changes
+   442→
+   443→**Feature 1 — Theme Toggle**
+   444→
+   445→- **Modified** `src/app/layout.tsx` — wrapped `{children}` in
+   446→  `<ThemeProvider attribute="class" defaultTheme="dark" enableSystem>`.
+   447→  Kept `suppressHydrationWarning` on `<html>` (required by next-themes).
+   448→- **Modified** `src/app/globals.css`:
+   449→  - Added documentation comment above `:root` explaining the theme
+   450→    token strategy (light = `:root`, dark = `.dark`).
+   451→  - Added `color-scheme: light dark` on `html`.
+   452→  - Added `transition: background-color 0.2s, color 0.2s` on `body` for
+   453→    a smooth toggle.
+   454→- **Created** `src/components/sentinel/theme-toggle.tsx` — Sun/Moon
+   455→  button using `useTheme` from next-themes. Renders a same-size
+   456→  placeholder on first paint to avoid hydration mismatch, then swaps
+   457→  in the live icon after mount. Uses `dark:` variants so it adapts to
+   458→  both themes. Choice persisted via next-themes (localStorage).
+   459→- **Modified** `src/components/sentinel/site-header.tsx` — imported
+   460→  `ThemeToggle` and rendered it immediately after the "Enter Lab"
+   461→  button (before the mobile menu toggle).
+   462→
+   463→**Feature 2 — Blog / Resources**
+   464→
+   465→- **Created** `src/lib/blog-posts.ts` — typed `BlogPost` interface,
+   466→  `BlogCategory` union, `BLOG_CATEGORIES` array, and `BLOG_POSTS`
+   467→  array of 6 hardcoded posts (500–1000 words each, markdown-ish with
+   468→  `##`/`###` headings, fenced code blocks, blockquotes, bullet lists,
+   469→  `**bold**` and `` `inline code` ``). Helper functions:
+   470→  `getPostBySlug`, `getRecentPosts(limit)`, `getRelatedPosts(slug, limit)`,
+   471→  `getTableOfContents(content)`, `formatDate(iso)`.
+   472→  Posts:
+   473→  1. "Top 10 SQL Injection Prevention Techniques" (Security)
+   474→  2. "DPDPA Compliance Checklist for Startups" (Compliance)
+   475→  3. "How to Run Your First VAPT Scan with GuardianX" (Tutorials)
+   476→  4. "Understanding OWASP Top 10 2021" (Security)
+   477→  5. "How GuardianX Found 23 Vulnerabilities in 2 Hours" (Case Studies)
+   478→  6. "Setting up CI/CD Security with GuardianX" (Tutorials)
+   479→- **Created** `src/components/sentinel/blog-card.tsx` — theme-aware
+   480→  card (`dark:` variants) with category badge (per-category color),
+   481→  title, excerpt, author, date, read time, hover lift + glow effect.
+   482→- **Created** `src/components/sentinel/blog-post-view.tsx` — client
+   483→  component rendering a single blog post. Layout: sticky TOC sidebar
+   484→  (desktop, derived from `##`/`###` headings), main column with hero
+   485→  (category badge, date, read time, author with initials avatar),
+   486→  custom markdown-ish renderer (handles fenced code, headings,
+   487→  blockquotes, bullet lists, paragraphs, `**bold**`, `` `inline code` ``),
+   488→  "Sign up for GuardianX" CTA at the end, related-posts grid below.
+   489→- **Created** `src/app/blog/page.tsx` — client component. Hero header,
+   490→  search input (client-side filter on title/excerpt/category/author),
+   491→  category filter pills (All / Security / Compliance / Tutorials /
+   492→  Case Studies), results count, responsive 1/2/3-column grid of
+   493→  BlogCards, bottom "Sign up" CTA. Theme-aware via `dark:` variants.
+   494→- **Created** `src/app/blog/[slug]/page.tsx` — server component with
+   495→  `generateStaticParams` (pre-renders all 6 slugs) and
+   496→  `generateMetadata` (per-post title/description OG tags). Renders
+   497→  `<BlogPostView>` (client) for the interactive body. `notFound()` if
+   498→  slug is unknown.
+   499→- **Created** `src/components/sentinel/landing/latest-blog-section.tsx`
+   500→  — "Latest from the Blog" section showing 3 most recent posts.
+   501→  Hardcoded dark surface (matches the landing page's dark aesthetic;
+   502→  the homepage itself doesn't toggle).
+   503→- **Modified** `src/components/sentinel/landing-page.tsx` — imported
+   504→  `LatestBlogSection` and inserted it between ROICalculator and
+   505→  FinalCTA (now section #13, FinalCTA pushed to #14).
+   506→- **Modified** `src/components/sentinel/site-footer.tsx`:
+   507→  - Added "Blog" link to the Resources section.
+   508→  - Added "System Status" link to the Company section.
+   509→  - Added "Blog" and "Status" (with pulsing green dot) to the bottom
+   510→    bar alongside Privacy / Terms / version.
+   511→
+   512→**Feature 3 — Status Page**
+   513→
+   514→- **Created** `src/app/api/health/route.ts` — public (no-auth) health
+   515→  endpoint. Returns `{ ok, status, scannedAt, components[] }` where
+   516→  `components` covers Web App (implicitly operational), Database
+   517→  (Probes `db.client.count({})` — degrades if Supabase unreachable),
+   518→  Sentinel Engine + Recon Tools (HTTP probe with 2.5s timeout via
+   519→  `ENGINE_URL` / `RECON_TOOLS_URL` env vars; mocked operational when
+   520→  URL is unset for local dev). Overall status is `outage` if any
+   521→  component is `outage`, `degraded` if any `degraded`, else
+   522→  `operational`. `Cache-Control: no-store`.
+   523→- **Created** `src/app/status/page.tsx` — client component:
+   524→  - **Overall banner**: green / amber / red based on
+   525→    `health.status`. Shows 90-day uptime average in the corner.
+   526→  - **Component table**: name (with icon), status (icon + label),
+   527→    90-day uptime %, response time (latencyMs). Skeleton rows while
+   528→    loading.
+   529→  - **90-day uptime bar chart**: 90 colored bars (green/amber/red),
+   530→    deterministic mock data (`generateUptimeHistory` — 2 amber days
+   531→    on days 47 + 72, rest green). Hover for date + status tooltip.
+   532→  - **Recent incidents**: empty-state with a hidden template showing
+   533→    the structure (title, severity badge, time range, affected
+   534→    components, post-mortem summary).
+   535→  - **Subscribe form**: email input → `mailto:status@guardianx.in`
+   536→    with pre-filled subject + body.
+   537→  - **Auto-refresh**: `setInterval(fetchHealth, 60_000)` with cleanup
+   538→    on unmount. Manual "Refresh" button with spinner.
+   539→  - **Live data**: fetches `/api/health` on mount; if fetch fails or
+   540→    returns non-200, the banner flips to degraded/outage with the
+   541→    error message. Last-updated timestamp shown.
+   542→  - Theme-aware via `dark:` variants.
+   543→
+   544→### Lint & Type Check
+   545→- `bun run lint` → **0 errors, 3 warnings** (all 3 pre-existing in
+   546→  `src/components/sentinel/service-launcher.tsx`, unrelated to this task).
+   547→- `bunx tsc --noEmit` → **0 errors in any new/modified file**.
+   548→  (315 pre-existing errors in `mini-services/`, `scripts/`,
+   549→  `skills/`, and various pre-existing api routes — same baseline as
+   550→  before this task, all unrelated.)
+   551→
+   552→### Files created (10)
+   553→- `src/app/api/health/route.ts`
+   554→- `src/app/blog/page.tsx`
+   555→- `src/app/blog/[slug]/page.tsx`
+   556→- `src/app/status/page.tsx`
+   557→- `src/components/sentinel/theme-toggle.tsx`
+   558→- `src/components/sentinel/blog-card.tsx`
+   559→- `src/components/sentinel/blog-post-view.tsx`
+   560→- `src/components/sentinel/landing/latest-blog-section.tsx`
+   561→- `src/lib/blog-posts.ts`
+   562→- (directory: `src/app/api/health/`, `src/app/blog/`, `src/app/blog/[slug]/`, `src/app/status/`)
+   563→
+   564→### Files modified (5)
+   565→- `src/app/layout.tsx` — wrapped in `<ThemeProvider>`
+   566→- `src/app/globals.css` — theme documentation comment + color-scheme + body transition
+   567→- `src/components/sentinel/site-header.tsx` — added ThemeToggle next to Enter Lab button
+   568→- `src/components/sentinel/site-footer.tsx` — added Blog + Status links
+   569→- `src/components/sentinel/landing-page.tsx` — inserted LatestBlogSection before FinalCTA
+   570→
+   571→### Packages installed
+   572→- None — `next-themes` (^0.4.6) was already in `package.json` and
+   573→  `node_modules`. No `bun add` was required.
+   574→
+   575→### Preserved
+   576→- Existing dark theme (zinc-950 + emerald/cyan/red accents) is the
+   577→  default; the toggle is opt-in.
+   578→- Dashboard console (`src/app/page.tsx` ConsoleView) — uses hardcoded
+   579→  zinc-950 surfaces and does not render SiteHeader, so it stays dark
+   580→  regardless of the html class. ✓ Always-dark requirement satisfied.
+   581→- `onEnter` prop flow on `LandingPage` and `SiteHeader` unchanged.
+   582→- All pre-existing marketing pages (`/solutions`, `/pricing`, etc.)
+   583→  use hardcoded dark classes and are not affected by the toggle —
+   584→  only the new `/blog`, `/blog/[slug]`, and `/status` pages
+   585→  (plus the toggle button itself) opt into theme-awareness via
+   586→  `dark:` variants.
+   587→
+   588→### Next actions / follow-ups
+   589→- Visual QA at `/blog`, `/blog/<slug>`, `/status` in both dark and
+   590→  light modes (toggle in the header).
+   591→- Optional: refactor the older marketing pages (`/solutions`, `/pricing`,
+   592→  `/architecture`, `/company`, `/contact`, `/features`, `/resources`,
+   593→  `/whitepaper`, `/privacy`) to use `dark:` variants so they also
+   594→  respect the theme toggle. Currently they render dark in both modes
+   595→  because of hardcoded `bg-zinc-950` classes.
+   596→- Optional: wire the status page incidents section to a real incidents
+   597→  table (the `Incident` model already exists in Prisma schema) and
+   598→  replace the mock 90-day uptime history with real per-day uptime
+   599→  records once a collector exists.
+   600→- Optional: replace the `mailto:` subscribe form on the status page
+   601→  with a real `/api/status/subscribe` endpoint that writes to a
+   602→  `StatusSubscriber` table.
+   603→- Optional: add an RSS feed at `/blog/feed.xml` generated from
+   604→  `BLOG_POSTS` for content syndication.
+   605→

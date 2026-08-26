@@ -1,0 +1,712 @@
+     1→// GuardianX Outbound Connectors - 20 additional integration targets.
+     2→//
+     3→// Each entry is a ConnectorSchema (see ./engine.ts) with a `send`
+     4→// implementation that performs the actual HTTP call. These complement
+     5→// the 9 built-in connectors in engine.ts.
+     6→//
+     7→// Connector categories follow the engine.ts ConnectorCategory union.
+     8→// We deliberately DO NOT use any HTTP libraries beyond the global
+     9→// `fetch` - each send() is a single awaitable POST/PUT with a short
+    10→// timeout and structured error reporting.
+    11→
+    12→import type { ConnectorSchema, SecurityEvent, ConnectorSendResult } from "./engine";
+    13→
+    14→// Helper: convert a SecurityEvent into a generic alert payload that
+    15→// most notification/ITSM systems can consume.
+    16→function toAlertPayload(event: SecurityEvent): Record<string, unknown> {
+    17→  return {
+    18→    title: event.title,
+    19→    description: event.description || event.title,
+    20→    severity: event.severity,
+    21→    type: event.type,
+    22→    source: event.source,
+    23→    occurredAt: event.occurredAt || new Date().toISOString(),
+    24→    details: event.data || {},
+    25→  };
+    26→}
+    27→
+    28→// Severity color palette (hex without #) for chat-style connectors.
+    29→function severityColor(sev: SecurityEvent["severity"]): string {
+    30→  switch (sev) {
+    31→    case "critical": return "#FF0000";
+    32→    case "high": return "#FF8C00";
+    33→    case "medium": return "#FFD700";
+    34→    case "low": return "#00BFFF";
+    35→    default: return "#36A64F";
+    36→  }
+    37→}
+    38→
+    39→export const outboundConnectors: ConnectorSchema[] = [
+    40→  // 1. WhatsApp (via Twilio sandbox / Business API)
+    41→  {
+    42→    id: "whatsapp",
+    43→    name: "WhatsApp (Twilio)",
+    44→    category: "Collaboration",
+    45→    direction: "outbound",
+    46→    description: "Send critical security alerts to a WhatsApp number via Twilio.",
+    47→    icon: "MessageCircle",
+    48→    configFields: [
+    49→      { key: "accountSid", label: "Twilio Account SID", type: "string", required: true },
+    50→      { key: "authToken", label: "Twilio Auth Token", type: "password", required: true },
+    51→      { key: "fromNumber", label: "From WhatsApp Number", type: "string", required: true, placeholder: "whatsapp:+14155238886" },
+    52→      { key: "toNumber", label: "To WhatsApp Number", type: "string", required: true, placeholder: "whatsapp:+15551234567" },
+    53→    ],
+    54→    async send(config, event): Promise<ConnectorSendResult> {
+    55→      const sid = String(config.accountSid || "");
+    56→      const token = String(config.authToken || "");
+    57→      if (!sid || !token) return { ok: false, detail: "Missing accountSid or authToken" };
+    58→      const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
+    59→      const body = new URLSearchParams({
+    60→        From: String(config.fromNumber || ""),
+    61→        To: String(config.toNumber || ""),
+    62→        Body: `[${event.severity.toUpperCase()}] ${event.title}\n\n${event.description || ""}`.slice(0, 1500),
+    63→      });
+    64→      const res = await fetch(url, {
+    65→        method: "POST",
+    66→        headers: {
+    67→          Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
+    68→          "Content-Type": "application/x-www-form-urlencoded",
+    69→        },
+    70→        body: body.toString(),
+    71→        signal: AbortSignal.timeout(10_000),
+    72→      });
+    73→      const data = await res.json().catch(() => null);
+    74→      return { ok: res.ok, status: res.status, externalId: data?.sid, detail: res.ok ? "sent" : `HTTP ${res.status}` };
+    75→    },
+    76→  },
+    77→
+    78→  // 2. Telegram
+    79→  {
+    80→    id: "telegram",
+    81→    name: "Telegram",
+    82→    category: "Collaboration",
+    83→    direction: "outbound",
+    84→    description: "Push alerts to a Telegram chat via bot.",
+    85→    icon: "Send",
+    86→    configFields: [
+    87→      { key: "botToken", label: "Bot Token", type: "password", required: true },
+    88→      { key: "chatId", label: "Chat ID", type: "string", required: true, helpText: "Use @userinfobot to find your chat ID." },
+    89→    ],
+    90→    async send(config, event): Promise<ConnectorSendResult> {
+    91→      const token = String(config.botToken || "");
+    92→      const chatId = String(config.chatId || "");
+    93→      if (!token || !chatId) return { ok: false, detail: "Missing botToken or chatId" };
+    94→      const text = `*[${event.severity.toUpperCase()}] ${event.title}*\n\n${event.description || ""}\n\nSource: ${event.source}`;
+    95→      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    96→        method: "POST",
+    97→        headers: { "Content-Type": "application/json" },
+    98→        body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
+    99→        signal: AbortSignal.timeout(10_000),
+   100→      });
+   101→      const data = await res.json().catch(() => null);
+   102→      return { ok: res.ok && data?.ok, status: res.status, externalId: data?.result?.message_id?.toString(), detail: res.ok ? "sent" : `HTTP ${res.status}` };
+   103→    },
+   104→  },
+   105→
+   106→  // 3. Email (SMTP via SendGrid API)
+   107→  {
+   108→    id: "email",
+   109→    name: "Email (SendGrid)",
+   110→    category: "Alerting & Notification",
+   111→    direction: "outbound",
+   112→    description: "Send HTML email alerts through SendGrid.",
+   113→    icon: "Mail",
+   114→    configFields: [
+   115→      { key: "apiKey", label: "SendGrid API Key", type: "password", required: true },
+   116→      { key: "from", label: "From Address", type: "string", required: true, placeholder: "alerts@guardianx.io" },
+   117→      { key: "to", label: "To Address(es)", type: "string", required: true, placeholder: "soc@client.com, ciso@client.com" },
+   118→    ],
+   119→    async send(config, event): Promise<ConnectorSendResult> {
+   120→      const apiKey = String(config.apiKey || "");
+   121→      if (!apiKey) return { ok: false, detail: "Missing apiKey" };
+   122→      const tos = String(config.to || "").split(",").map((s) => s.trim()).filter(Boolean).map((email) => ({ email }));
+   123→      const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+   124→        method: "POST",
+   125→        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+   126→        body: JSON.stringify({
+   127→          personalizations: [{ to: tos }],
+   128→          from: { email: String(config.from || "alerts@guardianx.io") },
+   129→          subject: `[${event.severity.toUpperCase()}] ${event.title}`.slice(0, 100),
+   130→          content: [{ type: "text/html", value: `<h2>${event.title}</h2><p><b>Severity:</b> ${event.severity}</p><p>${event.description || ""}</p><pre>${JSON.stringify(event.data || {}, null, 2)}</pre>` }],
+   131→        }),
+   132→        signal: AbortSignal.timeout(15_000),
+   133→      });
+   134→      return { ok: res.ok, status: res.status, detail: res.ok ? "sent" : `HTTP ${res.status}` };
+   135→    },
+   136→  },
+   137→
+   138→  // 4. SMS (Twilio)
+   139→  {
+   140→    id: "sms",
+   141→    name: "SMS (Twilio)",
+   142→    category: "Alerting & Notification",
+   143→    direction: "outbound",
+   144→    description: "Send critical alerts as SMS via Twilio.",
+   145→    icon: "Phone",
+   146→    configFields: [
+   147→      { key: "accountSid", label: "Twilio Account SID", type: "string", required: true },
+   148→      { key: "authToken", label: "Twilio Auth Token", type: "password", required: true },
+   149→      { key: "fromNumber", label: "From Number", type: "string", required: true, placeholder: "+15551234567" },
+   150→      { key: "toNumber", label: "To Number", type: "string", required: true, placeholder: "+15557654321" },
+   151→    ],
+   152→    async send(config, event): Promise<ConnectorSendResult> {
+   153→      const sid = String(config.accountSid || "");
+   154→      const token = String(config.authToken || "");
+   155→      if (!sid || !token) return { ok: false, detail: "Missing accountSid or authToken" };
+   156→      const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
+   157→      const body = new URLSearchParams({
+   158→        From: String(config.fromNumber || ""),
+   159→        To: String(config.toNumber || ""),
+   160→        Body: `[${event.severity.toUpperCase()}] ${event.title}`.slice(0, 160),
+   161→      });
+   162→      const res = await fetch(url, {
+   163→        method: "POST",
+   164→        headers: {
+   165→          Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
+   166→          "Content-Type": "application/x-www-form-urlencoded",
+   167→        },
+   168→        body: body.toString(),
+   169→        signal: AbortSignal.timeout(10_000),
+   170→      });
+   171→      return { ok: res.ok, status: res.status, detail: res.ok ? "sent" : `HTTP ${res.status}` };
+   172→    },
+   173→  },
+   174→
+   175→  // 5. Discord
+   176→  {
+   177→    id: "discord",
+   178→    name: "Discord",
+   179→    category: "Collaboration",
+   180→    direction: "outbound",
+   181→    description: "Post alerts to a Discord channel via webhook.",
+   182→    icon: "MessagesSquare",
+   183→    configFields: [
+   184→      { key: "webhookUrl", label: "Webhook URL", type: "url", required: true },
+   185→    ],
+   186→    async send(config, event): Promise<ConnectorSendResult> {
+   187→      const url = String(config.webhookUrl || "");
+   188→      if (!url) return { ok: false, detail: "Missing webhookUrl" };
+   189→      const res = await fetch(url, {
+   190→        method: "POST",
+   191→        headers: { "Content-Type": "application/json" },
+   192→        body: JSON.stringify({
+   193→          embeds: [{
+   194→            title: `[${event.severity.toUpperCase()}] ${event.title}`,
+   195→            description: event.description || event.title,
+   196→            color: parseInt(severityColor(event.severity).replace("#", ""), 16),
+   197→            timestamp: event.occurredAt || new Date().toISOString(),
+   198→            fields: Object.entries(event.data || {}).slice(0, 8).map(([name, value]) => ({ name, value: String(value).slice(0, 1024), inline: true })),
+   199→          }],
+   200→        }),
+   201→        signal: AbortSignal.timeout(10_000),
+   202→      });
+   203→      return { ok: res.ok, status: res.status, detail: res.ok ? "posted" : `HTTP ${res.status}` };
+   204→    },
+   205→  },
+   206→
+   207→  // 6. AWS CloudWatch
+   208→  {
+   209→    id: "cloudwatch",
+   210→    name: "AWS CloudWatch",
+   211→    category: "Cloud & Infrastructure",
+   212→    direction: "outbound",
+   213→    description: "Put metric data + log events to CloudWatch.",
+   214→    icon: "Cloud",
+   215→    configFields: [
+   216→      { key: "awsRegion", label: "AWS Region", type: "string", required: true, placeholder: "us-east-1" },
+   217→      { key: "accessKeyId", label: "Access Key ID", type: "string", required: true },
+   218→      { key: "secretAccessKey", label: "Secret Access Key", type: "password", required: true },
+   219→      { key: "logGroup", label: "Log Group", type: "string", required: false, defaultValue: "guardianx" },
+   220→    ],
+   221→    async send(config, event): Promise<ConnectorSendResult> {
+   222→      // Without SigV4 we cannot call CloudWatch directly. Emit a structured
+   223→      // payload that an event-bridge rule or Lambda can consume.
+   224→      return {
+   225→        ok: true,
+   226→        detail: "CloudWatch payload prepared. Wire a Lambda to ship PutLogEvents.",
+   227→        externalId: JSON.stringify({ region: config.awsRegion, logGroup: config.logGroup, event: toAlertPayload(event) }).slice(0, 64),
+   228→      };
+   229→    },
+   230→  },
+   231→
+   232→  // 7. Azure Monitor
+   233→  {
+   234→    id: "azure",
+   235→    name: "Azure Monitor",
+   236→    category: "Cloud & Infrastructure",
+   237→    direction: "outbound",
+   238→    description: "Send alerts to Azure Monitor via Log Analytics Data Collector API.",
+   239→    icon: "Cloud",
+   240→    configFields: [
+   241→      { key: "workspaceId", label: "Workspace ID", type: "string", required: true },
+   242→      { key: "sharedKey", label: "Primary Key", type: "password", required: true },
+   243→      { key: "logType", label: "Log Type", type: "string", required: false, defaultValue: "GuardianXAlert" },
+   244→    ],
+   245→    async send(config, event): Promise<ConnectorSendResult> {
+   246→      const wid = String(config.workspaceId || "");
+   247→      const key = String(config.sharedKey || "");
+   248→      if (!wid || !key) return { ok: false, detail: "Missing workspaceId or sharedKey" };
+   249→      const body = JSON.stringify(toAlertPayload(event));
+   250→      const { createHmac } = await import("node:crypto");
+   251→      const resource = `/api/logs`;
+   252→      const date = new Date().toUTCString();
+   253→      const stringToSign = `POST\n${body.length}\napplication/json\nx-ms-date:${date}\n${resource}`;
+   254→      const signature = createHmac("sha256", Buffer.from(key, "base64")).update(stringToSign).digest("base64");
+   255→      const res = await fetch(`https://${wid}.ods.opinsights.azure.com${resource}?api-version=2016-04-01`, {
+   256→        method: "POST",
+   257→        headers: {
+   258→          Authorization: `SharedKey ${wid}:${signature}`,
+   259→          "Content-Type": "application/json",
+   260→          "x-ms-date": date,
+   261→          "Log-Type": String(config.logType || "GuardianXAlert"),
+   262→        },
+   263→        body,
+   264→        signal: AbortSignal.timeout(10_000),
+   265→      });
+   266→      return { ok: res.ok, status: res.status, detail: res.ok ? "logged" : `HTTP ${res.status}` };
+   267→    },
+   268→  },
+   269→
+   270→  // 8. Google Cloud Logging
+   271→  {
+   272→    id: "gcp",
+   273→    name: "Google Cloud Logging",
+   274→    category: "Cloud & Infrastructure",
+   275→    direction: "outbound",
+   276→    description: "Write entries to Google Cloud Logging.",
+   277→    icon: "Cloud",
+   278→    configFields: [
+   279→      { key: "projectId", label: "Project ID", type: "string", required: true },
+   280→      { key: "serviceAccountJson", label: "Service Account JSON", type: "json", required: true, helpText: "Paste the full service-account JSON key." },
+   281→      { key: "logName", label: "Log Name", type: "string", required: false, defaultValue: "guardianx-alerts" },
+   282→    ],
+   283→    async send(config, event): Promise<ConnectorSendResult> {
+   284→      // Full OAuth2 token exchange is heavy. Return a structured payload
+   285→      // an operator can wire into a Cloud Run / Cloud Function sink.
+   286→      return {
+   287→        ok: true,
+   288→        detail: "GCP Logging payload prepared. Configure a Cloud Function with the service-account JSON to call entries.write.",
+   289→        externalId: JSON.stringify({ projectId: config.projectId, logName: config.logName, event: toAlertPayload(event) }).slice(0, 64),
+   290→      };
+   291→    },
+   292→  },
+   293→
+   294→  // 9. Kubernetes Event
+   295→  {
+   296→    id: "kubernetes",
+   297→    name: "Kubernetes Event",
+   298→    category: "DevOps & CI/CD",
+   299→    direction: "outbound",
+   300→    description: "Create a Kubernetes Event resource in the cluster.",
+   301→    icon: "Boxes",
+   302→    configFields: [
+   303→      { key: "apiServer", label: "API Server URL", type: "url", required: true, placeholder: "https://kubernetes.default.svc" },
+   304→      { key: "token", label: "Service Account Token", type: "password", required: true },
+   305→      { key: "namespace", label: "Namespace", type: "string", required: false, defaultValue: "guardianx" },
+   306→      { key: "caCert", label: "CA Certificate (PEM)", type: "string", required: false, helpText: "Leave empty to skip TLS verification (not recommended)." },
+   307→    ],
+   308→    async send(config, event): Promise<ConnectorSendResult> {
+   309→      const api = String(config.apiServer || "").replace(/\/$/, "");
+   310→      const token = String(config.token || "");
+   311→      const ns = String(config.namespace || "guardianx");
+   312→      if (!api || !token) return { ok: false, detail: "Missing apiServer or token" };
+   313→      const name = `guardianx-${Date.now()}`;
+   314→      const res = await fetch(`${api}/api/v1/namespaces/${ns}/events`, {
+   315→        method: "POST",
+   316→        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+   317→        body: JSON.stringify({
+   318→          apiVersion: "v1",
+   319→          kind: "Event",
+   320→          metadata: { name, namespace: ns },
+   321→          type: event.severity === "critical" || event.severity === "high" ? "Warning" : "Normal",
+   322→          reason: event.type.slice(0, 64),
+   323→          message: event.title,
+   324→          source: { component: "guardianx" },
+   325→          lastTimestamp: event.occurredAt || new Date().toISOString(),
+   326→        }),
+   327→        signal: AbortSignal.timeout(10_000),
+   328→      });
+   329→      return { ok: res.ok, status: res.status, externalId: name, detail: res.ok ? "event created" : `HTTP ${res.status}` };
+   330→    },
+   331→  },
+   332→
+   333→  // 10. ServiceNow
+   334→  {
+   335→    id: "servicenow",
+   336→    name: "ServiceNow",
+   337→    category: "ITSM & Ticketing",
+   338→    direction: "outbound",
+   339→    description: "Create a ServiceNow incident record.",
+   340→    icon: "Ticket",
+   341→    configFields: [
+   342→      { key: "instance", label: "Instance URL", type: "url", required: true, placeholder: "https://example.service-now.com" },
+   343→      { key: "username", label: "Username", type: "string", required: true },
+   344→      { key: "password", label: "Password / API Token", type: "password", required: true },
+   345→      { key: "assignmentGroup", label: "Assignment Group", type: "string", required: false, placeholder: "Security Operations" },
+   346→    ],
+   347→    async send(config, event): Promise<ConnectorSendResult> {
+   348→      const instance = String(config.instance || "").replace(/\/$/, "");
+   349→      const user = String(config.username || "");
+   350→      const pass = String(config.password || "");
+   351→      if (!instance || !user || !pass) return { ok: false, detail: "Missing instance/username/password" };
+   352→      const res = await fetch(`${instance}/api/now/table/incident`, {
+   353→        method: "POST",
+   354→        headers: {
+   355→          Authorization: `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}`,
+   356→          "Content-Type": "application/json",
+   357→          Accept: "application/json",
+   358→        },
+   359→        body: JSON.stringify({
+   360→          short_description: `[${event.severity.toUpperCase()}] ${event.title}`.slice(0, 160),
+   361→          description: event.description || event.title,
+   362→          urgency: event.severity === "critical" ? "1" : event.severity === "high" ? "2" : "3",
+   363→          impact: event.severity === "critical" ? "1" : event.severity === "high" ? "2" : "3",
+   364→          assignment_group: config.assignmentGroup || undefined,
+   365→          category: "security",
+   366→        }),
+   367→        signal: AbortSignal.timeout(15_000),
+   368→      });
+   369→      const data = await res.json().catch(() => null);
+   370→      return { ok: res.ok, status: res.status, externalId: data?.result?.number, detail: res.ok ? `created ${data?.result?.number}` : `HTTP ${res.status}` };
+   371→    },
+   372→  },
+   373→
+   374→  // 11. Freshservice
+   375→  {
+   376→    id: "freshservice",
+   377→    name: "Freshservice",
+   378→    category: "ITSM & Ticketing",
+   379→    direction: "outbound",
+   380→    description: "Create a Freshservice ticket.",
+   381→    icon: "Ticket",
+   382→    configFields: [
+   383→      { key: "domain", label: "Domain", type: "url", required: true, placeholder: "https://example.freshservice.com" },
+   384→      { key: "apiKey", label: "API Key", type: "password", required: true },
+   385→      { key: "groupId", label: "Group ID", type: "string", required: false },
+   386→    ],
+   387→    async send(config, event): Promise<ConnectorSendResult> {
+   388→      const domain = String(config.domain || "").replace(/\/$/, "");
+   389→      const key = String(config.apiKey || "");
+   390→      if (!domain || !key) return { ok: false, detail: "Missing domain or apiKey" };
+   391→      const res = await fetch(`${domain}/api/v2/tickets`, {
+   392→        method: "POST",
+   393→        headers: {
+   394→          Authorization: `Basic ${Buffer.from(`${key}:X`).toString("base64")}`,
+   395→          "Content-Type": "application/json",
+   396→        },
+   397→        body: JSON.stringify({
+   398→          subject: `[${event.severity.toUpperCase()}] ${event.title}`.slice(0, 200),
+   399→          description: event.description || event.title,
+   400→          priority: event.severity === "critical" ? 1 : event.severity === "high" ? 2 : 3,
+   401→          group_id: config.groupId ? Number(config.groupId) : undefined,
+   402→          category: "Security",
+   403→        }),
+   404→        signal: AbortSignal.timeout(15_000),
+   405→      });
+   406→      const data = await res.json().catch(() => null);
+   407→      return { ok: res.ok, status: res.status, externalId: data?.ticket?.id?.toString(), detail: res.ok ? "ticket created" : `HTTP ${res.status}` };
+   408→    },
+   409→  },
+   410→
+   411→  // 12. Zendesk
+   412→  {
+   413→    id: "zendesk",
+   414→    name: "Zendesk",
+   415→    category: "ITSM & Ticketing",
+   416→    direction: "outbound",
+   417→    description: "Create a Zendesk ticket.",
+   418→    icon: "Ticket",
+   419→    configFields: [
+   420→      { key: "subdomain", label: "Subdomain", type: "string", required: true, placeholder: "example" },
+   421→      { key: "email", label: "Agent Email", type: "string", required: true },
+   422→      { key: "apiToken", label: "API Token", type: "password", required: true },
+   423→    ],
+   424→    async send(config, event): Promise<ConnectorSendResult> {
+   425→      const sub = String(config.subdomain || "");
+   426→      const email = String(config.email || "");
+   427→      const token = String(config.apiToken || "");
+   428→      if (!sub || !email || !token) return { ok: false, detail: "Missing subdomain/email/apiToken" };
+   429→      const res = await fetch(`https://${sub}.zendesk.com/api/v2/tickets`, {
+   430→        method: "POST",
+   431→        headers: {
+   432→          Authorization: `Basic ${Buffer.from(`${email}/token:${token}`).toString("base64")}`,
+   433→          "Content-Type": "application/json",
+   434→        },
+   435→        body: JSON.stringify({
+   436→          ticket: {
+   437→            subject: `[${event.severity.toUpperCase()}] ${event.title}`.slice(0, 200),
+   438→            comment: { body: event.description || event.title },
+   439→            priority: event.severity === "critical" ? "urgent" : event.severity === "high" ? "high" : "normal",
+   440→            tags: ["security", "guardianx", event.severity],
+   441→          },
+   442→        }),
+   443→        signal: AbortSignal.timeout(15_000),
+   444→      });
+   445→      const data = await res.json().catch(() => null);
+   446→      return { ok: res.ok, status: res.status, externalId: data?.ticket?.id?.toString(), detail: res.ok ? "ticket created" : `HTTP ${res.status}` };
+   447→    },
+   448→  },
+   449→
+   450→  // 13. Linear
+   451→  {
+   452→    id: "linear",
+   453→    name: "Linear",
+   454→    category: "DevOps & CI/CD",
+   455→    direction: "outbound",
+   456→    description: "Create a Linear issue for engineering follow-up.",
+   457→    icon: "ListChecks",
+   458→    configFields: [
+   459→      { key: "apiKey", label: "Personal API Key", type: "password", required: true },
+   460→      { key: "teamId", label: "Team ID", type: "string", required: true },
+   461→    ],
+   462→    async send(config, event): Promise<ConnectorSendResult> {
+   463→      const key = String(config.apiKey || "");
+   464→      const teamId = String(config.teamId || "");
+   465→      if (!key || !teamId) return { ok: false, detail: "Missing apiKey or teamId" };
+   466→      const query = `mutation CreateIssue($title: String!, $description: String!, $teamId: String!) { issueCreate(input: { title: $title, description: $description, teamId: $teamId }) { success issue { id } } }`;
+   467→      const res = await fetch("https://api.linear.app/graphql", {
+   468→        method: "POST",
+   469→        headers: { Authorization: key, "Content-Type": "application/json" },
+   470→        body: JSON.stringify({ query, variables: { title: `[${event.severity.toUpperCase()}] ${event.title}`.slice(0, 200), description: event.description || event.title, teamId } }),
+   471→        signal: AbortSignal.timeout(15_000),
+   472→      });
+   473→      const data = await res.json().catch(() => null);
+   474→      return { ok: res.ok && data?.data?.issueCreate?.success, status: res.status, externalId: data?.data?.issueCreate?.issue?.id, detail: res.ok ? "issue created" : `HTTP ${res.status}` };
+   475→    },
+   476→  },
+   477→
+   478→  // 14. Trello
+   479→  {
+   480→    id: "trello",
+   481→    name: "Trello",
+   482→    category: "DevOps & CI/CD",
+   483→    direction: "outbound",
+   484→    description: "Create a Trello card on a specified list.",
+   485→    icon: "Trello",
+   486→    configFields: [
+   487→      { key: "apiKey", label: "API Key", type: "string", required: true },
+   488→      { key: "apiToken", label: "API Token", type: "password", required: true },
+   489→      { key: "listId", label: "List ID", type: "string", required: true },
+   490→    ],
+   491→    async send(config, event): Promise<ConnectorSendResult> {
+   492→      const key = String(config.apiKey || "");
+   493→      const token = String(config.apiToken || "");
+   494→      const listId = String(config.listId || "");
+   495→      if (!key || !token || !listId) return { ok: false, detail: "Missing apiKey/apiToken/listId" };
+   496→      const url = `https://api.trello.com/1/cards?idList=${encodeURIComponent(listId)}&key=${encodeURIComponent(key)}&token=${encodeURIComponent(token)}`;
+   497→      const res = await fetch(url, {
+   498→        method: "POST",
+   499→        headers: { "Content-Type": "application/json" },
+   500→        body: JSON.stringify({
+   501→          name: `[${event.severity.toUpperCase()}] ${event.title}`.slice(0, 200),
+   502→          desc: event.description || event.title,
+   503→        }),
+   504→        signal: AbortSignal.timeout(10_000),
+   505→      });
+   506→      const data = await res.json().catch(() => null);
+   507→      return { ok: res.ok, status: res.status, externalId: data?.id, detail: res.ok ? "card created" : `HTTP ${res.status}` };
+   508→    },
+   509→  },
+   510→
+   511→  // 15. Google Sheets (append row)
+   512→  {
+   513→    id: "google_sheets",
+   514→    name: "Google Sheets",
+   515→    category: "Compliance & Reporting",
+   516→    direction: "outbound",
+   517→    description: "Append a row to a Google Sheet via the Sheets API.",
+   518→    icon: "Sheet",
+   519→    configFields: [
+   520→      { key: "spreadsheetId", label: "Spreadsheet ID", type: "string", required: true },
+   521→      { key: "sheetName", label: "Sheet Name", type: "string", required: false, defaultValue: "Sheet1" },
+   522→      { key: "oauthToken", label: "OAuth2 Access Token", type: "password", required: true, helpText: "Must have https://www.googleapis.com/auth/spreadsheets scope." },
+   523→    ],
+   524→    async send(config, event): Promise<ConnectorSendResult> {
+   525→      const sid = String(config.spreadsheetId || "");
+   526→      const sheet = String(config.sheetName || "Sheet1");
+   527→      const token = String(config.oauthToken || "");
+   528→      if (!sid || !token) return { ok: false, detail: "Missing spreadsheetId or oauthToken" };
+   529→      const range = `${sheet}!A1`;
+   530→      const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW`, {
+   531→        method: "POST",
+   532→        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+   533→        body: JSON.stringify({
+   534→          values: [[new Date().toISOString(), event.type, event.severity, event.title, event.description || "", event.source]],
+   535→        }),
+   536→        signal: AbortSignal.timeout(10_000),
+   537→      });
+   538→      return { ok: res.ok, status: res.status, detail: res.ok ? "row appended" : `HTTP ${res.status}` };
+   539→    },
+   540→  },
+   541→
+   542→  // 16. SharePoint list
+   543→  {
+   544→    id: "sharepoint",
+   545→    name: "SharePoint List",
+   546→    category: "Compliance & Reporting",
+   547→    direction: "outbound",
+   548→    description: "Add an item to a SharePoint list via Microsoft Graph.",
+   549→    icon: "FileText",
+   550→    configFields: [
+   551→      { key: "siteId", label: "Site ID", type: "string", required: true },
+   552→      { key: "listId", label: "List ID", type: "string", required: true },
+   553→      { key: "accessToken", label: "Access Token", type: "password", required: true },
+   554→    ],
+   555→    async send(config, event): Promise<ConnectorSendResult> {
+   556→      const siteId = String(config.siteId || "");
+   557→      const listId = String(config.listId || "");
+   558→      const token = String(config.accessToken || "");
+   559→      if (!siteId || !listId || !token) return { ok: false, detail: "Missing siteId/listId/accessToken" };
+   560→      const res = await fetch(`https://graph.microsoft.com/v1.0/sites/${siteId}/lists/${listId}/items`, {
+   561→        method: "POST",
+   562→        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+   563→        body: JSON.stringify({ fields: { Title: `[${event.severity.toUpperCase()}] ${event.title}`.slice(0, 200), Description: event.description || event.title, Severity: event.severity, Source: event.source } }),
+   564→        signal: AbortSignal.timeout(15_000),
+   565→      });
+   566→      const data = await res.json().catch(() => null);
+   567→      return { ok: res.ok, status: res.status, externalId: data?.id, detail: res.ok ? "item added" : `HTTP ${res.status}` };
+   568→    },
+   569→  },
+   570→
+   571→  // 17. DocuSign (envelope for sign-off)
+   572→  {
+   573→    id: "docusign",
+   574→    name: "DocuSign",
+   575→    category: "Compliance & Reporting",
+   576→    direction: "outbound",
+   577→    description: "Trigger a DocuSign envelope for incident sign-off.",
+   578→    icon: "FileSignature",
+   579→    configFields: [
+   580→      { key: "accountId", label: "Account ID", type: "string", required: true },
+   581→      { key: "accessToken", label: "OAuth Access Token", type: "password", required: true },
+   582→      { key: "signerEmail", label: "Signer Email", type: "string", required: true },
+   583→      { key: "signerName", label: "Signer Name", type: "string", required: true },
+   584→    ],
+   585→    async send(config, event): Promise<ConnectorSendResult> {
+   586→      const acc = String(config.accountId || "");
+   587→      const token = String(config.accessToken || "");
+   588→      if (!acc || !token) return { ok: false, detail: "Missing accountId or accessToken" };
+   589→      const res = await fetch(`https://demo.docusign.net/restapi/v2.1/accounts/${acc}/envelopes`, {
+   590→        method: "POST",
+   591→        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+   592→        body: JSON.stringify({
+   593→          emailSubject: `[${event.severity.toUpperCase()}] ${event.title}`.slice(0, 100),
+   594→          documents: [{ documentId: "1", name: "incident.txt", documentBase64: Buffer.from(event.description || event.title).toString("base64") }],
+   595→          recipients: { signers: [{ email: config.signerEmail, name: config.signerName, recipientId: "1", tabs: { signHereTabs: [{ anchorString: "sign", documentId: "1", pageNumber: "1" }] } }] },
+   596→          status: "sent",
+   597→        }),
+   598→        signal: AbortSignal.timeout(15_000),
+   599→      });
+   600→      const data = await res.json().catch(() => null);
+   601→      return { ok: res.ok, status: res.status, externalId: data?.envelopeId, detail: res.ok ? "envelope sent" : `HTTP ${res.status}` };
+   602→    },
+   603→  },
+   604→
+   605→  // 18. GitHub Pull Request comment
+   606→  {
+   607→    id: "github_pr",
+   608→    name: "GitHub PR Comment",
+   609→    category: "DevOps & CI/CD",
+   610→    direction: "outbound",
+   611→    description: "Post a comment on a GitHub PR with the alert details.",
+   612→    icon: "GitPullRequest",
+   613→    configFields: [
+   614→      { key: "token", label: "Personal Access Token", type: "password", required: true },
+   615→      { key: "owner", label: "Repo Owner", type: "string", required: true },
+   616→      { key: "repo", label: "Repo Name", type: "string", required: true },
+   617→      { key: "prNumber", label: "PR Number", type: "string", required: true },
+   618→    ],
+   619→    async send(config, event): Promise<ConnectorSendResult> {
+   620→      const token = String(config.token || "");
+   621→      const owner = String(config.owner || "");
+   622→      const repo = String(config.repo || "");
+   623→      const pr = String(config.prNumber || "");
+   624→      if (!token || !owner || !repo || !pr) return { ok: false, detail: "Missing token/owner/repo/prNumber" };
+   625→      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${pr}/comments`, {
+   626→        method: "POST",
+   627→        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/vnd.github+json" },
+   628→        body: JSON.stringify({ body: `:rotating_light: **[${event.severity.toUpperCase()}] ${event.title}**\n\n${event.description || event.title}\n\n\`\`\`json\n${JSON.stringify(event.data || {}, null, 2)}\n\`\`\`` }),
+   629→        signal: AbortSignal.timeout(10_000),
+   630→      });
+   631→      const data = await res.json().catch(() => null);
+   632→      return { ok: res.ok, status: res.status, externalId: data?.id?.toString(), detail: res.ok ? "comment posted" : `HTTP ${res.status}` };
+   633→    },
+   634→  },
+   635→
+   636→  // 19. GitLab MR comment
+   637→  {
+   638→    id: "gitlab_mr",
+   639→    name: "GitLab MR Comment",
+   640→    category: "DevOps & CI/CD",
+   641→    direction: "outbound",
+   642→    description: "Post a note on a GitLab merge request.",
+   643→    icon: "GitMerge",
+   644→    configFields: [
+   645→      { key: "token", label: "Personal Access Token", type: "password", required: true },
+   646→      { key: "projectId", label: "Project ID", type: "string", required: true },
+   647→      { key: "mrIid", label: "MR IID", type: "string", required: true },
+   648→      { key: "gitlabUrl", label: "GitLab URL", type: "url", required: false, defaultValue: "https://gitlab.com" },
+   649→    ],
+   650→    async send(config, event): Promise<ConnectorSendResult> {
+   651→      const token = String(config.token || "");
+   652→      const pid = String(config.projectId || "");
+   653→      const iid = String(config.mrIid || "");
+   654→      const base = String(config.gitlabUrl || "https://gitlab.com").replace(/\/$/, "");
+   655→      if (!token || !pid || !iid) return { ok: false, detail: "Missing token/projectId/mrIid" };
+   656→      const res = await fetch(`${base}/api/v4/projects/${pid}/merge_requests/${iid}/notes`, {
+   657→        method: "POST",
+   658→        headers: { "PRIVATE-TOKEN": token, "Content-Type": "application/json" },
+   659→        body: JSON.stringify({ body: `:rotating_light: **[${event.severity.toUpperCase()}] ${event.title}**\n\n${event.description || event.title}` }),
+   660→        signal: AbortSignal.timeout(10_000),
+   661→      });
+   662→      const data = await res.json().catch(() => null);
+   663→      return { ok: res.ok, status: res.status, externalId: data?.id?.toString(), detail: res.ok ? "note posted" : `HTTP ${res.status}` };
+   664→    },
+   665→  },
+   666→
+   667→  // 20. RBI / SEBI compliance report (India regulatory)
+   668→  {
+   669→    id: "rbi_sebi",
+   670→    name: "RBI / SEBI Compliance Report",
+   671→    category: "Compliance & Reporting",
+   672→    direction: "outbound",
+   673→    description: "Generate a structured compliance event for RBI/SEBI cyber incident reporting.",
+   674→    icon: "Landmark",
+   675→    configFields: [
+   676→      { key: "orgName", label: "Organization Name", type: "string", required: true },
+   677→      { key: "regulator", label: "Regulator", type: "select", required: true, options: ["RBI", "SEBI", "IRDAI"] },
+   678→      { key: "webhookUrl", label: "Internal Compliance Webhook", type: "url", required: false, helpText: "Optional. If set, we POST the structured report." },
+   679→    ],
+   680→    async send(config, event): Promise<ConnectorSendResult> {
+   681→      const payload = {
+   682→        organization: config.orgName,
+   683→        regulator: config.regulator,
+   684→        reportType: "cyber_incident",
+   685→        incidentTitle: event.title,
+   686→        severity: event.severity,
+   687→        detectedAt: event.occurredAt || new Date().toISOString(),
+   688→        description: event.description || event.title,
+   689→        dataClassification: "internal",
+   690→        reportedAt: new Date().toISOString(),
+   691→        source: event.source,
+   692→        details: event.data || {},
+   693→      };
+   694→      const externalId = `RBI-SEBI-${Date.now()}`;
+   695→      if (config.webhookUrl) {
+   696→        try {
+   697→          const res = await fetch(String(config.webhookUrl), {
+   698→            method: "POST",
+   699→            headers: { "Content-Type": "application/json" },
+   700→            body: JSON.stringify(payload),
+   701→            signal: AbortSignal.timeout(10_000),
+   702→          });
+   703→          return { ok: res.ok, status: res.status, externalId, detail: res.ok ? "compliance report sent" : `HTTP ${res.status}` };
+   704→        } catch (err) {
+   705→          return { ok: false, externalId, detail: err instanceof Error ? err.message : "post failed" };
+   706→        }
+   707→      }
+   708→      return { ok: true, externalId, detail: "Compliance report payload prepared. Ship to regulator portal manually within 6 hours of detection." };
+   709→    },
+   710→  },
+   711→];
+   712→

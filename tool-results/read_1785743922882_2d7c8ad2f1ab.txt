@@ -1,0 +1,2002 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback, useRef } from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import { Button } from "@/components/ui/button";
+     6→import { Input } from "@/components/ui/input";
+     7→import { Label } from "@/components/ui/label";
+     8→import { Badge } from "@/components/ui/badge";
+     9→import { Skeleton } from "@/components/ui/skeleton";
+    10→import { useToast } from "@/hooks/use-toast";
+    11→import {
+    12→  ShieldAlert, Activity, FileText, Lock, Crosshair, Bug, Bird,
+    13→  AlertTriangle, ShieldCheck, ArrowRight, Plus, ChevronLeft,
+    14→  Search, Clock, Zap, Terminal, Trash2, CheckCircle2, Eye,
+    15→  Fingerprint, Globe, Ban, Play, Loader2, RefreshCw, Hash,
+    16→  Network, User, Tag, ChevronDown, ChevronRight, Wand2, Radio,
+    17→  Cpu, Database, Server, Skull, FileLock2, ListChecks, ClipboardList,
+    18→} from "lucide-react";
+    19→
+    20→// ── Shared types ────────────────────────────────────────────────────────────
+    21→interface Incident {
+    22→  id: string;
+    23→  title: string;
+    24→  description: string | null;
+    25→  severity: string;
+    26→  status: string;
+    27→  category: string;
+    28→  source: string;
+    29→  sourceId: string | null;
+    30→  assignee: string | null;
+    31→  detectedAt: string;
+    32→  containedAt: string | null;
+    33→  eradicatedAt: string | null;
+    34→  closedAt: string | null;
+    35→  rootCause: string | null;
+    36→  lessonsLearned: string | null;
+    37→  createdAt: string;
+    38→  updatedAt: string;
+    39→  eventCount?: number;
+    40→  evidenceCount?: number;
+    41→}
+    42→
+    43→// Normalized timeline entry - the backend returns entries with either
+    44→// { timestamp, type } (unified timeline) or { occurredAt, eventType } (raw
+    45→// IncidentEvent). We normalize both to this shape.
+    46→interface TimelineEntry {
+    47→  id: string;
+    48→  eventType: string;
+    49→  source: string;
+    50→  sourceId: string | null;
+    51→  title: string;
+    52→  description: string | null;
+    53→  severity: string;
+    54→  metadata: string | null;
+    55→  actor: string | null;
+    56→  occurredAt: string;
+    57→}
+    58→
+    59→interface Evidence {
+    60→  id: string;
+    61→  evidenceType: string;
+    62→  filename: string;
+    63→  sha256: string;
+    64→  collectedBy: string;
+    65→  collectedAt: string;
+    66→  description: string | null;
+    67→  fileSize: number;
+    68→  chainOfCustody: Array<Record<string, unknown>>;
+    69→  isImmutable: boolean;
+    70→}
+    71→
+    72→interface IOC {
+    73→  id: string;
+    74→  iocType: string;
+    75→  value: string;
+    76→  confidence: string;
+    77→  source: string;
+    78→  tags: string[] | string | null;
+    79→  firstSeen: string;
+    80→  lastSeen: string;
+    81→  hitCount: number;
+    82→  isActive: boolean;
+    83→}
+    84→
+    85→// Playbook steps come in two shapes depending on origin:
+    86→// - Seed data + my create modal: { order, action, description, automated }
+    87→// - Parallel agent's create endpoint + execute response: { index, title, description, automated, status? }
+    88→interface PlaybookStep {
+    89→  order?: number;
+    90→  index?: number;
+    91→  action?: string;
+    92→  title?: string;
+    93→  description: string;
+    94→  automated: boolean;
+    95→  status?: string;
+    96→  eventId?: string;
+    97→}
+    98→
+    99→interface Playbook {
+   100→  id: string;
+   101→  name: string;
+   102→  description: string | null;
+   103→  category: string;
+   104→  trigger: string;
+   105→  steps: PlaybookStep[];
+   106→  severity: string;
+   107→  isActive: boolean;
+   108→  createdAt: string;
+   109→}
+   110→
+   111→// ── Style helpers ───────────────────────────────────────────────────────────
+   112→const SEVERITY_STYLE: Record<string, { text: string; bg: string; border: string; dot: string }> = {
+   113→  critical: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30", dot: "bg-red-500" },
+   114→  high:     { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30", dot: "bg-amber-500" },
+   115→  medium:   { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", dot: "bg-yellow-500" },
+   116→  low:      { text: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/30", dot: "bg-sky-500" },
+   117→  info:     { text: "text-zinc-400", bg: "bg-zinc-500/10", border: "border-zinc-500/30", dot: "bg-zinc-500" },
+   118→  warning:  { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30", dot: "bg-amber-500" },
+   119→};
+   120→
+   121→const STATUS_STYLE: Record<string, { text: string; bg: string; border: string; label: string }> = {
+   122→  open:         { text: "text-red-400",     bg: "bg-red-500/10",     border: "border-red-500/30",     label: "Open" },
+   123→  investigating:{ text: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/30",   label: "Investigating" },
+   124→  contained:    { text: "text-cyan-400",    bg: "bg-cyan-500/10",    border: "border-cyan-500/30",    label: "Contained" },
+   125→  eradicated:   { text: "text-violet-400",  bg: "bg-violet-500/10",  border: "border-violet-500/30",  label: "Eradicated" },
+   126→  closed:       { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", label: "Closed" },
+   127→};
+   128→
+   129→const EVENT_TYPE_CONFIG: Record<string, { icon: typeof Bug; color: string; label: string }> = {
+   130→  anomaly:        { icon: AlertTriangle, color: "text-amber-400", label: "Anomaly" },
+   131→  canary:         { icon: Bird,          color: "text-rose-400",  label: "Canary" },
+   132→  honeypot:       { icon: Bug,           color: "text-violet-400",label: "Honeypot" },
+   133→  finding:        { icon: Crosshair,     color: "text-red-400",   label: "Finding" },
+   134→  patch:          { icon: ShieldCheck,   color: "text-emerald-400",label: "Patch" },
+   135→  containment:    { icon: Lock,          color: "text-cyan-400",  label: "Containment" },
+   136→  note:           { icon: FileText,      color: "text-zinc-400",  label: "Note" },
+   137→  status_change:  { icon: ArrowRight,    color: "text-sky-400",   label: "Status" },
+   138→  audit:          { icon: FileText,      color: "text-zinc-400",  label: "Audit" },
+   139→  api_access:     { icon: Activity,      color: "text-amber-400", label: "API" },
+   140→};
+   141→
+   142→// Map a raw timeline "type" string to one of our EVENT_TYPE_CONFIG keys.
+   143→function normalizeEventType(rawType: string): string {
+   144→  if (!rawType) return "note";
+   145→  // strip "incident." prefix if present
+   146→  const t = rawType.startsWith("incident.") ? rawType.slice("incident.".length) : rawType;
+   147→  if (t in EVENT_TYPE_CONFIG) return t;
+   148→  if (t === "audit") return "note";
+   149→  if (t === "api_access" || t === "api_log") return "anomaly";
+   150→  return "note";
+   151→}
+   152→
+   153→const IOC_TYPE_ICON: Record<string, typeof Globe> = {
+   154→  ip: Network,
+   155→  hash: Fingerprint,
+   156→  domain: Globe,
+   157→  url: Globe,
+   158→  email: User,
+   159→  user_agent: Cpu,
+   160→};
+   161→
+   162→const STATUS_FLOW = ["open", "investigating", "contained", "eradicated", "closed"];
+   163→
+   164→function timeAgo(iso: string): string {
+   165→  if (!iso) return "-";
+   166→  const diff = Date.now() - new Date(iso).getTime();
+   167→  const sec = Math.floor(diff / 1000);
+   168→  if (sec < 60) return `${sec}s ago`;
+   169→  const min = Math.floor(sec / 60);
+   170→  if (min < 60) return `${min}m ago`;
+   171→  const hr = Math.floor(min / 60);
+   172→  if (hr < 24) return `${hr}h ago`;
+   173→  const day = Math.floor(hr / 24);
+   174→  if (day < 30) return `${day}d ago`;
+   175→  return new Date(iso).toLocaleDateString();
+   176→}
+   177→
+   178→function truncateHash(h: string, len = 16): string {
+   179→  if (!h) return "";
+   180→  if (h.length <= len * 2) return h;
+   181→  return `${h.slice(0, len)}...${h.slice(-8)}`;
+   182→}
+   183→
+   184→// Safely unwrap an API response that may be either a bare array or an
+   185→// object wrapping the array under a known key. The parallel-agent routes
+   186→// wrap responses as { iocs: [...] }, { evidence: [...] }, { playbooks: [...] },
+   187→// { timeline: [...] }, while the older list endpoints return bare arrays.
+   188→function unwrapList<T>(data: unknown, key: string): T[] {
+   189→  if (Array.isArray(data)) return data as T[];
+   190→  if (data && typeof data === "object") {
+   191→    const obj = data as Record<string, unknown>;
+   192→    if (Array.isArray(obj[key])) return obj[key] as T[];
+   193→  }
+   194→  return [];
+   195→}
+   196→
+   197→// Normalize a raw timeline entry (which may come from the unified timeline
+   198→// endpoint with { timestamp, type, title, description, severity, source,
+   199→// metadata } OR from a raw IncidentEvent with { occurredAt, eventType, ... })
+   200→// into our TimelineEntry shape.
+   201→function normalizeTimelineEntry(raw: Record<string, unknown>): TimelineEntry {
+   202→  const meta = raw.metadata as Record<string, unknown> | string | null;
+   203→  const metaObj = typeof meta === "string" ? (() => { try { return JSON.parse(meta); } catch { return {}; } })() : (meta || {});
+   204→  const ts = (raw.occurredAt || raw.timestamp || new Date().toISOString()) as string;
+   205→  return {
+   206→    id: (raw.id as string) || (metaObj?.eventId as string) || `${ts}-${raw.title}`,
+   207→    eventType: normalizeEventType((raw.eventType as string) || (raw.type as string) || "note"),
+   208→    source: (raw.source as string) || "system",
+   209→    sourceId: (raw.sourceId as string) || null,
+   210→    title: (raw.title as string) || "Untitled event",
+   211→    description: (raw.description as string) || null,
+   212→    severity: (raw.severity as string) || "info",
+   213→    metadata: typeof meta === "string" ? meta : (meta ? JSON.stringify(meta) : null),
+   214→    actor: (raw.actor as string) || (metaObj?.actor as string) || null,
+   215→    occurredAt: ts,
+   216→  };
+   217→}
+   218→
+   219→// ── Main component ──────────────────────────────────────────────────────────
+   220→export function DfirPanel() {
+   221→  const [tab, setTab] = useState<"incidents" | "ioc" | "playbooks">("incidents");
+   222→  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+   223→
+   224→  return (
+   225→    <div className="space-y-5">
+   226→      {/* Header */}
+   227→      <div>
+   228→        <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-red-500/60">
+   229→          <span className="size-1.5 rounded-full bg-red-500 pulse-dot" />
+   230→          dfir@guardianx:~$ incident-response --live
+   231→        </div>
+   232→        <h2 className="flex items-center gap-2 text-xl font-bold text-zinc-50">
+   233→          <ShieldAlert className="size-5 text-red-400" />
+   234→          DFIR Command
+   235→          <span className="font-mono text-sm text-zinc-500">{"// Digital Forensics & Incident Response"}</span>
+   236→        </h2>
+   237→        <p className="mt-1 text-sm text-zinc-400">
+   238→          Triage incidents, lock down evidence with hash chains, track IOCs, and run IR playbooks.
+   239→        </p>
+   240→      </div>
+   241→
+   242→      {/* Tab switcher */}
+   243→      <div className="holo-card-sharp hud-corners flex flex-wrap gap-1 p-1.5">
+   244→        {([
+   245→          { id: "incidents", label: "Incidents", icon: ShieldAlert, color: "red" },
+   246→          { id: "ioc", label: "IOC Tracker", icon: Fingerprint, color: "amber" },
+   247→          { id: "playbooks", label: "Playbooks", icon: ClipboardList, color: "violet" },
+   248→        ] as const).map((t) => {
+   249→          const Icon = t.icon;
+   250→          const isActive = tab === t.id;
+   251→          const colorClasses: Record<string, string> = {
+   252→            red: "bg-red-500/15 text-red-300 border-red-500/40 neon-border-red",
+   253→            amber: "bg-amber-500/15 text-amber-300 border-amber-500/40 neon-border-amber",
+   254→            violet: "bg-violet-500/15 text-violet-300 border-violet-500/40 neon-border-violet",
+   255→          };
+   256→          return (
+   257→            <button
+   258→              key={t.id}
+   259→              onClick={() => setTab(t.id)}
+   260→              className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all ${
+   261→                isActive ? colorClasses[t.color] : "border-transparent text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+   262→              }`}
+   263→            >
+   264→              <Icon className="size-4" />
+   265→              {t.label}
+   266→            </button>
+   267→          );
+   268→        })}
+   269→      </div>
+   270→
+   271→      {/* Tab content */}
+   272→      <AnimatePresence mode="wait">
+   273→        <motion.div
+   274→          key={tab}
+   275→          initial={{ opacity: 0, y: 8 }}
+   276→          animate={{ opacity: 1, y: 0 }}
+   277→          exit={{ opacity: 0, y: -8 }}
+   278→          transition={{ duration: 0.15 }}
+   279→        >
+   280→          {tab === "incidents" && (
+   281→            selectedIncidentId ? (
+   282→              <IncidentDetail
+   283→                incidentId={selectedIncidentId}
+   284→                onBack={() => setSelectedIncidentId(null)}
+   285→              />
+   286→            ) : (
+   287→              <IncidentsList onSelect={setSelectedIncidentId} />
+   288→            )
+   289→          )}
+   290→          {tab === "ioc" && <IocTracker />}
+   291→          {tab === "playbooks" && <PlaybooksTab />}
+   292→        </motion.div>
+   293→      </AnimatePresence>
+   294→    </div>
+   295→  );
+   296→}
+   297→
+   298→// ════════════════════════════════════════════════════════════════════════════
+   299→// INCIDENTS LIST (Overview Tab)
+   300→// ════════════════════════════════════════════════════════════════════════════
+   301→function IncidentsList({ onSelect }: { onSelect: (id: string) => void }) {
+   302→  const { toast } = useToast();
+   303→  const [incidents, setIncidents] = useState<Incident[]>([]);
+   304→  const [loading, setLoading] = useState(true);
+   305→  const [statusFilter, setStatusFilter] = useState<string>("all");
+   306→  const [severityFilter, setSeverityFilter] = useState<string>("all");
+   307→  const [query, setQuery] = useState("");
+   308→  const [createOpen, setCreateOpen] = useState(false);
+   309→  const [autoCreating, setAutoCreating] = useState(false);
+   310→
+   311→  const load = useCallback(async () => {
+   312→    try {
+   313→      const params = new URLSearchParams();
+   314→      if (statusFilter !== "all") params.set("status", statusFilter);
+   315→      if (severityFilter !== "all") params.set("severity", severityFilter);
+   316→      const res = await fetch(`/api/incidents?${params.toString()}`);
+   317→      const data = await res.json();
+   318→      setIncidents(unwrapList<Incident>(data, "incidents"));
+   319→    } catch {
+   320→      setIncidents([]);
+   321→    } finally {
+   322→      setLoading(false);
+   323→    }
+   324→  }, [statusFilter, severityFilter]);
+   325→
+   326→  useEffect(() => {
+   327→    load();
+   328→    const id = setInterval(load, 15_000);
+   329→    return () => clearInterval(id);
+   330→  }, [load]);
+   331→
+   332→  const filtered = incidents.filter((inc) => {
+   333→    const q = query.trim().toLowerCase();
+   334→    if (!q) return true;
+   335→    return (
+   336→      inc.title.toLowerCase().includes(q) ||
+   337→      inc.category.toLowerCase().includes(q) ||
+   338→      inc.source.toLowerCase().includes(q) ||
+   339→      (inc.assignee?.toLowerCase().includes(q) ?? false)
+   340→    );
+   341→  });
+   342→
+   343→  const stats = {
+   344→    open: incidents.filter((i) => i.status === "open" || i.status === "investigating").length,
+   345→    critical: incidents.filter((i) => i.severity === "critical").length,
+   346→    contained: incidents.filter((i) => i.status === "contained" || i.status === "eradicated").length,
+   347→    avgResponse: "-",
+   348→  };
+   349→
+   350→  const handleAutoCreate = async () => {
+   351→    setAutoCreating(true);
+   352→    try {
+   353→      const res = await fetch("/api/incidents/auto-create", {
+   354→        method: "POST",
+   355→        headers: { "Content-Type": "application/json" },
+   356→        body: JSON.stringify({}),
+   357→      });
+   358→      const data = await res.json();
+   359→      if (!res.ok) throw new Error(data.error || "Auto-create failed");
+   360→      const created = (data.created as number) ?? (data.createdCount as number) ?? 0;
+   361→      toast({
+   362→        title: created > 0 ? `${created} incident(s) created` : "Auto-create complete",
+   363→        description: data.message || (created > 0
+   364→          ? `${created} incident(s) created from anomalies.`
+   365→          : "No new anomalies found."),
+   366→      });
+   367→      load();
+   368→    } catch (err) {
+   369→      toast({
+   370→        variant: "destructive",
+   371→        title: "Auto-create failed",
+   372→        description: err instanceof Error ? err.message : "unknown error",
+   373→      });
+   374→    } finally {
+   375→      setAutoCreating(false);
+   376→    }
+   377→  };
+   378→
+   379→  return (
+   380→    <div className="space-y-4">
+   381→      {/* Stats bar */}
+   382→      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+   383→        <StatTile icon={ShieldAlert} label="Open Incidents" value={stats.open} color="text-red-400" border="border-red-500/20" />
+   384→        <StatTile icon={Skull} label="Critical" value={stats.critical} color="text-rose-400" border="border-rose-500/20" />
+   385→        <StatTile icon={Lock} label="Contained" value={stats.contained} color="text-cyan-400" border="border-cyan-500/20" />
+   386→        <StatTile icon={Clock} label="Avg Response" value={stats.avgResponse} color="text-emerald-400" border="border-emerald-500/20" />
+   387→      </div>
+   388→
+   389→      {/* Toolbar */}
+   390→      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+   391→        <div className="flex flex-1 flex-wrap items-center gap-2">
+   392→          <div className="relative w-full sm:w-56">
+   393→            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+   394→            <Input
+   395→              value={query}
+   396→              onChange={(e) => setQuery(e.target.value)}
+   397→              placeholder="Search incidents..."
+   398→              className="border-zinc-800 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-500 focus-visible:border-red-500/50"
+   399→            />
+   400→          </div>
+   401→          <select
+   402→            value={statusFilter}
+   403→            onChange={(e) => setStatusFilter(e.target.value)}
+   404→            className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-red-500/50 focus:outline-none"
+   405→          >
+   406→            <option value="all">All Status</option>
+   407→            <option value="open">Open</option>
+   408→            <option value="investigating">Investigating</option>
+   409→            <option value="contained">Contained</option>
+   410→            <option value="eradicated">Eradicated</option>
+   411→            <option value="closed">Closed</option>
+   412→          </select>
+   413→          <select
+   414→            value={severityFilter}
+   415→            onChange={(e) => setSeverityFilter(e.target.value)}
+   416→            className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-red-500/50 focus:outline-none"
+   417→          >
+   418→            <option value="all">All Severity</option>
+   419→            <option value="critical">Critical</option>
+   420→            <option value="high">High</option>
+   421→            <option value="medium">Medium</option>
+   422→            <option value="low">Low</option>
+   423→          </select>
+   424→        </div>
+   425→        <div className="flex items-center gap-2">
+   426→          <Button
+   427→            onClick={handleAutoCreate}
+   428→            disabled={autoCreating}
+   429→            variant="outline"
+   430→            className="border-violet-500/40 bg-violet-500/5 text-violet-300 hover:bg-violet-500/15"
+   431→          >
+   432→            {autoCreating ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
+   433→            <span className="hidden sm:inline">Auto-Create</span>
+   434→          </Button>
+   435→          <Button
+   436→            onClick={() => setCreateOpen(true)}
+   437→            className="bg-red-600 text-white hover:bg-red-500 neon-border-red"
+   438→          >
+   439→            <Plus className="size-4" /> Create Incident
+   440→          </Button>
+   441→        </div>
+   442→      </div>
+   443→
+   444→      {/* Incident list */}
+   445→      {loading ? (
+   446→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   447→          {Array.from({ length: 6 }).map((_, i) => (
+   448→            <Skeleton key={i} className="h-44 bg-zinc-900/40" />
+   449→          ))}
+   450→        </div>
+   451→      ) : filtered.length === 0 ? (
+   452→        <div className="holo-card-sharp hud-corners flex flex-col items-center justify-center px-6 py-16 text-center">
+   453→          <div className="flex size-14 items-center justify-center rounded-full bg-red-500/10 ring-1 ring-red-500/30">
+   454→            <ShieldAlert className="size-7 text-red-400" />
+   455→          </div>
+   456→          <h3 className="mt-4 text-base font-semibold text-zinc-200">
+   457→            {query || statusFilter !== "all" || severityFilter !== "all"
+   458→              ? "No incidents match your filters"
+   459→              : "No incidents yet"}
+   460→          </h3>
+   461→          <p className="mt-1 max-w-sm text-sm text-zinc-400">
+   462→            Create an incident manually, or run "Auto-Create from Anomalies" to scan canaries, honeypots, and findings.
+   463→          </p>
+   464→        </div>
+   465→      ) : (
+   466→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   467→          {filtered.map((inc, i) => {
+   468→            const sev = SEVERITY_STYLE[inc.severity] || SEVERITY_STYLE.medium;
+   469→            const stat = STATUS_STYLE[inc.status] || STATUS_STYLE.open;
+   470→            return (
+   471→              <motion.div
+   472→                key={inc.id}
+   473→                initial={{ opacity: 0, y: 8 }}
+   474→                animate={{ opacity: 1, y: 0 }}
+   475→                transition={{ delay: Math.min(i * 0.04, 0.3) }}
+   476→                onClick={() => onSelect(inc.id)}
+   477→                className="holo-card-sharp hud-corners glow-hover group cursor-pointer border border-zinc-800 p-4 hover:border-red-500/40"
+   478→              >
+   479→                {/* Header */}
+   480→                <div className="mb-2 flex items-start justify-between gap-2">
+   481→                  <div className="flex items-center gap-2">
+   482→                    <div className={`flex size-8 items-center justify-center rounded-md border ${sev.border} ${sev.bg}`}>
+   483→                      <ShieldAlert className={`size-4 ${sev.text}`} />
+   484→                    </div>
+   485→                    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${sev.border} ${sev.bg} ${sev.text}`}>
+   486→                      {inc.severity}
+   487→                    </span>
+   488→                  </div>
+   489→                  <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${stat.border} ${stat.bg} ${stat.text}`}>
+   490→                    {stat.label}
+   491→                  </span>
+   492→                </div>
+   493→
+   494→                {/* Title */}
+   495→                <h3 className="line-clamp-2 text-sm font-bold text-zinc-100 group-hover:text-red-300">
+   496→                  {inc.title}
+   497→                </h3>
+   498→
+   499→                {/* Meta row */}
+   500→                <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-zinc-500">
+   501→                  <span className="flex items-center gap-1">
+   502→                    <Tag className="size-3" />
+   503→                    {inc.category}
+   504→                  </span>
+   505→                  <span className="text-zinc-700">|</span>
+   506→                  <span className="flex items-center gap-1">
+   507→                    <Radio className="size-3" />
+   508→                    {inc.source}
+   509→                  </span>
+   510→                  <span className="text-zinc-700">|</span>
+   511→                  <span className="flex items-center gap-1">
+   512→                    <Clock className="size-3" />
+   513→                    {timeAgo(inc.detectedAt)}
+   514→                  </span>
+   515→                </div>
+   516→
+   517→                {/* Footer */}
+   518→                <div className="mt-3 flex items-center justify-between border-t border-zinc-800/60 pt-2">
+   519→                  <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
+   520→                    <User className="size-3 text-zinc-500" />
+   521→                    {inc.assignee || "unassigned"}
+   522→                  </div>
+   523→                  <div className="flex items-center gap-2 font-mono text-[10px]">
+   524→                    {typeof inc.eventCount === "number" && (
+   525→                      <span className="flex items-center gap-1 text-cyan-400">
+   526→                        <Activity className="size-3" />
+   527→                        {inc.eventCount}
+   528→                      </span>
+   529→                    )}
+   530→                    {typeof inc.evidenceCount === "number" && (
+   531→                      <span className="flex items-center gap-1 text-violet-400">
+   532→                        <FileLock2 className="size-3" />
+   533→                        {inc.evidenceCount}
+   534→                      </span>
+   535→                    )}
+   536→                  </div>
+   537→                </div>
+   538→              </motion.div>
+   539→            );
+   540→          })}
+   541→        </div>
+   542→      )}
+   543→
+   544→      {/* Create incident modal */}
+   545→      {createOpen && (
+   546→        <CreateIncidentModal
+   547→          onClose={() => setCreateOpen(false)}
+   548→          onCreated={() => {
+   549→            setCreateOpen(false);
+   550→            load();
+   551→          }}
+   552→        />
+   553→      )}
+   554→    </div>
+   555→  );
+   556→}
+   557→
+   558→// ── Stat tile ──
+   559→function StatTile({
+   560→  icon: Icon, label, value, color, border,
+   561→}: { icon: typeof ShieldAlert; label: string; value: string | number; color: string; border: string }) {
+   562→  return (
+   563→    <div className={`holo-card-sharp hud-corners border ${border} p-4`}>
+   564→      <div className="flex items-center justify-between">
+   565→        <Icon className={`size-4 ${color}`} />
+   566→        <span className="text-[9px] uppercase tracking-widest text-zinc-600">{label}</span>
+   567→      </div>
+   568→      <div className={`mt-1 font-mono text-2xl font-bold ${color}`}>{value}</div>
+   569→    </div>
+   570→  );
+   571→}
+   572→
+   573→// ── Create Incident Modal ──
+   574→function CreateIncidentModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+   575→  const { toast } = useToast();
+   576→  const [loading, setLoading] = useState(false);
+   577→  const [form, setForm] = useState({
+   578→    title: "",
+   579→    description: "",
+   580→    severity: "medium",
+   581→    category: "other",
+   582→  });
+   583→
+   584→  const handleSubmit = async () => {
+   585→    if (!form.title.trim()) return;
+   586→    setLoading(true);
+   587→    try {
+   588→      const res = await fetch("/api/incidents", {
+   589→        method: "POST",
+   590→        headers: { "Content-Type": "application/json" },
+   591→        body: JSON.stringify(form),
+   592→      });
+   593→      const data = await res.json();
+   594→      if (!res.ok) throw new Error(data.error || "Failed to create incident");
+   595→      toast({ title: "Incident created", description: form.title });
+   596→      onCreated();
+   597→    } catch (err) {
+   598→      toast({
+   599→        variant: "destructive",
+   600→        title: "Failed to create incident",
+   601→        description: err instanceof Error ? err.message : "unknown error",
+   602→      });
+   603→    } finally {
+   604→      setLoading(false);
+   605→    }
+   606→  };
+   607→
+   608→  return (
+   609→    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+   610→      <motion.div
+   611→        initial={{ opacity: 0, scale: 0.95 }}
+   612→        animate={{ opacity: 1, scale: 1 }}
+   613→        onClick={(e) => e.stopPropagation()}
+   614→        className="holo-card-sharp hud-corners w-full max-w-lg rounded-lg p-6"
+   615→      >
+   616→        <div className="mb-4 flex items-center gap-2">
+   617→          <ShieldAlert className="size-5 text-red-400" />
+   618→          <h2 className="text-lg font-bold text-zinc-50">Create Incident Case</h2>
+   619→        </div>
+   620→
+   621→        <div className="space-y-3">
+   622→          <div>
+   623→            <Label className="text-xs text-zinc-400">Title *</Label>
+   624→            <Input
+   625→              value={form.title}
+   626→              onChange={(e) => setForm({ ...form, title: e.target.value })}
+   627→              placeholder="e.g. Suspicious data exfiltration from web-app-01"
+   628→              className="mt-1 border-zinc-700 bg-zinc-900/60 text-zinc-200 focus-visible:border-red-500/50"
+   629→            />
+   630→          </div>
+   631→          <div>
+   632→            <Label className="text-xs text-zinc-400">Description</Label>
+   633→            <textarea
+   634→              value={form.description}
+   635→              onChange={(e) => setForm({ ...form, description: e.target.value })}
+   636→              placeholder="What happened, when, and what is the suspected impact..."
+   637→              rows={3}
+   638→              className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-red-500/50 focus:outline-none"
+   639→            />
+   640→          </div>
+   641→          <div className="grid gap-3 sm:grid-cols-2">
+   642→            <div>
+   643→              <Label className="text-xs text-zinc-400">Severity</Label>
+   644→              <select
+   645→                value={form.severity}
+   646→                onChange={(e) => setForm({ ...form, severity: e.target.value })}
+   647→                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-red-500/50 focus:outline-none"
+   648→              >
+   649→                <option value="low">Low</option>
+   650→                <option value="medium">Medium</option>
+   651→                <option value="high">High</option>
+   652→                <option value="critical">Critical</option>
+   653→              </select>
+   654→            </div>
+   655→            <div>
+   656→              <Label className="text-xs text-zinc-400">Category</Label>
+   657→              <select
+   658→                value={form.category}
+   659→                onChange={(e) => setForm({ ...form, category: e.target.value })}
+   660→                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-red-500/50 focus:outline-none"
+   661→              >
+   662→                <option value="other">Other</option>
+   663→                <option value="data_exfiltration">Data Exfiltration</option>
+   664→                <option value="intrusion">Intrusion</option>
+   665→                <option value="malware">Malware</option>
+   666→                <option value="phishing">Phishing</option>
+   667→                <option value="vulnerability">Vulnerability</option>
+   668→                <option value="misconfiguration">Misconfiguration</option>
+   669→                <option value="insider_threat">Insider Threat</option>
+   670→              </select>
+   671→            </div>
+   672→          </div>
+   673→        </div>
+   674→
+   675→        <div className="mt-5 flex justify-end gap-2">
+   676→          <Button variant="outline" onClick={onClose} className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+   677→            Cancel
+   678→          </Button>
+   679→          <Button onClick={handleSubmit} disabled={loading || !form.title.trim()} className="bg-red-600 text-white hover:bg-red-500">
+   680→            {loading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+   681→            Create Case
+   682→          </Button>
+   683→        </div>
+   684→      </motion.div>
+   685→    </div>
+   686→  );
+   687→}
+   688→
+   689→// ════════════════════════════════════════════════════════════════════════════
+   690→// INCIDENT DETAIL (Command Center)
+   691→// ════════════════════════════════════════════════════════════════════════════
+   692→function IncidentDetail({ incidentId, onBack }: { incidentId: string; onBack: () => void }) {
+   693→  const { toast } = useToast();
+   694→  const [incident, setIncident] = useState<Incident | null>(null);
+   695→  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+   696→  const [evidence, setEvidence] = useState<Evidence[]>([]);
+   697→  const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
+   698→  const [loading, setLoading] = useState(true);
+   699→  const [containOpen, setContainOpen] = useState(false);
+   700→  const [noteOpen, setNoteOpen] = useState(false);
+   701→  const [evidenceOpen, setEvidenceOpen] = useState(false);
+   702→  const [selectedPlaybook, setSelectedPlaybook] = useState<string>("");
+   703→  const [executingPb, setExecutingPb] = useState(false);
+   704→  const [executedSteps, setExecutedSteps] = useState<PlaybookStep[] | null>(null);
+   705→  const [checkedSteps, setCheckedSteps] = useState<Set<number>>(new Set());
+   706→  const [titleEditing, setTitleEditing] = useState(false);
+   707→  const [titleDraft, setTitleDraft] = useState("");
+   708→  const [rootCause, setRootCause] = useState("");
+   709→  const [lessons, setLessons] = useState("");
+   710→  const [savingField, setSavingField] = useState<string | null>(null);
+   711→  const timelineRef = useRef<HTMLDivElement>(null);
+   712→
+   713→  const loadAll = useCallback(async () => {
+   714→    try {
+   715→      const [incRes, tlRes, evRes, pbRes] = await Promise.all([
+   716→        fetch(`/api/incidents/${incidentId}`),
+   717→        fetch(`/api/incidents/${incidentId}/timeline`),
+   718→        fetch(`/api/incidents/${incidentId}/evidence`),
+   719→        fetch(`/api/playbooks?includeInactive=true`),
+   720→      ]);
+   721→      const [inc, tl, ev, pb] = await Promise.all([
+   722→        incRes.json(), tlRes.json(), evRes.json(), pbRes.json(),
+   723→      ]);
+   724→      if (!incRes.ok) throw new Error(inc.error || "Failed to load incident");
+   725→      setIncident(inc);
+   726→      // Timeline endpoint returns either a bare array OR { timeline: [...] }
+   727→      const tlList = unwrapList<Record<string, unknown>>(tl, "timeline");
+   728→      setTimeline(tlList.map(normalizeTimelineEntry));
+   729→      // Evidence endpoint returns either a bare array OR { evidence: [...] }
+   730→      const evList = unwrapList<Evidence>(ev, "evidence");
+   731→      setEvidence(evList);
+   732→      const pbList = unwrapList<Playbook>(pb, "playbooks");
+   733→      setPlaybooks(pbList);
+   734→      setRootCause(inc.rootCause || "");
+   735→      setLessons(inc.lessonsLearned || "");
+   736→    } catch (err) {
+   737→      toast({
+   738→        variant: "destructive",
+   739→        title: "Failed to load incident",
+   740→        description: err instanceof Error ? err.message : "unknown error",
+   741→      });
+   742→    } finally {
+   743→      setLoading(false);
+   744→    }
+   745→  }, [incidentId, toast]);
+   746→
+   747→  useEffect(() => {
+   748→    loadAll();
+   749→    const id = setInterval(loadAll, 15_000);
+   750→    return () => clearInterval(id);
+   751→  }, [loadAll]);
+   752→
+   753→  // auto-scroll timeline to bottom when new events arrive
+   754→  useEffect(() => {
+   755→    if (timelineRef.current) {
+   756→      timelineRef.current.scrollTop = timelineRef.current.scrollHeight;
+   757→    }
+   758→  }, [timeline]);
+   759→
+   760→  const transitionStatus = async (newStatus: string) => {
+   761→    if (!incident) return;
+   762→    try {
+   763→      const res = await fetch(`/api/incidents/${incidentId}`, {
+   764→        method: "PATCH",
+   765→        headers: { "Content-Type": "application/json" },
+   766→        body: JSON.stringify({ status: newStatus }),
+   767→      });
+   768→      const data = await res.json();
+   769→      if (!res.ok) throw new Error(data.error || "Failed to update status");
+   770→      toast({ title: `Status changed to ${newStatus}`, description: incident.title });
+   771→      loadAll();
+   772→    } catch (err) {
+   773→      toast({
+   774→        variant: "destructive",
+   775→        title: "Status update failed",
+   776→        description: err instanceof Error ? err.message : "unknown error",
+   777→      });
+   778→    }
+   779→  };
+   780→
+   781→  const handleContain = async () => {
+   782→    setContainOpen(false);
+   783→    try {
+   784→      const res = await fetch(`/api/incidents/${incidentId}/contain`, {
+   785→        method: "POST",
+   786→        headers: { "Content-Type": "application/json" },
+   787→        body: JSON.stringify({ action: "isolate" }),
+   788→      });
+   789→      const data = await res.json();
+   790→      if (!res.ok) throw new Error(data.error || "Containment failed");
+   791→      toast({
+   792→        title: "Incident contained",
+   793→        description: data.message || "Asset isolated, source IP blocked, sessions revoked.",
+   794→      });
+   795→      loadAll();
+   796→    } catch (err) {
+   797→      toast({
+   798→        variant: "destructive",
+   799→        title: "Containment failed",
+   800→        description: err instanceof Error ? err.message : "unknown error",
+   801→      });
+   802→    }
+   803→  };
+   804→
+   805→  const saveField = async (field: "rootCause" | "lessonsLearned" | "title", value: string) => {
+   806→    setSavingField(field);
+   807→    try {
+   808→      const res = await fetch(`/api/incidents/${incidentId}`, {
+   809→        method: "PATCH",
+   810→        headers: { "Content-Type": "application/json" },
+   811→        body: JSON.stringify({ [field]: value }),
+   812→      });
+   813→      const data = await res.json();
+   814→      if (!res.ok) throw new Error(data.error || "Save failed");
+   815→      toast({ title: "Saved", description: field === "title" ? "Incident title updated" : field === "rootCause" ? "Root cause saved" : "Lessons learned saved" });
+   816→      loadAll();
+   817→    } catch (err) {
+   818→      toast({
+   819→        variant: "destructive",
+   820→        title: "Save failed",
+   821→        description: err instanceof Error ? err.message : "unknown error",
+   822→      });
+   823→    } finally {
+   824→      setSavingField(null);
+   825→      if (field === "title") setTitleEditing(false);
+   826→    }
+   827→  };
+   828→
+   829→  const executePlaybook = async () => {
+   830→    if (!selectedPlaybook) return;
+   831→    setExecutingPb(true);
+   832→    try {
+   833→      const res = await fetch(`/api/playbooks/${selectedPlaybook}/execute`, {
+   834→        method: "POST",
+   835→        headers: { "Content-Type": "application/json" },
+   836→        body: JSON.stringify({ incidentId }),
+   837→      });
+   838→      const data = await res.json();
+   839→      if (!res.ok) throw new Error(data.error || "Execution failed");
+   840→      toast({
+   841→        title: "Playbook executed",
+   842→        description: data.message || `${data.steps?.length || 0} steps added to timeline.`,
+   843→      });
+   844→      // steps may be { index, title, description, automated, status } OR { order, action, description, automated }
+   845→      const steps = (data.steps || []) as PlaybookStep[];
+   846→      setExecutedSteps(steps);
+   847→      setCheckedSteps(new Set(steps.filter((s) => s.status === "executed").map((s) => s.order ?? s.index ?? 0)));
+   848→      loadAll();
+   849→    } catch (err) {
+   850→      toast({
+   851→        variant: "destructive",
+   852→        title: "Execution failed",
+   853→        description: err instanceof Error ? err.message : "unknown error",
+   854→      });
+   855→    } finally {
+   856→      setExecutingPb(false);
+   857→    }
+   858→  };
+   859→
+   860→  if (loading || !incident) {
+   861→    return (
+   862→      <div className="space-y-3">
+   863→        <Skeleton className="h-12 bg-zinc-900/40" />
+   864→        <Skeleton className="h-64 bg-zinc-900/40" />
+   865→        <Skeleton className="h-64 bg-zinc-900/40" />
+   866→      </div>
+   867→    );
+   868→  }
+   869→
+   870→  const sev = SEVERITY_STYLE[incident.severity] || SEVERITY_STYLE.medium;
+   871→  const stat = STATUS_STYLE[incident.status] || STATUS_STYLE.open;
+   872→  const currentStatusIdx = STATUS_FLOW.indexOf(incident.status);
+   873→
+   874→  return (
+   875→    <div className="space-y-4">
+   876→      {/* Back button + header */}
+   877→      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+   878→        <div className="flex-1">
+   879→          <button
+   880→            onClick={onBack}
+   881→            className="mb-2 flex items-center gap-1 text-xs text-zinc-400 transition-colors hover:text-zinc-200"
+   882→          >
+   883→            <ChevronLeft className="size-3.5" />
+   884→            Back to incidents
+   885→          </button>
+   886→          {titleEditing ? (
+   887→            <div className="flex items-center gap-2">
+   888→              <Input
+   889→                value={titleDraft}
+   890→                onChange={(e) => setTitleDraft(e.target.value)}
+   891→                className="max-w-2xl border-zinc-700 bg-zinc-900/60 text-lg font-bold text-zinc-100 focus-visible:border-red-500/50"
+   892→                autoFocus
+   893→              />
+   894→              <Button size="sm" onClick={() => saveField("title", titleDraft)} disabled={savingField === "title"}>
+   895→                {savingField === "title" ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+   896→              </Button>
+   897→              <Button size="sm" variant="outline" onClick={() => setTitleEditing(false)} className="border-zinc-700 bg-zinc-900 text-zinc-300">
+   898→                Cancel
+   899→              </Button>
+   900→            </div>
+   901→          ) : (
+   902→            <h2
+   903→              className="cursor-text text-xl font-bold text-zinc-50 hover:text-red-300"
+   904→              onClick={() => { setTitleDraft(incident.title); setTitleEditing(true); }}
+   905→              title="Click to edit title"
+   906→            >
+   907→              {incident.title}
+   908→            </h2>
+   909→          )}
+   910→          <div className="mt-2 flex flex-wrap items-center gap-2">
+   911→            <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${sev.border} ${sev.bg} ${sev.text}`}>
+   912→              {incident.severity}
+   913→            </span>
+   914→            <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${stat.border} ${stat.bg} ${stat.text}`}>
+   915→              {stat.label}
+   916→            </span>
+   917→            <Badge variant="outline" className="border-zinc-700 text-[10px] text-zinc-400">
+   918→              <Tag className="mr-1 size-3" />{incident.category}
+   919→            </Badge>
+   920→            <Badge variant="outline" className="border-zinc-700 text-[10px] text-zinc-400">
+   921→              <Radio className="mr-1 size-3" />{incident.source}
+   922→            </Badge>
+   923→          </div>
+   924→        </div>
+   925→        <div className="flex items-center gap-2 text-xs text-zinc-400">
+   926→          <User className="size-3.5 text-zinc-500" />
+   927→          <span className="font-mono">{incident.assignee || "unassigned"}</span>
+   928→        </div>
+   929→      </div>
+   930→
+   931→      {/* Workflow status bar */}
+   932→      <div className="holo-card-sharp hud-corners p-4">
+   933→        <div className="mb-3 flex items-center justify-between">
+   934→          <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Status Workflow</span>
+   935→          <Button
+   936→            onClick={() => setContainOpen(true)}
+   937→            disabled={incident.status === "closed" || incident.status === "contained" || incident.status === "eradicated"}
+   938→            size="sm"
+   939→            className="bg-cyan-600 text-white hover:bg-cyan-500 neon-border-cyan"
+   940→          >
+   941→            <Lock className="size-3.5" /> Contain Now
+   942→          </Button>
+   943→        </div>
+   944→        <div className="flex flex-wrap items-center gap-1.5">
+   945→          {STATUS_FLOW.map((s, idx) => {
+   946→            const cfg = STATUS_STYLE[s];
+   947→            const isCurrent = idx === currentStatusIdx;
+   948→            const isDone = idx < currentStatusIdx;
+   949→            const isNext = idx === currentStatusIdx + 1;
+   950→            const isClickable = idx <= currentStatusIdx + 1 && !isCurrent && !isDone;
+   951→            return (
+   952→              <div key={s} className="flex items-center gap-1.5">
+   953→                <button
+   954→                  onClick={() => isClickable && transitionStatus(s)}
+   955→                  disabled={!isClickable}
+   956→                  className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold transition-all ${
+   957→                    isCurrent
+   958→                      ? `${cfg.border} ${cfg.bg} ${cfg.text} neon-border-cyan`
+   959→                      : isDone
+   960→                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+   961→                      : isNext
+   962→                      ? `${cfg.border} ${cfg.bg} ${cfg.text} hover:opacity-80`
+   963→                      : "border-zinc-800 bg-zinc-900/40 text-zinc-600"
+   964→                  } ${isClickable ? "cursor-pointer" : "cursor-default"}`}
+   965→                  title={isCurrent ? "Current status" : isDone ? "Completed" : isNext ? `Transition to ${s}` : "Locked"}
+   966→                >
+   967→                  {isDone && <CheckCircle2 className="mr-1 inline size-3" />}
+   968→                  {cfg.label}
+   969→                </button>
+   970→                {idx < STATUS_FLOW.length - 1 && (
+   971→                  <ArrowRight className="size-3 text-zinc-700" />
+   972→                )}
+   973→              </div>
+   974→            );
+   975→          })}
+   976→        </div>
+   977→      </div>
+   978→
+   979→      {/* Two-column layout: timeline + evidence */}
+   980→      <div className="grid gap-4 lg:grid-cols-5">
+   981→        {/* Timeline (60%) */}
+   982→        <div className="lg:col-span-3">
+   983→          <div className="holo-card-sharp hud-corners h-full p-4">
+   984→            <div className="mb-3 flex items-center justify-between">
+   985→              <div className="flex items-center gap-2">
+   986→                <Activity className="size-4 text-cyan-400" />
+   987→                <h3 className="text-sm font-bold text-zinc-100">Forensic Timeline</h3>
+   988→                <span className="font-mono text-[10px] text-zinc-500">({timeline.length} events)</span>
+   989→              </div>
+   990→              <Button
+   991→                size="sm"
+   992→                variant="outline"
+   993→                onClick={() => setNoteOpen(true)}
+   994→                className="border-cyan-500/30 bg-cyan-500/5 text-cyan-300 hover:bg-cyan-500/15"
+   995→              >
+   996→                <Plus className="size-3.5" /> Add Note
+   997→              </Button>
+   998→            </div>
+   999→
+  1000→            <div
+  1001→              ref={timelineRef}
+  1002→              className="custom-scrollbar max-h-96 space-y-2 overflow-y-auto pr-1"
+  1003→            >
+  1004→              {timeline.length === 0 ? (
+  1005→                <div className="flex h-32 items-center justify-center text-xs text-zinc-600">
+  1006→                  No events yet. Add a note or execute a playbook.
+  1007→                </div>
+  1008→              ) : (
+  1009→                timeline.map((ev, i) => {
+  1010→                  const cfg = EVENT_TYPE_CONFIG[ev.eventType] || EVENT_TYPE_CONFIG.note;
+  1011→                  const evSev = SEVERITY_STYLE[ev.severity] || SEVERITY_STYLE.info;
+  1012→                  const Icon = cfg.icon;
+  1013→                  return (
+  1014→                    <motion.div
+  1015→                      key={ev.id}
+  1016→                      initial={{ opacity: 0, x: -8 }}
+  1017→                      animate={{ opacity: 1, x: 0 }}
+  1018→                      transition={{ delay: Math.min(i * 0.02, 0.3) }}
+  1019→                      className="flex gap-3 rounded-md border border-zinc-800/60 bg-zinc-900/40 p-2.5 hover:border-zinc-700"
+  1020→                    >
+  1021→                      <div className={`flex size-7 shrink-0 items-center justify-center rounded-md border ${evSev.border} ${evSev.bg}`}>
+  1022→                        <Icon className={`size-3.5 ${cfg.color}`} />
+  1023→                      </div>
+  1024→                      <div className="min-w-0 flex-1">
+  1025→                        <div className="flex items-start justify-between gap-2">
+  1026→                          <h4 className="text-xs font-semibold text-zinc-100">{ev.title}</h4>
+  1027→                          <span className="shrink-0 font-mono text-[9px] text-zinc-600">
+  1028→                            {new Date(ev.occurredAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+  1029→                          </span>
+  1030→                        </div>
+  1031→                        {ev.description && (
+  1032→                          <p className="mt-0.5 whitespace-pre-line text-[11px] leading-relaxed text-zinc-400">{ev.description}</p>
+  1033→                        )}
+  1034→                        <div className="mt-1 flex items-center gap-2 text-[9px] text-zinc-600">
+  1035→                          <span className={`rounded border px-1 py-0.5 ${evSev.border} ${evSev.bg} ${evSev.text}`}>{ev.eventType}</span>
+  1036→                          <span>by {ev.actor || ev.source}</span>
+  1037→                        </div>
+  1038→                      </div>
+  1039→                    </motion.div>
+  1040→                  );
+  1041→                })
+  1042→              )}
+  1043→            </div>
+  1044→          </div>
+  1045→        </div>
+  1046→
+  1047→        {/* Evidence locker (40%) */}
+  1048→        <div className="lg:col-span-2">
+  1049→          <div className="holo-card-sharp hud-corners h-full p-4">
+  1050→            <div className="mb-3 flex items-center justify-between">
+  1051→              <div className="flex items-center gap-2">
+  1052→                <FileLock2 className="size-4 text-violet-400" />
+  1053→                <h3 className="text-sm font-bold text-zinc-100">Evidence Locker</h3>
+  1054→                <span className="font-mono text-[10px] text-zinc-500">({evidence.length})</span>
+  1055→              </div>
+  1056→              <Button
+  1057→                size="sm"
+  1058→                variant="outline"
+  1059→                onClick={() => setEvidenceOpen(true)}
+  1060→                className="border-violet-500/30 bg-violet-500/5 text-violet-300 hover:bg-violet-500/15"
+  1061→              >
+  1062→                <Plus className="size-3.5" /> Add
+  1063→              </Button>
+  1064→            </div>
+  1065→
+  1066→            <div className="custom-scrollbar max-h-96 space-y-2 overflow-y-auto pr-1">
+  1067→              {evidence.length === 0 ? (
+  1068→                <div className="flex h-32 items-center justify-center text-xs text-zinc-600">
+  1069→                  No evidence collected. Hash-locked artifacts appear here.
+  1070→                </div>
+  1071→              ) : (
+  1072→                evidence.map((ev) => {
+  1073→                  const chainLen = Array.isArray(ev.chainOfCustody) ? ev.chainOfCustody.length : 0;
+  1074→                  return (
+  1075→                    <motion.div
+  1076→                      key={ev.id}
+  1077→                      initial={{ opacity: 0, y: 4 }}
+  1078→                      animate={{ opacity: 1, y: 0 }}
+  1079→                      className="rounded-md border border-zinc-800/60 bg-zinc-900/40 p-2.5 hover:border-violet-500/30"
+  1080→                    >
+  1081→                      <div className="flex items-start justify-between gap-2">
+  1082→                        <div className="flex min-w-0 items-center gap-1.5">
+  1083→                          <span title={ev.isImmutable ? "Immutable (hash-locked)" : "Mutable"}>
+  1084→                            {ev.isImmutable ? (
+  1085→                              <Lock className="size-3 shrink-0 text-emerald-400" />
+  1086→                            ) : (
+  1087→                              <FileText className="size-3 shrink-0 text-zinc-500" />
+  1088→                            )}
+  1089→                          </span>
+  1090→                          <FileText className="size-3 shrink-0 text-zinc-500" />
+  1091→                          <span className="truncate text-xs font-medium text-zinc-200">{ev.filename}</span>
+  1092→                        </div>
+  1093→                        <Badge variant="outline" className="shrink-0 border-zinc-700 text-[9px] text-zinc-400">
+  1094→                          {ev.evidenceType}
+  1095→                        </Badge>
+  1096→                      </div>
+  1097→                      <div className="mt-1.5 flex items-center gap-1.5 font-mono text-[9px] text-zinc-500">
+  1098→                        <Hash className="size-2.5" />
+  1099→                        <span className="truncate" title={ev.sha256}>{truncateHash(ev.sha256)}</span>
+  1100→                      </div>
+  1101→                      <div className="mt-1 flex items-center justify-between text-[9px] text-zinc-600">
+  1102→                        <span>by {ev.collectedBy}</span>
+  1103→                        <span>{timeAgo(ev.collectedAt)}</span>
+  1104→                      </div>
+  1105→                      {chainLen > 0 && (
+  1106→                        <div className="mt-1.5 flex items-center gap-1 border-t border-zinc-800/60 pt-1 text-[9px] text-zinc-600">
+  1107→                          <Eye className="size-2.5" />
+  1108→                          {chainLen} custody entr{chainLen === 1 ? "y" : "ies"}
+  1109→                          <span className="text-zinc-700">|</span>
+  1110→                          {ev.fileSize > 0 && <span>{ev.fileSize} B</span>}
+  1111→                        </div>
+  1112→                      )}
+  1113→                    </motion.div>
+  1114→                  );
+  1115→                })
+  1116→              )}
+  1117→            </div>
+  1118→          </div>
+  1119→        </div>
+  1120→      </div>
+  1121→
+  1122→      {/* Root cause + lessons learned */}
+  1123→      <div className="grid gap-4 lg:grid-cols-2">
+  1124→        <div className="holo-card-sharp hud-corners p-4">
+  1125→          <div className="mb-2 flex items-center justify-between">
+  1126→            <div className="flex items-center gap-2">
+  1127→              <Crosshair className="size-4 text-amber-400" />
+  1128→              <h3 className="text-sm font-bold text-zinc-100">Root Cause Analysis</h3>
+  1129→            </div>
+  1130→            <Button
+  1131→              size="sm"
+  1132→              variant="ghost"
+  1133→              onClick={() => saveField("rootCause", rootCause)}
+  1134→              disabled={savingField === "rootCause"}
+  1135→              className="text-xs text-zinc-400 hover:text-zinc-200"
+  1136→            >
+  1137→              {savingField === "rootCause" ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3" />}
+  1138→              Save
+  1139→            </Button>
+  1140→          </div>
+  1141→          <textarea
+  1142→            value={rootCause}
+  1143→            onChange={(e) => setRootCause(e.target.value)}
+  1144→            placeholder="What was the underlying cause of this incident? (e.g. misconfigured S3 bucket, leaked credentials, unpatched CVE-2024-XXXX)..."
+  1145→            rows={4}
+  1146→            className="w-full rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-amber-500/50 focus:outline-none"
+  1147→          />
+  1148→        </div>
+  1149→        <div className="holo-card-sharp hud-corners p-4">
+  1150→          <div className="mb-2 flex items-center justify-between">
+  1151→            <div className="flex items-center gap-2">
+  1152→              <FileText className="size-4 text-emerald-400" />
+  1153→              <h3 className="text-sm font-bold text-zinc-100">Lessons Learned</h3>
+  1154→            </div>
+  1155→            <Button
+  1156→              size="sm"
+  1157→              variant="ghost"
+  1158→              onClick={() => saveField("lessonsLearned", lessons)}
+  1159→              disabled={savingField === "lessonsLearned"}
+  1160→              className="text-xs text-zinc-400 hover:text-zinc-200"
+  1161→            >
+  1162→              {savingField === "lessonsLearned" ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3" />}
+  1163→              Save
+  1164→            </Button>
+  1165→          </div>
+  1166→          <textarea
+  1167→            value={lessons}
+  1168→            onChange={(e) => setLessons(e.target.value)}
+  1169→            placeholder="What did we learn? What controls failed? What will we change to prevent recurrence?..."
+  1170→            rows={4}
+  1171→            className="w-full rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-emerald-500/50 focus:outline-none"
+  1172→          />
+  1173→        </div>
+  1174→      </div>
+  1175→
+  1176→      {/* Playbook execution */}
+  1177→      <div className="holo-card-sharp hud-corners p-4">
+  1178→        <div className="mb-3 flex items-center gap-2">
+  1179→          <ClipboardList className="size-4 text-violet-400" />
+  1180→          <h3 className="text-sm font-bold text-zinc-100">Playbook Execution</h3>
+  1181→        </div>
+  1182→        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+  1183→          <div className="flex-1">
+  1184→            <Label className="text-xs text-zinc-400">Select Playbook</Label>
+  1185→            <select
+  1186→              value={selectedPlaybook}
+  1187→              onChange={(e) => setSelectedPlaybook(e.target.value)}
+  1188→              className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-violet-500/50 focus:outline-none"
+  1189→            >
+  1190→              <option value="">Choose a playbook...</option>
+  1191→              {playbooks.filter((p) => p.isActive).map((p) => (
+  1192→                <option key={p.id} value={p.id}>
+  1193→                  {p.name} ({p.steps.length} steps, {p.severity})
+  1194→                </option>
+  1195→              ))}
+  1196→            </select>
+  1197→          </div>
+  1198→          <Button
+  1199→            onClick={executePlaybook}
+  1200→            disabled={!selectedPlaybook || executingPb}
+  1201→            className="bg-violet-600 text-white hover:bg-violet-500 neon-border-violet"
+  1202→          >
+  1203→            {executingPb ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+  1204→            Execute
+  1205→          </Button>
+  1206→        </div>
+  1207→
+  1208→        {/* Step checklist after execution */}
+  1209→        {executedSteps && (
+  1210→          <div className="mt-4">
+  1211→            <div className="mb-2 flex items-center justify-between">
+  1212→              <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+  1213→                Execution Checklist ({checkedSteps.size}/{executedSteps.length} done)
+  1214→              </span>
+  1215→              <span className="font-mono text-[10px] text-zinc-600">
+  1216→                {executedSteps.length > 0 ? Math.round((checkedSteps.size / executedSteps.length) * 100) : 0}% complete
+  1217→              </span>
+  1218→            </div>
+  1219→            <div className="space-y-1.5">
+  1220→              {executedSteps.map((step, i) => {
+  1221→                const stepNum = step.order ?? step.index ?? i + 1;
+  1222→                const stepTitle = step.action ?? step.title ?? `Step ${i + 1}`;
+  1223→                const checked = checkedSteps.has(stepNum);
+  1224→                return (
+  1225→                  <button
+  1226→                    key={stepNum}
+  1227→                    onClick={() => {
+  1228→                      setCheckedSteps((prev) => {
+  1229→                        const next = new Set(prev);
+  1230→                        if (next.has(stepNum)) next.delete(stepNum);
+  1231→                        else next.add(stepNum);
+  1232→                        return next;
+  1233→                      });
+  1234→                    }}
+  1235→                    className={`flex w-full items-start gap-2.5 rounded-md border p-2.5 text-left transition-all ${
+  1236→                      checked
+  1237→                        ? "border-emerald-500/30 bg-emerald-500/5"
+  1238→                        : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700"
+  1239→                    }`}
+  1240→                  >
+  1241→                    <div className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded ${
+  1242→                      checked ? "bg-emerald-500 text-zinc-950" : "border border-zinc-700 bg-zinc-900"
+  1243→                    }`}>
+  1244→                      {checked && <CheckCircle2 className="size-3.5" />}
+  1245→                    </div>
+  1246→                    <div className="min-w-0 flex-1">
+  1247→                      <div className="flex items-center gap-2">
+  1248→                        <span className="font-mono text-[10px] text-zinc-500">#{stepNum}</span>
+  1249→                        <span className={`text-xs font-semibold ${checked ? "text-emerald-300 line-through" : "text-zinc-100"}`}>
+  1250→                          {stepTitle}
+  1251→                        </span>
+  1252→                        {step.automated ? (
+  1253→                          <Badge variant="outline" className="border-cyan-500/30 bg-cyan-500/5 text-[9px] text-cyan-300">
+  1254→                            <Zap className="mr-0.5 size-2.5" /> AUTO
+  1255→                          </Badge>
+  1256→                        ) : (
+  1257→                          <Badge variant="outline" className="border-amber-500/30 bg-amber-500/5 text-[9px] text-amber-300">
+  1258→                            <User className="mr-0.5 size-2.5" /> MANUAL
+  1259→                          </Badge>
+  1260→                        )}
+  1261→                        {step.status === "executed" && (
+  1262→                          <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/5 text-[9px] text-emerald-300">
+  1263→                            EXECUTED
+  1264→                          </Badge>
+  1265→                        )}
+  1266→                      </div>
+  1267→                      {step.description && (
+  1268→                        <p className="mt-0.5 text-[11px] text-zinc-500">{step.description}</p>
+  1269→                      )}
+  1270→                    </div>
+  1271→                  </button>
+  1272→                );
+  1273→              })}
+  1274→            </div>
+  1275→          </div>
+  1276→        )}
+  1277→      </div>
+  1278→
+  1279→      {/* Containment confirmation dialog */}
+  1280→      {containOpen && (
+  1281→        <ConfirmDialog
+  1282→          title="Confirm Containment Action"
+  1283→          description="This will isolate the affected asset, block the source IP via virtual WAF, and revoke all active sessions. The incident will be marked as contained. This action is logged to the forensic timeline."
+  1284→          confirmLabel="Contain & Isolate"
+  1285→          onConfirm={handleContain}
+  1286→          onCancel={() => setContainOpen(false)}
+  1287→          color="cyan"
+  1288→        />
+  1289→      )}
+  1290→
+  1291→      {/* Add note modal */}
+  1292→      {noteOpen && (
+  1293→        <AddNoteModal
+  1294→          onClose={() => setNoteOpen(false)}
+  1295→          onAdded={() => { setNoteOpen(false); loadAll(); }}
+  1296→          incidentId={incidentId}
+  1297→        />
+  1298→      )}
+  1299→
+  1300→      {/* Add evidence modal */}
+  1301→      {evidenceOpen && (
+  1302→        <AddEvidenceModal
+  1303→          onClose={() => setEvidenceOpen(false)}
+  1304→          onAdded={() => { setEvidenceOpen(false); loadAll(); }}
+  1305→          incidentId={incidentId}
+  1306→        />
+  1307→      )}
+  1308→    </div>
+  1309→  );
+  1310→}
+  1311→
+  1312→// ── Confirm dialog ──
+  1313→function ConfirmDialog({
+  1314→  title, description, confirmLabel, onConfirm, onCancel, color = "red",
+  1315→}: {
+  1316→  title: string;
+  1317→  description: string;
+  1318→  confirmLabel: string;
+  1319→  onConfirm: () => void;
+  1320→  onCancel: () => void;
+  1321→  color?: "red" | "cyan" | "violet";
+  1322→}) {
+  1323→  const colorMap = {
+  1324→    red: "bg-red-600 hover:bg-red-500 neon-border-red",
+  1325→    cyan: "bg-cyan-600 hover:bg-cyan-500 neon-border-cyan",
+  1326→    violet: "bg-violet-600 hover:bg-violet-500 neon-border-violet",
+  1327→  };
+  1328→  const iconMap = { red: AlertTriangle, cyan: Lock, violet: ShieldCheck };
+  1329→  const Icon = iconMap[color];
+  1330→  const iconColor = { red: "text-red-400", cyan: "text-cyan-400", violet: "text-violet-400" };
+  1331→  return (
+  1332→    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onCancel}>
+  1333→      <motion.div
+  1334→        initial={{ opacity: 0, scale: 0.95 }}
+  1335→        animate={{ opacity: 1, scale: 1 }}
+  1336→        onClick={(e) => e.stopPropagation()}
+  1337→        className="holo-card-sharp hud-corners w-full max-w-md rounded-lg p-6"
+  1338→      >
+  1339→        <div className="mb-3 flex items-center gap-2">
+  1340→          <Icon className={`size-5 ${iconColor[color]}`} />
+  1341→          <h2 className="text-lg font-bold text-zinc-50">{title}</h2>
+  1342→        </div>
+  1343→        <p className="text-sm text-zinc-400">{description}</p>
+  1344→        <div className="mt-5 flex justify-end gap-2">
+  1345→          <Button variant="outline" onClick={onCancel} className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+  1346→            Cancel
+  1347→          </Button>
+  1348→          <Button onClick={onConfirm} className={colorMap[color]}>
+  1349→            {confirmLabel}
+  1350→          </Button>
+  1351→        </div>
+  1352→      </motion.div>
+  1353→    </div>
+  1354→  );
+  1355→}
+  1356→
+  1357→// ── Add Note Modal ──
+  1358→function AddNoteModal({
+  1359→  onClose, onAdded, incidentId,
+  1360→}: { onClose: () => void; onAdded: () => void; incidentId: string }) {
+  1361→  const { toast } = useToast();
+  1362→  const [loading, setLoading] = useState(false);
+  1363→  const [form, setForm] = useState({ title: "", description: "", severity: "info" });
+  1364→
+  1365→  const handleSubmit = async () => {
+  1366→    if (!form.title.trim()) return;
+  1367→    setLoading(true);
+  1368→    try {
+  1369→      const res = await fetch(`/api/incidents/${incidentId}/events`, {
+  1370→        method: "POST",
+  1371→        headers: { "Content-Type": "application/json" },
+  1372→        body: JSON.stringify({ ...form, eventType: "note" }),
+  1373→      });
+  1374→      const data = await res.json();
+  1375→      if (!res.ok) throw new Error(data.error || "Failed to add note");
+  1376→      toast({ title: "Note added to timeline" });
+  1377→      onAdded();
+  1378→    } catch (err) {
+  1379→      toast({
+  1380→        variant: "destructive",
+  1381→        title: "Failed to add note",
+  1382→        description: err instanceof Error ? err.message : "unknown error",
+  1383→      });
+  1384→    } finally {
+  1385→      setLoading(false);
+  1386→    }
+  1387→  };
+  1388→
+  1389→  return (
+  1390→    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+  1391→      <motion.div
+  1392→        initial={{ opacity: 0, scale: 0.95 }}
+  1393→        animate={{ opacity: 1, scale: 1 }}
+  1394→        onClick={(e) => e.stopPropagation()}
+  1395→        className="holo-card-sharp hud-corners w-full max-w-md rounded-lg p-6"
+  1396→      >
+  1397→        <div className="mb-4 flex items-center gap-2">
+  1398→          <FileText className="size-5 text-cyan-400" />
+  1399→          <h2 className="text-lg font-bold text-zinc-50">Add Timeline Note</h2>
+  1400→        </div>
+  1401→        <div className="space-y-3">
+  1402→          <div>
+  1403→            <Label className="text-xs text-zinc-400">Title *</Label>
+  1404→            <Input
+  1405→              value={form.title}
+  1406→              onChange={(e) => setForm({ ...form, title: e.target.value })}
+  1407→              placeholder="e.g. Contacted SOC escalation team"
+  1408→              className="mt-1 border-zinc-700 bg-zinc-900/60 text-zinc-200 focus-visible:border-cyan-500/50"
+  1409→              autoFocus
+  1410→            />
+  1411→          </div>
+  1412→          <div>
+  1413→            <Label className="text-xs text-zinc-400">Description</Label>
+  1414→            <textarea
+  1415→              value={form.description}
+  1416→              onChange={(e) => setForm({ ...form, description: e.target.value })}
+  1417→              placeholder="Add details, observations, or context..."
+  1418→              rows={3}
+  1419→              className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-cyan-500/50 focus:outline-none"
+  1420→            />
+  1421→          </div>
+  1422→          <div>
+  1423→            <Label className="text-xs text-zinc-400">Severity</Label>
+  1424→            <select
+  1425→              value={form.severity}
+  1426→              onChange={(e) => setForm({ ...form, severity: e.target.value })}
+  1427→              className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-cyan-500/50 focus:outline-none"
+  1428→            >
+  1429→              <option value="info">Info</option>
+  1430→              <option value="low">Low</option>
+  1431→              <option value="medium">Medium</option>
+  1432→              <option value="high">High</option>
+  1433→              <option value="critical">Critical</option>
+  1434→            </select>
+  1435→          </div>
+  1436→        </div>
+  1437→        <div className="mt-5 flex justify-end gap-2">
+  1438→          <Button variant="outline" onClick={onClose} className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+  1439→            Cancel
+  1440→          </Button>
+  1441→          <Button onClick={handleSubmit} disabled={loading || !form.title.trim()} className="bg-cyan-600 text-white hover:bg-cyan-500">
+  1442→            {loading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+  1443→            Add Note
+  1444→          </Button>
+  1445→        </div>
+  1446→      </motion.div>
+  1447→    </div>
+  1448→  );
+  1449→}
+  1450→
+  1451→// ── Add Evidence Modal ──
+  1452→function AddEvidenceModal({
+  1453→  onClose, onAdded, incidentId,
+  1454→}: { onClose: () => void; onAdded: () => void; incidentId: string }) {
+  1455→  const { toast } = useToast();
+  1456→  const [loading, setLoading] = useState(false);
+  1457→  const [form, setForm] = useState({
+  1458→    evidenceType: "log",
+  1459→    filename: "",
+  1460→    content: "",
+  1461→    description: "",
+  1462→  });
+  1463→
+  1464→  const handleSubmit = async () => {
+  1465→    if (!form.filename.trim()) return;
+  1466→    setLoading(true);
+  1467→    try {
+  1468→      const res = await fetch(`/api/incidents/${incidentId}/evidence`, {
+  1469→        method: "POST",
+  1470→        headers: { "Content-Type": "application/json" },
+  1471→        body: JSON.stringify(form),
+  1472→      });
+  1473→      const data = await res.json();
+  1474→      if (!res.ok) throw new Error(data.error || "Failed to collect evidence");
+  1475→      toast({
+  1476→        title: "Evidence collected",
+  1477→        description: data.sha256 ? `SHA-256: ${truncateHash(data.sha256, 12)}... locked.` : data.message || "Hash-locked and sealed.",
+  1478→      });
+  1479→      onAdded();
+  1480→    } catch (err) {
+  1481→      toast({
+  1482→        variant: "destructive",
+  1483→        title: "Failed to collect evidence",
+  1484→        description: err instanceof Error ? err.message : "unknown error",
+  1485→      });
+  1486→    } finally {
+  1487→      setLoading(false);
+  1488→    }
+  1489→  };
+  1490→
+  1491→  return (
+  1492→    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+  1493→      <motion.div
+  1494→        initial={{ opacity: 0, scale: 0.95 }}
+  1495→        animate={{ opacity: 1, scale: 1 }}
+  1496→        onClick={(e) => e.stopPropagation()}
+  1497→        className="holo-card-sharp hud-corners max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg p-6"
+  1498→      >
+  1499→        <div className="mb-4 flex items-center gap-2">
+  1500→          <FileLock2 className="size-5 text-violet-400" />
+  1501→          <h2 className="text-lg font-bold text-zinc-50">Collect Evidence</h2>
+  1502→        </div>
+  1503→        <div className="space-y-3">
+  1504→          <div className="grid gap-3 sm:grid-cols-2">
+  1505→            <div>
+  1506→              <Label className="text-xs text-zinc-400">Evidence Type</Label>
+  1507→              <select
+  1508→                value={form.evidenceType}
+  1509→                onChange={(e) => setForm({ ...form, evidenceType: e.target.value })}
+  1510→                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-violet-500/50 focus:outline-none"
+  1511→              >
+  1512→                <option value="log">Log</option>
+  1513→                <option value="pcap">PCAP</option>
+  1514→                <option value="memory_dump">Memory Dump</option>
+  1515→                <option value="disk_image">Disk Image</option>
+  1516→                <option value="screenshot">Screenshot</option>
+  1517→                <option value="config">Configuration</option>
+  1518→                <option value="other">Other</option>
+  1519→              </select>
+  1520→            </div>
+  1521→            <div>
+  1522→              <Label className="text-xs text-zinc-400">Filename *</Label>
+  1523→              <Input
+  1524→                value={form.filename}
+  1525→                onChange={(e) => setForm({ ...form, filename: e.target.value })}
+  1526→                placeholder="auth-logs-2024.txt"
+  1527→                className="mt-1 border-zinc-700 bg-zinc-900/60 text-zinc-200 focus-visible:border-violet-500/50"
+  1528→              />
+  1529→            </div>
+  1530→          </div>
+  1531→          <div>
+  1532→            <Label className="text-xs text-zinc-400">Content (will be SHA-256 hashed)</Label>
+  1533→            <textarea
+  1534→              value={form.content}
+  1535→              onChange={(e) => setForm({ ...form, content: e.target.value })}
+  1536→              placeholder="Paste log lines, JSON payload, config snippet, or any text artifact..."
+  1537→              rows={6}
+  1538→              className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 font-mono text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-violet-500/50 focus:outline-none"
+  1539→            />
+  1540→          </div>
+  1541→          <div>
+  1542→            <Label className="text-xs text-zinc-400">Description</Label>
+  1543→            <Input
+  1544→              value={form.description}
+  1545→              onChange={(e) => setForm({ ...form, description: e.target.value })}
+  1546→              placeholder="Where was this collected from?"
+  1547→              className="mt-1 border-zinc-700 bg-zinc-900/60 text-zinc-200 focus-visible:border-violet-500/50"
+  1548→            />
+  1549→          </div>
+  1550→        </div>
+  1551→        <div className="mt-5 flex justify-end gap-2">
+  1552→          <Button variant="outline" onClick={onClose} className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+  1553→            Cancel
+  1554→          </Button>
+  1555→          <Button onClick={handleSubmit} disabled={loading || !form.filename.trim()} className="bg-violet-600 text-white hover:bg-violet-500">
+  1556→            {loading ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
+  1557→            Hash-Lock & Collect
+  1558→          </Button>
+  1559→        </div>
+  1560→      </motion.div>
+  1561→    </div>
+  1562→  );
+  1563→}
+  1564→
+  1565→// ════════════════════════════════════════════════════════════════════════════
+  1566→// IOC TRACKER TAB
+  1567→// ════════════════════════════════════════════════════════════════════════════
+  1568→function IocTracker() {
+  1569→  const { toast } = useToast();
+  1570→  const [iocs, setIocs] = useState<IOC[]>([]);
+  1571→  const [loading, setLoading] = useState(true);
+  1572→  const [typeFilter, setTypeFilter] = useState("all");
+  1573→  const [activeFilter, setActiveFilter] = useState("all");
+  1574→  const [query, setQuery] = useState("");
+  1575→  const [addOpen, setAddOpen] = useState(false);
+  1576→  const [checkingId, setCheckingId] = useState<string | null>(null);
+  1577→
+  1578→  const load = useCallback(async () => {
+  1579→    try {
+  1580→      const params = new URLSearchParams();
+  1581→      if (typeFilter !== "all") params.set("type", typeFilter);
+  1582→      if (activeFilter !== "all") params.set("active", activeFilter);
+  1583→      if (query) params.set("q", query);
+  1584→      const res = await fetch(`/api/iocs?${params.toString()}`);
+  1585→      const data = await res.json();
+  1586→      setIocs(unwrapList<IOC>(data, "iocs"));
+  1587→    } catch {
+  1588→      setIocs([]);
+  1589→    } finally {
+  1590→      setLoading(false);
+  1591→    }
+  1592→  }, [typeFilter, activeFilter, query]);
+  1593→
+  1594→  useEffect(() => {
+  1595→    load();
+  1596→    const id = setInterval(load, 30_000);
+  1597→    return () => clearInterval(id);
+  1598→  }, [load]);
+  1599→
+  1600→  const toggleActive = async (ioc: IOC) => {
+  1601→    try {
+  1602→      const res = await fetch(`/api/iocs`, {
+  1603→        method: "PATCH",
+  1604→        headers: { "Content-Type": "application/json" },
+  1605→        body: JSON.stringify({ id: ioc.id, isActive: !ioc.isActive }),
+  1606→      });
+  1607→      const data = await res.json();
+  1608→      if (!res.ok) throw new Error(data.error || "Update failed");
+  1609→      toast({ title: `IOC ${!ioc.isActive ? "activated" : "deactivated"}`, description: ioc.value });
+  1610→      load();
+  1611→    } catch (err) {
+  1612→      toast({
+  1613→        variant: "destructive",
+  1614→        title: "Update failed",
+  1615→        description: err instanceof Error ? err.message : "unknown error",
+  1616→      });
+  1617→    }
+  1618→  };
+  1619→
+  1620→  const checkIoc = async (ioc: IOC) => {
+  1621→    setCheckingId(ioc.id);
+  1622→    try {
+  1623→      const res = await fetch(`/api/iocs/check`, {
+  1624→        method: "POST",
+  1625→        headers: { "Content-Type": "application/json" },
+  1626→        body: JSON.stringify({ value: ioc.value }),
+  1627→      });
+  1628→      const data = await res.json();
+  1629→      if (!res.ok) throw new Error(data.error || "Check failed");
+  1630→      if (data.found) {
+  1631→        toast({
+  1632→          title: "IOC re-confirmed",
+  1633→          description: `${ioc.value} matched. Hit count now ${data.ioc?.hitCount || ioc.hitCount + 1}.`,
+  1634→          variant: "destructive",
+  1635→        });
+  1636→      } else {
+  1637→        toast({
+  1638→          title: "No match found",
+  1639→          description: data.message || `${ioc.value} not seen in threat intel.`,
+  1640→        });
+  1641→      }
+  1642→      load();
+  1643→    } catch (err) {
+  1644→      toast({
+  1645→        variant: "destructive",
+  1646→        title: "IOC check failed",
+  1647→        description: err instanceof Error ? err.message : "unknown error",
+  1648→      });
+  1649→    } finally {
+  1650→      setCheckingId(null);
+  1651→    }
+  1652→  };
+  1653→
+  1654→  const stats = {
+  1655→    total: iocs.length,
+  1656→    active: iocs.filter((i) => i.isActive).length,
+  1657→    ip: iocs.filter((i) => i.iocType === "ip").length,
+  1658→    hash: iocs.filter((i) => i.iocType === "hash").length,
+  1659→    domain: iocs.filter((i) => i.iocType === "domain" || i.iocType === "url").length,
+  1660→  };
+  1661→
+  1662→  return (
+  1663→    <div className="space-y-4">
+  1664→      {/* Stats */}
+  1665→      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+  1666→        <StatTile icon={Fingerprint} label="Total IOCs" value={stats.total} color="text-amber-400" border="border-amber-500/20" />
+  1667→        <StatTile icon={Activity} label="Active" value={stats.active} color="text-red-400" border="border-red-500/20" />
+  1668→        <StatTile icon={Network} label="IP Addresses" value={stats.ip} color="text-cyan-400" border="border-cyan-500/20" />
+  1669→        <StatTile icon={Hash} label="Hashes + Domains" value={stats.hash + stats.domain} color="text-violet-400" border="border-violet-500/20" />
+  1670→      </div>
+  1671→
+  1672→      {/* Toolbar */}
+  1673→      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  1674→        <div className="flex flex-1 flex-wrap items-center gap-2">
+  1675→          <div className="relative w-full sm:w-56">
+  1676→            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+  1677→            <Input
+  1678→              value={query}
+  1679→              onChange={(e) => setQuery(e.target.value)}
+  1680→              placeholder="Search IOC value..."
+  1681→              className="border-zinc-800 bg-zinc-900/60 pl-9 font-mono text-zinc-200 placeholder:text-zinc-500 focus-visible:border-amber-500/50"
+  1682→            />
+  1683→          </div>
+  1684→          <select
+  1685→            value={typeFilter}
+  1686→            onChange={(e) => setTypeFilter(e.target.value)}
+  1687→            className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+  1688→          >
+  1689→            <option value="all">All Types</option>
+  1690→            <option value="ip">IP</option>
+  1691→            <option value="hash">Hash</option>
+  1692→            <option value="domain">Domain</option>
+  1693→            <option value="url">URL</option>
+  1694→            <option value="email">Email</option>
+  1695→            <option value="user_agent">User Agent</option>
+  1696→          </select>
+  1697→          <select
+  1698→            value={activeFilter}
+  1699→            onChange={(e) => setActiveFilter(e.target.value)}
+  1700→            className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+  1701→          >
+  1702→            <option value="all">All</option>
+  1703→            <option value="true">Active</option>
+  1704→            <option value="false">Inactive</option>
+  1705→          </select>
+  1706→        </div>
+  1707→        <Button onClick={() => setAddOpen(true)} className="bg-amber-600 text-white hover:bg-amber-500 neon-border-amber">
+  1708→          <Plus className="size-4" /> Add IOC
+  1709→        </Button>
+  1710→      </div>
+  1711→
+  1712→      {/* IOC table */}
+  1713→      {loading ? (
+  1714→        <Skeleton className="h-64 bg-zinc-900/40" />
+  1715→      ) : iocs.length === 0 ? (
+  1716→        <div className="holo-card-sharp hud-corners flex flex-col items-center justify-center px-6 py-16 text-center">
+  1717→          <div className="flex size-14 items-center justify-center rounded-full bg-amber-500/10 ring-1 ring-amber-500/30">
+  1718→            <Fingerprint className="size-7 text-amber-400" />
+  1719→          </div>
+  1720→          <h3 className="mt-4 text-base font-semibold text-zinc-200">No IOCs tracked</h3>
+  1721→          <p className="mt-1 max-w-sm text-sm text-zinc-400">
+  1722→            Add an IP, hash, domain, or other indicator to start tracking adversary infrastructure.
+  1723→          </p>
+  1724→        </div>
+  1725→      ) : (
+  1726→        <div className="holo-card-sharp hud-corners overflow-hidden">
+  1727→          <div className="custom-scrollbar max-h-[28rem] overflow-y-auto">
+  1728→            <table className="w-full text-left text-xs">
+  1729→              <thead className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur">
+  1730→                <tr className="border-b border-zinc-800 text-[10px] uppercase tracking-wider text-zinc-500">
+  1731→                  <th className="px-3 py-2.5 font-medium">Value</th>
+  1732→                  <th className="px-3 py-2.5 font-medium">Type</th>
+  1733→                  <th className="px-3 py-2.5 font-medium">Conf.</th>
+  1734→                  <th className="px-3 py-2.5 font-medium">Source</th>
+  1735→                  <th className="px-3 py-2.5 font-medium">First / Last Seen</th>
+  1736→                  <th className="px-3 py-2.5 text-center font-medium">Hits</th>
+  1737→                  <th className="px-3 py-2.5 text-center font-medium">Active</th>
+  1738→                  <th className="px-3 py-2.5 text-right font-medium">Action</th>
+  1739→                </tr>
+  1740→              </thead>
+  1741→              <tbody className="divide-y divide-zinc-800/60">
+  1742→                {iocs.map((ioc, i) => {
+  1743→                  const Icon = IOC_TYPE_ICON[ioc.iocType] || Globe;
+  1744→                  const conf = SEVERITY_STYLE[ioc.confidence] || SEVERITY_STYLE.info;
+  1745→                  return (
+  1746→                    <motion.tr
+  1747→                      key={ioc.id}
+  1748→                      initial={{ opacity: 0, y: 4 }}
+  1749→                      animate={{ opacity: 1, y: 0 }}
+  1750→                      transition={{ delay: Math.min(i * 0.02, 0.2) }}
+  1751→                      className="hover:bg-zinc-900/40"
+  1752→                    >
+  1753→                      <td className="px-3 py-2.5">
+  1754→                        <div className="flex items-center gap-2">
+  1755→                          <Icon className="size-3 shrink-0 text-zinc-500" />
+  1756→                          <span className="truncate font-mono text-[11px] text-zinc-200" title={ioc.value}>
+  1757→                            {ioc.value.length > 36 ? `${ioc.value.slice(0, 36)}...` : ioc.value}
+  1758→                          </span>
+  1759→                        </div>
+  1760→                      </td>
+  1761→                      <td className="px-3 py-2.5">
+  1762→                        <Badge variant="outline" className="border-zinc-700 text-[9px] text-zinc-400">
+  1763→                          {ioc.iocType}
+  1764→                        </Badge>
+  1765→                      </td>
+  1766→                      <td className="px-3 py-2.5">
+  1767→                        <span className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold ${conf.border} ${conf.bg} ${conf.text}`}>
+  1768→                          {ioc.confidence}
+  1769→                        </span>
+  1770→                      </td>
+  1771→                      <td className="px-3 py-2.5 text-zinc-500">{ioc.source}</td>
+  1772→                      <td className="px-3 py-2.5 text-zinc-500">
+  1773→                        <div className="text-[10px]">First: {timeAgo(ioc.firstSeen)}</div>
+  1774→                        <div className="text-[10px]">Last: {timeAgo(ioc.lastSeen)}</div>
+  1775→                      </td>
+  1776→                      <td className="px-3 py-2.5 text-center font-mono text-zinc-300">{ioc.hitCount}</td>
+  1777→                      <td className="px-3 py-2.5 text-center">
+  1778→                        <button
+  1779→                          onClick={() => toggleActive(ioc)}
+  1780→                          className={`inline-flex size-6 items-center justify-center rounded ${
+  1781→                            ioc.isActive
+  1782→                              ? "bg-emerald-500/15 text-emerald-400"
+  1783→                              : "bg-zinc-800 text-zinc-600"
+  1784→                          }`}
+  1785→                          title={ioc.isActive ? "Active (click to disable)" : "Inactive (click to enable)"}
+  1786→                        >
+  1787→                          {ioc.isActive ? <CheckCircle2 className="size-3.5" /> : <Ban className="size-3.5" />}
+  1788→                        </button>
+  1789→                      </td>
+  1790→                      <td className="px-3 py-2.5 text-right">
+  1791→                        <Button
+  1792→                          size="sm"
+  1793→                          variant="ghost"
+  1794→                          onClick={() => checkIoc(ioc)}
+  1795→                          disabled={checkingId === ioc.id}
+  1796→                          className="h-7 px-2 text-[10px] text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200"
+  1797→                        >
+  1798→                          {checkingId === ioc.id ? (
+  1799→                            <Loader2 className="size-3 animate-spin" />
+  1800→                          ) : (
+  1801→                            <Eye className="size-3" />
+  1802→                          )}
+  1803→                          Check
+  1804→                        </Button>
+  1805→                      </td>
+  1806→                    </motion.tr>
+  1807→                  );
+  1808→                })}
+  1809→              </tbody>
+  1810→            </table>
+  1811→          </div>
+  1812→        </div>
+  1813→      )}
+  1814→
+  1815→      {addOpen && (
+  1816→        <AddIocModal
+  1817→          onClose={() => setAddOpen(false)}
+  1818→          onAdded={() => { setAddOpen(false); load(); }}
+  1819→        />
+  1820→      )}
+  1821→    </div>
+  1822→  );
+  1823→}
+  1824→
+  1825→// ── Add IOC Modal ──
+  1826→function AddIocModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
+  1827→  const { toast } = useToast();
+  1828→  const [loading, setLoading] = useState(false);
+  1829→  const [form, setForm] = useState({
+  1830→    iocType: "ip",
+  1831→    value: "",
+  1832→    confidence: "medium",
+  1833→    source: "manual",
+  1834→    tags: "",
+  1835→  });
+  1836→
+  1837→  const handleSubmit = async () => {
+  1838→    if (!form.value.trim()) return;
+  1839→    setLoading(true);
+  1840→    try {
+  1841→      const tags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
+  1842→      const res = await fetch(`/api/iocs`, {
+  1843→        method: "POST",
+  1844→        headers: { "Content-Type": "application/json" },
+  1845→        body: JSON.stringify({ ...form, tags }),
+  1846→      });
+  1847→      const data = await res.json();
+  1848→      if (!res.ok) throw new Error(data.error || "Failed to add IOC");
+  1849→      toast({ title: data.created ? "IOC added" : "IOC re-confirmed", description: form.value });
+  1850→      onAdded();
+  1851→    } catch (err) {
+  1852→      toast({
+  1853→        variant: "destructive",
+  1854→        title: "Failed to add IOC",
+  1855→        description: err instanceof Error ? err.message : "unknown error",
+  1856→      });
+  1857→    } finally {
+  1858→      setLoading(false);
+  1859→    }
+  1860→  };
+  1861→
+  1862→  return (
+  1863→    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+  1864→      <motion.div
+  1865→        initial={{ opacity: 0, scale: 0.95 }}
+  1866→        animate={{ opacity: 1, scale: 1 }}
+  1867→        onClick={(e) => e.stopPropagation()}
+  1868→        className="holo-card-sharp hud-corners w-full max-w-md rounded-lg p-6"
+  1869→      >
+  1870→        <div className="mb-4 flex items-center gap-2">
+  1871→          <Fingerprint className="size-5 text-amber-400" />
+  1872→          <h2 className="text-lg font-bold text-zinc-50">Add IOC</h2>
+  1873→        </div>
+  1874→        <div className="space-y-3">
+  1875→          <div className="grid gap-3 sm:grid-cols-2">
+  1876→            <div>
+  1877→              <Label className="text-xs text-zinc-400">Type</Label>
+  1878→              <select
+  1879→                value={form.iocType}
+  1880→                onChange={(e) => setForm({ ...form, iocType: e.target.value })}
+  1881→                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+  1882→              >
+  1883→                <option value="ip">IP Address</option>
+  1884→                <option value="hash">File Hash</option>
+  1885→                <option value="domain">Domain</option>
+  1886→                <option value="url">URL</option>
+  1887→                <option value="email">Email</option>
+  1888→                <option value="user_agent">User Agent</option>
+  1889→              </select>
+  1890→            </div>
+  1891→            <div>
+  1892→              <Label className="text-xs text-zinc-400">Confidence</Label>
+  1893→              <select
+  1894→                value={form.confidence}
+  1895→                onChange={(e) => setForm({ ...form, confidence: e.target.value })}
+  1896→                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+  1897→              >
+  1898→                <option value="low">Low</option>
+  1899→                <option value="medium">Medium</option>
+  1900→                <option value="high">High</option>
+  1901→              </select>
+  1902→            </div>
+  1903→          </div>
+  1904→          <div>
+  1905→            <Label className="text-xs text-zinc-400">Value *</Label>
+  1906→            <Input
+  1907→              value={form.value}
+  1908→              onChange={(e) => setForm({ ...form, value: e.target.value })}
+  1909→              placeholder={form.iocType === "ip" ? "203.0.113.42" : form.iocType === "hash" ? "d41d8cd98f00b204e9800998ecf8427e" : "evil.example.com"}
+  1910→              className="mt-1 border-zinc-700 bg-zinc-900/60 font-mono text-zinc-200 focus-visible:border-amber-500/50"
+  1911→              autoFocus
+  1912→            />
+  1913→          </div>
+  1914→          <div className="grid gap-3 sm:grid-cols-2">
+  1915→            <div>
+  1916→              <Label className="text-xs text-zinc-400">Source</Label>
+  1917→              <select
+  1918→                value={form.source}
+  1919→                onChange={(e) => setForm({ ...form, source: e.target.value })}
+  1920→                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+  1921→              >
+  1922→                <option value="manual">Manual</option>
+  1923→                <option value="honeypot">Honeypot</option>
+  1924→                <option value="canary">Canary</option>
+  1925→                <option value="api_log">API Log</option>
+  1926→                <option value="threat_intel">Threat Intel</option>
+  1927→              </select>
+  1928→            </div>
+  1929→            <div>
+  1930→              <Label className="text-xs text-zinc-400">Tags (comma-separated)</Label>
+  1931→              <Input
+  1932→                value={form.tags}
+  1933→                onChange={(e) => setForm({ ...form, tags: e.target.value })}
+  1934→                placeholder="ransomware, c2"
+  1935→                className="mt-1 border-zinc-700 bg-zinc-900/60 text-zinc-200 focus-visible:border-amber-500/50"
+  1936→              />
+  1937→            </div>
+  1938→          </div>
+  1939→        </div>
+  1940→        <div className="mt-5 flex justify-end gap-2">
+  1941→          <Button variant="outline" onClick={onClose} className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+  1942→            Cancel
+  1943→          </Button>
+  1944→          <Button onClick={handleSubmit} disabled={loading || !form.value.trim()} className="bg-amber-600 text-white hover:bg-amber-500">
+  1945→            {loading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+  1946→            Add IOC
+  1947→          </Button>
+  1948→        </div>
+  1949→      </motion.div>
+  1950→    </div>
+  1951→  );
+  1952→}
+  1953→
+  1954→// ════════════════════════════════════════════════════════════════════════════
+  1955→// PLAYBOOKS TAB
+  1956→// ════════════════════════════════════════════════════════════════════════════
+  1957→function PlaybooksTab() {
+  1958→  const { toast } = useToast();
+  1959→  const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
+  1960→  const [loading, setLoading] = useState(true);
+  1961→  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  1962→  const [createOpen, setCreateOpen] = useState(false);
+  1963→
+  1964→  const load = useCallback(async () => {
+  1965→    try {
+  1966→      const res = await fetch(`/api/playbooks?includeInactive=true`);
+  1967→      const data = await res.json();
+  1968→      setPlaybooks(unwrapList<Playbook>(data, "playbooks"));
+  1969→    } catch {
+  1970→      setPlaybooks([]);
+  1971→    } finally {
+  1972→      setLoading(false);
+  1973→    }
+  1974→  }, []);
+  1975→
+  1976→  useEffect(() => {
+  1977→    load();
+  1978→  }, [load]);
+  1979→
+  1980→  const toggle = (id: string) => {
+  1981→    setExpanded((prev) => {
+  1982→      const next = new Set(prev);
+  1983→      if (next.has(id)) next.delete(id);
+  1984→      else next.add(id);
+  1985→      return next;
+  1986→    });
+  1987→  };
+  1988→
+  1989→  return (
+  1990→    <div className="space-y-4">
+  1991→      {/* Toolbar */}
+  1992→      <div className="flex items-center justify-between">
+  1993→        <div>
+  1994→          <h3 className="flex items-center gap-2 text-sm font-bold text-zinc-100">
+  1995→            <ClipboardList className="size-4 text-violet-400" />
+  1996→            IR Playbooks
+  1997→            <span className="font-mono text-[10px] text-zinc-500">({playbooks.length})</span>
+  1998→          </h3>
+  1999→          <p className="mt-0.5 text-xs text-zinc-500">
+  2000→            Pre-defined response procedures. Expand to view steps, execute from an incident case.
+
+[showing lines 1-2000 of 2342; use offset=2001 with limit to continue reading]

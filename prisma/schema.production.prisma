@@ -1,0 +1,426 @@
+// GuardianX — Production schema (PostgreSQL via Supabase pooler)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── Client (top-level entity — groups all assets + pipeline stages) ──────
+model Client {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  targetUrl    String?
+  repoUrl      String?
+  scope        String?
+  authorized   Boolean  @default(false)
+  frameworks   String?  // comma-separated: "DPDPA,GDPR,PCI-DSS"
+  status       String   @default("onboarding")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  codebases    Codebase[]
+  targets      Target[]
+}
+
+model Codebase {
+  id          String   @id @default(cuid())
+  name        String
+  language    String   @default("javascript")
+  description String?
+  sourceCode  String
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  scans       Scan[]
+  patches     Patch[]
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  role          String   @default("viewer")
+  avatar        String?
+  twofaSecret   String?
+  twofaEnabled  Boolean  @default(false)
+  backupCodes   String?
+  approved      Boolean  @default(false)
+  tokenVersion  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Scan {
+  id          String   @id @default(cuid())
+  codebaseId  String
+  codebase    Codebase @relation(fields: [codebaseId], references: [id], onDelete: Cascade)
+  status      String   @default("queued")
+  stageLabel  String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  patches     Patch[]
+  events      PipelineEvent[]
+}
+
+model Patch {
+  id             String   @id @default(cuid())
+  patchId        String   @unique
+  codebaseId     String
+  codebase       Codebase @relation(fields: [codebaseId], references: [id], onDelete: Cascade)
+  scanId         String
+  scan           Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  title          String
+  severity       String
+  cve            String?
+  affectedFile   String
+  aiExplanation  String
+  aiReasoning    String
+  confidence     Float    @default(0)
+  originalCode   String
+  patchedCode    String
+  diffPayload    String
+  testCode       String
+  sandboxLogs    String
+  sandboxPassed  Boolean  @default(false)
+  exploitCode    String?
+  exploitOriginalResult String?
+  exploitPatchedResult  String?
+  adversarialRounds    Int      @default(0)
+  adversarialWon       Boolean  @default(false)
+  adversarialTranscript String?
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  approvedAt     DateTime?
+  chatMessages   ChatMessage[]
+  attestations   Attestation[]
+}
+
+model PipelineEvent {
+  id        String   @id @default(cuid())
+  scanId    String
+  scan      Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  stage     String
+  message   String
+  level     String   @default("info")
+  meta      String?
+  createdAt DateTime @default(now())
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  patchId   String
+  patch     Patch    @relation(fields: [patchId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Credential {
+  id          String   @id @default(cuid())
+  label       String
+  kind        String
+  target      String
+  username    String?
+  secretCipher String
+  secretIv    String
+  secretTag   String
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime?
+  audits      CredentialAudit[]
+}
+
+model CredentialAudit {
+  id           String   @id @default(cuid())
+  credentialId String
+  credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  action       String
+  context      String?
+  createdAt    DateTime @default(now())
+}
+
+model Target {
+  id          String   @id @default(cuid())
+  name        String
+  baseUrl     String
+  authHeader  String?
+  notes       String?
+  authorized  Boolean  @default(false)
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  engagements Engagement[]
+}
+
+model Engagement {
+  id          String   @id @default(cuid())
+  targetId    String
+  target      Target   @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  status      String   @default("queued")
+  stageLabel  String?
+  crawlSummary String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  findings    Finding[]
+  events      RedAgentEvent[]
+}
+
+model Finding {
+  id           String   @id @default(cuid())
+  engagementId String
+  engagement   Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  title        String
+  severity     String
+  category     String
+  owasp        String?
+  endpoint     String
+  method       String
+  description  String
+  proofRequest String
+  proofResponse String
+  payload      String?
+  confidence   Float    @default(0)
+  remediation  String?
+  createdAt    DateTime @default(now())
+}
+
+model RedAgentEvent {
+  id           String   @id @default(cuid())
+  engagementId String
+  engagement   Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  stage        String
+  message      String
+  level        String   @default("info")
+  meta         String?
+  createdAt    DateTime @default(now())
+}
+
+model Attestation {
+  id        String   @id @default(cuid())
+  patchId   String   @unique
+  patch     Patch    @relation(fields: [patchId], references: [id], onDelete: Cascade)
+  prevHash  String
+  hash      String
+  data      String
+  createdAt DateTime @default(now())
+}
+
+model Canary {
+  id          String   @id @default(cuid())
+  targetId    String?
+  label       String
+  canaryType  String
+  canaryValue String   @unique
+  injectedEndpoint String
+  isActive    Boolean  @default(true)
+  detected    Boolean  @default(false)
+  detectedAt  DateTime?
+  detectedOn  String?
+  createdAt   DateTime @default(now())
+}
+
+model ApiAccessLog {
+  id          String   @id @default(cuid())
+  targetId    String?
+  ipAddress   String
+  method      String
+  endpoint    String
+  statusCode  Int
+  userAgent   String
+  responseSize Int
+  timestamp   DateTime @default(now())
+}
+
+model HoneypotHit {
+  id          String   @id @default(cuid())
+  targetId    String?
+  endpoint    String
+  ipAddress   String
+  userAgent   String
+  method      String
+  timestamp   DateTime @default(now())
+}
+
+model WebhookConfig {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  events      String
+  isActive    Boolean  @default(true)
+  secret      String?
+  createdAt   DateTime @default(now())
+}
+
+model ScheduledScan {
+  id          String   @id @default(cuid())
+  name        String
+  scanType    String
+  targetId    String?
+  codebaseId  String?
+  cronExpr    String
+  isActive    Boolean  @default(true)
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model AlertRule {
+  id          String   @id @default(cuid())
+  name        String
+  condition   String
+  channel     String
+  channelConfig String
+  isActive    Boolean  @default(true)
+  lastTriggered DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  entity      String?
+  actor       String   @default("system")
+  details     String?
+  createdAt   DateTime @default(now())
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  members     TeamMember[]
+}
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email       String
+  role        String   @default("viewer")
+  invitedAt   DateTime @default(now())
+  joinedAt    DateTime?
+}
+
+model AttackChain {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  severity    String
+  steps       String
+  findingIds  String?
+  createdAt   DateTime @default(now())
+}
+
+model Integration {
+  id          String   @id @default(cuid())
+  type        String
+  config      String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model FuzzResult {
+  id          String   @id @default(cuid())
+  targetUrl   String
+  endpoint    String
+  method      String
+  totalRequests Int
+  crashes     Int
+  errors      Int
+  anomalies   String?
+  createdAt   DateTime @default(now())
+}
+
+model Incident {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  severity        String   @default("medium")
+  status          String   @default("open")
+  category        String   @default("other")
+  source          String   @default("manual")
+  sourceId        String?
+  clientId        String?
+  targetId        String?
+  assignee        String?
+  detectedAt      DateTime @default(now())
+  containedAt     DateTime?
+  eradicatedAt    DateTime?
+  closedAt        DateTime?
+  rootCause       String?
+  lessonsLearned  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  events          IncidentEvent[]
+  evidence        Evidence[]
+}
+
+model IncidentEvent {
+  id          String   @id @default(cuid())
+  incidentId  String
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  eventType   String
+  source      String
+  sourceId    String?
+  title       String
+  description String?
+  severity    String   @default("info")
+  metadata    String?
+  actor       String?
+  occurredAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model IOC {
+  id          String   @id @default(cuid())
+  iocType     String
+  value       String   @unique
+  confidence  String   @default("medium")
+  source      String   @default("internal")
+  tags        String?
+  firstSeen   DateTime @default(now())
+  lastSeen    DateTime @default(now())
+  hitCount    Int      @default(1)
+  isActive    Boolean  @default(true)
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model Evidence {
+  id              String   @id @default(cuid())
+  incidentId      String
+  incident        Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  evidenceType    String
+  filename        String
+  sha256          String
+  collectedBy     String
+  collectedAt     DateTime @default(now())
+  description     String?
+  storagePath     String?
+  fileSize        Int      @default(0)
+  chainOfCustody  String   @default("[]")
+  isImmutable     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model Playbook {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String   @default("incident_response")
+  trigger     String   @default("manual")
+  steps       String
+  severity    String   @default("high")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}

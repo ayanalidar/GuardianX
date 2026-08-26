@@ -1,0 +1,1713 @@
+     1→
+     2→
+     3→ayana@CYBERSHIELD MINGW64 /d/GuardianX (main)
+     4→$ cd /d/GuardianX/mini-services/sentinel-engine
+     5→git init
+     6→git add .
+     7→git commit -m "guardianx-engine"
+     8→git remote add origin https://github.com/ayanalidar/GuardianX-engine.git
+     9→git push -u origin main
+    10→Initialized empty Git repository in D:/GuardianX/mini-services/sentinel-engine/.git/
+    11→warning: in the working copy of '.env', LF will be replaced by CRLF the next time Git touches it
+    12→warning: in the working copy of 'node_modules/@socket.io/component-emitter/LICENSE', LF will be replaced by CRLF the next time Git touches it
+    13→warning: in the working copy of 'node_modules/@socket.io/component-emitter/Readme.md', LF will be replaced by CRLF the next time Git touches it
+    14→warning: in the working copy of 'node_modules/@socket.io/component-emitter/lib/cjs/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+    15→warning: in the working copy of 'node_modules/@socket.io/component-emitter/lib/cjs/index.js', LF will be replaced by CRLF the next time Git touches it
+    16→warning: in the working copy of 'node_modules/@socket.io/component-emitter/lib/cjs/package.json', LF will be replaced by CRLF the next time Git touches it
+    17→warning: in the working copy of 'node_modules/@socket.io/component-emitter/lib/esm/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+    18→warning: in the working copy of 'node_modules/@socket.io/component-emitter/lib/esm/index.js', LF will be replaced by CRLF the next time Git touches it
+    19→warning: in the working copy of 'node_modules/@socket.io/component-emitter/lib/esm/package.json', LF will be replaced by CRLF the next time Git touches it
+    20→warning: in the working copy of 'node_modules/@socket.io/component-emitter/package.json', LF will be replaced by CRLF the next time Git touches it
+    21→warning: in the working copy of 'node_modules/@supabase/auth-js/AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+    22→warning: in the working copy of 'node_modules/@supabase/auth-js/LICENSE', LF will be replaced by CRLF the next time Git touches it
+    23→warning: in the working copy of 'node_modules/@supabase/auth-js/README.md', LF will be replaced by CRLF the next time Git touches it
+    24→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/AuthAdminApi.d.ts', LF will be replaced by CRLF the next time Git touches it
+    25→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js', LF will be replaced by CRLF the next time Git touches it
+    26→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/AuthClient.d.ts', LF will be replaced by CRLF the next time Git touches it
+    27→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/AuthClient.js', LF will be replaced by CRLF the next time Git touches it
+    28→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.d.ts', LF will be replaced by CRLF the next time Git touches it
+    29→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js', LF will be replaced by CRLF the next time Git touches it
+    30→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/GoTrueClient.d.ts', LF will be replaced by CRLF the next time Git touches it
+    31→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/GoTrueClient.js', LF will be replaced by CRLF the next time Git touches it
+    32→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+    33→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/index.js', LF will be replaced by CRLF the next time Git touches it
+    34→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/base64url.d.ts', LF will be replaced by CRLF the next time Git touches it
+    35→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/base64url.js', LF will be replaced by CRLF the next time Git touches it
+    36→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/constants.d.ts', LF will be replaced by CRLF the next time Git touches it
+    37→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/constants.js', LF will be replaced by CRLF the next time Git touches it
+    38→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/error-codes.d.ts', LF will be replaced by CRLF the next time Git touches it
+    39→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/error-codes.js', LF will be replaced by CRLF the next time Git touches it
+    40→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/errors.d.ts', LF will be replaced by CRLF the next time Git touches it
+    41→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/errors.js', LF will be replaced by CRLF the next time Git touches it
+    42→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/fetch.d.ts', LF will be replaced by CRLF the next time Git touches it
+    43→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/fetch.js', LF will be replaced by CRLF the next time Git touches it
+    44→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/helpers.d.ts', LF will be replaced by CRLF the next time Git touches it
+    45→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/helpers.js', LF will be replaced by CRLF the next time Git touches it
+    46→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/local-storage.d.ts', LF will be replaced by CRLF the next time Git touches it
+    47→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/local-storage.js', LF will be replaced by CRLF the next time Git touches it
+    48→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/locks.d.ts', LF will be replaced by CRLF the next time Git touches it
+    49→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/locks.js', LF will be replaced by CRLF the next time Git touches it
+    50→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/polyfills.d.ts', LF will be replaced by CRLF the next time Git touches it
+    51→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/polyfills.js', LF will be replaced by CRLF the next time Git touches it
+    52→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/types.d.ts', LF will be replaced by CRLF the next time Git touches it
+    53→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/types.js', LF will be replaced by CRLF the next time Git touches it
+    54→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/version.d.ts', LF will be replaced by CRLF the next time Git touches it
+    55→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/version.js', LF will be replaced by CRLF the next time Git touches it
+    56→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.d.ts', LF will be replaced by CRLF the next time Git touches it
+    57→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js', LF will be replaced by CRLF the next time Git touches it
+    58→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/web3/solana.d.ts', LF will be replaced by CRLF the next time Git touches it
+    59→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/web3/solana.js', LF will be replaced by CRLF the next time Git touches it
+    60→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.d.ts', LF will be replaced by CRLF the next time Git touches it
+    61→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.d.ts', LF will be replaced by CRLF the next time Git touches it
+    62→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.js', LF will be replaced by CRLF the next time Git touches it
+    63→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.d.ts', LF will be replaced by CRLF the next time Git touches it
+    64→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js', LF will be replaced by CRLF the next time Git touches it
+    65→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/main/lib/webauthn.js', LF will be replaced by CRLF the next time Git touches it
+    66→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/AuthAdminApi.d.ts', LF will be replaced by CRLF the next time Git touches it
+    67→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/AuthAdminApi.js', LF will be replaced by CRLF the next time Git touches it
+    68→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/AuthClient.d.ts', LF will be replaced by CRLF the next time Git touches it
+    69→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/AuthClient.js', LF will be replaced by CRLF the next time Git touches it
+    70→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.d.ts', LF will be replaced by CRLF the next time Git touches it
+    71→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.js', LF will be replaced by CRLF the next time Git touches it
+    72→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/GoTrueClient.d.ts', LF will be replaced by CRLF the next time Git touches it
+    73→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/GoTrueClient.js', LF will be replaced by CRLF the next time Git touches it
+    74→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+    75→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/index.js', LF will be replaced by CRLF the next time Git touches it
+    76→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/base64url.d.ts', LF will be replaced by CRLF the next time Git touches it
+    77→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/base64url.js', LF will be replaced by CRLF the next time Git touches it
+    78→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/constants.d.ts', LF will be replaced by CRLF the next time Git touches it
+    79→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/constants.js', LF will be replaced by CRLF the next time Git touches it
+    80→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/error-codes.d.ts', LF will be replaced by CRLF the next time Git touches it
+    81→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/error-codes.js', LF will be replaced by CRLF the next time Git touches it
+    82→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/errors.d.ts', LF will be replaced by CRLF the next time Git touches it
+    83→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/errors.js', LF will be replaced by CRLF the next time Git touches it
+    84→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/fetch.d.ts', LF will be replaced by CRLF the next time Git touches it
+    85→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/fetch.js', LF will be replaced by CRLF the next time Git touches it
+    86→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/helpers.d.ts', LF will be replaced by CRLF the next time Git touches it
+    87→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/helpers.js', LF will be replaced by CRLF the next time Git touches it
+    88→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/local-storage.d.ts', LF will be replaced by CRLF the next time Git touches it
+    89→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/local-storage.js', LF will be replaced by CRLF the next time Git touches it
+    90→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/locks.d.ts', LF will be replaced by CRLF the next time Git touches it
+    91→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/locks.js', LF will be replaced by CRLF the next time Git touches it
+    92→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/polyfills.d.ts', LF will be replaced by CRLF the next time Git touches it
+    93→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/polyfills.js', LF will be replaced by CRLF the next time Git touches it
+    94→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/types.d.ts', LF will be replaced by CRLF the next time Git touches it
+    95→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/types.js', LF will be replaced by CRLF the next time Git touches it
+    96→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/version.d.ts', LF will be replaced by CRLF the next time Git touches it
+    97→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/version.js', LF will be replaced by CRLF the next time Git touches it
+    98→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.d.ts', LF will be replaced by CRLF the next time Git touches it
+    99→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.js', LF will be replaced by CRLF the next time Git touches it
+   100→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/web3/solana.d.ts', LF will be replaced by CRLF the next time Git touches it
+   101→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/web3/solana.js', LF will be replaced by CRLF the next time Git touches it
+   102→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.d.ts', LF will be replaced by CRLF the next time Git touches it
+   103→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.d.ts', LF will be replaced by CRLF the next time Git touches it
+   104→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.js', LF will be replaced by CRLF the next time Git touches it
+   105→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.d.ts', LF will be replaced by CRLF the next time Git touches it
+   106→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.js', LF will be replaced by CRLF the next time Git touches it
+   107→warning: in the working copy of 'node_modules/@supabase/auth-js/dist/module/lib/webauthn.js', LF will be replaced by CRLF the next time Git touches it
+   108→warning: in the working copy of 'node_modules/@supabase/auth-js/migrations/README.md', LF will be replaced by CRLF the next time Git touches it
+   109→warning: in the working copy of 'node_modules/@supabase/auth-js/migrations/lockless-coordination.md', LF will be replaced by CRLF the next time Git touches it
+   110→warning: in the working copy of 'node_modules/@supabase/auth-js/package.json', LF will be replaced by CRLF the next time Git touches it
+   111→warning: in the working copy of 'node_modules/@supabase/auth-js/src/AuthAdminApi.ts', LF will be replaced by CRLF the next time Git touches it
+   112→warning: in the working copy of 'node_modules/@supabase/auth-js/src/AuthClient.ts', LF will be replaced by CRLF the next time Git touches it
+   113→warning: in the working copy of 'node_modules/@supabase/auth-js/src/GoTrueAdminApi.ts', LF will be replaced by CRLF the next time Git touches it
+   114→warning: in the working copy of 'node_modules/@supabase/auth-js/src/GoTrueClient.ts', LF will be replaced by CRLF the next time Git touches it
+   115→warning: in the working copy of 'node_modules/@supabase/auth-js/src/index.ts', LF will be replaced by CRLF the next time Git touches it
+   116→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/base64url.ts', LF will be replaced by CRLF the next time Git touches it
+   117→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/constants.ts', LF will be replaced by CRLF the next time Git touches it
+   118→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/error-codes.ts', LF will be replaced by CRLF the next time Git touches it
+   119→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/errors.ts', LF will be replaced by CRLF the next time Git touches it
+   120→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/fetch.ts', LF will be replaced by CRLF the next time Git touches it
+   121→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/helpers.ts', LF will be replaced by CRLF the next time Git touches it
+   122→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/local-storage.ts', LF will be replaced by CRLF the next time Git touches it
+   123→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/locks.ts', LF will be replaced by CRLF the next time Git touches it
+   124→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/polyfills.ts', LF will be replaced by CRLF the next time Git touches it
+   125→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/types.ts', LF will be replaced by CRLF the next time Git touches it
+   126→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/version.ts', LF will be replaced by CRLF the next time Git touches it
+   127→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/web3/ethereum.ts', LF will be replaced by CRLF the next time Git touches it
+   128→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/web3/solana.ts', LF will be replaced by CRLF the next time Git touches it
+   129→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/webauthn.dom.ts', LF will be replaced by CRLF the next time Git touches it
+   130→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/webauthn.errors.ts', LF will be replaced by CRLF the next time Git touches it
+   131→warning: in the working copy of 'node_modules/@supabase/auth-js/src/lib/webauthn.ts', LF will be replaced by CRLF the next time Git touches it
+   132→warning: in the working copy of 'node_modules/@supabase/functions-js/AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+   133→warning: in the working copy of 'node_modules/@supabase/functions-js/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   134→warning: in the working copy of 'node_modules/@supabase/functions-js/README.md', LF will be replaced by CRLF the next time Git touches it
+   135→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/main/FunctionsClient.d.ts', LF will be replaced by CRLF the next time Git touches it
+   136→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/main/FunctionsClient.js', LF will be replaced by CRLF the next time Git touches it
+   137→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/main/helper.d.ts', LF will be replaced by CRLF the next time Git touches it
+   138→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/main/helper.js', LF will be replaced by CRLF the next time Git touches it
+   139→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/main/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   140→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/main/index.js', LF will be replaced by CRLF the next time Git touches it
+   141→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/main/types.d.ts', LF will be replaced by CRLF the next time Git touches it
+   142→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/main/types.js', LF will be replaced by CRLF the next time Git touches it
+   143→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/main/version.d.ts', LF will be replaced by CRLF the next time Git touches it
+   144→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/main/version.js', LF will be replaced by CRLF the next time Git touches it
+   145→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/module/FunctionsClient.d.ts', LF will be replaced by CRLF the next time Git touches it
+   146→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/module/FunctionsClient.js', LF will be replaced by CRLF the next time Git touches it
+   147→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/module/helper.d.ts', LF will be replaced by CRLF the next time Git touches it
+   148→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/module/helper.js', LF will be replaced by CRLF the next time Git touches it
+   149→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/module/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   150→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/module/index.js', LF will be replaced by CRLF the next time Git touches it
+   151→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/module/types.d.ts', LF will be replaced by CRLF the next time Git touches it
+   152→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/module/types.js', LF will be replaced by CRLF the next time Git touches it
+   153→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/module/version.d.ts', LF will be replaced by CRLF the next time Git touches it
+   154→warning: in the working copy of 'node_modules/@supabase/functions-js/dist/module/version.js', LF will be replaced by CRLF the next time Git touches it
+   155→warning: in the working copy of 'node_modules/@supabase/functions-js/migrations/README.md', LF will be replaced by CRLF the next time Git touches it
+   156→warning: in the working copy of 'node_modules/@supabase/functions-js/package.json', LF will be replaced by CRLF the next time Git touches it
+   157→warning: in the working copy of 'node_modules/@supabase/functions-js/src/FunctionsClient.ts', LF will be replaced by CRLF the next time Git touches it
+   158→warning: in the working copy of 'node_modules/@supabase/functions-js/src/edge-runtime.d.ts', LF will be replaced by CRLF the next time Git touches it
+   159→warning: in the working copy of 'node_modules/@supabase/functions-js/src/helper.ts', LF will be replaced by CRLF the next time Git touches it
+   160→warning: in the working copy of 'node_modules/@supabase/functions-js/src/index.ts', LF will be replaced by CRLF the next time Git touches it
+   161→warning: in the working copy of 'node_modules/@supabase/functions-js/src/types.ts', LF will be replaced by CRLF the next time Git touches it
+   162→warning: in the working copy of 'node_modules/@supabase/functions-js/src/version.ts', LF will be replaced by CRLF the next time Git touches it
+   163→warning: in the working copy of 'node_modules/@supabase/phoenix/LICENSE.md', LF will be replaced by CRLF the next time Git touches it
+   164→warning: in the working copy of 'node_modules/@supabase/phoenix/README.md', LF will be replaced by CRLF the next time Git touches it
+   165→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/ajax.js', LF will be replaced by CRLF the next time Git touches it
+   166→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/channel.js', LF will be replaced by CRLF the next time Git touches it
+   167→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/constants.js', LF will be replaced by CRLF the next time Git touches it
+   168→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/index.js', LF will be replaced by CRLF the next time Git touches it
+   169→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/longpoll.js', LF will be replaced by CRLF the next time Git touches it
+   170→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/presence.js', LF will be replaced by CRLF the next time Git touches it
+   171→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/push.js', LF will be replaced by CRLF the next time Git touches it
+   172→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/serializer.js', LF will be replaced by CRLF the next time Git touches it
+   173→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/socket.js', LF will be replaced by CRLF the next time Git touches it
+   174→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/timer.js', LF will be replaced by CRLF the next time Git touches it
+   175→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/types.js', LF will be replaced by CRLF the next time Git touches it
+   176→warning: in the working copy of 'node_modules/@supabase/phoenix/assets/js/phoenix/utils.js', LF will be replaced by CRLF the next time Git touches it
+   177→warning: in the working copy of 'node_modules/@supabase/phoenix/package.json', LF will be replaced by CRLF the next time Git touches it
+   178→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js', LF will be replaced by CRLF the next time Git touches it
+   179→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js.map', LF will be replaced by CRLF the next time Git touches it
+   180→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/phoenix.js', LF will be replaced by CRLF the next time Git touches it
+   181→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/phoenix.min.js', LF will be replaced by CRLF the next time Git touches it
+   182→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/phoenix.mjs', LF will be replaced by CRLF the next time Git touches it
+   183→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/phoenix.mjs.map', LF will be replaced by CRLF the next time Git touches it
+   184→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/ajax.d.ts', LF will be replaced by CRLF the next time Git touches it
+   185→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/channel.d.ts', LF will be replaced by CRLF the next time Git touches it
+   186→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/constants.d.ts', LF will be replaced by CRLF the next time Git touches it
+   187→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   188→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/longpoll.d.ts', LF will be replaced by CRLF the next time Git touches it
+   189→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/presence.d.ts', LF will be replaced by CRLF the next time Git touches it
+   190→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/push.d.ts', LF will be replaced by CRLF the next time Git touches it
+   191→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/serializer.d.ts', LF will be replaced by CRLF the next time Git touches it
+   192→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/socket.d.ts', LF will be replaced by CRLF the next time Git touches it
+   193→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/timer.d.ts', LF will be replaced by CRLF the next time Git touches it
+   194→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/types.d.ts', LF will be replaced by CRLF the next time Git touches it
+   195→warning: in the working copy of 'node_modules/@supabase/phoenix/priv/static/types/utils.d.ts', LF will be replaced by CRLF the next time Git touches it
+   196→warning: in the working copy of 'node_modules/@supabase/phoenix/tsconfig.json', LF will be replaced by CRLF the next time Git touches it
+   197→warning: in the working copy of 'node_modules/@supabase/postgrest-js/AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+   198→warning: in the working copy of 'node_modules/@supabase/postgrest-js/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   199→warning: in the working copy of 'node_modules/@supabase/postgrest-js/README.md', LF will be replaced by CRLF the next time Git touches it
+   200→warning: in the working copy of 'node_modules/@supabase/postgrest-js/dist/index.cjs', LF will be replaced by CRLF the next time Git touches it
+   201→warning: in the working copy of 'node_modules/@supabase/postgrest-js/dist/index.d.cts', LF will be replaced by CRLF the next time Git touches it
+   202→warning: in the working copy of 'node_modules/@supabase/postgrest-js/dist/index.d.mts', LF will be replaced by CRLF the next time Git touches it
+   203→warning: in the working copy of 'node_modules/@supabase/postgrest-js/dist/index.mjs', LF will be replaced by CRLF the next time Git touches it
+   204→warning: in the working copy of 'node_modules/@supabase/postgrest-js/migrations/README.md', LF will be replaced by CRLF the next time Git touches it
+   205→warning: in the working copy of 'node_modules/@supabase/postgrest-js/package.json', LF will be replaced by CRLF the next time Git touches it
+   206→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/PostgrestBuilder.ts', LF will be replaced by CRLF the next time Git touches it
+   207→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/PostgrestClient.ts', LF will be replaced by CRLF the next time Git touches it
+   208→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/PostgrestError.ts', LF will be replaced by CRLF the next time Git touches it
+   209→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/PostgrestFilterBuilder.ts', LF will be replaced by CRLF the next time Git touches it
+   210→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/PostgrestQueryBuilder.ts', LF will be replaced by CRLF the next time Git touches it
+   211→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/PostgrestTransformBuilder.ts', LF will be replaced by CRLF the next time Git touches it
+   212→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/constants.ts', LF will be replaced by CRLF the next time Git touches it
+   213→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/index.ts', LF will be replaced by CRLF the next time Git touches it
+   214→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/select-query-parser/parser.ts', LF will be replaced by CRLF the next time Git touches it
+   215→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/select-query-parser/result.ts', LF will be replaced by CRLF the next time Git touches it
+   216→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/select-query-parser/types.ts', LF will be replaced by CRLF the next time Git touches it
+   217→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/select-query-parser/utils.ts', LF will be replaced by CRLF the next time Git touches it
+   218→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/types/common/common.ts', LF will be replaced by CRLF the next time Git touches it
+   219→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/types/common/rpc.ts', LF will be replaced by CRLF the next time Git touches it
+   220→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/types/feature-flags.ts', LF will be replaced by CRLF the next time Git touches it
+   221→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/types/types.ts', LF will be replaced by CRLF the next time Git touches it
+   222→warning: in the working copy of 'node_modules/@supabase/postgrest-js/src/version.ts', LF will be replaced by CRLF the next time Git touches it
+   223→warning: in the working copy of 'node_modules/@supabase/realtime-js/AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+   224→warning: in the working copy of 'node_modules/@supabase/realtime-js/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   225→warning: in the working copy of 'node_modules/@supabase/realtime-js/README.md', LF will be replaced by CRLF the next time Git touches it
+   226→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.d.ts', LF will be replaced by CRLF the next time Git touches it
+   227→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js', LF will be replaced by CRLF the next time Git touches it
+   228→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/RealtimeClient.d.ts', LF will be replaced by CRLF the next time Git touches it
+   229→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js', LF will be replaced by CRLF the next time Git touches it
+   230→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.d.ts', LF will be replaced by CRLF the next time Git touches it
+   231→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js', LF will be replaced by CRLF the next time Git touches it
+   232→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/RealtimePresence.d.ts', LF will be replaced by CRLF the next time Git touches it
+   233→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js', LF will be replaced by CRLF the next time Git touches it
+   234→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   235→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/index.js', LF will be replaced by CRLF the next time Git touches it
+   236→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/constants.d.ts', LF will be replaced by CRLF the next time Git touches it
+   237→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/constants.js', LF will be replaced by CRLF the next time Git touches it
+   238→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.d.ts', LF will be replaced by CRLF the next time Git touches it
+   239→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js', LF will be replaced by CRLF the next time Git touches it
+   240→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/serializer.d.ts', LF will be replaced by CRLF the next time Git touches it
+   241→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/serializer.js', LF will be replaced by CRLF the next time Git touches it
+   242→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/transformers.d.ts', LF will be replaced by CRLF the next time Git touches it
+   243→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/transformers.js', LF will be replaced by CRLF the next time Git touches it
+   244→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/version.d.ts', LF will be replaced by CRLF the next time Git touches it
+   245→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/version.js', LF will be replaced by CRLF the next time Git touches it
+   246→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.d.ts', LF will be replaced by CRLF the next time Git touches it
+   247→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js', LF will be replaced by CRLF the next time Git touches it
+   248→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.d.ts', LF will be replaced by CRLF the next time Git touches it
+   249→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js', LF will be replaced by CRLF the next time Git touches it
+   250→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.d.ts', LF will be replaced by CRLF the next time Git touches it
+   251→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js', LF will be replaced by CRLF the next time Git touches it
+   252→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.d.ts', LF will be replaced by CRLF the next time Git touches it
+   253→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js', LF will be replaced by CRLF the next time Git touches it
+   254→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/phoenix/types.d.ts', LF will be replaced by CRLF the next time Git touches it
+   255→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/main/phoenix/types.js', LF will be replaced by CRLF the next time Git touches it
+   256→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.d.ts', LF will be replaced by CRLF the next time Git touches it
+   257→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.js', LF will be replaced by CRLF the next time Git touches it
+   258→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/RealtimeClient.d.ts', LF will be replaced by CRLF the next time Git touches it
+   259→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js', LF will be replaced by CRLF the next time Git touches it
+   260→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.d.ts', LF will be replaced by CRLF the next time Git touches it
+   261→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.js', LF will be replaced by CRLF the next time Git touches it
+   262→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/RealtimePresence.d.ts', LF will be replaced by CRLF the next time Git touches it
+   263→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/RealtimePresence.js', LF will be replaced by CRLF the next time Git touches it
+   264→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   265→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/index.js', LF will be replaced by CRLF the next time Git touches it
+   266→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/constants.d.ts', LF will be replaced by CRLF the next time Git touches it
+   267→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/constants.js', LF will be replaced by CRLF the next time Git touches it
+   268→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.d.ts', LF will be replaced by CRLF the next time Git touches it
+   269→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.js', LF will be replaced by CRLF the next time Git touches it
+   270→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/serializer.d.ts', LF will be replaced by CRLF the next time Git touches it
+   271→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/serializer.js', LF will be replaced by CRLF the next time Git touches it
+   272→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/transformers.d.ts', LF will be replaced by CRLF the next time Git touches it
+   273→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/transformers.js', LF will be replaced by CRLF the next time Git touches it
+   274→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/version.d.ts', LF will be replaced by CRLF the next time Git touches it
+   275→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/version.js', LF will be replaced by CRLF the next time Git touches it
+   276→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.d.ts', LF will be replaced by CRLF the next time Git touches it
+   277→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js', LF will be replaced by CRLF the next time Git touches it
+   278→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.d.ts', LF will be replaced by CRLF the next time Git touches it
+   279→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.js', LF will be replaced by CRLF the next time Git touches it
+   280→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.d.ts', LF will be replaced by CRLF the next time Git touches it
+   281→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.js', LF will be replaced by CRLF the next time Git touches it
+   282→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.d.ts', LF will be replaced by CRLF the next time Git touches it
+   283→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.js', LF will be replaced by CRLF the next time Git touches it
+   284→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/phoenix/types.d.ts', LF will be replaced by CRLF the next time Git touches it
+   285→warning: in the working copy of 'node_modules/@supabase/realtime-js/dist/module/phoenix/types.js', LF will be replaced by CRLF the next time Git touches it
+   286→warning: in the working copy of 'node_modules/@supabase/realtime-js/migrations/README.md', LF will be replaced by CRLF the next time Git touches it
+   287→warning: in the working copy of 'node_modules/@supabase/realtime-js/migrations/httpsend-server-version.md', LF will be replaced by CRLF the next time Git touches it
+   288→warning: in the working copy of 'node_modules/@supabase/realtime-js/package.json', LF will be replaced by CRLF the next time Git touches it
+   289→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/RealtimeChannel.ts', LF will be replaced by CRLF the next time Git touches it
+   290→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/RealtimeClient.ts', LF will be replaced by CRLF the next time Git touches it
+   291→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/RealtimePostgresFilterBuilder.ts', LF will be replaced by CRLF the next time Git touches it
+   292→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/RealtimePresence.ts', LF will be replaced by CRLF the next time Git touches it
+   293→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/index.ts', LF will be replaced by CRLF the next time Git touches it
+   294→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/lib/constants.ts', LF will be replaced by CRLF the next time Git touches it
+   295→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/lib/normalizeChannelError.ts', LF will be replaced by CRLF the next time Git touches it
+   296→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/lib/serializer.ts', LF will be replaced by CRLF the next time Git touches it
+   297→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/lib/transformers.ts', LF will be replaced by CRLF the next time Git touches it
+   298→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/lib/version.ts', LF will be replaced by CRLF the next time Git touches it
+   299→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/lib/websocket-factory.ts', LF will be replaced by CRLF the next time Git touches it
+   300→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/phoenix/channelAdapter.ts', LF will be replaced by CRLF the next time Git touches it
+   301→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/phoenix/presenceAdapter.ts', LF will be replaced by CRLF the next time Git touches it
+   302→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/phoenix/socketAdapter.ts', LF will be replaced by CRLF the next time Git touches it
+   303→warning: in the working copy of 'node_modules/@supabase/realtime-js/src/phoenix/types.ts', LF will be replaced by CRLF the next time Git touches it
+   304→warning: in the working copy of 'node_modules/@supabase/storage-js/AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+   305→warning: in the working copy of 'node_modules/@supabase/storage-js/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   306→warning: in the working copy of 'node_modules/@supabase/storage-js/README.md', LF will be replaced by CRLF the next time Git touches it
+   307→warning: in the working copy of 'node_modules/@supabase/storage-js/dist/index.cjs', LF will be replaced by CRLF the next time Git touches it
+   308→warning: in the working copy of 'node_modules/@supabase/storage-js/dist/index.d.cts', LF will be replaced by CRLF the next time Git touches it
+   309→warning: in the working copy of 'node_modules/@supabase/storage-js/dist/index.d.mts', LF will be replaced by CRLF the next time Git touches it
+   310→warning: in the working copy of 'node_modules/@supabase/storage-js/dist/index.mjs', LF will be replaced by CRLF the next time Git touches it
+   311→warning: in the working copy of 'node_modules/@supabase/storage-js/migrations/README.md', LF will be replaced by CRLF the next time Git touches it
+   312→warning: in the working copy of 'node_modules/@supabase/storage-js/package.json', LF will be replaced by CRLF the next time Git touches it
+   313→warning: in the working copy of 'node_modules/@supabase/storage-js/src/StorageClient.ts', LF will be replaced by CRLF the next time Git touches it
+   314→warning: in the working copy of 'node_modules/@supabase/storage-js/src/index.ts', LF will be replaced by CRLF the next time Git touches it
+   315→warning: in the working copy of 'node_modules/@supabase/storage-js/src/lib/common/BaseApiClient.ts', LF will be replaced by CRLF the next time Git touches it
+   316→warning: in the working copy of 'node_modules/@supabase/storage-js/src/lib/common/errors.ts', LF will be replaced by CRLF the next time Git touches it
+   317→warning: in the working copy of 'node_modules/@supabase/storage-js/src/lib/common/fetch.ts', LF will be replaced by CRLF the next time Git touches it
+   318→warning: in the working copy of 'node_modules/@supabase/storage-js/src/lib/common/headers.ts', LF will be replaced by CRLF the next time Git touches it
+   319→warning: in the working copy of 'node_modules/@supabase/storage-js/src/lib/common/helpers.ts', LF will be replaced by CRLF the next time Git touches it
+   320→warning: in the working copy of 'node_modules/@supabase/storage-js/src/lib/constants.ts', LF will be replaced by CRLF the next time Git touches it
+   321→warning: in the working copy of 'node_modules/@supabase/storage-js/src/lib/types.ts', LF will be replaced by CRLF the next time Git touches it
+   322→warning: in the working copy of 'node_modules/@supabase/storage-js/src/lib/version.ts', LF will be replaced by CRLF the next time Git touches it
+   323→warning: in the working copy of 'node_modules/@supabase/storage-js/src/packages/BlobDownloadBuilder.ts', LF will be replaced by CRLF the next time Git touches it
+   324→warning: in the working copy of 'node_modules/@supabase/storage-js/src/packages/StorageAnalyticsClient.ts', LF will be replaced by CRLF the next time Git touches it
+   325→warning: in the working copy of 'node_modules/@supabase/storage-js/src/packages/StorageBucketApi.ts', LF will be replaced by CRLF the next time Git touches it
+   326→warning: in the working copy of 'node_modules/@supabase/storage-js/src/packages/StorageFileApi.ts', LF will be replaced by CRLF the next time Git touches it
+   327→warning: in the working copy of 'node_modules/@supabase/storage-js/src/packages/StorageVectorsClient.ts', LF will be replaced by CRLF the next time Git touches it
+   328→warning: in the working copy of 'node_modules/@supabase/storage-js/src/packages/StreamDownloadBuilder.ts', LF will be replaced by CRLF the next time Git touches it
+   329→warning: in the working copy of 'node_modules/@supabase/storage-js/src/packages/VectorBucketApi.ts', LF will be replaced by CRLF the next time Git touches it
+   330→warning: in the working copy of 'node_modules/@supabase/storage-js/src/packages/VectorDataApi.ts', LF will be replaced by CRLF the next time Git touches it
+   331→warning: in the working copy of 'node_modules/@supabase/storage-js/src/packages/VectorIndexApi.ts', LF will be replaced by CRLF the next time Git touches it
+   332→warning: in the working copy of 'node_modules/@supabase/supabase-js/AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+   333→warning: in the working copy of 'node_modules/@supabase/supabase-js/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   334→warning: in the working copy of 'node_modules/@supabase/supabase-js/README.md', LF will be replaced by CRLF the next time Git touches it
+   335→warning: in the working copy of 'node_modules/@supabase/supabase-js/dist/cors.cjs', LF will be replaced by CRLF the next time Git touches it
+   336→warning: in the working copy of 'node_modules/@supabase/supabase-js/dist/cors.d.cts', LF will be replaced by CRLF the next time Git touches it
+   337→warning: in the working copy of 'node_modules/@supabase/supabase-js/dist/cors.d.mts', LF will be replaced by CRLF the next time Git touches it
+   338→warning: in the working copy of 'node_modules/@supabase/supabase-js/dist/cors.mjs', LF will be replaced by CRLF the next time Git touches it
+   339→warning: in the working copy of 'node_modules/@supabase/supabase-js/dist/index.cjs', LF will be replaced by CRLF the next time Git touches it
+   340→warning: in the working copy of 'node_modules/@supabase/supabase-js/dist/index.d.cts', LF will be replaced by CRLF the next time Git touches it
+   341→warning: in the working copy of 'node_modules/@supabase/supabase-js/dist/index.d.mts', LF will be replaced by CRLF the next time Git touches it
+   342→warning: in the working copy of 'node_modules/@supabase/supabase-js/dist/index.mjs', LF will be replaced by CRLF the next time Git touches it
+   343→warning: in the working copy of 'node_modules/@supabase/supabase-js/dist/umd/supabase.js', LF will be replaced by CRLF the next time Git touches it
+   344→warning: in the working copy of 'node_modules/@supabase/supabase-js/migrations/README.md', LF will be replaced by CRLF the next time Git touches it
+   345→warning: in the working copy of 'node_modules/@supabase/supabase-js/package.json', LF will be replaced by CRLF the next time Git touches it
+   346→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/SupabaseClient.ts', LF will be replaced by CRLF the next time Git touches it
+   347→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/cors.ts', LF will be replaced by CRLF the next time Git touches it
+   348→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/index.ts', LF will be replaced by CRLF the next time Git touches it
+   349→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/lib/SupabaseAuthClient.ts', LF will be replaced by CRLF the next time Git touches it
+   350→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/lib/constants.ts', LF will be replaced by CRLF the next time Git touches it
+   351→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/lib/fetch.ts', LF will be replaced by CRLF the next time Git touches it
+   352→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/lib/helpers.ts', LF will be replaced by CRLF the next time Git touches it
+   353→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/lib/rest/types/common/common.ts', LF will be replaced by CRLF the next time Git touches it
+   354→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/lib/rest/types/common/rpc.ts', LF will be replaced by CRLF the next time Git touches it
+   355→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/lib/types.ts', LF will be replaced by CRLF the next time Git touches it
+   356→warning: in the working copy of 'node_modules/@supabase/supabase-js/src/lib/version.ts', LF will be replaced by CRLF the next time Git touches it
+   357→warning: in the working copy of 'node_modules/@types/cors/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   358→warning: in the working copy of 'node_modules/@types/cors/README.md', LF will be replaced by CRLF the next time Git touches it
+   359→warning: in the working copy of 'node_modules/@types/cors/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   360→warning: in the working copy of 'node_modules/@types/cors/package.json', LF will be replaced by CRLF the next time Git touches it
+   361→warning: in the working copy of 'node_modules/@types/node/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   362→warning: in the working copy of 'node_modules/@types/node/assert.d.ts', LF will be replaced by CRLF the next time Git touches it
+   363→warning: in the working copy of 'node_modules/@types/node/assert/strict.d.ts', LF will be replaced by CRLF the next time Git touches it
+   364→warning: in the working copy of 'node_modules/@types/node/async_hooks.d.ts', LF will be replaced by CRLF the next time Git touches it
+   365→warning: in the working copy of 'node_modules/@types/node/buffer.buffer.d.ts', LF will be replaced by CRLF the next time Git touches it
+   366→warning: in the working copy of 'node_modules/@types/node/buffer.d.ts', LF will be replaced by CRLF the next time Git touches it
+   367→warning: in the working copy of 'node_modules/@types/node/child_process.d.ts', LF will be replaced by CRLF the next time Git touches it
+   368→warning: in the working copy of 'node_modules/@types/node/cluster.d.ts', LF will be replaced by CRLF the next time Git touches it
+   369→warning: in the working copy of 'node_modules/@types/node/console.d.ts', LF will be replaced by CRLF the next time Git touches it
+   370→warning: in the working copy of 'node_modules/@types/node/constants.d.ts', LF will be replaced by CRLF the next time Git touches it
+   371→warning: in the working copy of 'node_modules/@types/node/crypto.d.ts', LF will be replaced by CRLF the next time Git touches it
+   372→warning: in the working copy of 'node_modules/@types/node/dgram.d.ts', LF will be replaced by CRLF the next time Git touches it
+   373→warning: in the working copy of 'node_modules/@types/node/diagnostics_channel.d.ts', LF will be replaced by CRLF the next time Git touches it
+   374→warning: in the working copy of 'node_modules/@types/node/dns.d.ts', LF will be replaced by CRLF the next time Git touches it
+   375→warning: in the working copy of 'node_modules/@types/node/dns/promises.d.ts', LF will be replaced by CRLF the next time Git touches it
+   376→warning: in the working copy of 'node_modules/@types/node/domain.d.ts', LF will be replaced by CRLF the next time Git touches it
+   377→warning: in the working copy of 'node_modules/@types/node/events.d.ts', LF will be replaced by CRLF the next time Git touches it
+   378→warning: in the working copy of 'node_modules/@types/node/ffi.d.ts', LF will be replaced by CRLF the next time Git touches it
+   379→warning: in the working copy of 'node_modules/@types/node/fs.d.ts', LF will be replaced by CRLF the next time Git touches it
+   380→warning: in the working copy of 'node_modules/@types/node/fs/promises.d.ts', LF will be replaced by CRLF the next time Git touches it
+   381→warning: in the working copy of 'node_modules/@types/node/globals.d.ts', LF will be replaced by CRLF the next time Git touches it
+   382→warning: in the working copy of 'node_modules/@types/node/globals.typedarray.d.ts', LF will be replaced by CRLF the next time Git touches it
+   383→warning: in the working copy of 'node_modules/@types/node/http.d.ts', LF will be replaced by CRLF the next time Git touches it
+   384→warning: in the working copy of 'node_modules/@types/node/http2.d.ts', LF will be replaced by CRLF the next time Git touches it
+   385→warning: in the working copy of 'node_modules/@types/node/https.d.ts', LF will be replaced by CRLF the next time Git touches it
+   386→warning: in the working copy of 'node_modules/@types/node/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   387→warning: in the working copy of 'node_modules/@types/node/inspector.d.ts', LF will be replaced by CRLF the next time Git touches it
+   388→warning: in the working copy of 'node_modules/@types/node/inspector.generated.d.ts', LF will be replaced by CRLF the next time Git touches it
+   389→warning: in the working copy of 'node_modules/@types/node/inspector/promises.d.ts', LF will be replaced by CRLF the next time Git touches it
+   390→warning: in the working copy of 'node_modules/@types/node/module.d.ts', LF will be replaced by CRLF the next time Git touches it
+   391→warning: in the working copy of 'node_modules/@types/node/net.d.ts', LF will be replaced by CRLF the next time Git touches it
+   392→warning: in the working copy of 'node_modules/@types/node/os.d.ts', LF will be replaced by CRLF the next time Git touches it
+   393→warning: in the working copy of 'node_modules/@types/node/package.json', LF will be replaced by CRLF the next time Git touches it
+   394→warning: in the working copy of 'node_modules/@types/node/path.d.ts', LF will be replaced by CRLF the next time Git touches it
+   395→warning: in the working copy of 'node_modules/@types/node/path/posix.d.ts', LF will be replaced by CRLF the next time Git touches it
+   396→warning: in the working copy of 'node_modules/@types/node/path/win32.d.ts', LF will be replaced by CRLF the next time Git touches it
+   397→warning: in the working copy of 'node_modules/@types/node/perf_hooks.d.ts', LF will be replaced by CRLF the next time Git touches it
+   398→warning: in the working copy of 'node_modules/@types/node/process.d.ts', LF will be replaced by CRLF the next time Git touches it
+   399→warning: in the working copy of 'node_modules/@types/node/punycode.d.ts', LF will be replaced by CRLF the next time Git touches it
+   400→warning: in the working copy of 'node_modules/@types/node/querystring.d.ts', LF will be replaced by CRLF the next time Git touches it
+   401→warning: in the working copy of 'node_modules/@types/node/quic.d.ts', LF will be replaced by CRLF the next time Git touches it
+   402→warning: in the working copy of 'node_modules/@types/node/readline.d.ts', LF will be replaced by CRLF the next time Git touches it
+   403→warning: in the working copy of 'node_modules/@types/node/readline/promises.d.ts', LF will be replaced by CRLF the next time Git touches it
+   404→warning: in the working copy of 'node_modules/@types/node/repl.d.ts', LF will be replaced by CRLF the next time Git touches it
+   405→warning: in the working copy of 'node_modules/@types/node/sea.d.ts', LF will be replaced by CRLF the next time Git touches it
+   406→warning: in the working copy of 'node_modules/@types/node/sqlite.d.ts', LF will be replaced by CRLF the next time Git touches it
+   407→warning: in the working copy of 'node_modules/@types/node/stream.d.ts', LF will be replaced by CRLF the next time Git touches it
+   408→warning: in the working copy of 'node_modules/@types/node/stream/consumers.d.ts', LF will be replaced by CRLF the next time Git touches it
+   409→warning: in the working copy of 'node_modules/@types/node/stream/iter.d.ts', LF will be replaced by CRLF the next time Git touches it
+   410→warning: in the working copy of 'node_modules/@types/node/stream/promises.d.ts', LF will be replaced by CRLF the next time Git touches it
+   411→warning: in the working copy of 'node_modules/@types/node/stream/web.d.ts', LF will be replaced by CRLF the next time Git touches it
+   412→warning: in the working copy of 'node_modules/@types/node/string_decoder.d.ts', LF will be replaced by CRLF the next time Git touches it
+   413→warning: in the working copy of 'node_modules/@types/node/test.d.ts', LF will be replaced by CRLF the next time Git touches it
+   414→warning: in the working copy of 'node_modules/@types/node/test/reporters.d.ts', LF will be replaced by CRLF the next time Git touches it
+   415→warning: in the working copy of 'node_modules/@types/node/timers.d.ts', LF will be replaced by CRLF the next time Git touches it
+   416→warning: in the working copy of 'node_modules/@types/node/timers/promises.d.ts', LF will be replaced by CRLF the next time Git touches it
+   417→warning: in the working copy of 'node_modules/@types/node/tls.d.ts', LF will be replaced by CRLF the next time Git touches it
+   418→warning: in the working copy of 'node_modules/@types/node/trace_events.d.ts', LF will be replaced by CRLF the next time Git touches it
+   419→warning: in the working copy of 'node_modules/@types/node/ts5.6/buffer.buffer.d.ts', LF will be replaced by CRLF the next time Git touches it
+   420→warning: in the working copy of 'node_modules/@types/node/ts5.6/compatibility/float16array.d.ts', LF will be replaced by CRLF the next time Git touches it
+   421→warning: in the working copy of 'node_modules/@types/node/ts5.6/globals.typedarray.d.ts', LF will be replaced by CRLF the next time Git touches it
+   422→warning: in the working copy of 'node_modules/@types/node/ts5.6/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   423→warning: in the working copy of 'node_modules/@types/node/ts5.7/compatibility/float16array.d.ts', LF will be replaced by CRLF the next time Git touches it
+   424→warning: in the working copy of 'node_modules/@types/node/ts5.7/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   425→warning: in the working copy of 'node_modules/@types/node/tty.d.ts', LF will be replaced by CRLF the next time Git touches it
+   426→warning: in the working copy of 'node_modules/@types/node/url.d.ts', LF will be replaced by CRLF the next time Git touches it
+   427→warning: in the working copy of 'node_modules/@types/node/util.d.ts', LF will be replaced by CRLF the next time Git touches it
+   428→warning: in the working copy of 'node_modules/@types/node/util/types.d.ts', LF will be replaced by CRLF the next time Git touches it
+   429→warning: in the working copy of 'node_modules/@types/node/v8.d.ts', LF will be replaced by CRLF the next time Git touches it
+   430→warning: in the working copy of 'node_modules/@types/node/vm.d.ts', LF will be replaced by CRLF the next time Git touches it
+   431→warning: in the working copy of 'node_modules/@types/node/wasi.d.ts', LF will be replaced by CRLF the next time Git touches it
+   432→warning: in the working copy of 'node_modules/@types/node/web-globals/abortcontroller.d.ts', LF will be replaced by CRLF the next time Git touches it
+   433→warning: in the working copy of 'node_modules/@types/node/web-globals/blob.d.ts', LF will be replaced by CRLF the next time Git touches it
+   434→warning: in the working copy of 'node_modules/@types/node/web-globals/console.d.ts', LF will be replaced by CRLF the next time Git touches it
+   435→warning: in the working copy of 'node_modules/@types/node/web-globals/crypto.d.ts', LF will be replaced by CRLF the next time Git touches it
+   436→warning: in the working copy of 'node_modules/@types/node/web-globals/domexception.d.ts', LF will be replaced by CRLF the next time Git touches it
+   437→warning: in the working copy of 'node_modules/@types/node/web-globals/encoding.d.ts', LF will be replaced by CRLF the next time Git touches it
+   438→warning: in the working copy of 'node_modules/@types/node/web-globals/events.d.ts', LF will be replaced by CRLF the next time Git touches it
+   439→warning: in the working copy of 'node_modules/@types/node/web-globals/fetch.d.ts', LF will be replaced by CRLF the next time Git touches it
+   440→warning: in the working copy of 'node_modules/@types/node/web-globals/importmeta.d.ts', LF will be replaced by CRLF the next time Git touches it
+   441→warning: in the working copy of 'node_modules/@types/node/web-globals/messaging.d.ts', LF will be replaced by CRLF the next time Git touches it
+   442→warning: in the working copy of 'node_modules/@types/node/web-globals/navigator.d.ts', LF will be replaced by CRLF the next time Git touches it
+   443→warning: in the working copy of 'node_modules/@types/node/web-globals/performance.d.ts', LF will be replaced by CRLF the next time Git touches it
+   444→warning: in the working copy of 'node_modules/@types/node/web-globals/storage.d.ts', LF will be replaced by CRLF the next time Git touches it
+   445→warning: in the working copy of 'node_modules/@types/node/web-globals/streams.d.ts', LF will be replaced by CRLF the next time Git touches it
+   446→warning: in the working copy of 'node_modules/@types/node/web-globals/timers.d.ts', LF will be replaced by CRLF the next time Git touches it
+   447→warning: in the working copy of 'node_modules/@types/node/web-globals/url.d.ts', LF will be replaced by CRLF the next time Git touches it
+   448→warning: in the working copy of 'node_modules/@types/node/worker_threads.d.ts', LF will be replaced by CRLF the next time Git touches it
+   449→warning: in the working copy of 'node_modules/@types/node/zlib.d.ts', LF will be replaced by CRLF the next time Git touches it
+   450→warning: in the working copy of 'node_modules/@types/node/zlib/iter.d.ts', LF will be replaced by CRLF the next time Git touches it
+   451→warning: in the working copy of 'node_modules/@types/ws/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   452→warning: in the working copy of 'node_modules/@types/ws/index.d.mts', LF will be replaced by CRLF the next time Git touches it
+   453→warning: in the working copy of 'node_modules/@types/ws/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   454→warning: in the working copy of 'node_modules/@types/ws/package.json', LF will be replaced by CRLF the next time Git touches it
+   455→warning: in the working copy of 'node_modules/accepts/HISTORY.md', LF will be replaced by CRLF the next time Git touches it
+   456→warning: in the working copy of 'node_modules/accepts/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   457→warning: in the working copy of 'node_modules/accepts/README.md', LF will be replaced by CRLF the next time Git touches it
+   458→warning: in the working copy of 'node_modules/accepts/index.js', LF will be replaced by CRLF the next time Git touches it
+   459→warning: in the working copy of 'node_modules/accepts/package.json', LF will be replaced by CRLF the next time Git touches it
+   460→warning: in the working copy of 'node_modules/base64id/CHANGELOG.md', LF will be replaced by CRLF the next time Git touches it
+   461→warning: in the working copy of 'node_modules/base64id/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   462→warning: in the working copy of 'node_modules/base64id/README.md', LF will be replaced by CRLF the next time Git touches it
+   463→warning: in the working copy of 'node_modules/base64id/lib/base64id.js', LF will be replaced by CRLF the next time Git touches it
+   464→warning: in the working copy of 'node_modules/base64id/package.json', LF will be replaced by CRLF the next time Git touches it
+   465→warning: in the working copy of 'node_modules/cookie/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   466→warning: in the working copy of 'node_modules/cookie/README.md', LF will be replaced by CRLF the next time Git touches it
+   467→warning: in the working copy of 'node_modules/cookie/SECURITY.md', LF will be replaced by CRLF the next time Git touches it
+   468→warning: in the working copy of 'node_modules/cookie/index.js', LF will be replaced by CRLF the next time Git touches it
+   469→warning: in the working copy of 'node_modules/cookie/package.json', LF will be replaced by CRLF the next time Git touches it
+   470→warning: in the working copy of 'node_modules/cors/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   471→warning: in the working copy of 'node_modules/cors/README.md', LF will be replaced by CRLF the next time Git touches it
+   472→warning: in the working copy of 'node_modules/cors/lib/index.js', LF will be replaced by CRLF the next time Git touches it
+   473→warning: in the working copy of 'node_modules/cors/package.json', LF will be replaced by CRLF the next time Git touches it
+   474→warning: in the working copy of 'node_modules/debug/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   475→warning: in the working copy of 'node_modules/debug/README.md', LF will be replaced by CRLF the next time Git touches it
+   476→warning: in the working copy of 'node_modules/debug/package.json', LF will be replaced by CRLF the next time Git touches it
+   477→warning: in the working copy of 'node_modules/debug/src/browser.js', LF will be replaced by CRLF the next time Git touches it
+   478→warning: in the working copy of 'node_modules/debug/src/common.js', LF will be replaced by CRLF the next time Git touches it
+   479→warning: in the working copy of 'node_modules/debug/src/index.js', LF will be replaced by CRLF the next time Git touches it
+   480→warning: in the working copy of 'node_modules/debug/src/node.js', LF will be replaced by CRLF the next time Git touches it
+   481→warning: in the working copy of 'node_modules/engine.io-parser/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   482→warning: in the working copy of 'node_modules/engine.io-parser/Readme.md', LF will be replaced by CRLF the next time Git touches it
+   483→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/commons.d.ts', LF will be replaced by CRLF the next time Git touches it
+   484→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/commons.js', LF will be replaced by CRLF the next time Git touches it
+   485→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/contrib/base64-arraybuffer.d.ts', LF will be replaced by CRLF the next time Git touches it
+   486→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/contrib/base64-arraybuffer.js', LF will be replaced by CRLF the next time Git touches it
+   487→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/decodePacket.browser.d.ts', LF will be replaced by CRLF the next time Git touches it
+   488→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/decodePacket.browser.js', LF will be replaced by CRLF the next time Git touches it
+   489→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/decodePacket.d.ts', LF will be replaced by CRLF the next time Git touches it
+   490→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/decodePacket.js', LF will be replaced by CRLF the next time Git touches it
+   491→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/encodePacket.browser.d.ts', LF will be replaced by CRLF the next time Git touches it
+   492→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/encodePacket.browser.js', LF will be replaced by CRLF the next time Git touches it
+   493→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/encodePacket.d.ts', LF will be replaced by CRLF the next time Git touches it
+   494→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/encodePacket.js', LF will be replaced by CRLF the next time Git touches it
+   495→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   496→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/index.js', LF will be replaced by CRLF the next time Git touches it
+   497→warning: in the working copy of 'node_modules/engine.io-parser/build/cjs/package.json', LF will be replaced by CRLF the next time Git touches it
+   498→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/commons.d.ts', LF will be replaced by CRLF the next time Git touches it
+   499→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/commons.js', LF will be replaced by CRLF the next time Git touches it
+   500→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/contrib/base64-arraybuffer.d.ts', LF will be replaced by CRLF the next time Git touches it
+   501→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/contrib/base64-arraybuffer.js', LF will be replaced by CRLF the next time Git touches it
+   502→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/decodePacket.browser.d.ts', LF will be replaced by CRLF the next time Git touches it
+   503→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/decodePacket.browser.js', LF will be replaced by CRLF the next time Git touches it
+   504→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/decodePacket.d.ts', LF will be replaced by CRLF the next time Git touches it
+   505→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/decodePacket.js', LF will be replaced by CRLF the next time Git touches it
+   506→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/encodePacket.browser.d.ts', LF will be replaced by CRLF the next time Git touches it
+   507→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/encodePacket.browser.js', LF will be replaced by CRLF the next time Git touches it
+   508→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/encodePacket.d.ts', LF will be replaced by CRLF the next time Git touches it
+   509→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/encodePacket.js', LF will be replaced by CRLF the next time Git touches it
+   510→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   511→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/index.js', LF will be replaced by CRLF the next time Git touches it
+   512→warning: in the working copy of 'node_modules/engine.io-parser/build/esm/package.json', LF will be replaced by CRLF the next time Git touches it
+   513→warning: in the working copy of 'node_modules/engine.io-parser/package.json', LF will be replaced by CRLF the next time Git touches it
+   514→warning: in the working copy of 'node_modules/engine.io/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   515→warning: in the working copy of 'node_modules/engine.io/README.md', LF will be replaced by CRLF the next time Git touches it
+   516→warning: in the working copy of 'node_modules/engine.io/build/contrib/types.cookie.d.ts', LF will be replaced by CRLF the next time Git touches it
+   517→warning: in the working copy of 'node_modules/engine.io/build/contrib/types.cookie.js', LF will be replaced by CRLF the next time Git touches it
+   518→warning: in the working copy of 'node_modules/engine.io/build/engine.io.d.ts', LF will be replaced by CRLF the next time Git touches it
+   519→warning: in the working copy of 'node_modules/engine.io/build/engine.io.js', LF will be replaced by CRLF the next time Git touches it
+   520→warning: in the working copy of 'node_modules/engine.io/build/parser-v3/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   521→warning: in the working copy of 'node_modules/engine.io/build/parser-v3/index.js', LF will be replaced by CRLF the next time Git touches it
+   522→warning: in the working copy of 'node_modules/engine.io/build/parser-v3/utf8.d.ts', LF will be replaced by CRLF the next time Git touches it
+   523→warning: in the working copy of 'node_modules/engine.io/build/parser-v3/utf8.js', LF will be replaced by CRLF the next time Git touches it
+   524→warning: in the working copy of 'node_modules/engine.io/build/server.d.ts', LF will be replaced by CRLF the next time Git touches it
+   525→warning: in the working copy of 'node_modules/engine.io/build/server.js', LF will be replaced by CRLF the next time Git touches it
+   526→warning: in the working copy of 'node_modules/engine.io/build/socket.d.ts', LF will be replaced by CRLF the next time Git touches it
+   527→warning: in the working copy of 'node_modules/engine.io/build/socket.js', LF will be replaced by CRLF the next time Git touches it
+   528→warning: in the working copy of 'node_modules/engine.io/build/transport.d.ts', LF will be replaced by CRLF the next time Git touches it
+   529→warning: in the working copy of 'node_modules/engine.io/build/transport.js', LF will be replaced by CRLF the next time Git touches it
+   530→warning: in the working copy of 'node_modules/engine.io/build/transports-uws/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   531→warning: in the working copy of 'node_modules/engine.io/build/transports-uws/index.js', LF will be replaced by CRLF the next time Git touches it
+   532→warning: in the working copy of 'node_modules/engine.io/build/transports-uws/polling.d.ts', LF will be replaced by CRLF the next time Git touches it
+   533→warning: in the working copy of 'node_modules/engine.io/build/transports-uws/polling.js', LF will be replaced by CRLF the next time Git touches it
+   534→warning: in the working copy of 'node_modules/engine.io/build/transports-uws/websocket.d.ts', LF will be replaced by CRLF the next time Git touches it
+   535→warning: in the working copy of 'node_modules/engine.io/build/transports-uws/websocket.js', LF will be replaced by CRLF the next time Git touches it
+   536→warning: in the working copy of 'node_modules/engine.io/build/transports/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   537→warning: in the working copy of 'node_modules/engine.io/build/transports/index.js', LF will be replaced by CRLF the next time Git touches it
+   538→warning: in the working copy of 'node_modules/engine.io/build/transports/polling-jsonp.d.ts', LF will be replaced by CRLF the next time Git touches it
+   539→warning: in the working copy of 'node_modules/engine.io/build/transports/polling-jsonp.js', LF will be replaced by CRLF the next time Git touches it
+   540→warning: in the working copy of 'node_modules/engine.io/build/transports/polling.d.ts', LF will be replaced by CRLF the next time Git touches it
+   541→warning: in the working copy of 'node_modules/engine.io/build/transports/polling.js', LF will be replaced by CRLF the next time Git touches it
+   542→warning: in the working copy of 'node_modules/engine.io/build/transports/websocket.d.ts', LF will be replaced by CRLF the next time Git touches it
+   543→warning: in the working copy of 'node_modules/engine.io/build/transports/websocket.js', LF will be replaced by CRLF the next time Git touches it
+   544→warning: in the working copy of 'node_modules/engine.io/build/transports/webtransport.d.ts', LF will be replaced by CRLF the next time Git touches it
+   545→warning: in the working copy of 'node_modules/engine.io/build/transports/webtransport.js', LF will be replaced by CRLF the next time Git touches it
+   546→warning: in the working copy of 'node_modules/engine.io/build/userver.d.ts', LF will be replaced by CRLF the next time Git touches it
+   547→warning: in the working copy of 'node_modules/engine.io/build/userver.js', LF will be replaced by CRLF the next time Git touches it
+   548→warning: in the working copy of 'node_modules/engine.io/package.json', LF will be replaced by CRLF the next time Git touches it
+   549→warning: in the working copy of 'node_modules/engine.io/wrapper.mjs', LF will be replaced by CRLF the next time Git touches it
+   550→warning: in the working copy of 'node_modules/iceberg-js/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   551→warning: in the working copy of 'node_modules/iceberg-js/README.md', LF will be replaced by CRLF the next time Git touches it
+   552→warning: in the working copy of 'node_modules/iceberg-js/dist/index.cjs', LF will be replaced by CRLF the next time Git touches it
+   553→warning: in the working copy of 'node_modules/iceberg-js/dist/index.d.cts', LF will be replaced by CRLF the next time Git touches it
+   554→warning: in the working copy of 'node_modules/iceberg-js/dist/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   555→warning: in the working copy of 'node_modules/iceberg-js/dist/index.mjs', LF will be replaced by CRLF the next time Git touches it
+   556→warning: in the working copy of 'node_modules/iceberg-js/package.json', LF will be replaced by CRLF the next time Git touches it
+   557→warning: in the working copy of 'node_modules/mime-db/HISTORY.md', LF will be replaced by CRLF the next time Git touches it
+   558→warning: in the working copy of 'node_modules/mime-db/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   559→warning: in the working copy of 'node_modules/mime-db/README.md', LF will be replaced by CRLF the next time Git touches it
+   560→warning: in the working copy of 'node_modules/mime-db/db.json', LF will be replaced by CRLF the next time Git touches it
+   561→warning: in the working copy of 'node_modules/mime-db/index.js', LF will be replaced by CRLF the next time Git touches it
+   562→warning: in the working copy of 'node_modules/mime-db/package.json', LF will be replaced by CRLF the next time Git touches it
+   563→warning: in the working copy of 'node_modules/mime-types/HISTORY.md', LF will be replaced by CRLF the next time Git touches it
+   564→warning: in the working copy of 'node_modules/mime-types/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   565→warning: in the working copy of 'node_modules/mime-types/README.md', LF will be replaced by CRLF the next time Git touches it
+   566→warning: in the working copy of 'node_modules/mime-types/index.js', LF will be replaced by CRLF the next time Git touches it
+   567→warning: in the working copy of 'node_modules/mime-types/package.json', LF will be replaced by CRLF the next time Git touches it
+   568→warning: in the working copy of 'node_modules/ms/index.js', LF will be replaced by CRLF the next time Git touches it
+   569→warning: in the working copy of 'node_modules/ms/license.md', LF will be replaced by CRLF the next time Git touches it
+   570→warning: in the working copy of 'node_modules/ms/package.json', LF will be replaced by CRLF the next time Git touches it
+   571→warning: in the working copy of 'node_modules/ms/readme.md', LF will be replaced by CRLF the next time Git touches it
+   572→warning: in the working copy of 'node_modules/negotiator/HISTORY.md', LF will be replaced by CRLF the next time Git touches it
+   573→warning: in the working copy of 'node_modules/negotiator/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   574→warning: in the working copy of 'node_modules/negotiator/README.md', LF will be replaced by CRLF the next time Git touches it
+   575→warning: in the working copy of 'node_modules/negotiator/index.js', LF will be replaced by CRLF the next time Git touches it
+   576→warning: in the working copy of 'node_modules/negotiator/lib/charset.js', LF will be replaced by CRLF the next time Git touches it
+   577→warning: in the working copy of 'node_modules/negotiator/lib/encoding.js', LF will be replaced by CRLF the next time Git touches it
+   578→warning: in the working copy of 'node_modules/negotiator/lib/language.js', LF will be replaced by CRLF the next time Git touches it
+   579→warning: in the working copy of 'node_modules/negotiator/lib/mediaType.js', LF will be replaced by CRLF the next time Git touches it
+   580→warning: in the working copy of 'node_modules/negotiator/package.json', LF will be replaced by CRLF the next time Git touches it
+   581→warning: in the working copy of 'node_modules/object-assign/index.js', LF will be replaced by CRLF the next time Git touches it
+   582→warning: in the working copy of 'node_modules/object-assign/license', LF will be replaced by CRLF the next time Git touches it
+   583→warning: in the working copy of 'node_modules/object-assign/package.json', LF will be replaced by CRLF the next time Git touches it
+   584→warning: in the working copy of 'node_modules/object-assign/readme.md', LF will be replaced by CRLF the next time Git touches it
+   585→warning: in the working copy of 'node_modules/socket.io-adapter/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   586→warning: in the working copy of 'node_modules/socket.io-adapter/Readme.md', LF will be replaced by CRLF the next time Git touches it
+   587→warning: in the working copy of 'node_modules/socket.io-adapter/dist/cluster-adapter.d.ts', LF will be replaced by CRLF the next time Git touches it
+   588→warning: in the working copy of 'node_modules/socket.io-adapter/dist/cluster-adapter.js', LF will be replaced by CRLF the next time Git touches it
+   589→warning: in the working copy of 'node_modules/socket.io-adapter/dist/contrib/yeast.d.ts', LF will be replaced by CRLF the next time Git touches it
+   590→warning: in the working copy of 'node_modules/socket.io-adapter/dist/contrib/yeast.js', LF will be replaced by CRLF the next time Git touches it
+   591→warning: in the working copy of 'node_modules/socket.io-adapter/dist/in-memory-adapter.d.ts', LF will be replaced by CRLF the next time Git touches it
+   592→warning: in the working copy of 'node_modules/socket.io-adapter/dist/in-memory-adapter.js', LF will be replaced by CRLF the next time Git touches it
+   593→warning: in the working copy of 'node_modules/socket.io-adapter/dist/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   594→warning: in the working copy of 'node_modules/socket.io-adapter/dist/index.js', LF will be replaced by CRLF the next time Git touches it
+   595→warning: in the working copy of 'node_modules/socket.io-adapter/package.json', LF will be replaced by CRLF the next time Git touches it
+   596→warning: in the working copy of 'node_modules/socket.io-parser/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   597→warning: in the working copy of 'node_modules/socket.io-parser/Readme.md', LF will be replaced by CRLF the next time Git touches it
+   598→warning: in the working copy of 'node_modules/socket.io-parser/build/cjs/binary.d.ts', LF will be replaced by CRLF the next time Git touches it
+   599→warning: in the working copy of 'node_modules/socket.io-parser/build/cjs/binary.js', LF will be replaced by CRLF the next time Git touches it
+   600→warning: in the working copy of 'node_modules/socket.io-parser/build/cjs/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   601→warning: in the working copy of 'node_modules/socket.io-parser/build/cjs/index.js', LF will be replaced by CRLF the next time Git touches it
+   602→warning: in the working copy of 'node_modules/socket.io-parser/build/cjs/is-binary.d.ts', LF will be replaced by CRLF the next time Git touches it
+   603→warning: in the working copy of 'node_modules/socket.io-parser/build/cjs/is-binary.js', LF will be replaced by CRLF the next time Git touches it
+   604→warning: in the working copy of 'node_modules/socket.io-parser/build/cjs/package.json', LF will be replaced by CRLF the next time Git touches it
+   605→warning: in the working copy of 'node_modules/socket.io-parser/build/esm-debug/binary.d.ts', LF will be replaced by CRLF the next time Git touches it
+   606→warning: in the working copy of 'node_modules/socket.io-parser/build/esm-debug/binary.js', LF will be replaced by CRLF the next time Git touches it
+   607→warning: in the working copy of 'node_modules/socket.io-parser/build/esm-debug/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   608→warning: in the working copy of 'node_modules/socket.io-parser/build/esm-debug/index.js', LF will be replaced by CRLF the next time Git touches it
+   609→warning: in the working copy of 'node_modules/socket.io-parser/build/esm-debug/is-binary.d.ts', LF will be replaced by CRLF the next time Git touches it
+   610→warning: in the working copy of 'node_modules/socket.io-parser/build/esm-debug/is-binary.js', LF will be replaced by CRLF the next time Git touches it
+   611→warning: in the working copy of 'node_modules/socket.io-parser/build/esm-debug/package.json', LF will be replaced by CRLF the next time Git touches it
+   612→warning: in the working copy of 'node_modules/socket.io-parser/build/esm/binary.d.ts', LF will be replaced by CRLF the next time Git touches it
+   613→warning: in the working copy of 'node_modules/socket.io-parser/build/esm/binary.js', LF will be replaced by CRLF the next time Git touches it
+   614→warning: in the working copy of 'node_modules/socket.io-parser/build/esm/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   615→warning: in the working copy of 'node_modules/socket.io-parser/build/esm/index.js', LF will be replaced by CRLF the next time Git touches it
+   616→warning: in the working copy of 'node_modules/socket.io-parser/build/esm/is-binary.d.ts', LF will be replaced by CRLF the next time Git touches it
+   617→warning: in the working copy of 'node_modules/socket.io-parser/build/esm/is-binary.js', LF will be replaced by CRLF the next time Git touches it
+   618→warning: in the working copy of 'node_modules/socket.io-parser/build/esm/package.json', LF will be replaced by CRLF the next time Git touches it
+   619→warning: in the working copy of 'node_modules/socket.io-parser/package.json', LF will be replaced by CRLF the next time Git touches it
+   620→warning: in the working copy of 'node_modules/socket.io/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   621→warning: in the working copy of 'node_modules/socket.io/Readme.md', LF will be replaced by CRLF the next time Git touches it
+   622→warning: in the working copy of 'node_modules/socket.io/client-dist/socket.io.esm.min.js', LF will be replaced by CRLF the next time Git touches it
+   623→warning: in the working copy of 'node_modules/socket.io/client-dist/socket.io.js', LF will be replaced by CRLF the next time Git touches it
+   624→warning: in the working copy of 'node_modules/socket.io/client-dist/socket.io.min.js', LF will be replaced by CRLF the next time Git touches it
+   625→warning: in the working copy of 'node_modules/socket.io/client-dist/socket.io.msgpack.min.js', LF will be replaced by CRLF the next time Git touches it
+   626→warning: in the working copy of 'node_modules/socket.io/dist/broadcast-operator.d.ts', LF will be replaced by CRLF the next time Git touches it
+   627→warning: in the working copy of 'node_modules/socket.io/dist/broadcast-operator.js', LF will be replaced by CRLF the next time Git touches it
+   628→warning: in the working copy of 'node_modules/socket.io/dist/client.d.ts', LF will be replaced by CRLF the next time Git touches it
+   629→warning: in the working copy of 'node_modules/socket.io/dist/client.js', LF will be replaced by CRLF the next time Git touches it
+   630→warning: in the working copy of 'node_modules/socket.io/dist/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   631→warning: in the working copy of 'node_modules/socket.io/dist/index.js', LF will be replaced by CRLF the next time Git touches it
+   632→warning: in the working copy of 'node_modules/socket.io/dist/namespace.d.ts', LF will be replaced by CRLF the next time Git touches it
+   633→warning: in the working copy of 'node_modules/socket.io/dist/namespace.js', LF will be replaced by CRLF the next time Git touches it
+   634→warning: in the working copy of 'node_modules/socket.io/dist/parent-namespace.d.ts', LF will be replaced by CRLF the next time Git touches it
+   635→warning: in the working copy of 'node_modules/socket.io/dist/parent-namespace.js', LF will be replaced by CRLF the next time Git touches it
+   636→warning: in the working copy of 'node_modules/socket.io/dist/socket-types.d.ts', LF will be replaced by CRLF the next time Git touches it
+   637→warning: in the working copy of 'node_modules/socket.io/dist/socket-types.js', LF will be replaced by CRLF the next time Git touches it
+   638→warning: in the working copy of 'node_modules/socket.io/dist/socket.d.ts', LF will be replaced by CRLF the next time Git touches it
+   639→warning: in the working copy of 'node_modules/socket.io/dist/socket.js', LF will be replaced by CRLF the next time Git touches it
+   640→warning: in the working copy of 'node_modules/socket.io/dist/typed-events.d.ts', LF will be replaced by CRLF the next time Git touches it
+   641→warning: in the working copy of 'node_modules/socket.io/dist/typed-events.js', LF will be replaced by CRLF the next time Git touches it
+   642→warning: in the working copy of 'node_modules/socket.io/dist/uws.d.ts', LF will be replaced by CRLF the next time Git touches it
+   643→warning: in the working copy of 'node_modules/socket.io/dist/uws.js', LF will be replaced by CRLF the next time Git touches it
+   644→warning: in the working copy of 'node_modules/socket.io/package.json', LF will be replaced by CRLF the next time Git touches it
+   645→warning: in the working copy of 'node_modules/socket.io/wrapper.mjs', LF will be replaced by CRLF the next time Git touches it
+   646→warning: in the working copy of 'node_modules/tslib/SECURITY.md', LF will be replaced by CRLF the next time Git touches it
+   647→warning: in the working copy of 'node_modules/tslib/modules/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   648→warning: in the working copy of 'node_modules/tslib/package.json', LF will be replaced by CRLF the next time Git touches it
+   649→warning: in the working copy of 'node_modules/tslib/tslib.es6.mjs', LF will be replaced by CRLF the next time Git touches it
+   650→warning: in the working copy of 'node_modules/undici-types/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   651→warning: in the working copy of 'node_modules/undici-types/README.md', LF will be replaced by CRLF the next time Git touches it
+   652→warning: in the working copy of 'node_modules/undici-types/agent.d.ts', LF will be replaced by CRLF the next time Git touches it
+   653→warning: in the working copy of 'node_modules/undici-types/api.d.ts', LF will be replaced by CRLF the next time Git touches it
+   654→warning: in the working copy of 'node_modules/undici-types/balanced-pool.d.ts', LF will be replaced by CRLF the next time Git touches it
+   655→warning: in the working copy of 'node_modules/undici-types/cache-interceptor.d.ts', LF will be replaced by CRLF the next time Git touches it
+   656→warning: in the working copy of 'node_modules/undici-types/cache.d.ts', LF will be replaced by CRLF the next time Git touches it
+   657→warning: in the working copy of 'node_modules/undici-types/client-stats.d.ts', LF will be replaced by CRLF the next time Git touches it
+   658→warning: in the working copy of 'node_modules/undici-types/client.d.ts', LF will be replaced by CRLF the next time Git touches it
+   659→warning: in the working copy of 'node_modules/undici-types/connector.d.ts', LF will be replaced by CRLF the next time Git touches it
+   660→warning: in the working copy of 'node_modules/undici-types/content-type.d.ts', LF will be replaced by CRLF the next time Git touches it
+   661→warning: in the working copy of 'node_modules/undici-types/cookies.d.ts', LF will be replaced by CRLF the next time Git touches it
+   662→warning: in the working copy of 'node_modules/undici-types/diagnostics-channel.d.ts', LF will be replaced by CRLF the next time Git touches it
+   663→warning: in the working copy of 'node_modules/undici-types/dispatcher.d.ts', LF will be replaced by CRLF the next time Git touches it
+   664→warning: in the working copy of 'node_modules/undici-types/dispatcher1-wrapper.d.ts', LF will be replaced by CRLF the next time Git touches it
+   665→warning: in the working copy of 'node_modules/undici-types/env-http-proxy-agent.d.ts', LF will be replaced by CRLF the next time Git touches it
+   666→warning: in the working copy of 'node_modules/undici-types/errors.d.ts', LF will be replaced by CRLF the next time Git touches it
+   667→warning: in the working copy of 'node_modules/undici-types/eventsource.d.ts', LF will be replaced by CRLF the next time Git touches it
+   668→warning: in the working copy of 'node_modules/undici-types/fetch.d.ts', LF will be replaced by CRLF the next time Git touches it
+   669→warning: in the working copy of 'node_modules/undici-types/formdata.d.ts', LF will be replaced by CRLF the next time Git touches it
+   670→warning: in the working copy of 'node_modules/undici-types/global-dispatcher.d.ts', LF will be replaced by CRLF the next time Git touches it
+   671→warning: in the working copy of 'node_modules/undici-types/global-origin.d.ts', LF will be replaced by CRLF the next time Git touches it
+   672→warning: in the working copy of 'node_modules/undici-types/h2c-client.d.ts', LF will be replaced by CRLF the next time Git touches it
+   673→warning: in the working copy of 'node_modules/undici-types/handlers.d.ts', LF will be replaced by CRLF the next time Git touches it
+   674→warning: in the working copy of 'node_modules/undici-types/header.d.ts', LF will be replaced by CRLF the next time Git touches it
+   675→warning: in the working copy of 'node_modules/undici-types/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   676→warning: in the working copy of 'node_modules/undici-types/interceptors.d.ts', LF will be replaced by CRLF the next time Git touches it
+   677→warning: in the working copy of 'node_modules/undici-types/mock-agent.d.ts', LF will be replaced by CRLF the next time Git touches it
+   678→warning: in the working copy of 'node_modules/undici-types/mock-call-history.d.ts', LF will be replaced by CRLF the next time Git touches it
+   679→warning: in the working copy of 'node_modules/undici-types/mock-client.d.ts', LF will be replaced by CRLF the next time Git touches it
+   680→warning: in the working copy of 'node_modules/undici-types/mock-errors.d.ts', LF will be replaced by CRLF the next time Git touches it
+   681→warning: in the working copy of 'node_modules/undici-types/mock-interceptor.d.ts', LF will be replaced by CRLF the next time Git touches it
+   682→warning: in the working copy of 'node_modules/undici-types/mock-pool.d.ts', LF will be replaced by CRLF the next time Git touches it
+   683→warning: in the working copy of 'node_modules/undici-types/package.json', LF will be replaced by CRLF the next time Git touches it
+   684→warning: in the working copy of 'node_modules/undici-types/patch.d.ts', LF will be replaced by CRLF the next time Git touches it
+   685→warning: in the working copy of 'node_modules/undici-types/pool-stats.d.ts', LF will be replaced by CRLF the next time Git touches it
+   686→warning: in the working copy of 'node_modules/undici-types/pool.d.ts', LF will be replaced by CRLF the next time Git touches it
+   687→warning: in the working copy of 'node_modules/undici-types/proxy-agent.d.ts', LF will be replaced by CRLF the next time Git touches it
+   688→warning: in the working copy of 'node_modules/undici-types/readable.d.ts', LF will be replaced by CRLF the next time Git touches it
+   689→warning: in the working copy of 'node_modules/undici-types/retry-agent.d.ts', LF will be replaced by CRLF the next time Git touches it
+   690→warning: in the working copy of 'node_modules/undici-types/retry-handler.d.ts', LF will be replaced by CRLF the next time Git touches it
+   691→warning: in the working copy of 'node_modules/undici-types/round-robin-pool.d.ts', LF will be replaced by CRLF the next time Git touches it
+   692→warning: in the working copy of 'node_modules/undici-types/snapshot-agent.d.ts', LF will be replaced by CRLF the next time Git touches it
+   693→warning: in the working copy of 'node_modules/undici-types/socks5-proxy-agent.d.ts', LF will be replaced by CRLF the next time Git touches it
+   694→warning: in the working copy of 'node_modules/undici-types/util.d.ts', LF will be replaced by CRLF the next time Git touches it
+   695→warning: in the working copy of 'node_modules/undici-types/utility.d.ts', LF will be replaced by CRLF the next time Git touches it
+   696→warning: in the working copy of 'node_modules/undici-types/webidl.d.ts', LF will be replaced by CRLF the next time Git touches it
+   697→warning: in the working copy of 'node_modules/undici-types/websocket.d.ts', LF will be replaced by CRLF the next time Git touches it
+   698→warning: in the working copy of 'node_modules/vary/HISTORY.md', LF will be replaced by CRLF the next time Git touches it
+   699→warning: in the working copy of 'node_modules/vary/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   700→warning: in the working copy of 'node_modules/vary/README.md', LF will be replaced by CRLF the next time Git touches it
+   701→warning: in the working copy of 'node_modules/vary/index.js', LF will be replaced by CRLF the next time Git touches it
+   702→warning: in the working copy of 'node_modules/vary/package.json', LF will be replaced by CRLF the next time Git touches it
+   703→warning: in the working copy of 'node_modules/ws/LICENSE', LF will be replaced by CRLF the next time Git touches it
+   704→warning: in the working copy of 'node_modules/ws/README.md', LF will be replaced by CRLF the next time Git touches it
+   705→warning: in the working copy of 'node_modules/ws/browser.js', LF will be replaced by CRLF the next time Git touches it
+   706→warning: in the working copy of 'node_modules/ws/index.js', LF will be replaced by CRLF the next time Git touches it
+   707→warning: in the working copy of 'node_modules/ws/lib/buffer-util.js', LF will be replaced by CRLF the next time Git touches it
+   708→warning: in the working copy of 'node_modules/ws/lib/constants.js', LF will be replaced by CRLF the next time Git touches it
+   709→warning: in the working copy of 'node_modules/ws/lib/event-target.js', LF will be replaced by CRLF the next time Git touches it
+   710→warning: in the working copy of 'node_modules/ws/lib/extension.js', LF will be replaced by CRLF the next time Git touches it
+   711→warning: in the working copy of 'node_modules/ws/lib/limiter.js', LF will be replaced by CRLF the next time Git touches it
+   712→warning: in the working copy of 'node_modules/ws/lib/permessage-deflate.js', LF will be replaced by CRLF the next time Git touches it
+   713→warning: in the working copy of 'node_modules/ws/lib/receiver.js', LF will be replaced by CRLF the next time Git touches it
+   714→warning: in the working copy of 'node_modules/ws/lib/sender.js', LF will be replaced by CRLF the next time Git touches it
+   715→warning: in the working copy of 'node_modules/ws/lib/stream.js', LF will be replaced by CRLF the next time Git touches it
+   716→warning: in the working copy of 'node_modules/ws/lib/subprotocol.js', LF will be replaced by CRLF the next time Git touches it
+   717→warning: in the working copy of 'node_modules/ws/lib/validation.js', LF will be replaced by CRLF the next time Git touches it
+   718→warning: in the working copy of 'node_modules/ws/lib/websocket-server.js', LF will be replaced by CRLF the next time Git touches it
+   719→warning: in the working copy of 'node_modules/ws/lib/websocket.js', LF will be replaced by CRLF the next time Git touches it
+   720→warning: in the working copy of 'node_modules/ws/package.json', LF will be replaced by CRLF the next time Git touches it
+   721→warning: in the working copy of 'node_modules/ws/wrapper.mjs', LF will be replaced by CRLF the next time Git touches it
+   722→warning: in the working copy of 'node_modules/z-ai-web-dev-sdk/README.md', LF will be replaced by CRLF the next time Git touches it
+   723→warning: in the working copy of 'node_modules/z-ai-web-dev-sdk/dist/cli.d.ts', LF will be replaced by CRLF the next time Git touches it
+   724→warning: in the working copy of 'node_modules/z-ai-web-dev-sdk/dist/cli.js', LF will be replaced by CRLF the next time Git touches it
+   725→warning: in the working copy of 'node_modules/z-ai-web-dev-sdk/dist/index.d.ts', LF will be replaced by CRLF the next time Git touches it
+   726→warning: in the working copy of 'node_modules/z-ai-web-dev-sdk/dist/index.js', LF will be replaced by CRLF the next time Git touches it
+   727→warning: in the working copy of 'node_modules/z-ai-web-dev-sdk/package.json', LF will be replaced by CRLF the next time Git touches it
+   728→Enumerating objects: 990, done.
+   729→Counting objects: 100% (990/990), done.
+   730→Delta compression using up to 12 threads
+   731→Compressing objects: 100% (955/955), done.
+   732→Writing objects: 100% (990/990), done.
+   733→Total 990 (delta 172), reused 0 (delta 0), pack-reused 0 (from 0)
+   734→[master (root-commit) 1f92f0e] guardianx-engine
+   735→ 973 files changed, 248217 insertions(+)
+   736→ create mode 100644 .dockerignore
+   737→ create mode 100644 .env
+   738→ create mode 100644 Dockerfile
+   739→ create mode 100644 audit-scraper/__init__.py
+   740→ create mode 100644 audit-scraper/__pycache__/config.cpython-313.pyc
+   741→ create mode 100644 audit-scraper/config.py
+   742→ create mode 100644 audit-scraper/credential_scanner.py
+   743→ create mode 100644 audit-scraper/engine.py
+   744→ create mode 100644 audit-scraper/logger.py
+   745→ create mode 100644 audit-scraper/main.py
+   746→ create mode 100644 audit-scraper/requirements.txt
+   747→ create mode 100644 audit-scraper/run.py
+   748→ create mode 100644 audit-scraper/sanitizer.py
+   749→ create mode 100644 audit-scraper/schema_example.json
+   750→ create mode 100644 bun.lock
+   751→ create mode 100644 index.ts
+   752→ create mode 100644 node_modules/.bin/z-ai-generate.bunx
+   753→ create mode 100644 node_modules/.bin/z-ai-generate.exe
+   754→ create mode 100644 node_modules/.bin/z-ai.bunx
+   755→ create mode 100644 node_modules/.bin/z-ai.exe
+   756→ create mode 100644 node_modules/@socket.io/component-emitter/LICENSE
+   757→ create mode 100644 node_modules/@socket.io/component-emitter/Readme.md
+   758→ create mode 100644 node_modules/@socket.io/component-emitter/lib/cjs/index.d.ts
+   759→ create mode 100644 node_modules/@socket.io/component-emitter/lib/cjs/index.js
+   760→ create mode 100644 node_modules/@socket.io/component-emitter/lib/cjs/package.json
+   761→ create mode 100644 node_modules/@socket.io/component-emitter/lib/esm/index.d.ts
+   762→ create mode 100644 node_modules/@socket.io/component-emitter/lib/esm/index.js
+   763→ create mode 100644 node_modules/@socket.io/component-emitter/lib/esm/package.json
+   764→ create mode 100644 node_modules/@socket.io/component-emitter/package.json
+   765→ create mode 100644 node_modules/@supabase/auth-js/AGENTS.md
+   766→ create mode 100644 node_modules/@supabase/auth-js/LICENSE
+   767→ create mode 100644 node_modules/@supabase/auth-js/README.md
+   768→ create mode 100644 node_modules/@supabase/auth-js/dist/main/AuthAdminApi.d.ts
+   769→ create mode 100644 node_modules/@supabase/auth-js/dist/main/AuthAdminApi.d.ts.map
+   770→ create mode 100644 node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js
+   771→ create mode 100644 node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js.map
+   772→ create mode 100644 node_modules/@supabase/auth-js/dist/main/AuthClient.d.ts
+   773→ create mode 100644 node_modules/@supabase/auth-js/dist/main/AuthClient.d.ts.map
+   774→ create mode 100644 node_modules/@supabase/auth-js/dist/main/AuthClient.js
+   775→ create mode 100644 node_modules/@supabase/auth-js/dist/main/AuthClient.js.map
+   776→ create mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.d.ts
+   777→ create mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.d.ts.map
+   778→ create mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js
+   779→ create mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js.map
+   780→ create mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueClient.d.ts
+   781→ create mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueClient.d.ts.map
+   782→ create mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueClient.js
+   783→ create mode 100644 node_modules/@supabase/auth-js/dist/main/GoTrueClient.js.map
+   784→ create mode 100644 node_modules/@supabase/auth-js/dist/main/index.d.ts
+   785→ create mode 100644 node_modules/@supabase/auth-js/dist/main/index.d.ts.map
+   786→ create mode 100644 node_modules/@supabase/auth-js/dist/main/index.js
+   787→ create mode 100644 node_modules/@supabase/auth-js/dist/main/index.js.map
+   788→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/base64url.d.ts
+   789→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/base64url.d.ts.map
+   790→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/base64url.js
+   791→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/base64url.js.map
+   792→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/constants.d.ts
+   793→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/constants.d.ts.map
+   794→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/constants.js
+   795→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/constants.js.map
+   796→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/error-codes.d.ts
+   797→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/error-codes.d.ts.map
+   798→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/error-codes.js
+   799→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/error-codes.js.map
+   800→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/errors.d.ts
+   801→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/errors.d.ts.map
+   802→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/errors.js
+   803→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/errors.js.map
+   804→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/fetch.d.ts
+   805→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/fetch.d.ts.map
+   806→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/fetch.js
+   807→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/fetch.js.map
+   808→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/helpers.d.ts
+   809→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/helpers.d.ts.map
+   810→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/helpers.js
+   811→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/helpers.js.map
+   812→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/local-storage.d.ts
+   813→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/local-storage.d.ts.map
+   814→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/local-storage.js
+   815→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/local-storage.js.map
+   816→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/locks.d.ts
+   817→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/locks.d.ts.map
+   818→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/locks.js
+   819→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/locks.js.map
+   820→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/polyfills.d.ts
+   821→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/polyfills.d.ts.map
+   822→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/polyfills.js
+   823→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/polyfills.js.map
+   824→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/types.d.ts
+   825→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/types.d.ts.map
+   826→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/types.js
+   827→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/types.js.map
+   828→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/version.d.ts
+   829→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/version.d.ts.map
+   830→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/version.js
+   831→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/version.js.map
+   832→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.d.ts
+   833→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.d.ts.map
+   834→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js
+   835→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js.map
+   836→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/solana.d.ts
+   837→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/solana.d.ts.map
+   838→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/solana.js
+   839→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/web3/solana.js.map
+   840→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.d.ts
+   841→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.d.ts.map
+   842→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.d.ts
+   843→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.d.ts.map
+   844→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.js
+   845→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.dom.js.map
+   846→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.d.ts
+   847→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.d.ts.map
+   848→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js
+   849→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js.map
+   850→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.js
+   851→ create mode 100644 node_modules/@supabase/auth-js/dist/main/lib/webauthn.js.map
+   852→ create mode 100644 node_modules/@supabase/auth-js/dist/module/AuthAdminApi.d.ts
+   853→ create mode 100644 node_modules/@supabase/auth-js/dist/module/AuthAdminApi.d.ts.map
+   854→ create mode 100644 node_modules/@supabase/auth-js/dist/module/AuthAdminApi.js
+   855→ create mode 100644 node_modules/@supabase/auth-js/dist/module/AuthAdminApi.js.map
+   856→ create mode 100644 node_modules/@supabase/auth-js/dist/module/AuthClient.d.ts
+   857→ create mode 100644 node_modules/@supabase/auth-js/dist/module/AuthClient.d.ts.map
+   858→ create mode 100644 node_modules/@supabase/auth-js/dist/module/AuthClient.js
+   859→ create mode 100644 node_modules/@supabase/auth-js/dist/module/AuthClient.js.map
+   860→ create mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.d.ts
+   861→ create mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.d.ts.map
+   862→ create mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.js
+   863→ create mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.js.map
+   864→ create mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueClient.d.ts
+   865→ create mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueClient.d.ts.map
+   866→ create mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueClient.js
+   867→ create mode 100644 node_modules/@supabase/auth-js/dist/module/GoTrueClient.js.map
+   868→ create mode 100644 node_modules/@supabase/auth-js/dist/module/index.d.ts
+   869→ create mode 100644 node_modules/@supabase/auth-js/dist/module/index.d.ts.map
+   870→ create mode 100644 node_modules/@supabase/auth-js/dist/module/index.js
+   871→ create mode 100644 node_modules/@supabase/auth-js/dist/module/index.js.map
+   872→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/base64url.d.ts
+   873→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/base64url.d.ts.map
+   874→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/base64url.js
+   875→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/base64url.js.map
+   876→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/constants.d.ts
+   877→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/constants.d.ts.map
+   878→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/constants.js
+   879→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/constants.js.map
+   880→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/error-codes.d.ts
+   881→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/error-codes.d.ts.map
+   882→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/error-codes.js
+   883→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/error-codes.js.map
+   884→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/errors.d.ts
+   885→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/errors.d.ts.map
+   886→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/errors.js
+   887→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/errors.js.map
+   888→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/fetch.d.ts
+   889→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/fetch.d.ts.map
+   890→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/fetch.js
+   891→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/fetch.js.map
+   892→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/helpers.d.ts
+   893→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/helpers.d.ts.map
+   894→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/helpers.js
+   895→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/helpers.js.map
+   896→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/local-storage.d.ts
+   897→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/local-storage.d.ts.map
+   898→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/local-storage.js
+   899→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/local-storage.js.map
+   900→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/locks.d.ts
+   901→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/locks.d.ts.map
+   902→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/locks.js
+   903→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/locks.js.map
+   904→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/polyfills.d.ts
+   905→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/polyfills.d.ts.map
+   906→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/polyfills.js
+   907→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/polyfills.js.map
+   908→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/types.d.ts
+   909→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/types.d.ts.map
+   910→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/types.js
+   911→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/types.js.map
+   912→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/version.d.ts
+   913→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/version.d.ts.map
+   914→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/version.js
+   915→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/version.js.map
+   916→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.d.ts
+   917→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.d.ts.map
+   918→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.js
+   919→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.js.map
+   920→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/solana.d.ts
+   921→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/solana.d.ts.map
+   922→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/solana.js
+   923→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/web3/solana.js.map
+   924→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.d.ts
+   925→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.d.ts.map
+   926→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.d.ts
+   927→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.d.ts.map
+   928→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.js
+   929→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.js.map
+   930→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.d.ts
+   931→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.d.ts.map
+   932→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.js
+   933→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.js.map
+   934→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.js
+   935→ create mode 100644 node_modules/@supabase/auth-js/dist/module/lib/webauthn.js.map
+   936→ create mode 100644 node_modules/@supabase/auth-js/dist/tsconfig.module.tsbuildinfo
+   937→ create mode 100644 node_modules/@supabase/auth-js/dist/tsconfig.tsbuildinfo
+   938→ create mode 100644 node_modules/@supabase/auth-js/migrations/README.md
+   939→ create mode 100644 node_modules/@supabase/auth-js/migrations/lockless-coordination.md
+   940→ create mode 100644 node_modules/@supabase/auth-js/package.json
+   941→ create mode 100644 node_modules/@supabase/auth-js/src/AuthAdminApi.ts
+   942→ create mode 100644 node_modules/@supabase/auth-js/src/AuthClient.ts
+   943→ create mode 100644 node_modules/@supabase/auth-js/src/GoTrueAdminApi.ts
+   944→ create mode 100644 node_modules/@supabase/auth-js/src/GoTrueClient.ts
+   945→ create mode 100644 node_modules/@supabase/auth-js/src/index.ts
+   946→ create mode 100644 node_modules/@supabase/auth-js/src/lib/base64url.ts
+   947→ create mode 100644 node_modules/@supabase/auth-js/src/lib/constants.ts
+   948→ create mode 100644 node_modules/@supabase/auth-js/src/lib/error-codes.ts
+   949→ create mode 100644 node_modules/@supabase/auth-js/src/lib/errors.ts
+   950→ create mode 100644 node_modules/@supabase/auth-js/src/lib/fetch.ts
+   951→ create mode 100644 node_modules/@supabase/auth-js/src/lib/helpers.ts
+   952→ create mode 100644 node_modules/@supabase/auth-js/src/lib/local-storage.ts
+   953→ create mode 100644 node_modules/@supabase/auth-js/src/lib/locks.ts
+   954→ create mode 100644 node_modules/@supabase/auth-js/src/lib/polyfills.ts
+   955→ create mode 100644 node_modules/@supabase/auth-js/src/lib/types.ts
+   956→ create mode 100644 node_modules/@supabase/auth-js/src/lib/version.ts
+   957→ create mode 100644 node_modules/@supabase/auth-js/src/lib/web3/ethereum.ts
+   958→ create mode 100644 node_modules/@supabase/auth-js/src/lib/web3/solana.ts
+   959→ create mode 100644 node_modules/@supabase/auth-js/src/lib/webauthn.dom.ts
+   960→ create mode 100644 node_modules/@supabase/auth-js/src/lib/webauthn.errors.ts
+   961→ create mode 100644 node_modules/@supabase/auth-js/src/lib/webauthn.ts
+   962→ create mode 100644 node_modules/@supabase/functions-js/AGENTS.md
+   963→ create mode 100644 node_modules/@supabase/functions-js/LICENSE
+   964→ create mode 100644 node_modules/@supabase/functions-js/README.md
+   965→ create mode 100644 node_modules/@supabase/functions-js/dist/main/FunctionsClient.d.ts
+   966→ create mode 100644 node_modules/@supabase/functions-js/dist/main/FunctionsClient.d.ts.map
+   967→ create mode 100644 node_modules/@supabase/functions-js/dist/main/FunctionsClient.js
+   968→ create mode 100644 node_modules/@supabase/functions-js/dist/main/FunctionsClient.js.map
+   969→ create mode 100644 node_modules/@supabase/functions-js/dist/main/helper.d.ts
+   970→ create mode 100644 node_modules/@supabase/functions-js/dist/main/helper.d.ts.map
+   971→ create mode 100644 node_modules/@supabase/functions-js/dist/main/helper.js
+   972→ create mode 100644 node_modules/@supabase/functions-js/dist/main/helper.js.map
+   973→ create mode 100644 node_modules/@supabase/functions-js/dist/main/index.d.ts
+   974→ create mode 100644 node_modules/@supabase/functions-js/dist/main/index.d.ts.map
+   975→ create mode 100644 node_modules/@supabase/functions-js/dist/main/index.js
+   976→ create mode 100644 node_modules/@supabase/functions-js/dist/main/index.js.map
+   977→ create mode 100644 node_modules/@supabase/functions-js/dist/main/types.d.ts
+   978→ create mode 100644 node_modules/@supabase/functions-js/dist/main/types.d.ts.map
+   979→ create mode 100644 node_modules/@supabase/functions-js/dist/main/types.js
+   980→ create mode 100644 node_modules/@supabase/functions-js/dist/main/types.js.map
+   981→ create mode 100644 node_modules/@supabase/functions-js/dist/main/version.d.ts
+   982→ create mode 100644 node_modules/@supabase/functions-js/dist/main/version.d.ts.map
+   983→ create mode 100644 node_modules/@supabase/functions-js/dist/main/version.js
+   984→ create mode 100644 node_modules/@supabase/functions-js/dist/main/version.js.map
+   985→ create mode 100644 node_modules/@supabase/functions-js/dist/module/FunctionsClient.d.ts
+   986→ create mode 100644 node_modules/@supabase/functions-js/dist/module/FunctionsClient.d.ts.map
+   987→ create mode 100644 node_modules/@supabase/functions-js/dist/module/FunctionsClient.js
+   988→ create mode 100644 node_modules/@supabase/functions-js/dist/module/FunctionsClient.js.map
+   989→ create mode 100644 node_modules/@supabase/functions-js/dist/module/helper.d.ts
+   990→ create mode 100644 node_modules/@supabase/functions-js/dist/module/helper.d.ts.map
+   991→ create mode 100644 node_modules/@supabase/functions-js/dist/module/helper.js
+   992→ create mode 100644 node_modules/@supabase/functions-js/dist/module/helper.js.map
+   993→ create mode 100644 node_modules/@supabase/functions-js/dist/module/index.d.ts
+   994→ create mode 100644 node_modules/@supabase/functions-js/dist/module/index.d.ts.map
+   995→ create mode 100644 node_modules/@supabase/functions-js/dist/module/index.js
+   996→ create mode 100644 node_modules/@supabase/functions-js/dist/module/index.js.map
+   997→ create mode 100644 node_modules/@supabase/functions-js/dist/module/types.d.ts
+   998→ create mode 100644 node_modules/@supabase/functions-js/dist/module/types.d.ts.map
+   999→ create mode 100644 node_modules/@supabase/functions-js/dist/module/types.js
+  1000→ create mode 100644 node_modules/@supabase/functions-js/dist/module/types.js.map
+  1001→ create mode 100644 node_modules/@supabase/functions-js/dist/module/version.d.ts
+  1002→ create mode 100644 node_modules/@supabase/functions-js/dist/module/version.d.ts.map
+  1003→ create mode 100644 node_modules/@supabase/functions-js/dist/module/version.js
+  1004→ create mode 100644 node_modules/@supabase/functions-js/dist/module/version.js.map
+  1005→ create mode 100644 node_modules/@supabase/functions-js/dist/tsconfig.module.tsbuildinfo
+  1006→ create mode 100644 node_modules/@supabase/functions-js/dist/tsconfig.tsbuildinfo
+  1007→ create mode 100644 node_modules/@supabase/functions-js/migrations/README.md
+  1008→ create mode 100644 node_modules/@supabase/functions-js/package.json
+  1009→ create mode 100644 node_modules/@supabase/functions-js/src/FunctionsClient.ts
+  1010→ create mode 100644 node_modules/@supabase/functions-js/src/edge-runtime.d.ts
+  1011→ create mode 100644 node_modules/@supabase/functions-js/src/helper.ts
+  1012→ create mode 100644 node_modules/@supabase/functions-js/src/index.ts
+  1013→ create mode 100644 node_modules/@supabase/functions-js/src/types.ts
+  1014→ create mode 100644 node_modules/@supabase/functions-js/src/version.ts
+  1015→ create mode 100644 node_modules/@supabase/phoenix/LICENSE.md
+  1016→ create mode 100644 node_modules/@supabase/phoenix/README.md
+  1017→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/ajax.js
+  1018→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/channel.js
+  1019→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/constants.js
+  1020→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/index.js
+  1021→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/longpoll.js
+  1022→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/presence.js
+  1023→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/push.js
+  1024→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/serializer.js
+  1025→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/socket.js
+  1026→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/timer.js
+  1027→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/types.js
+  1028→ create mode 100644 node_modules/@supabase/phoenix/assets/js/phoenix/utils.js
+  1029→ create mode 100644 node_modules/@supabase/phoenix/package.json
+  1030→ create mode 100644 node_modules/@supabase/phoenix/priv/static/favicon.ico
+  1031→ create mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix-orange.png
+  1032→ create mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js
+  1033→ create mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js.map
+  1034→ create mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.js
+  1035→ create mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.min.js
+  1036→ create mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.mjs
+  1037→ create mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.mjs.map
+  1038→ create mode 100644 node_modules/@supabase/phoenix/priv/static/phoenix.png
+  1039→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/ajax.d.ts
+  1040→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/ajax.d.ts.map
+  1041→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/channel.d.ts
+  1042→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/channel.d.ts.map
+  1043→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/constants.d.ts
+  1044→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/constants.d.ts.map
+  1045→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/index.d.ts
+  1046→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/index.d.ts.map
+  1047→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/longpoll.d.ts
+  1048→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/longpoll.d.ts.map
+  1049→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/presence.d.ts
+  1050→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/presence.d.ts.map
+  1051→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/push.d.ts
+  1052→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/push.d.ts.map
+  1053→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/serializer.d.ts
+  1054→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/serializer.d.ts.map
+  1055→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/socket.d.ts
+  1056→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/socket.d.ts.map
+  1057→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/timer.d.ts
+  1058→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/timer.d.ts.map
+  1059→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/types.d.ts
+  1060→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/types.d.ts.map
+  1061→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/utils.d.ts
+  1062→ create mode 100644 node_modules/@supabase/phoenix/priv/static/types/utils.d.ts.map
+  1063→ create mode 100644 node_modules/@supabase/phoenix/tsconfig.json
+  1064→ create mode 100644 node_modules/@supabase/postgrest-js/AGENTS.md
+  1065→ create mode 100644 node_modules/@supabase/postgrest-js/LICENSE
+  1066→ create mode 100644 node_modules/@supabase/postgrest-js/README.md
+  1067→ create mode 100644 node_modules/@supabase/postgrest-js/dist/index.cjs
+  1068→ create mode 100644 node_modules/@supabase/postgrest-js/dist/index.cjs.map
+  1069→ create mode 100644 node_modules/@supabase/postgrest-js/dist/index.d.cts
+  1070→ create mode 100644 node_modules/@supabase/postgrest-js/dist/index.d.cts.map
+  1071→ create mode 100644 node_modules/@supabase/postgrest-js/dist/index.d.mts
+  1072→ create mode 100644 node_modules/@supabase/postgrest-js/dist/index.d.mts.map
+  1073→ create mode 100644 node_modules/@supabase/postgrest-js/dist/index.mjs
+  1074→ create mode 100644 node_modules/@supabase/postgrest-js/dist/index.mjs.map
+  1075→ create mode 100644 node_modules/@supabase/postgrest-js/migrations/README.md
+  1076→ create mode 100644 node_modules/@supabase/postgrest-js/package.json
+  1077→ create mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestBuilder.ts
+  1078→ create mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestClient.ts
+  1079→ create mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestError.ts
+  1080→ create mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestFilterBuilder.ts
+  1081→ create mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestQueryBuilder.ts
+  1082→ create mode 100644 node_modules/@supabase/postgrest-js/src/PostgrestTransformBuilder.ts
+  1083→ create mode 100644 node_modules/@supabase/postgrest-js/src/constants.ts
+  1084→ create mode 100644 node_modules/@supabase/postgrest-js/src/index.ts
+  1085→ create mode 100644 node_modules/@supabase/postgrest-js/src/select-query-parser/parser.ts
+  1086→ create mode 100644 node_modules/@supabase/postgrest-js/src/select-query-parser/result.ts
+  1087→ create mode 100644 node_modules/@supabase/postgrest-js/src/select-query-parser/types.ts
+  1088→ create mode 100644 node_modules/@supabase/postgrest-js/src/select-query-parser/utils.ts
+  1089→ create mode 100644 node_modules/@supabase/postgrest-js/src/types/common/common.ts
+  1090→ create mode 100644 node_modules/@supabase/postgrest-js/src/types/common/rpc.ts
+  1091→ create mode 100644 node_modules/@supabase/postgrest-js/src/types/feature-flags.ts
+  1092→ create mode 100644 node_modules/@supabase/postgrest-js/src/types/types.ts
+  1093→ create mode 100644 node_modules/@supabase/postgrest-js/src/version.ts
+  1094→ create mode 100644 node_modules/@supabase/realtime-js/AGENTS.md
+  1095→ create mode 100644 node_modules/@supabase/realtime-js/LICENSE
+  1096→ create mode 100644 node_modules/@supabase/realtime-js/README.md
+  1097→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.d.ts
+  1098→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.d.ts.map
+  1099→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js
+  1100→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js.map
+  1101→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeClient.d.ts
+  1102→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeClient.d.ts.map
+  1103→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+  1104→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js.map
+  1105→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.d.ts
+  1106→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.d.ts.map
+  1107→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js
+  1108→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js.map
+  1109→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePresence.d.ts
+  1110→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePresence.d.ts.map
+  1111→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js
+  1112→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js.map
+  1113→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/index.d.ts
+  1114→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/index.d.ts.map
+  1115→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/index.js
+  1116→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/index.js.map
+  1117→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/constants.d.ts
+  1118→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/constants.d.ts.map
+  1119→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/constants.js
+  1120→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/constants.js.map
+  1121→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.d.ts
+  1122→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.d.ts.map
+  1123→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js
+  1124→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js.map
+  1125→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/serializer.d.ts
+  1126→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/serializer.d.ts.map
+  1127→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/serializer.js
+  1128→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/serializer.js.map
+  1129→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/transformers.d.ts
+  1130→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/transformers.d.ts.map
+  1131→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/transformers.js
+  1132→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/transformers.js.map
+  1133→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/version.d.ts
+  1134→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/version.d.ts.map
+  1135→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/version.js
+  1136→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/version.js.map
+  1137→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.d.ts
+  1138→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.d.ts.map
+  1139→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js
+  1140→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js.map
+  1141→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.d.ts
+  1142→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.d.ts.map
+  1143→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js
+  1144→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js.map
+  1145→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.d.ts
+  1146→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.d.ts.map
+  1147→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js
+  1148→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js.map
+  1149→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.d.ts
+  1150→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.d.ts.map
+  1151→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js
+  1152→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js.map
+  1153→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/types.d.ts
+  1154→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/types.d.ts.map
+  1155→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/types.js
+  1156→ create mode 100644 node_modules/@supabase/realtime-js/dist/main/phoenix/types.js.map
+  1157→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.d.ts
+  1158→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.d.ts.map
+  1159→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.js
+  1160→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.js.map
+  1161→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeClient.d.ts
+  1162→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeClient.d.ts.map
+  1163→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js
+  1164→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js.map
+  1165→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.d.ts
+  1166→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.d.ts.map
+  1167→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.js
+  1168→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePostgresFilterBuilder.js.map
+  1169→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePresence.d.ts
+  1170→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePresence.d.ts.map
+  1171→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePresence.js
+  1172→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/RealtimePresence.js.map
+  1173→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/index.d.ts
+  1174→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/index.d.ts.map
+  1175→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/index.js
+  1176→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/index.js.map
+  1177→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/constants.d.ts
+  1178→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/constants.d.ts.map
+  1179→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/constants.js
+  1180→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/constants.js.map
+  1181→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.d.ts
+  1182→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.d.ts.map
+  1183→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.js
+  1184→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/normalizeChannelError.js.map
+  1185→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/serializer.d.ts
+  1186→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/serializer.d.ts.map
+  1187→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/serializer.js
+  1188→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/serializer.js.map
+  1189→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/transformers.d.ts
+  1190→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/transformers.d.ts.map
+  1191→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/transformers.js
+  1192→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/transformers.js.map
+  1193→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/version.d.ts
+  1194→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/version.d.ts.map
+  1195→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/version.js
+  1196→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/version.js.map
+  1197→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.d.ts
+  1198→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.d.ts.map
+  1199→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+  1200→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js.map
+  1201→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.d.ts
+  1202→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.d.ts.map
+  1203→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.js
+  1204→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/channelAdapter.js.map
+  1205→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.d.ts
+  1206→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.d.ts.map
+  1207→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.js
+  1208→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/presenceAdapter.js.map
+  1209→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.d.ts
+  1210→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.d.ts.map
+  1211→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.js
+  1212→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/socketAdapter.js.map
+  1213→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/types.d.ts
+  1214→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/types.d.ts.map
+  1215→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/types.js
+  1216→ create mode 100644 node_modules/@supabase/realtime-js/dist/module/phoenix/types.js.map
+  1217→ create mode 100644 node_modules/@supabase/realtime-js/dist/tsconfig.module.tsbuildinfo
+  1218→ create mode 100644 node_modules/@supabase/realtime-js/dist/tsconfig.tsbuildinfo
+  1219→ create mode 100644 node_modules/@supabase/realtime-js/migrations/README.md
+  1220→ create mode 100644 node_modules/@supabase/realtime-js/migrations/httpsend-server-version.md
+  1221→ create mode 100644 node_modules/@supabase/realtime-js/package.json
+  1222→ create mode 100644 node_modules/@supabase/realtime-js/src/RealtimeChannel.ts
+  1223→ create mode 100644 node_modules/@supabase/realtime-js/src/RealtimeClient.ts
+  1224→ create mode 100644 node_modules/@supabase/realtime-js/src/RealtimePostgresFilterBuilder.ts
+  1225→ create mode 100644 node_modules/@supabase/realtime-js/src/RealtimePresence.ts
+  1226→ create mode 100644 node_modules/@supabase/realtime-js/src/index.ts
+  1227→ create mode 100644 node_modules/@supabase/realtime-js/src/lib/constants.ts
+  1228→ create mode 100644 node_modules/@supabase/realtime-js/src/lib/normalizeChannelError.ts
+  1229→ create mode 100644 node_modules/@supabase/realtime-js/src/lib/serializer.ts
+  1230→ create mode 100644 node_modules/@supabase/realtime-js/src/lib/transformers.ts
+  1231→ create mode 100644 node_modules/@supabase/realtime-js/src/lib/version.ts
+  1232→ create mode 100644 node_modules/@supabase/realtime-js/src/lib/websocket-factory.ts
+  1233→ create mode 100644 node_modules/@supabase/realtime-js/src/phoenix/channelAdapter.ts
+  1234→ create mode 100644 node_modules/@supabase/realtime-js/src/phoenix/presenceAdapter.ts
+  1235→ create mode 100644 node_modules/@supabase/realtime-js/src/phoenix/socketAdapter.ts
+  1236→ create mode 100644 node_modules/@supabase/realtime-js/src/phoenix/types.ts
+  1237→ create mode 100644 node_modules/@supabase/storage-js/AGENTS.md
+  1238→ create mode 100644 node_modules/@supabase/storage-js/LICENSE
+  1239→ create mode 100644 node_modules/@supabase/storage-js/README.md
+  1240→ create mode 100644 node_modules/@supabase/storage-js/dist/index.cjs
+  1241→ create mode 100644 node_modules/@supabase/storage-js/dist/index.cjs.map
+  1242→ create mode 100644 node_modules/@supabase/storage-js/dist/index.d.cts
+  1243→ create mode 100644 node_modules/@supabase/storage-js/dist/index.d.cts.map
+  1244→ create mode 100644 node_modules/@supabase/storage-js/dist/index.d.mts
+  1245→ create mode 100644 node_modules/@supabase/storage-js/dist/index.d.mts.map
+  1246→ create mode 100644 node_modules/@supabase/storage-js/dist/index.mjs
+  1247→ create mode 100644 node_modules/@supabase/storage-js/dist/index.mjs.map
+  1248→ create mode 100644 node_modules/@supabase/storage-js/dist/umd/supabase.js
+  1249→ create mode 100644 node_modules/@supabase/storage-js/migrations/README.md
+  1250→ create mode 100644 node_modules/@supabase/storage-js/package.json
+  1251→ create mode 100644 node_modules/@supabase/storage-js/src/StorageClient.ts
+  1252→ create mode 100644 node_modules/@supabase/storage-js/src/index.ts
+  1253→ create mode 100644 node_modules/@supabase/storage-js/src/lib/common/BaseApiClient.ts
+  1254→ create mode 100644 node_modules/@supabase/storage-js/src/lib/common/errors.ts
+  1255→ create mode 100644 node_modules/@supabase/storage-js/src/lib/common/fetch.ts
+  1256→ create mode 100644 node_modules/@supabase/storage-js/src/lib/common/headers.ts
+  1257→ create mode 100644 node_modules/@supabase/storage-js/src/lib/common/helpers.ts
+  1258→ create mode 100644 node_modules/@supabase/storage-js/src/lib/constants.ts
+  1259→ create mode 100644 node_modules/@supabase/storage-js/src/lib/types.ts
+  1260→ create mode 100644 node_modules/@supabase/storage-js/src/lib/version.ts
+  1261→ create mode 100644 node_modules/@supabase/storage-js/src/packages/BlobDownloadBuilder.ts
+  1262→ create mode 100644 node_modules/@supabase/storage-js/src/packages/StorageAnalyticsClient.ts
+  1263→ create mode 100644 node_modules/@supabase/storage-js/src/packages/StorageBucketApi.ts
+  1264→ create mode 100644 node_modules/@supabase/storage-js/src/packages/StorageFileApi.ts
+  1265→ create mode 100644 node_modules/@supabase/storage-js/src/packages/StorageVectorsClient.ts
+  1266→ create mode 100644 node_modules/@supabase/storage-js/src/packages/StreamDownloadBuilder.ts
+  1267→ create mode 100644 node_modules/@supabase/storage-js/src/packages/VectorBucketApi.ts
+  1268→ create mode 100644 node_modules/@supabase/storage-js/src/packages/VectorDataApi.ts
+  1269→ create mode 100644 node_modules/@supabase/storage-js/src/packages/VectorIndexApi.ts
+  1270→ create mode 100644 node_modules/@supabase/supabase-js/AGENTS.md
+  1271→ create mode 100644 node_modules/@supabase/supabase-js/LICENSE
+  1272→ create mode 100644 node_modules/@supabase/supabase-js/README.md
+  1273→ create mode 100644 node_modules/@supabase/supabase-js/dist/cors.cjs
+  1274→ create mode 100644 node_modules/@supabase/supabase-js/dist/cors.cjs.map
+  1275→ create mode 100644 node_modules/@supabase/supabase-js/dist/cors.d.cts
+  1276→ create mode 100644 node_modules/@supabase/supabase-js/dist/cors.d.cts.map
+  1277→ create mode 100644 node_modules/@supabase/supabase-js/dist/cors.d.mts
+  1278→ create mode 100644 node_modules/@supabase/supabase-js/dist/cors.d.mts.map
+  1279→ create mode 100644 node_modules/@supabase/supabase-js/dist/cors.mjs
+  1280→ create mode 100644 node_modules/@supabase/supabase-js/dist/cors.mjs.map
+  1281→ create mode 100644 node_modules/@supabase/supabase-js/dist/index.cjs
+  1282→ create mode 100644 node_modules/@supabase/supabase-js/dist/index.cjs.map
+  1283→ create mode 100644 node_modules/@supabase/supabase-js/dist/index.d.cts
+  1284→ create mode 100644 node_modules/@supabase/supabase-js/dist/index.d.cts.map
+  1285→ create mode 100644 node_modules/@supabase/supabase-js/dist/index.d.mts
+  1286→ create mode 100644 node_modules/@supabase/supabase-js/dist/index.d.mts.map
+  1287→ create mode 100644 node_modules/@supabase/supabase-js/dist/index.mjs
+  1288→ create mode 100644 node_modules/@supabase/supabase-js/dist/index.mjs.map
+  1289→ create mode 100644 node_modules/@supabase/supabase-js/dist/umd/supabase.js
+  1290→ create mode 100644 node_modules/@supabase/supabase-js/migrations/README.md
+  1291→ create mode 100644 node_modules/@supabase/supabase-js/package.json
+  1292→ create mode 100644 node_modules/@supabase/supabase-js/src/SupabaseClient.ts
+  1293→ create mode 100644 node_modules/@supabase/supabase-js/src/cors.ts
+  1294→ create mode 100644 node_modules/@supabase/supabase-js/src/index.ts
+  1295→ create mode 100644 node_modules/@supabase/supabase-js/src/lib/SupabaseAuthClient.ts
+  1296→ create mode 100644 node_modules/@supabase/supabase-js/src/lib/constants.ts
+  1297→ create mode 100644 node_modules/@supabase/supabase-js/src/lib/fetch.ts
+  1298→ create mode 100644 node_modules/@supabase/supabase-js/src/lib/helpers.ts
+  1299→ create mode 100644 node_modules/@supabase/supabase-js/src/lib/rest/types/common/common.ts
+  1300→ create mode 100644 node_modules/@supabase/supabase-js/src/lib/rest/types/common/rpc.ts
+  1301→ create mode 100644 node_modules/@supabase/supabase-js/src/lib/types.ts
+  1302→ create mode 100644 node_modules/@supabase/supabase-js/src/lib/version.ts
+  1303→ create mode 100644 node_modules/@types/cors/LICENSE
+  1304→ create mode 100644 node_modules/@types/cors/README.md
+  1305→ create mode 100644 node_modules/@types/cors/index.d.ts
+  1306→ create mode 100644 node_modules/@types/cors/package.json
+  1307→ create mode 100644 node_modules/@types/node/LICENSE
+  1308→ create mode 100644 node_modules/@types/node/README.md
+  1309→ create mode 100644 node_modules/@types/node/assert.d.ts
+  1310→ create mode 100644 node_modules/@types/node/assert/strict.d.ts
+  1311→ create mode 100644 node_modules/@types/node/async_hooks.d.ts
+  1312→ create mode 100644 node_modules/@types/node/buffer.buffer.d.ts
+  1313→ create mode 100644 node_modules/@types/node/buffer.d.ts
+  1314→ create mode 100644 node_modules/@types/node/child_process.d.ts
+  1315→ create mode 100644 node_modules/@types/node/cluster.d.ts
+  1316→ create mode 100644 node_modules/@types/node/console.d.ts
+  1317→ create mode 100644 node_modules/@types/node/constants.d.ts
+  1318→ create mode 100644 node_modules/@types/node/crypto.d.ts
+  1319→ create mode 100644 node_modules/@types/node/dgram.d.ts
+  1320→ create mode 100644 node_modules/@types/node/diagnostics_channel.d.ts
+  1321→ create mode 100644 node_modules/@types/node/dns.d.ts
+  1322→ create mode 100644 node_modules/@types/node/dns/promises.d.ts
+  1323→ create mode 100644 node_modules/@types/node/domain.d.ts
+  1324→ create mode 100644 node_modules/@types/node/events.d.ts
+  1325→ create mode 100644 node_modules/@types/node/ffi.d.ts
+  1326→ create mode 100644 node_modules/@types/node/fs.d.ts
+  1327→ create mode 100644 node_modules/@types/node/fs/promises.d.ts
+  1328→ create mode 100644 node_modules/@types/node/globals.d.ts
+  1329→ create mode 100644 node_modules/@types/node/globals.typedarray.d.ts
+  1330→ create mode 100644 node_modules/@types/node/http.d.ts
+  1331→ create mode 100644 node_modules/@types/node/http2.d.ts
+  1332→ create mode 100644 node_modules/@types/node/https.d.ts
+  1333→ create mode 100644 node_modules/@types/node/index.d.ts
+  1334→ create mode 100644 node_modules/@types/node/inspector.d.ts
+  1335→ create mode 100644 node_modules/@types/node/inspector.generated.d.ts
+  1336→ create mode 100644 node_modules/@types/node/inspector/promises.d.ts
+  1337→ create mode 100644 node_modules/@types/node/module.d.ts
+  1338→ create mode 100644 node_modules/@types/node/net.d.ts
+  1339→ create mode 100644 node_modules/@types/node/os.d.ts
+  1340→ create mode 100644 node_modules/@types/node/package.json
+  1341→ create mode 100644 node_modules/@types/node/path.d.ts
+  1342→ create mode 100644 node_modules/@types/node/path/posix.d.ts
+  1343→ create mode 100644 node_modules/@types/node/path/win32.d.ts
+  1344→ create mode 100644 node_modules/@types/node/perf_hooks.d.ts
+  1345→ create mode 100644 node_modules/@types/node/process.d.ts
+  1346→ create mode 100644 node_modules/@types/node/punycode.d.ts
+  1347→ create mode 100644 node_modules/@types/node/querystring.d.ts
+  1348→ create mode 100644 node_modules/@types/node/quic.d.ts
+  1349→ create mode 100644 node_modules/@types/node/readline.d.ts
+  1350→ create mode 100644 node_modules/@types/node/readline/promises.d.ts
+  1351→ create mode 100644 node_modules/@types/node/repl.d.ts
+  1352→ create mode 100644 node_modules/@types/node/sea.d.ts
+  1353→ create mode 100644 node_modules/@types/node/sqlite.d.ts
+  1354→ create mode 100644 node_modules/@types/node/stream.d.ts
+  1355→ create mode 100644 node_modules/@types/node/stream/consumers.d.ts
+  1356→ create mode 100644 node_modules/@types/node/stream/iter.d.ts
+  1357→ create mode 100644 node_modules/@types/node/stream/promises.d.ts
+  1358→ create mode 100644 node_modules/@types/node/stream/web.d.ts
+  1359→ create mode 100644 node_modules/@types/node/string_decoder.d.ts
+  1360→ create mode 100644 node_modules/@types/node/test.d.ts
+  1361→ create mode 100644 node_modules/@types/node/test/reporters.d.ts
+  1362→ create mode 100644 node_modules/@types/node/timers.d.ts
+  1363→ create mode 100644 node_modules/@types/node/timers/promises.d.ts
+  1364→ create mode 100644 node_modules/@types/node/tls.d.ts
+  1365→ create mode 100644 node_modules/@types/node/trace_events.d.ts
+  1366→ create mode 100644 node_modules/@types/node/ts5.6/buffer.buffer.d.ts
+  1367→ create mode 100644 node_modules/@types/node/ts5.6/compatibility/float16array.d.ts
+  1368→ create mode 100644 node_modules/@types/node/ts5.6/globals.typedarray.d.ts
+  1369→ create mode 100644 node_modules/@types/node/ts5.6/index.d.ts
+  1370→ create mode 100644 node_modules/@types/node/ts5.7/compatibility/float16array.d.ts
+  1371→ create mode 100644 node_modules/@types/node/ts5.7/index.d.ts
+  1372→ create mode 100644 node_modules/@types/node/tty.d.ts
+  1373→ create mode 100644 node_modules/@types/node/url.d.ts
+  1374→ create mode 100644 node_modules/@types/node/util.d.ts
+  1375→ create mode 100644 node_modules/@types/node/util/types.d.ts
+  1376→ create mode 100644 node_modules/@types/node/v8.d.ts
+  1377→ create mode 100644 node_modules/@types/node/vm.d.ts
+  1378→ create mode 100644 node_modules/@types/node/wasi.d.ts
+  1379→ create mode 100644 node_modules/@types/node/web-globals/abortcontroller.d.ts
+  1380→ create mode 100644 node_modules/@types/node/web-globals/blob.d.ts
+  1381→ create mode 100644 node_modules/@types/node/web-globals/console.d.ts
+  1382→ create mode 100644 node_modules/@types/node/web-globals/crypto.d.ts
+  1383→ create mode 100644 node_modules/@types/node/web-globals/domexception.d.ts
+  1384→ create mode 100644 node_modules/@types/node/web-globals/encoding.d.ts
+  1385→ create mode 100644 node_modules/@types/node/web-globals/events.d.ts
+  1386→ create mode 100644 node_modules/@types/node/web-globals/fetch.d.ts
+  1387→ create mode 100644 node_modules/@types/node/web-globals/importmeta.d.ts
+  1388→ create mode 100644 node_modules/@types/node/web-globals/messaging.d.ts
+  1389→ create mode 100644 node_modules/@types/node/web-globals/navigator.d.ts
+  1390→ create mode 100644 node_modules/@types/node/web-globals/performance.d.ts
+  1391→ create mode 100644 node_modules/@types/node/web-globals/storage.d.ts
+  1392→ create mode 100644 node_modules/@types/node/web-globals/streams.d.ts
+  1393→ create mode 100644 node_modules/@types/node/web-globals/timers.d.ts
+  1394→ create mode 100644 node_modules/@types/node/web-globals/url.d.ts
+  1395→ create mode 100644 node_modules/@types/node/worker_threads.d.ts
+  1396→ create mode 100644 node_modules/@types/node/zlib.d.ts
+  1397→ create mode 100644 node_modules/@types/node/zlib/iter.d.ts
+  1398→ create mode 100644 node_modules/@types/ws/LICENSE
+  1399→ create mode 100644 node_modules/@types/ws/README.md
+  1400→ create mode 100644 node_modules/@types/ws/index.d.mts
+  1401→ create mode 100644 node_modules/@types/ws/index.d.ts
+  1402→ create mode 100644 node_modules/@types/ws/package.json
+  1403→ create mode 100644 node_modules/accepts/HISTORY.md
+  1404→ create mode 100644 node_modules/accepts/LICENSE
+  1405→ create mode 100644 node_modules/accepts/README.md
+  1406→ create mode 100644 node_modules/accepts/index.js
+  1407→ create mode 100644 node_modules/accepts/package.json
+  1408→ create mode 100644 node_modules/base64id/CHANGELOG.md
+  1409→ create mode 100644 node_modules/base64id/LICENSE
+  1410→ create mode 100644 node_modules/base64id/README.md
+  1411→ create mode 100644 node_modules/base64id/lib/base64id.js
+  1412→ create mode 100644 node_modules/base64id/package.json
+  1413→ create mode 100644 node_modules/cookie/LICENSE
+  1414→ create mode 100644 node_modules/cookie/README.md
+  1415→ create mode 100644 node_modules/cookie/SECURITY.md
+  1416→ create mode 100644 node_modules/cookie/index.js
+  1417→ create mode 100644 node_modules/cookie/package.json
+  1418→ create mode 100644 node_modules/cors/LICENSE
+  1419→ create mode 100644 node_modules/cors/README.md
+  1420→ create mode 100644 node_modules/cors/lib/index.js
+  1421→ create mode 100644 node_modules/cors/package.json
+  1422→ create mode 100644 node_modules/debug/LICENSE
+  1423→ create mode 100644 node_modules/debug/README.md
+  1424→ create mode 100644 node_modules/debug/package.json
+  1425→ create mode 100644 node_modules/debug/src/browser.js
+  1426→ create mode 100644 node_modules/debug/src/common.js
+  1427→ create mode 100644 node_modules/debug/src/index.js
+  1428→ create mode 100644 node_modules/debug/src/node.js
+  1429→ create mode 100644 node_modules/engine.io-parser/LICENSE
+  1430→ create mode 100644 node_modules/engine.io-parser/Readme.md
+  1431→ create mode 100644 node_modules/engine.io-parser/build/cjs/commons.d.ts
+  1432→ create mode 100644 node_modules/engine.io-parser/build/cjs/commons.js
+  1433→ create mode 100644 node_modules/engine.io-parser/build/cjs/contrib/base64-arraybuffer.d.ts
+  1434→ create mode 100644 node_modules/engine.io-parser/build/cjs/contrib/base64-arraybuffer.js
+  1435→ create mode 100644 node_modules/engine.io-parser/build/cjs/decodePacket.browser.d.ts
+  1436→ create mode 100644 node_modules/engine.io-parser/build/cjs/decodePacket.browser.js
+  1437→ create mode 100644 node_modules/engine.io-parser/build/cjs/decodePacket.d.ts
+  1438→ create mode 100644 node_modules/engine.io-parser/build/cjs/decodePacket.js
+  1439→ create mode 100644 node_modules/engine.io-parser/build/cjs/encodePacket.browser.d.ts
+  1440→ create mode 100644 node_modules/engine.io-parser/build/cjs/encodePacket.browser.js
+  1441→ create mode 100644 node_modules/engine.io-parser/build/cjs/encodePacket.d.ts
+  1442→ create mode 100644 node_modules/engine.io-parser/build/cjs/encodePacket.js
+  1443→ create mode 100644 node_modules/engine.io-parser/build/cjs/index.d.ts
+  1444→ create mode 100644 node_modules/engine.io-parser/build/cjs/index.js
+  1445→ create mode 100644 node_modules/engine.io-parser/build/cjs/package.json
+  1446→ create mode 100644 node_modules/engine.io-parser/build/esm/commons.d.ts
+  1447→ create mode 100644 node_modules/engine.io-parser/build/esm/commons.js
+  1448→ create mode 100644 node_modules/engine.io-parser/build/esm/contrib/base64-arraybuffer.d.ts
+  1449→ create mode 100644 node_modules/engine.io-parser/build/esm/contrib/base64-arraybuffer.js
+  1450→ create mode 100644 node_modules/engine.io-parser/build/esm/decodePacket.browser.d.ts
+  1451→ create mode 100644 node_modules/engine.io-parser/build/esm/decodePacket.browser.js
+  1452→ create mode 100644 node_modules/engine.io-parser/build/esm/decodePacket.d.ts
+  1453→ create mode 100644 node_modules/engine.io-parser/build/esm/decodePacket.js
+  1454→ create mode 100644 node_modules/engine.io-parser/build/esm/encodePacket.browser.d.ts
+  1455→ create mode 100644 node_modules/engine.io-parser/build/esm/encodePacket.browser.js
+  1456→ create mode 100644 node_modules/engine.io-parser/build/esm/encodePacket.d.ts
+  1457→ create mode 100644 node_modules/engine.io-parser/build/esm/encodePacket.js
+  1458→ create mode 100644 node_modules/engine.io-parser/build/esm/index.d.ts
+  1459→ create mode 100644 node_modules/engine.io-parser/build/esm/index.js
+  1460→ create mode 100644 node_modules/engine.io-parser/build/esm/package.json
+  1461→ create mode 100644 node_modules/engine.io-parser/package.json
+  1462→ create mode 100644 node_modules/engine.io/LICENSE
+  1463→ create mode 100644 node_modules/engine.io/README.md
+  1464→ create mode 100644 node_modules/engine.io/build/contrib/types.cookie.d.ts
+  1465→ create mode 100644 node_modules/engine.io/build/contrib/types.cookie.js
+  1466→ create mode 100644 node_modules/engine.io/build/engine.io.d.ts
+  1467→ create mode 100644 node_modules/engine.io/build/engine.io.js
+  1468→ create mode 100644 node_modules/engine.io/build/parser-v3/index.d.ts
+  1469→ create mode 100644 node_modules/engine.io/build/parser-v3/index.js
+  1470→ create mode 100644 node_modules/engine.io/build/parser-v3/utf8.d.ts
+  1471→ create mode 100644 node_modules/engine.io/build/parser-v3/utf8.js
+  1472→ create mode 100644 node_modules/engine.io/build/server.d.ts
+  1473→ create mode 100644 node_modules/engine.io/build/server.js
+  1474→ create mode 100644 node_modules/engine.io/build/socket.d.ts
+  1475→ create mode 100644 node_modules/engine.io/build/socket.js
+  1476→ create mode 100644 node_modules/engine.io/build/transport.d.ts
+  1477→ create mode 100644 node_modules/engine.io/build/transport.js
+  1478→ create mode 100644 node_modules/engine.io/build/transports-uws/index.d.ts
+  1479→ create mode 100644 node_modules/engine.io/build/transports-uws/index.js
+  1480→ create mode 100644 node_modules/engine.io/build/transports-uws/polling.d.ts
+  1481→ create mode 100644 node_modules/engine.io/build/transports-uws/polling.js
+  1482→ create mode 100644 node_modules/engine.io/build/transports-uws/websocket.d.ts
+  1483→ create mode 100644 node_modules/engine.io/build/transports-uws/websocket.js
+  1484→ create mode 100644 node_modules/engine.io/build/transports/index.d.ts
+  1485→ create mode 100644 node_modules/engine.io/build/transports/index.js
+  1486→ create mode 100644 node_modules/engine.io/build/transports/polling-jsonp.d.ts
+  1487→ create mode 100644 node_modules/engine.io/build/transports/polling-jsonp.js
+  1488→ create mode 100644 node_modules/engine.io/build/transports/polling.d.ts
+  1489→ create mode 100644 node_modules/engine.io/build/transports/polling.js
+  1490→ create mode 100644 node_modules/engine.io/build/transports/websocket.d.ts
+  1491→ create mode 100644 node_modules/engine.io/build/transports/websocket.js
+  1492→ create mode 100644 node_modules/engine.io/build/transports/webtransport.d.ts
+  1493→ create mode 100644 node_modules/engine.io/build/transports/webtransport.js
+  1494→ create mode 100644 node_modules/engine.io/build/userver.d.ts
+  1495→ create mode 100644 node_modules/engine.io/build/userver.js
+  1496→ create mode 100644 node_modules/engine.io/package.json
+  1497→ create mode 100644 node_modules/engine.io/wrapper.mjs
+  1498→ create mode 100644 node_modules/iceberg-js/LICENSE
+  1499→ create mode 100644 node_modules/iceberg-js/README.md
+  1500→ create mode 100644 node_modules/iceberg-js/dist/index.cjs
+  1501→ create mode 100644 node_modules/iceberg-js/dist/index.cjs.map
+  1502→ create mode 100644 node_modules/iceberg-js/dist/index.d.cts
+  1503→ create mode 100644 node_modules/iceberg-js/dist/index.d.ts
+  1504→ create mode 100644 node_modules/iceberg-js/dist/index.mjs
+  1505→ create mode 100644 node_modules/iceberg-js/dist/index.mjs.map
+  1506→ create mode 100644 node_modules/iceberg-js/package.json
+  1507→ create mode 100644 node_modules/mime-db/HISTORY.md
+  1508→ create mode 100644 node_modules/mime-db/LICENSE
+  1509→ create mode 100644 node_modules/mime-db/README.md
+  1510→ create mode 100644 node_modules/mime-db/db.json
+  1511→ create mode 100644 node_modules/mime-db/index.js
+  1512→ create mode 100644 node_modules/mime-db/package.json
+  1513→ create mode 100644 node_modules/mime-types/HISTORY.md
+  1514→ create mode 100644 node_modules/mime-types/LICENSE
+  1515→ create mode 100644 node_modules/mime-types/README.md
+  1516→ create mode 100644 node_modules/mime-types/index.js
+  1517→ create mode 100644 node_modules/mime-types/package.json
+  1518→ create mode 100644 node_modules/ms/index.js
+  1519→ create mode 100644 node_modules/ms/license.md
+  1520→ create mode 100644 node_modules/ms/package.json
+  1521→ create mode 100644 node_modules/ms/readme.md
+  1522→ create mode 100644 node_modules/negotiator/HISTORY.md
+  1523→ create mode 100644 node_modules/negotiator/LICENSE
+  1524→ create mode 100644 node_modules/negotiator/README.md
+  1525→ create mode 100644 node_modules/negotiator/index.js
+  1526→ create mode 100644 node_modules/negotiator/lib/charset.js
+  1527→ create mode 100644 node_modules/negotiator/lib/encoding.js
+  1528→ create mode 100644 node_modules/negotiator/lib/language.js
+  1529→ create mode 100644 node_modules/negotiator/lib/mediaType.js
+  1530→ create mode 100644 node_modules/negotiator/package.json
+  1531→ create mode 100644 node_modules/object-assign/index.js
+  1532→ create mode 100644 node_modules/object-assign/license
+  1533→ create mode 100644 node_modules/object-assign/package.json
+  1534→ create mode 100644 node_modules/object-assign/readme.md
+  1535→ create mode 100644 node_modules/socket.io-adapter/LICENSE
+  1536→ create mode 100644 node_modules/socket.io-adapter/Readme.md
+  1537→ create mode 100644 node_modules/socket.io-adapter/dist/cluster-adapter.d.ts
+  1538→ create mode 100644 node_modules/socket.io-adapter/dist/cluster-adapter.js
+  1539→ create mode 100644 node_modules/socket.io-adapter/dist/contrib/yeast.d.ts
+  1540→ create mode 100644 node_modules/socket.io-adapter/dist/contrib/yeast.js
+  1541→ create mode 100644 node_modules/socket.io-adapter/dist/in-memory-adapter.d.ts
+  1542→ create mode 100644 node_modules/socket.io-adapter/dist/in-memory-adapter.js
+  1543→ create mode 100644 node_modules/socket.io-adapter/dist/index.d.ts
+  1544→ create mode 100644 node_modules/socket.io-adapter/dist/index.js
+  1545→ create mode 100644 node_modules/socket.io-adapter/package.json
+  1546→ create mode 100644 node_modules/socket.io-parser/LICENSE
+  1547→ create mode 100644 node_modules/socket.io-parser/Readme.md
+  1548→ create mode 100644 node_modules/socket.io-parser/build/cjs/binary.d.ts
+  1549→ create mode 100644 node_modules/socket.io-parser/build/cjs/binary.js
+  1550→ create mode 100644 node_modules/socket.io-parser/build/cjs/index.d.ts
+  1551→ create mode 100644 node_modules/socket.io-parser/build/cjs/index.js
+  1552→ create mode 100644 node_modules/socket.io-parser/build/cjs/is-binary.d.ts
+  1553→ create mode 100644 node_modules/socket.io-parser/build/cjs/is-binary.js
+  1554→ create mode 100644 node_modules/socket.io-parser/build/cjs/package.json
+  1555→ create mode 100644 node_modules/socket.io-parser/build/esm-debug/binary.d.ts
+  1556→ create mode 100644 node_modules/socket.io-parser/build/esm-debug/binary.js
+  1557→ create mode 100644 node_modules/socket.io-parser/build/esm-debug/index.d.ts
+  1558→ create mode 100644 node_modules/socket.io-parser/build/esm-debug/index.js
+  1559→ create mode 100644 node_modules/socket.io-parser/build/esm-debug/is-binary.d.ts
+  1560→ create mode 100644 node_modules/socket.io-parser/build/esm-debug/is-binary.js
+  1561→ create mode 100644 node_modules/socket.io-parser/build/esm-debug/package.json
+  1562→ create mode 100644 node_modules/socket.io-parser/build/esm/binary.d.ts
+  1563→ create mode 100644 node_modules/socket.io-parser/build/esm/binary.js
+  1564→ create mode 100644 node_modules/socket.io-parser/build/esm/index.d.ts
+  1565→ create mode 100644 node_modules/socket.io-parser/build/esm/index.js
+  1566→ create mode 100644 node_modules/socket.io-parser/build/esm/is-binary.d.ts
+  1567→ create mode 100644 node_modules/socket.io-parser/build/esm/is-binary.js
+  1568→ create mode 100644 node_modules/socket.io-parser/build/esm/package.json
+  1569→ create mode 100644 node_modules/socket.io-parser/package.json
+  1570→ create mode 100644 node_modules/socket.io/LICENSE
+  1571→ create mode 100644 node_modules/socket.io/Readme.md
+  1572→ create mode 100644 node_modules/socket.io/client-dist/socket.io.esm.min.js
+  1573→ create mode 100644 node_modules/socket.io/client-dist/socket.io.esm.min.js.map
+  1574→ create mode 100644 node_modules/socket.io/client-dist/socket.io.js
+  1575→ create mode 100644 node_modules/socket.io/client-dist/socket.io.js.map
+  1576→ create mode 100644 node_modules/socket.io/client-dist/socket.io.min.js
+  1577→ create mode 100644 node_modules/socket.io/client-dist/socket.io.min.js.map
+  1578→ create mode 100644 node_modules/socket.io/client-dist/socket.io.msgpack.min.js
+  1579→ create mode 100644 node_modules/socket.io/client-dist/socket.io.msgpack.min.js.map
+  1580→ create mode 100644 node_modules/socket.io/dist/broadcast-operator.d.ts
+  1581→ create mode 100644 node_modules/socket.io/dist/broadcast-operator.js
+  1582→ create mode 100644 node_modules/socket.io/dist/client.d.ts
+  1583→ create mode 100644 node_modules/socket.io/dist/client.js
+  1584→ create mode 100644 node_modules/socket.io/dist/index.d.ts
+  1585→ create mode 100644 node_modules/socket.io/dist/index.js
+  1586→ create mode 100644 node_modules/socket.io/dist/namespace.d.ts
+  1587→ create mode 100644 node_modules/socket.io/dist/namespace.js
+  1588→ create mode 100644 node_modules/socket.io/dist/parent-namespace.d.ts
+  1589→ create mode 100644 node_modules/socket.io/dist/parent-namespace.js
+  1590→ create mode 100644 node_modules/socket.io/dist/socket-types.d.ts
+  1591→ create mode 100644 node_modules/socket.io/dist/socket-types.js
+  1592→ create mode 100644 node_modules/socket.io/dist/socket.d.ts
+  1593→ create mode 100644 node_modules/socket.io/dist/socket.js
+  1594→ create mode 100644 node_modules/socket.io/dist/typed-events.d.ts
+  1595→ create mode 100644 node_modules/socket.io/dist/typed-events.js
+  1596→ create mode 100644 node_modules/socket.io/dist/uws.d.ts
+  1597→ create mode 100644 node_modules/socket.io/dist/uws.js
+  1598→ create mode 100644 node_modules/socket.io/package.json
+  1599→ create mode 100644 node_modules/socket.io/wrapper.mjs
+  1600→ create mode 100644 node_modules/tslib/CopyrightNotice.txt
+  1601→ create mode 100644 node_modules/tslib/LICENSE.txt
+  1602→ create mode 100644 node_modules/tslib/README.md
+  1603→ create mode 100644 node_modules/tslib/SECURITY.md
+  1604→ create mode 100644 node_modules/tslib/modules/index.d.ts
+  1605→ create mode 100644 node_modules/tslib/modules/index.js
+  1606→ create mode 100644 node_modules/tslib/modules/package.json
+  1607→ create mode 100644 node_modules/tslib/package.json
+  1608→ create mode 100644 node_modules/tslib/tslib.d.ts
+  1609→ create mode 100644 node_modules/tslib/tslib.es6.html
+  1610→ create mode 100644 node_modules/tslib/tslib.es6.js
+  1611→ create mode 100644 node_modules/tslib/tslib.es6.mjs
+  1612→ create mode 100644 node_modules/tslib/tslib.html
+  1613→ create mode 100644 node_modules/tslib/tslib.js
+  1614→ create mode 100644 node_modules/undici-types/LICENSE
+  1615→ create mode 100644 node_modules/undici-types/README.md
+  1616→ create mode 100644 node_modules/undici-types/agent.d.ts
+  1617→ create mode 100644 node_modules/undici-types/api.d.ts
+  1618→ create mode 100644 node_modules/undici-types/balanced-pool.d.ts
+  1619→ create mode 100644 node_modules/undici-types/cache-interceptor.d.ts
+  1620→ create mode 100644 node_modules/undici-types/cache.d.ts
+  1621→ create mode 100644 node_modules/undici-types/client-stats.d.ts
+  1622→ create mode 100644 node_modules/undici-types/client.d.ts
+  1623→ create mode 100644 node_modules/undici-types/connector.d.ts
+  1624→ create mode 100644 node_modules/undici-types/content-type.d.ts
+  1625→ create mode 100644 node_modules/undici-types/cookies.d.ts
+  1626→ create mode 100644 node_modules/undici-types/diagnostics-channel.d.ts
+  1627→ create mode 100644 node_modules/undici-types/dispatcher.d.ts
+  1628→ create mode 100644 node_modules/undici-types/dispatcher1-wrapper.d.ts
+  1629→ create mode 100644 node_modules/undici-types/env-http-proxy-agent.d.ts
+  1630→ create mode 100644 node_modules/undici-types/errors.d.ts
+  1631→ create mode 100644 node_modules/undici-types/eventsource.d.ts
+  1632→ create mode 100644 node_modules/undici-types/fetch.d.ts
+  1633→ create mode 100644 node_modules/undici-types/formdata.d.ts
+  1634→ create mode 100644 node_modules/undici-types/global-dispatcher.d.ts
+  1635→ create mode 100644 node_modules/undici-types/global-origin.d.ts
+  1636→ create mode 100644 node_modules/undici-types/h2c-client.d.ts
+  1637→ create mode 100644 node_modules/undici-types/handlers.d.ts
+  1638→ create mode 100644 node_modules/undici-types/header.d.ts
+  1639→ create mode 100644 node_modules/undici-types/index.d.ts
+  1640→ create mode 100644 node_modules/undici-types/interceptors.d.ts
+  1641→ create mode 100644 node_modules/undici-types/mock-agent.d.ts
+  1642→ create mode 100644 node_modules/undici-types/mock-call-history.d.ts
+  1643→ create mode 100644 node_modules/undici-types/mock-client.d.ts
+  1644→ create mode 100644 node_modules/undici-types/mock-errors.d.ts
+  1645→ create mode 100644 node_modules/undici-types/mock-interceptor.d.ts
+  1646→ create mode 100644 node_modules/undici-types/mock-pool.d.ts
+  1647→ create mode 100644 node_modules/undici-types/package.json
+  1648→ create mode 100644 node_modules/undici-types/patch.d.ts
+  1649→ create mode 100644 node_modules/undici-types/pool-stats.d.ts
+  1650→ create mode 100644 node_modules/undici-types/pool.d.ts
+  1651→ create mode 100644 node_modules/undici-types/proxy-agent.d.ts
+  1652→ create mode 100644 node_modules/undici-types/readable.d.ts
+  1653→ create mode 100644 node_modules/undici-types/retry-agent.d.ts
+  1654→ create mode 100644 node_modules/undici-types/retry-handler.d.ts
+  1655→ create mode 100644 node_modules/undici-types/round-robin-pool.d.ts
+  1656→ create mode 100644 node_modules/undici-types/snapshot-agent.d.ts
+  1657→ create mode 100644 node_modules/undici-types/socks5-proxy-agent.d.ts
+  1658→ create mode 100644 node_modules/undici-types/util.d.ts
+  1659→ create mode 100644 node_modules/undici-types/utility.d.ts
+  1660→ create mode 100644 node_modules/undici-types/webidl.d.ts
+  1661→ create mode 100644 node_modules/undici-types/websocket.d.ts
+  1662→ create mode 100644 node_modules/vary/HISTORY.md
+  1663→ create mode 100644 node_modules/vary/LICENSE
+  1664→ create mode 100644 node_modules/vary/README.md
+  1665→ create mode 100644 node_modules/vary/index.js
+  1666→ create mode 100644 node_modules/vary/package.json
+  1667→ create mode 100644 node_modules/ws/LICENSE
+  1668→ create mode 100644 node_modules/ws/README.md
+  1669→ create mode 100644 node_modules/ws/browser.js
+  1670→ create mode 100644 node_modules/ws/index.js
+  1671→ create mode 100644 node_modules/ws/lib/buffer-util.js
+  1672→ create mode 100644 node_modules/ws/lib/constants.js
+  1673→ create mode 100644 node_modules/ws/lib/event-target.js
+  1674→ create mode 100644 node_modules/ws/lib/extension.js
+  1675→ create mode 100644 node_modules/ws/lib/limiter.js
+  1676→ create mode 100644 node_modules/ws/lib/permessage-deflate.js
+  1677→ create mode 100644 node_modules/ws/lib/receiver.js
+  1678→ create mode 100644 node_modules/ws/lib/sender.js
+  1679→ create mode 100644 node_modules/ws/lib/stream.js
+  1680→ create mode 100644 node_modules/ws/lib/subprotocol.js
+  1681→ create mode 100644 node_modules/ws/lib/validation.js
+  1682→ create mode 100644 node_modules/ws/lib/websocket-server.js
+  1683→ create mode 100644 node_modules/ws/lib/websocket.js
+  1684→ create mode 100644 node_modules/ws/package.json
+  1685→ create mode 100644 node_modules/ws/wrapper.mjs
+  1686→ create mode 100644 node_modules/z-ai-web-dev-sdk/README.md
+  1687→ create mode 100644 node_modules/z-ai-web-dev-sdk/dist/cli.d.ts
+  1688→ create mode 100644 node_modules/z-ai-web-dev-sdk/dist/cli.js
+  1689→ create mode 100644 node_modules/z-ai-web-dev-sdk/dist/index.d.ts
+  1690→ create mode 100644 node_modules/z-ai-web-dev-sdk/dist/index.js
+  1691→ create mode 100644 node_modules/z-ai-web-dev-sdk/package.json
+  1692→ create mode 100644 package.json
+  1693→ create mode 100644 railway.json
+  1694→ create mode 100644 scripts/generate-vapt-report.py
+  1695→ create mode 100644 scripts/requirements.txt
+  1696→ create mode 100644 src/lib/db.ts
+  1697→ create mode 100644 src/lib/sentinel/engine/ai.ts
+  1698→ create mode 100644 src/lib/sentinel/engine/diff.ts
+  1699→ create mode 100644 src/lib/sentinel/engine/exposure-scanner.ts
+  1700→ create mode 100644 src/lib/sentinel/engine/http-attacker.ts
+  1701→ create mode 100644 src/lib/sentinel/engine/language-patterns.ts
+  1702→ create mode 100644 src/lib/sentinel/engine/pipeline.ts
+  1703→ create mode 100644 src/lib/sentinel/engine/recon-client.ts
+  1704→ create mode 100644 src/lib/sentinel/engine/redagent-ai.ts
+  1705→ create mode 100644 src/lib/sentinel/engine/redagent-pipeline.ts
+  1706→ create mode 100644 src/lib/sentinel/engine/sandbox.ts
+  1707→ create mode 100644 start.sh
+  1708→ create mode 100644 tsconfig.json
+  1709→error: src refspec main does not match any
+  1710→error: failed to push some refs to 'https://github.com/ayanalidar/GuardianX-engine.git'
+  1711→
+  1712→ayana@CYBERSHIELD MINGW64 /d/GuardianX/mini-services/sentinel-engine (master)
+  1713→

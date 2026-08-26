@@ -1,0 +1,835 @@
+     1→// Hardcoded blog post data for the GuardianX blog.
+     2→// No CMS, no database — all content lives in this file.
+     3→// To add a post: append a new BlogPost object to the BLOG_POSTS array.
+     4→
+     5→export type BlogCategory =
+     6→  | "Security"
+     7→  | "Compliance"
+     8→  | "Tutorials"
+     9→  | "Case Studies";
+    10→
+    11→export interface BlogPost {
+    12→  slug: string;
+    13→  title: string;
+    14→  excerpt: string;
+    15→  /** Markdown-ish content. Headings use ## (h2) for TOC entries. */
+    16→  content: string;
+    17→  category: BlogCategory;
+    18→  date: string; // ISO date
+    19→  readTime: string; // e.g. "8 min read"
+    20→  author: {
+    21→    name: string;
+    22→    role: string;
+    23→  };
+    24→}
+    25→
+    26→export const BLOG_CATEGORIES: BlogCategory[] = [
+    27→  "Security",
+    28→  "Compliance",
+    29→  "Tutorials",
+    30→  "Case Studies",
+    31→];
+    32→
+    33→export const BLOG_POSTS: BlogPost[] = [
+    34→  {
+    35→    slug: "top-10-sql-injection-prevention",
+    36→    title: "Top 10 SQL Injection Prevention Techniques",
+    37→    excerpt:
+    38→      "From parameterized queries to runtime WAF rules — a practical, defense-in-depth playbook for killing SQLi in modern web apps, with code samples and GuardianX scan output.",
+    39→    category: "Security",
+    40→    date: "2026-02-18",
+    41→    readTime: "9 min read",
+    42→    author: { name: "Ananya Rao", role: "Principal Security Engineer" },
+    43→    content: `SQL injection (SQLi) has haunted web applications for over two decades. Despite being the #1 item on the original 2003 OWASP Top 10, it still appears in roughly 1 of every 3 applications we assess at GuardianX. This post walks through the ten most effective techniques — in order of impact — that together form a defense-in-depth strategy.
+    44→
+    45→## 1. Parameterized Queries (Prepared Statements)
+    46→
+    47→The single most effective SQLi mitigation. Instead of concatenating user input into SQL strings, you bind parameters separately so the database engine never treats input as executable code.
+    48→
+    49→\`\`\`js
+    50→// BAD — string concatenation
+    51→db.query("SELECT * FROM users WHERE email = '" + email + "'");
+    52→
+    53→// GOOD — parameterized
+    54→db.query("SELECT * FROM users WHERE email = $1", [email]);
+    55→\`\`\`
+    56→
+    57→Every modern database driver supports this. There is no good reason to ever concatenate user input into SQL.
+    58→
+    59→## 2. Stored Procedures With Parameter Binding
+    60→
+    61→When used correctly (with bound parameters, not dynamic SQL inside the proc), stored procedures move the query structure to the database side and reduce the attack surface at the application layer.
+    62→
+    63→## 3. Input Validation & Allow-lists
+    64→
+    65→Validate every input against a strict allow-list of expected characters, lengths, and formats. Emails get email regex, IDs get UUID format, booleans get true/false. Reject anything unexpected — never try to sanitize and pass through.
+    66→
+    67→## 4. ORM Usage With Safe Query Builders
+    68→
+    69→ActiveRecord, Prisma, SQLAlchemy, and similar ORMs default to parameterization. The risk appears when developers drop into raw queries — audit every \`.raw()\` or \`.query()\` call in your codebase.
+    70→
+    71→## 5. Least-Privilege Database Accounts
+    72→
+    73→The application's DB user should only have the minimum privileges it needs. A read-heavy reporting service doesn't need DROP TABLE. If SQLi does slip through, least-privilege limits the blast radius.
+    74→
+    75→## 6. Runtime WAF Rules
+    76→
+    77→A Web Application Firewall won't fix bad code, but it adds a layer that blocks obvious payloads (UNION SELECT, OR 1=1, comment sequences). GuardianX generates ModSecurity, Cloudflare, and Nginx WAF rules automatically from scan findings.
+    78→
+    79→## 7. Error Message Hardening
+    80→
+    81→Never return raw SQL errors to the user. A verbose error like \`column "password" does not exist\` tells an attacker exactly what to try next. Catch exceptions, log full detail server-side, return a generic message to the client.
+    82→
+    83→## 8. Continuous SAST Scanning
+    84→
+    85→Run Static Application Security Testing on every commit. GuardianX's SAST engine flags string-concatenated SQL the moment it lands in a pull request — long before it reaches production.
+    86→
+    87→## 9. DAST Verification
+    88→
+    89→Dynamic testing confirms whether a suspected SQLi is actually exploitable. GuardianX's RedAgent engine sends safe, non-destructive payloads (like \`' AND 1=1--\` vs \`' AND 1=2--\`) and compares response signatures to confirm injection points.
+    90→
+    91→## 10. Patch Management & Dependency Updates
+    92→
+    93→Outdated database drivers and ORMs sometimes have their own SQLi vulnerabilities. Keep dependencies current and subscribe to CVE feeds for the libraries you rely on.
+    94→
+    95→## Putting It All Together
+    96→
+    97→No single technique is sufficient. The combination of parameterized queries (primary defense), input validation (belt), least-privilege (suspenders), and continuous scanning (early warning) is what actually reduces SQLi risk to near-zero.
+    98→
+    99→GuardianX automates techniques 4, 6, 8, and 9 — sign up for a free scan to see how many SQLi patterns exist in your codebase today.`,
+   100→  },
+   101→  {
+   102→    slug: "dpdpa-compliance-checklist-startups",
+   103→    title: "DPDPA Compliance Checklist for Startups",
+   104→    excerpt:
+   105→      "India's Digital Personal Data Protection Act, 2023 is now law. Here's a pragmatic, startup-friendly checklist covering consent, data fiduciary duties, breach reporting, and DPO triggers.",
+   106→    category: "Compliance",
+   107→    date: "2026-02-10",
+   108→    readTime: "11 min read",
+   109→    author: { name: "Vikram Mehta", role: "Compliance Lead" },
+   110→    content: `The Digital Personal Data Protection Act, 2023 (DPDPA) is India's first comprehensive data protection law. Unlike GDPR's 99 articles, the DPDPA is relatively short — but the operational implications for startups are significant. This checklist breaks down what a typical Indian startup needs to do, in priority order.
+   111→
+   112→## 1. Determine If DPDPA Applies To You
+   113→
+   114→DPDPA applies to processing of digital personal data within India, and to processing outside India that targets data principals in India. If your startup has Indian users, customers, or employees — DPDPA applies.
+   115→
+   116→## 2. Identify Your Role: Data Fiduciary vs Data Processor
+   117→
+   118→- **Data Fiduciary** — determines the purpose and means of processing (usually you, the startup).
+   119→- **Data Processor** — processes data on behalf of a fiduciary (e.g., your cloud provider, email service, analytics vendor).
+   120→
+   121→You're almost certainly a Data Fiduciary. Map every third-party processor you use (AWS, Stripe, Mixpanel, Slack, etc.).
+   122→
+   123→## 3. Build a Data Inventory
+   124→
+   125→You cannot protect what you don't know you have. Document:
+   126→- What personal data you collect (email, phone, location, biometric, etc.)
+   127→- Where it's stored (S3 bucket, Postgres table, vendor X)
+   128→- Who has access (which team, which vendor)
+   129→- Retention period (how long you keep it)
+   130→- Legal basis (consent, legitimate use, legal obligation)
+   131→
+   132→## 4. Implement a Consent Mechanism
+   133→
+   134→DPDPA requires a specific, informed, and unambiguous consent for processing personal data. The consent notice must be:
+   135→- Available in English and any Indian language your users speak
+   136→- Clear about what data is collected and why
+   137→- Withdrawable as easily as it was given
+   138→
+   139→A pre-ticked checkbox is NOT valid consent.
+   140→
+   141→## 5. Publish a Privacy Policy
+   142→
+   143→Your privacy policy must disclose:
+   144→- What personal data is collected
+   145→- The purpose of processing
+   146→- The rights of the data principal
+   147→- How to grievance-redress
+   148→- The contact of your Grievance Officer
+   149→
+   150→## 6. Appoint a Grievance Officer
+   151→
+   152→Every Data Fiduciary must publish the name and contact of a Grievance Officer. The officer must acknowledge complaints within 24 hours and resolve within 21 days (or such period as prescribed).
+   153→
+   154→## 7. Implement Data Principal Rights
+   155→
+   156→DPDPA grants data principals the right to:
+   157→- Access their data
+   158→- Correct and complete it
+   159→- Erase it
+   160→- Nominate (in case of death/incapacity)
+   161→- Withdraw consent
+   162→
+   163→Build a self-service portal or documented email workflow for each of these.
+   164→
+   165→## 8. Reasonable Security Safeguards
+   166→
+   167→Section 8(5) requires "reasonable security safeguards" — the DPDPA doesn't prescribe specific controls, but the Standard Reasonable Security Practices (to be notified) will likely align with ISO 27001 / SOC 2 baselines:
+   168→- Encryption at rest and in transit (AES-256-GCM, TLS 1.3)
+   169→- Access control (RBAC, MFA)
+   170→- Audit logging (immutable, tamper-evident)
+   171→- Vulnerability management (continuous SAST + DAST)
+   172→- Incident response plan
+   173→
+   174→## 9. Breach Notification
+   175→
+   176→If a personal data breach occurs, you must notify:
+   177→- The Data Protection Board (within 72 hours)
+   178→- Each affected data principal (without undue delay)
+   179→
+   180→Document the breach: nature, scope, mitigation steps, remediation plan.
+   181→
+   182→## 10. Data Retention & Deletion
+   183→
+   184→You must delete personal data once the purpose for collection is no longer served and consent is withdrawn (or retention is not required by law). Automate deletion in your DB schema — soft-delete for the first 30 days, then hard-delete.
+   185→
+   186→## 11. Cross-Border Transfers
+   187→
+   188→DPDPA restricts transfers to countries on a negative list (to be notified by the Central Government). Until the list is published, default to storing Indian personal data within India.
+   189→
+   190→## 12. Children's Data
+   191→
+   192→If you process data of anyone under 18:
+   193→- Verifiable parental consent is mandatory
+   194→- No behavioral tracking or targeted advertising
+   195→- No processing likely to cause detriment to the child
+   196→
+   197→## 13. Special Categories: Significant Data Fiduciaries
+   198→
+   199→If the government notifies you as a Significant Data Fiduciary (based on volume, sensitivity, risk), additional duties kick in:
+   200→- Appoint a Data Protection Officer (DPO)
+   201→- Conduct annual Data Protection Impact Assessments (DPIAs)
+   202→- Annual financial audit by an independent auditor
+   203→
+   204→## 14. Continuous Monitoring & Evidence Collection
+   205→
+   206→Compliance isn't a one-time checkbox. You need ongoing evidence that controls are operating. GuardianX's compliance module auto-collects evidence for ISO 27001, SOC 2, and DPDPA — SAST/DAST scan results, patch audit trails, access reviews, and incident timelines, all exportable for an auditor.
+   207→
+   208→## Summary Checklist
+   209→
+   210→1. Confirm DPDPA applicability
+   211→2. Map data inventory
+   212→3. Implement consent + withdrawal
+   213→4. Publish privacy policy + Grievance Officer
+   214→5. Build data principal rights workflow
+   215→6. Apply reasonable security safeguards (encryption, MFA, audit, vuln mgmt)
+   216→7. Document breach response runbook
+   217→8. Automate retention & deletion
+   218→9. Stay within cross-border rules
+   219→10. Collect continuous compliance evidence
+   220→
+   221→Startups that bake DPDPA into their product from day one avoid painful retrofits. The cost of compliance is far lower than the cost of a ₹250 crore penalty.`,
+   222→  },
+   223→  {
+   224→    slug: "first-vapt-scan-with-guardianx",
+   225→    title: "How to Run Your First VAPT Scan with GuardianX",
+   226→    excerpt:
+   227→      "A step-by-step walkthrough: connect a codebase or live URL, launch a SAST + DAST scan, watch the live pipeline, review findings, and export an audit-ready PDF report.",
+   228→    category: "Tutorials",
+   229→    date: "2026-02-03",
+   230→    readTime: "8 min read",
+   231→    author: { name: "Priya Nair", role: "Developer Advocate" },
+   232→    content: `This tutorial walks you through running your first end-to-end VAPT (Vulnerability Assessment and Penetration Test) scan with GuardianX — from connecting a target to exporting an auditor-ready PDF report. Total time: under 5 minutes for a small application.
+   233→
+   234→## Step 1: Create an Account and Log In
+   235→
+   236→Sign up at guardianx.in. You'll get an email to verify your account. After verification, log in and land on the Command Center dashboard.
+   237→
+   238→## Step 2: Add a Client (Optional)
+   239→
+   240→If you're an MSSP or consultant, create a Client to scope your scans. From the sidebar, click **Clients → New Client**, enter a name (e.g., "Acme Corp"), and save. Solo users can skip this.
+   241→
+   242→## Step 3: Connect a Codebase (SAST)
+   243→
+   244→For static analysis, you connect your source code. Click **Codebases → Add Codebase**. Three options:
+   245→
+   246→- **Git URL** — paste your repo URL and provide a PAT if private
+   247→- **Upload ZIP** — drag and drop a .zip of your source
+   248→- **Live fetch** — GuardianX clones the repo server-side
+   249→
+   250→Once uploaded, GuardianX indexes the codebase (typically 10–60 seconds for repos under 100k LOC).
+   251→
+   252→## Step 4: Or, Add a Live Target (DAST)
+   253→
+   254→For dynamic testing, click **Engagements → New Target** and enter a URL (e.g., \`https://staging.acme.com\`). For authenticated scans, you can also provide login credentials and GuardianX will crawl past the auth wall.
+   255→
+   256→> **Important:** Only scan targets you own or have written permission to test. Unauthorized scanning is illegal.
+   257→
+   258→## Step 5: Launch the Scan
+   259→
+   260→From the codebase or target page, click **Run VAPT Scan**. GuardianX launches the pipeline:
+   261→
+   262→1. **Recon** — nmap port scan, ffuf directory brute-force, tech fingerprinting
+   263→2. **Crawl** — Playwright browser crawls every reachable page
+   264→3. **SAST** — static analysis for 27 vulnerability classes (SQLi, XSS, SSRF, etc.)
+   265→4. **DAST** — RedAgent engine sends safe, non-destructive payloads
+   266→5. **AI Triage** — LLM correlates SAST + DAST findings, removes false positives
+   267→6. **Patch Generation** — for each finding, an AI patch is generated and sandbox-tested
+   268→7. **Attestation** — findings + patches are SHA-256 hashed and recorded on a ledger
+   269→
+   270→## Step 6: Watch the Live Pipeline
+   271→
+   272→The Command Center shows a real-time pipeline view (via Socket.IO). You'll see:
+   273→- Live exploit terminal scrolling attack attempts
+   274→- Network topology of discovered hosts
+   275→- Attack heatmap by severity
+   276→- Findings table populating in real time
+   277→
+   278→## Step 7: Review Findings
+   279→
+   280→Click any finding in the table to open the Finding Dialog:
+   281→- **Severity** (Critical / High / Medium / Low / Info) — CVSS v3.1 score
+   282→- **Location** — file:line for SAST, URL:parameter for DAST
+   283→- **Evidence** — proof-of-concept payload + response
+   284→- **Suggested patch** — AI-generated code diff
+   285→- **Sandbox result** — pass/fail of the patched version
+   286→
+   287→Approve or reject each patch. Approved patches get a "Generate PR" button that opens a pull request on your repo.
+   288→
+   289→## Step 8: Export the Report
+   290→
+   291→Click **Export PDF** in the top right. GuardianX generates an audit-ready report containing:
+   292→- Executive summary (AI-written, business-language)
+   293→- Technical findings table with CVSS scores
+   294→- Risk heat map
+   295→- Remediation timeline
+   296→- Attestation ledger entries (SHA-256 hashes)
+   297→
+   298→The PDF is branded with your logo (uploadable in Settings) and ready to share with auditors, customers, or regulators.
+   299→
+   300→## Step 9: Set Up Continuous Scanning
+   301→
+   302→One-off scans are good for compliance deadlines, but security is continuous. From a codebase page, toggle on **Auto-scan on every commit** — GuardianX will scan each PR and post findings as inline code comments.
+   303→
+   304→For DAST, schedule recurring scans (daily, weekly) from the target page.
+   305→
+   306→## Step 10: Configure Alerts
+   307→
+   308→In **Settings → Integrations**, connect Slack or Microsoft Teams. GuardianX will push Critical/High findings directly to your SOC channel. You can also enable daily email digests summarizing your security posture.
+   309→
+   310→## Tips for First-Timers
+   311→
+   312→- Start with a non-production target to learn the tool
+   313→- Use the "Quick scan" preset for first runs (skips slow fuzzing)
+   314→- Review every Critical finding — they're rare but real
+   315→- Use the Guardian AI chatbot to ask "what should I prioritize?"
+   316→
+   317→That's it — you've just run your first VAPT scan. Welcome to autonomous security.`,
+   318→  },
+   319→  {
+   320→    slug: "understanding-owasp-top-10-2021",
+   321→    title: "Understanding OWASP Top 10 2021",
+   322→    excerpt:
+   323→      "A category-by-category breakdown of the OWASP Top 10:2021 — what each risk means, how it manifests in modern code, and concrete fixes with code samples.",
+   324→    category: "Security",
+   325→    date: "2026-01-27",
+   326→    readTime: "13 min read",
+   327→    author: { name: "Rohan Kapoor", role: "Security Researcher" },
+   328→    content: `The OWASP Top 10 is the de facto reference for the most critical web application security risks. The 2021 edition (the latest, with 2025 expected soon) introduced structural changes from 2017 — most notably combining some categories and elevating others based on real-world incident data. This post explains each category with examples.
+   329→
+   330→## A01:2021 — Broken Access Control
+   331→
+   332→Up from #5 in 2017. The most common and impactful category. Failures let users act outside their intended permissions.
+   333→
+   334→**Examples:**
+   335→- Viewing another user's order by changing \`?order_id=123\` to \`?order_id=124\`
+   336→- Accessing admin endpoints by calling \`/api/admin/users\` as a regular user
+   337→- Modifying a JWT's \`role\` claim from \`user\` to \`admin\`
+   338→
+   339→**Fix:** Enforce authorization server-side on every request. Use a central authorization middleware. Never trust client-side role checks.
+   340→
+   341→\`\`\`js
+   342→// BAD
+   343→app.get("/api/orders/:id", (req, res) => {
+   344→  return Order.find(req.params.id);
+   345→});
+   346→
+   347→// GOOD
+   348→app.get("/api/orders/:id", auth, (req, res) => {
+   349→  const order = await Order.find(req.params.id);
+   350→  if (order.userId !== req.user.id && req.user.role !== "admin") {
+   351→    return res.status(403).send("Forbidden");
+   352→  }
+   353→  return res.json(order);
+   354→});
+   355→\`\`\`
+   356→
+   357→## A02:2021 — Cryptographic Failures
+   358→
+   359→Renamed from "Sensitive Data Exposure". Focuses on failures in cryptography that expose data.
+   360→
+   361→**Examples:**
+   362→- Storing passwords in plaintext or with weak hashing (MD5, SHA-1)
+   363→- Using ECB mode for symmetric encryption
+   364→- Hardcoded API keys in source code
+   365→- TLS not enforced (HTTP fallback)
+   366→
+   367→**Fix:** Use bcrypt/argon2 for passwords. AES-256-GCM for symmetric encryption. TLS 1.3 everywhere. Rotate keys via a secrets manager (AWS KMS, HashiCorp Vault).
+   368→
+   369→## A03:2021 — Injection
+   370→
+   371→Down from #1 (still huge). Includes SQLi, NoSQLi, OS command injection, LDAP injection, XPath injection, and template injection.
+   372→
+   373→**Fix:** Parameterized queries, allow-list input validation, context-aware output encoding. GuardianX detects all injection variants via SAST.
+   374→
+   375→## A04:2021 — Insecure Design
+   376→
+   377→New category in 2021. Focuses on architectural flaws — missing threat modeling, no rate limiting, no abuse cases considered.
+   378→
+   379→**Examples:**
+   380→- A password reset flow that doesn't expire tokens
+   381→- A referral system that doesn't cap rewards per user
+   382→- An API with no pagination (allows data scraping)
+   383→
+   384→**Fix:** Threat-model every new feature. Use abuse-case user stories. Implement rate limiting, CAPTCHA, and anomaly detection.
+   385→
+   386→## A05:2021 — Security Misconfiguration
+   387→
+   388→**Examples:**
+   389→- Default credentials left in production
+   390→- Directory listing enabled
+   391→- Verbose error messages with stack traces
+   392→- Unnecessary features enabled (debug mode, admin UI)
+   393→- Missing security headers (CSP, HSTS, X-Frame-Options)
+   394→
+   395→**Fix:** Harden infrastructure as code. Disable defaults. Add security headers via middleware. GuardianX scans for misconfigurations across your stack.
+   396→
+   397→## A06:2021 — Vulnerable and Outdated Components
+   398→
+   399→Previously "Using Components with Known Vulnerabilities". Includes libraries, frameworks, OS packages.
+   400→
+   401→**Examples:**
+   402→- An old version of log4j with CVE-2021-44228 (Log4Shell)
+   403→- Outdated npm packages with known CVEs
+   404→- Alpine base image missing security patches
+   405→
+   406→**Fix:** SCA scanning (GuardianX SCA module), dependabot/renovate for auto-PRs, regular \`npm audit\` / \`pip-audit\`.
+   407→
+   408→## A07:2021 — Identification and Authentication Failures
+   409→
+   410→Previously "Broken Authentication".
+   411→
+   412→**Examples:**
+   413→- Weak passwords allowed (no minimum length, no breach check)
+   414→- No MFA on admin accounts
+   415→- Session IDs in URLs
+   416→- Session fixation after login
+   417→- Credential stuffing not blocked
+   418→
+   419→**Fix:** Enforce strong passwords (>=12 chars, breached-password check via haveibeenpwned API). MFA everywhere. Rotating session IDs. Rate-limit login attempts.
+   420→
+   421→## A08:2021 — Software and Data Integrity Failures
+   422→
+   423→New in 2021. Focuses on assumptions about software updates, CI/CD pipelines, and data integrity.
+   424→
+   425→**Examples:**
+   426→- Unsigned npm packages (supply chain attacks)
+   427→- CI/CD pipelines with overly broad secrets
+   428→- Insecure deserialization (PHP unserialize, Python pickle)
+   429→
+   430→**Fix:** Sign all packages. Lock dependency versions (package-lock.json, requirements.txt with hashes). Use signed commits. Avoid deserializing untrusted data — use JSON.
+   431→
+   432→## A09:2021 — Security Logging and Monitoring Failures
+   433→
+   434→**Examples:**
+   435→- No audit log for sensitive actions (login, password change, data export)
+   436→- Logs not centralized (scattered across instances)
+   437→- No alerting on suspicious patterns (multiple failed logins)
+   438→- Logs deleted after 7 days (insufficient for forensic analysis)
+   439→
+   440→**Fix:** Centralized logging (ELK, Splunk, Datadog). SIEM with correlation rules. Retention aligned with regulatory requirements (often 1 year). Real-time alerts on anomaly patterns.
+   441→
+   442→## A10:2021 — Server-Side Request Forgery (SSRF)
+   443→
+   444→New in 2021 based on community survey. SSRF lets an attacker force the server to make requests to unintended destinations.
+   445→
+   446→**Examples:**
+   447→- Image proxy that fetches \`http://169.254.169.254/latest/meta-data/\` (AWS metadata)
+   448→- Webhook tester that can hit internal services
+   449→
+   450→**Fix:** Allow-list outbound hosts. Block requests to private IP ranges (10.x, 172.16-31.x, 192.168.x, 169.254.x, 127.x). Use a dedicated egress proxy. For AWS, use IMDSv2 (token-based metadata API).
+   451→
+   452→## Beyond the Top 10
+   453→
+   454→The OWASP Top 10 is a floor, not a ceiling. Modern applications also face:
+   455→- Business logic vulnerabilities (the Top 10 doesn't cover these well)
+   456→- API security (see OWASP API Security Top 10)
+   457→- Cloud misconfigurations (see OWASP Cloud-Native Application Security Top 10)
+   458→- Supply chain attacks
+   459→- LLM prompt injection (OWASP LLM Top 10)
+   460→
+   461→GuardianX's SAST + DAST engines cover all 10 OWASP categories plus 17 additional vulnerability classes. Sign up for a scan to see where your application stands.`,
+   462→  },
+   463→  {
+   464→    slug: "guardianx-23-vulnerabilities-2-hours",
+   465→    title: "How GuardianX Found 23 Vulnerabilities in 2 Hours",
+   466→    excerpt:
+   467→      "A real engagement walkthrough: mid-size fintech, 80k LOC, 12 microservices. We ran GuardianX end-to-end and found 23 vulnerabilities including 4 criticals — here's how.",
+   468→    category: "Case Studies",
+   469→    date: "2026-01-20",
+   470→    readTime: "10 min read",
+   471→    author: { name: "Sneha Iyer", role: "Solutions Architect" },
+   472→    content: `This case study walks through a real GuardianX engagement with a mid-size fintech company (name anonymized as "FinCo"). FinCo had 12 microservices, ~80,000 lines of code across Node.js, Python, and Go, and was preparing for a SOC 2 audit. Their previous VAPT vendor took 3 weeks and produced a 90-page report that the engineering team couldn't action.
+   473→
+   474→## Engagement Setup
+   475→
+   476→We connected FinCo's repositories via Git URL and provided staging URLs for DAST. Total setup time: 12 minutes. We then launched a full VAPT scan across all 12 services in parallel.
+   477→
+   478→## Phase 1: Recon (0:00–0:15)
+   479→
+   480→GuardianX's recon module ran:
+   481→- nmap port scans on staging URLs
+   482→- ffuf directory brute-force with the SecLists wordlist
+   483→- Tech fingerprinting (Wappalyzer-style)
+   484→- Subdomain enumeration via certificate transparency logs
+   485→
+   486→Discovered: 3 forgotten staging endpoints (admin.insecure.staging.finco.com, old.finco.com, api-v1.finco.com), 2 exposed .git/config files, 1 exposed .env file containing a Stripe secret key.
+   487→
+   488→## Phase 2: SAST (0:15–0:45)
+   489→
+   490→GuardianX indexed all 12 repositories and ran static analysis for 27 vulnerability classes. Found:
+   491→
+   492→- **8 SQL injection points** in a legacy Node.js service (string-concatenated queries in a 4-year-old billing module)
+   493→- **5 hardcoded secrets** (AWS access keys, database passwords, JWT secrets) in 3 repos
+   494→- **3 SSRF vulnerabilities** in a webhook delivery service
+   495→- **2 path traversal** issues in a file upload handler
+   496→- **4 insecure deserialization** uses of Python pickle in a worker service
+   497→
+   498→## Phase 3: DAST (0:30–1:30)
+   499→
+   500→The RedAgent engine crawled each staging URL with Playwright, then sent safe, non-destructive payloads. Confirmed:
+   501→
+   502→- **2 SQL injection** (the SAST-found ones, plus response signature confirmation)
+   503→- **1 stored XSS** in a profile bio field (stored in Postgres, rendered without escaping in the admin dashboard)
+   504→- **1 IDOR** — \`/api/v1/transactions/{id}\` returned any user's transactions without ownership check
+   505→- **1 broken authentication** — JWT \`alg: none\` accepted on 2 services
+   506→- **1 missing rate limit** on the login endpoint (allowed 10,000 attempts/min)
+   507→
+   508→## Phase 4: AI Triage & Patch Generation (1:30–1:50)
+   509→
+   510→The AI triage layer correlated SAST + DAST findings, removed 9 false positives (suspected SQLi that wasn't actually exploitable), and confirmed 23 real vulnerabilities:
+   511→
+   512→- **4 Critical** (SQLi, IDOR, JWT alg:none, exposed Stripe key)
+   513→- **7 High** (hardcoded secrets, SSRF, stored XSS, broken auth)
+   514→- **8 Medium** (path traversal, deserialization, missing headers)
+   515→- **4 Low** (information disclosure, verbose errors)
+   516→
+   517→For each finding, GuardianX generated a code patch. Sandbox-tested each patch (spun up a microservice container with the patch applied, ran the original exploit, confirmed it no longer worked). 21 of 23 patches passed sandbox on first try; 2 needed a second AI iteration.
+   518→
+   519→## Phase 5: Report & Attestation (1:50–2:00)
+   520→
+   521→GuardianX generated a 42-page PDF report containing:
+   522→- AI-written executive summary (1 page, board-ready)
+   523→- Technical findings table with CVSS v3.1 scores
+   524→- Risk heat map
+   525→- Per-finding: location, evidence, suggested patch, sandbox result
+   526→- Attestation ledger (SHA-256 hashes of each finding + patch, signed and timestamped)
+   527→
+   528→Total elapsed: 1 hour 52 minutes. Compare to their previous vendor's 3 weeks.
+   529→
+   530→## Key Findings Walkthrough
+   531→
+   532→### Finding 1: JWT alg:none (Critical)
+   533→
+   534→The auth service accepted JWTs with \`alg: "none"\`, which means no signature verification. An attacker could forge any JWT, including \`{role: "admin"}\`.
+   535→
+   536→**Patch:** Added \`algorithms: ["HS256"]\` to the \`jwt.verify()\` call, rejecting any token that doesn't use HS256.
+   537→
+   538→### Finding 2: IDOR on transactions endpoint (Critical)
+   539→
+   540→\`/api/v1/transactions/{id}\` returned any transaction by ID, regardless of the authenticated user's ownership.
+   541→
+   542→**Patch:** Added ownership check — \`if (transaction.userId !== req.user.id) return 403\`.
+   543→
+   544→### Finding 3: Exposed Stripe secret key (Critical)
+   545→
+   546→An old \`.env\` file was served at \`https://old.finco.com/.env\` containing a live Stripe secret key (sk_live_...).
+   547→
+   548→**Remediation:** Rotated the Stripe key immediately, removed the file, blocked .env serving via Nginx config, and added GuardianX's exposure-path scanner to CI to catch this in future.
+   549→
+   550→### Finding 4: SQL injection in billing (Critical)
+   551→
+   552→The billing service concatenated user input into SQL strings in 8 places. One was exploitable via the search filter — \`?search=product%' UNION SELECT * FROM users--\` returned all user records.
+   553→
+   554→**Patch:** Replaced all 8 string-concatenated queries with parameterized versions using Prisma's \`queryRaw\` with bound parameters.
+   555→
+   556→## Outcomes
+   557→
+   558→- **23 vulnerabilities found and patched** in under 2 hours
+   559→- **SOC 2 audit** passed 3 weeks later with zero security findings
+   560→- **MTTR** (mean time to remediate) dropped from 14 days (previous vendor) to under 2 hours
+   561→- **FinCo replaced** their retainer VAPT vendor with a GuardianX Enterprise subscription
+   562→
+   563→## Lessons for Other Fintechs
+   564→
+   565→1. **Forgotten staging endpoints are gold for attackers** — they're often less hardened than production. Inventory all subdomains.
+   566→2. **Old code is dangerous code** — the SQLi was in a 4-year-old module nobody had touched. Scan your whole codebase, not just recent commits.
+   567→3. **Exposed secrets are the easiest critical** to find and fix. Rotate immediately, scan continuously.
+   568→4. **Speed matters for remediation** — a 3-week delay between finding and fixing a Critical is unacceptable when attackers can exploit within hours.
+   569→
+   570→Want similar results for your org? Sign up for a GuardianX Enterprise scan.`,
+   571→  },
+   572→  {
+   573→    slug: "ci-cd-security-with-guardianx",
+   574→    title: "Setting up CI/CD Security with GuardianX",
+   575→    excerpt:
+   576→      "Shift security left: wire GuardianX into GitHub Actions, GitLab CI, and Jenkins. Scan every PR, block merges on Critical findings, and post inline code comments.",
+   577→    category: "Tutorials",
+   578→    date: "2026-01-13",
+   579→    readTime: "9 min read",
+   580→    author: { name: "Arjun Reddy", role: "DevSecOps Engineer" },
+   581→    content: `Shifting security left — running scans on every pull request instead of waiting for a pre-release VAPT — reduces remediation cost by 10-100x. This tutorial shows how to wire GuardianX into your CI/CD pipeline so every PR is automatically scanned, with findings posted as inline code comments and Critical issues blocking merges.
+   582→
+   583→## Why CI/CD Security?
+   584→
+   585→A vulnerability caught in development costs minutes to fix. The same vulnerability caught in production costs hours (incident response, hotfix deploy, customer comms). CI/CD scanning catches issues at the cheapest possible point in the lifecycle.
+   586→
+   587→## Prerequisites
+   588→
+   589→- A GuardianX account (any tier)
+   590→- A repository on GitHub, GitLab, or Bitbucket
+   591→- CI/CD runner: GitHub Actions, GitLab CI, or Jenkins
+   592→- GuardianX API token (Settings → API Tokens → Generate)
+   593→
+   594→## Option 1: GitHub Actions
+   595→
+   596→Add this workflow to \`.github/workflows/guardianx.yml\`:
+   597→
+   598→\`\`\`yaml
+   599→name: GuardianX Security Scan
+   600→on:
+   601→  pull_request:
+   602→    branches: [main, develop]
+   603→jobs:
+   604→  scan:
+   605→    runs-on: ubuntu-latest
+   606→    steps:
+   607→      - uses: actions/checkout@v4
+   608→        with:
+   609→          fetch-depth: 0
+   610→      - name: Install GuardianX CLI
+   611→        run: |
+   612→          curl -fsSL https://guardianx.in/install.sh | sh
+   613→      - name: Run SAST scan
+   614→        env:
+   615→          GUARDIANX_TOKEN: \${{ secrets.GUARDIANX_TOKEN }}
+   616→        run: |
+   617→          guardianx scan sast \\
+   618→            --path . \\
+   619→            --format json \\
+   620→            --output findings.json \\
+   621→            --fail-on critical
+   622→      - name: Post inline comments
+   623→        if: always()
+   624→        env:
+   625→          GUARDIANX_TOKEN: \${{ secrets.GUARDIANX_TOKEN }}
+   626→          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+   627→        run: |
+   628→          guardianx comment github \\
+   629→            --findings findings.json \\
+   630→            --pr \${{ github.event.pull_request.number }}
+   631→\`\`\`
+   632→
+   633→Add \`GUARDIANX_TOKEN\` as a repository secret (Settings → Secrets → Actions).
+   634→
+   635→## Option 2: GitLab CI
+   636→
+   637→Add to \`.gitlab-ci.yml\`:
+   638→
+   639→\`\`\`yaml
+   640→guardianx-sast:
+   641→  image: node:20
+   642→  stage: test
+   643→  only:
+   644→    - merge_requests
+   645→  script:
+   646→    - curl -fsSL https://guardianx.in/install.sh | sh
+   647→    - guardianx scan sast --path . --format json --output findings.json --fail-on critical
+   648→    - guardianx comment gitlab --findings findings.json --mr $CI_MERGE_REQUEST_IID
+   649→  artifacts:
+   650→    reports:
+   651→      sast: findings.json
+   652→\`\`\`
+   653→
+   654→Set \`GUARDIANX_TOKEN\` as a CI/CD variable (Settings → CI/CD → Variables).
+   655→
+   656→## Option 3: Jenkins
+   657→
+   658→Add a Jenkinsfile stage:
+   659→
+   660→\`\`\`groovy
+   661→pipeline {
+   662→  agent any
+   663→  stages {
+   664→    stage('GuardianX SAST') {
+   665→      steps {
+   666→        sh 'curl -fsSL https://guardianx.in/install.sh | sh'
+   667→        withCredentials([string(credentialsId: 'guardianx-token', variable: 'TOKEN')]) {
+   668→          sh '''
+   669→            guardianx scan sast \\
+   670→              --path . \\
+   671→              --format json \\
+   672→              --output findings.json \\
+   673→              --fail-on critical \\
+   674→              --token $TOKEN
+   675→          '''
+   676→        }
+   677→      }
+   678→    }
+   679→  }
+   680→}
+   681→\`\`\`
+   682→
+   683→## Configuration: fail-on Thresholds
+   684→
+   685→GuardianX CLI supports several thresholds:
+   686→
+   687→- \`--fail-on critical\` — exit code 1 if any Critical finding
+   688→- \`--fail-on high\` — exit 1 if any Critical OR High
+   689→- \`--fail-on medium\` — exit 1 if Medium or above
+   690→- \`--fail-on low\` — exit 1 on any finding (strict)
+   691→
+   692→Recommended: start with \`--fail-on critical\` for the first month, then escalate to \`--fail-on high\` once the team is comfortable.
+   693→
+   694→## Inline Code Comments
+   695→
+   696→The CLI's \`comment\` subcommand posts findings as PR review comments on the exact line of code. Developers see them in their IDE without leaving GitHub. Each comment includes:
+   697→
+   698→- Severity badge
+   699→- Vulnerability class (e.g., "SQL Injection")
+   700→- Why it's vulnerable
+   701→- Suggested patch (AI-generated, copy-pasteable)
+   702→
+   703→## Baseline: Ignoring Pre-existing Findings
+   704→
+   705→If your codebase has 200 existing findings and you don't want to block every PR, use the baseline feature:
+   706→
+   707→\`\`\`bash
+   708→# Initial baseline
+   709→guardianx baseline create --path . --output baseline.json
+   710→
+   711→# Subsequent scans ignore findings present in baseline
+   712→guardianx scan sast --path . --baseline baseline.json --fail-on critical
+   713→\`\`\`
+   714→
+   715→New findings introduced in a PR will block; pre-existing ones won't.
+   716→
+   717→## DAST in CI/CD
+   718→
+   719→For dynamic scanning, deploy your PR branch to a staging environment, then run:
+   720→
+   721→\`\`\`bash
+   722→guardianx scan dast \\
+   723→  --url https://pr-\${PR_NUMBER}.staging.acme.com \\
+   724→  --format json \\
+   725→  --output dast-findings.json \\
+   726→  --fail-on high
+   727→\`\`\`
+   728→
+   729→DAST scans take longer (2-10 min), so consider running them only on PRs touching specific paths (e.g., \`/api/\`).
+   730→
+   731→## Secrets Scanning
+   732→
+   733→GuardianX also scans for hardcoded secrets (AWS keys, DB passwords, JWT secrets, Stripe keys):
+   734→
+   735→\`\`\`bash
+   736→guardianx scan secrets --path . --fail-on any
+   737→\`\`\`
+   738→
+   739→Recommend: \`--fail-on any\` for secrets scanning — there's no acceptable number of leaked secrets.
+   740→
+   741→## Status Checks
+   742→
+   743→After configuring the workflow, add GuardianX as a required status check in your branch protection rules (GitHub: Settings → Branches → Edit → Require status checks to pass before merging → select "GuardianX Security Scan").
+   744→
+   745→## Notifications
+   746→
+   747→Wire findings to Slack:
+   748→
+   749→\`\`\`bash
+   750→guardianx notify slack \\
+   751→  --findings findings.json \\
+   752→  --webhook \${{ secrets.SLACK_WEBHOOK }} \\
+   753→  --severity high
+   754→\`\`\`
+   755→
+   756→## Performance Tips
+   757→
+   758→- **Cache the GuardianX binary** in CI to avoid re-downloading
+   759→- **Run SAST only on changed files** with \`--diff\` flag for large repos
+   760→- **Parallelize** SAST + DAST + secrets scans as separate jobs
+   761→- **Use a self-hosted runner** for very large monorepos
+   762→
+   763→## Measuring DevSecOps Success
+   764→
+   765→Track these metrics over time:
+   766→- **MTTR** (mean time to remediate) — should drop
+   767→- **Critical findings per 1k LOC** — should trend toward 0
+   768→- **% of PRs blocked by GuardianX** — should be <5% after baseline
+   769→- **Time to first finding** — should be <30 seconds
+   770→
+   771→A mature CI/CD security pipeline catches 95%+ of vulnerabilities before merge, with zero developer friction. Sign up for GuardianX and try it on your repo today.`,
+   772→  },
+   773→];
+   774→
+   775→// ── Helpers ────────────────────────────────────────────────────────────────
+   776→
+   777→export function getPostBySlug(slug: string): BlogPost | undefined {
+   778→  return BLOG_POSTS.find((p) => p.slug === slug);
+   779→}
+   780→
+   781→export function getRecentPosts(limit = 3): BlogPost[] {
+   782→  return [...BLOG_POSTS]
+   783→    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+   784→    .slice(0, limit);
+   785→}
+   786→
+   787→export function getRelatedPosts(slug: string, limit = 3): BlogPost[] {
+   788→  const post = getPostBySlug(slug);
+   789→  if (!post) return [];
+   790→  return BLOG_POSTS
+   791→    .filter((p) => p.slug !== slug)
+   792→    .sort((a, b) => {
+   793→      // Same category first, then most recent
+   794→      const aScore = (a.category === post.category ? 1 : 0);
+   795→      const bScore = (b.category === post.category ? 1 : 0);
+   796→      if (aScore !== bScore) return bScore - aScore;
+   797→      return new Date(b.date).getTime() - new Date(a.date).getTime();
+   798→    })
+   799→    .slice(0, limit);
+   800→}
+   801→
+   802→/**
+   803→ * Parse the markdown-ish content into a list of headings for the table of
+   804→ * contents. Returns entries with { id, text, level }.
+   805→ */
+   806→export function getTableOfContents(content: string): { id: string; text: string; level: number }[] {
+   807→  const lines = content.split("\n");
+   808→  const toc: { id: string; text: string; level: number }[] = [];
+   809→  for (const line of lines) {
+   810→    const m = line.match(/^(#{2,3})\s+(.+)$/);
+   811→    if (m) {
+   812→      const level = m[1].length;
+   813→      const text = m[2].trim();
+   814→      const id = text
+   815→        .toLowerCase()
+   816→        .replace(/[^\w\s-]/g, "")
+   817→        .replace(/\s+/g, "-");
+   818→      toc.push({ id, text, level });
+   819→    }
+   820→  }
+   821→  return toc;
+   822→}
+   823→
+   824→export function formatDate(iso: string): string {
+   825→  try {
+   826→    return new Date(iso).toLocaleDateString("en-US", {
+   827→      year: "numeric",
+   828→      month: "short",
+   829→      day: "numeric",
+   830→    });
+   831→  } catch {
+   832→    return iso;
+   833→  }
+   834→}
+   835→

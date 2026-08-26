@@ -1,0 +1,23 @@
+# GuardianX security.txt
+# RFC 9116 compliant
+# https://www.rfc-editor.org/rfc/rfc9116.html
+
+Contact: mailto:security@guardianx.in
+Expires: 2026-12-31T23:59:59.000Z
+Preferred-Languages: en, hi
+Canonical: https://guardianx.in/.well-known/security.txt
+Policy: https://guardianx.in/terms
+Hiring: https://guardianx.in/company#careers
+
+# Encrypted reporting — please encrypt vulnerability reports to:
+Encryption: https://guardianx.in/.well-known/guardianx-security.asc
+# PGP fingerprint: 9F3A 1C7D 4B2E 8A60 5C1F 2D9E 7B04 6F8A 3C5D 1E2B
+
+# Acknowledgments
+Acknowledgments: https://guardianx.in/.well-known/security-hall-of-fame
+
+# Bug bounty program (in scope / out of scope / reward tiers)
+# Full policy: https://guardianx.in/docs/bug-bounty
+
+# Provider-Specific: Supabase (database) and Vercel (edge) incidents
+# should be reported directly to those vendors per their own programs.

@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: guardianx-engine
+    env: docker
+    dockerfilePath: ./Dockerfile.simple
+    dockerContext: .
+    healthCheckPath: /healthz
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://ekjsieovspkuqdjhxwct.supabase.co
+      - key: SUPABASE_URL
+        value: https://ekjsieovspkuqdjhxwct.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVranNpZW92c3BrdXFkamh4d2N0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTQ3NDUzNCwiZXhwIjoyMTAxMDUwNTM0fQ.wSRwd24RFJHmQBlszGuVkGUmyA1dUzvEVM-ZMZJFIBA
+      - key: PORT
+        value: 3003
+      - key: ZAI_CONFIG
+        value: '{"baseUrl":"https://internal-api.z.ai/v1","apiKey":"Z.ai"}'

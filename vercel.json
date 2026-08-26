@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "functions": {
+    "src/app/api/audit-scraper/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/scans/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/engagements/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/ci-cd/scan/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/patches/[id]/copilot/route.ts": {
+      "maxDuration": 120
+    },
+    "src/app/api/patches/[id]/chat/route.ts": {
+      "maxDuration": 120
+    },
+    "src/app/api/attack-chains/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/business-logic-test/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/fuzz/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/dark-web/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/threat-intel/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/sca-scan/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "github": {
+    "silent": true
+  }
+}

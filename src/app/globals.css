@@ -1,0 +1,946 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Theme tokens (next-themes)
+   - :root  → light theme (marketing pages when user toggles)
+       background: white, foreground: zinc-900, borders: zinc-200,
+       accents stay emerald/cyan (defined in neon-* utilities above).
+   - .dark  → dark theme (default; dashboard always dark).
+   next-themes adds/removes the `.dark` class on <html> based on the
+   user's choice (defaultTheme="dark", enableSystem). The dashboard
+   console view uses hardcoded zinc-950 surfaces so it stays dark
+   regardless of the html class — only opt-in marketing pages
+   (blog, status, and future pages using `dark:` variants) toggle.
+   ════════════════════════════════════════════════════════════════════ */
+:root {
+  --radius: 0.625rem;
+  /* Premium blueish light theme — deep navy/slate, not stark white.
+     Visible in daylight, cards stay colorful, text is high-contrast. */
+  --background: oklch(0.23 0.04 250);          /* deep navy-blue */
+  --foreground: oklch(0.93 0.02 250);          /* light blue-white text */
+  --card: oklch(0.28 0.05 250);                /* slightly lighter navy for cards */
+  --card-foreground: oklch(0.93 0.02 250);
+  --popover: oklch(0.26 0.04 250);
+  --popover-foreground: oklch(0.93 0.02 250);
+  --primary: oklch(0.65 0.18 160);             /* emerald accent */
+  --primary-foreground: oklch(0.15 0.02 250);
+  --secondary: oklch(0.32 0.04 250);
+  --secondary-foreground: oklch(0.93 0.02 250);
+  --muted: oklch(0.30 0.03 250);
+  --muted-foreground: oklch(0.70 0.03 250);    /* readable blue-grey */
+  --accent: oklch(0.35 0.05 250);
+  --accent-foreground: oklch(0.93 0.02 250);
+  --destructive: oklch(0.65 0.25 25);
+  --border: oklch(0.38 0.04 250);              /* visible blue border */
+  --input: oklch(0.32 0.04 250);
+  --ring: oklch(0.55 0.15 200);
+  --chart-1: oklch(0.65 0.22 41);
+  --chart-2: oklch(0.60 0.18 185);
+  --chart-3: oklch(0.55 0.15 270);
+  --chart-4: oklch(0.70 0.20 145);
+  --chart-5: oklch(0.65 0.25 340);
+  --sidebar: oklch(0.25 0.04 250);
+  --sidebar-foreground: oklch(0.93 0.02 250);
+  --sidebar-primary: oklch(0.65 0.18 160);
+  --sidebar-primary-foreground: oklch(0.15 0.02 250);
+  --sidebar-accent: oklch(0.32 0.04 250);
+  --sidebar-accent-foreground: oklch(0.93 0.02 250);
+  --sidebar-border: oklch(0.35 0.04 250);
+  --sidebar-ring: oklch(0.55 0.15 200);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    box-sizing: border-box;
+  }
+  html {
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    color-scheme: light dark;
+  }
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
+    max-width: 100vw;
+    /* Smooth theme transition when toggling next-themes */
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* ── Premium blueish light theme overrides ─────────────────────────────
+     When next-themes removes the .dark class (light mode), override the
+     hardcoded zinc-950/zinc-900 backgrounds with deep navy-blue so the
+     page is visible in daylight but NOT stark white. Cards keep their
+     colorful accents (emerald, cyan, red, violet) from the dark theme. */
+  html:not(.dark) .scanlines,
+  html:not(.dark) .cyber-vignette {
+    background: #1a2238 !important;   /* deep navy */
+    color: #dbe4f5 !important;        /* light blue-white text */
+  }
+  html:not(.dark) .scanlines::before,
+  html:not(.dark) .cyber-vignette::before,
+  html:not(.dark) .cyber-grid {
+    opacity: 0.08 !important;
+  }
+  /* Light mode: override dark backgrounds to navy blue */
+  html:not(.dark) .bg-zinc-950,
+  html:not(.dark) .bg-zinc-950\/90,
+  html:not(.dark) .bg-zinc-950\/95,
+  html:not(.dark) .bg-zinc-950\/40,
+  html:not(.dark) .bg-zinc-950\/60 {
+    background-color: rgba(26, 34, 56, 0.92) !important;   /* navy */
+  }
+  html:not(.dark) .bg-zinc-900,
+  html:not(.dark) .bg-zinc-900\/40,
+  html:not(.dark) .bg-zinc-900\/50,
+  html:not(.dark) .bg-zinc-900\/60 {
+    background-color: rgba(35, 45, 70, 0.85) !important;   /* lighter navy */
+  }
+  /* Light mode: text stays light (on navy bg) — keep readable */
+  html:not(.dark) .text-zinc-50,
+  html:not(.dark) .text-zinc-100,
+  html:not(.dark) .text-zinc-200 {
+    color: #e8edf7 !important;   /* light blue-white */
+  }
+  html:not(.dark) .text-zinc-400,
+  html:not(.dark) .text-zinc-500 {
+    color: #94a3c4 !important;   /* muted blue-grey, still readable */
+  }
+  html:not(.dark) .text-zinc-600,
+  html:not(.dark) .text-zinc-700 {
+    color: #6b7a9c !important;
+  }
+  /* Borders: blue-tinted */
+  html:not(.dark) .border-zinc-800,
+  html:not(.dark) .border-zinc-800\/80,
+  html:not(.dark) .border-zinc-800\/60,
+  html:not(.dark) .border-zinc-800\/50,
+  html:not(.dark) .border-zinc-700 {
+    border-color: rgba(71, 85, 120, 0.6) !important;
+  }
+  /* Keep neon accents vibrant in light mode (don't dim them) */
+  html:not(.dark) .neon-emerald { text-shadow: 0 0 12px rgba(16, 185, 129, 0.5); }
+  html:not(.dark) .neon-cyan { text-shadow: 0 0 12px rgba(6, 182, 212, 0.5); }
+  html:not(.dark) .neon-red { text-shadow: 0 0 12px rgba(239, 68, 68, 0.5); }
+  html:not(.dark) .neon-violet { text-shadow: 0 0 12px rgba(139, 92, 246, 0.5); }
+  html:not(.dark) .neon-amber { text-shadow: 0 0 12px rgba(245, 158, 11, 0.5); }
+}
+
+/* Custom scrollbar for the SentinelPatch dashboard dark surfaces */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(16 185 129 / 0.4) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgb(16 185 129 / 0.4);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(16 185 129 / 0.7);
+}
+
+/* ── Sci-Fi Lab Theme ──────────────────────────────────────────────────── */
+
+/* Animated cyber grid background */
+.cyber-grid {
+  background-image:
+    linear-gradient(rgba(16, 185, 129, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.07) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: grid-pan 20s linear infinite;
+}
+@keyframes grid-pan {
+  0% { background-position: 0 0; }
+  100% { background-position: 40px 40px; }
+}
+
+/* Scanline overlay */
+.scanlines::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 2px,
+    rgba(16, 185, 129, 0.015) 3px,
+    rgba(16, 185, 129, 0.015) 3px
+  );
+  animation: scanline-sweep 8s linear infinite;
+}
+@keyframes scanline-sweep {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+
+/* Vignette + ambient glow */
+.cyber-vignette::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  background:
+    radial-gradient(ellipse at top, rgba(16, 185, 129, 0.08), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(6, 182, 212, 0.05), transparent 50%),
+    radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+/* Holographic card — sharp glowing border */
+.holo-card {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.04), rgba(24, 24, 27, 0.85));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  backdrop-filter: blur(16px);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.1), 0 4px 16px rgba(0, 0, 0, 0.4);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.holo-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.08), transparent);
+  animation: holo-sweep 6s ease-in-out infinite;
+  pointer-events: none;
+}
+.holo-card > * {
+  position: relative;
+  z-index: 1;
+}
+@keyframes holo-sweep {
+  0%, 100% { left: -100%; }
+  50% { left: 200%; }
+}
+
+/* Neon glow text — vibrant multi-color system */
+.neon-emerald {
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.8), 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2);
+  color: rgb(52, 211, 153);
+}
+.neon-red {
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(239, 68, 68, 0.2);
+  color: rgb(248, 113, 113);
+}
+.neon-cyan {
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4), 0 0 40px rgba(6, 182, 212, 0.2);
+  color: rgb(34, 211, 238);
+}
+.neon-amber {
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.2);
+  color: rgb(251, 191, 36);
+}
+.neon-violet {
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.8), 0 0 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(139, 92, 246, 0.2);
+  color: rgb(167, 139, 250);
+}
+.neon-rose {
+  text-shadow: 0 0 8px rgba(244, 63, 94, 0.8), 0 0 20px rgba(244, 63, 94, 0.4), 0 0 40px rgba(244, 63, 94, 0.2);
+  color: rgb(251, 113, 133);
+}
+.neon-sky {
+  text-shadow: 0 0 8px rgba(14, 165, 233, 0.8), 0 0 20px rgba(14, 165, 233, 0.4), 0 0 40px rgba(14, 165, 233, 0.2);
+  color: rgb(56, 189, 248);
+}
+.neon-teal {
+  text-shadow: 0 0 8px rgba(20, 184, 166, 0.8), 0 0 20px rgba(20, 184, 166, 0.4), 0 0 40px rgba(20, 184, 166, 0.2);
+  color: rgb(45, 212, 191);
+}
+.neon-purple {
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.8), 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2);
+  color: rgb(192, 132, 252);
+}
+.neon-orange {
+  text-shadow: 0 0 8px rgba(249, 115, 22, 0.8), 0 0 20px rgba(249, 115, 22, 0.4), 0 0 40px rgba(249, 115, 22, 0.2);
+  color: rgb(251, 146, 60);
+}
+
+/* Neon border pulse — per-color variants */
+.neon-border {
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.5), 0 0 16px rgba(16, 185, 129, 0.25), inset 0 0 16px rgba(16, 185, 129, 0.04);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+.neon-border-red {
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.25), inset 0 0 16px rgba(239, 68, 68, 0.04);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+.neon-border-cyan {
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.5), 0 0 16px rgba(6, 182, 212, 0.25), inset 0 0 16px rgba(6, 182, 212, 0.04);
+  border: 1px solid rgba(6, 182, 212, 0.5);
+}
+.neon-border-amber {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.5), 0 0 16px rgba(245, 158, 11, 0.25), inset 0 0 16px rgba(245, 158, 11, 0.04);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+}
+.neon-border-violet {
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.5), 0 0 16px rgba(139, 92, 246, 0.25), inset 0 0 16px rgba(139, 92, 246, 0.04);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+}
+.neon-border-rose {
+  box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.5), 0 0 16px rgba(244, 63, 94, 0.25), inset 0 0 16px rgba(244, 63, 94, 0.04);
+  border: 1px solid rgba(244, 63, 94, 0.5);
+}
+.neon-border-sky {
+  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.5), 0 0 16px rgba(14, 165, 233, 0.25), inset 0 0 16px rgba(14, 165, 233, 0.04);
+  border: 1px solid rgba(14, 165, 233, 0.5);
+}
+.neon-border-purple {
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.5), 0 0 16px rgba(168, 85, 247, 0.25), inset 0 0 16px rgba(168, 85, 247, 0.04);
+  border: 1px solid rgba(168, 85, 247, 0.5);
+}
+
+/* Sharp glowing card — intensified */
+.holo-card-sharp {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.05), rgba(24, 24, 27, 0.9));
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  border-radius: 2px;
+  backdrop-filter: blur(16px);
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.15),
+    0 0 24px rgba(16, 185, 129, 0.12),
+    0 4px 24px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(16, 185, 129, 0.1);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  transition: all 0.3s ease;
+}
+.holo-card-sharp:hover {
+  border-color: rgba(16, 185, 129, 0.8);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.3),
+    0 0 32px rgba(16, 185, 129, 0.25),
+    0 4px 32px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(16, 185, 129, 0.2);
+}
+.holo-card-sharp::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.8), transparent);
+  animation: sharp-sweep 4s ease-in-out infinite;
+}
+@keyframes sharp-sweep {
+  0%, 100% { opacity: 0.3; transform: translateX(-100%); }
+  50% { opacity: 1; transform: translateX(100%); }
+}
+
+/* Section header with glowing accent line */
+.section-header {
+  position: relative;
+  padding-left: 12px;
+}
+.section-header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, rgb(16, 185, 129), rgb(6, 182, 212));
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  border-radius: 2px;
+}
+
+/* Animated gradient text */
+.gradient-text {
+  background: linear-gradient(90deg, rgb(16, 185, 129), rgb(6, 182, 212), rgb(139, 92, 246), rgb(16, 185, 129));
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 6s linear infinite;
+}
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+/* Glowing badge */
+.glow-badge {
+  box-shadow: 0 0 12px currentColor;
+}
+
+/* Glitch effect */
+.glitch {
+  position: relative;
+  animation: glitch-skew 4s infinite linear alternate-reverse;
+}
+@keyframes glitch-skew {
+  0%, 100% { transform: skew(0deg); }
+  20% { transform: skew(0.3deg); }
+  40% { transform: skew(-0.2deg); }
+  60% { transform: skew(0.1deg); }
+  80% { transform: skew(-0.3deg); }
+}
+
+/* Pulse / heartbeat */
+.pulse-dot {
+  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Radar sweep */
+.radar-sweep {
+  animation: radar-rotate 4s linear infinite;
+  transform-origin: center;
+}
+@keyframes radar-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Blip appearance */
+.blip-appear {
+  animation: blip-pop 0.5s ease-out;
+}
+@keyframes blip-pop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.5); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Typing cursor */
+.type-cursor::after {
+  content: "▊";
+  animation: blink 1s step-end infinite;
+  color: rgb(16 185 129);
+}
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Data stream (vertical falling chars) */
+.data-stream {
+  animation: data-fall linear infinite;
+}
+@keyframes data-fall {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+/* Flicker */
+.flicker {
+  animation: flicker 3s linear infinite;
+}
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  41% { opacity: 1; }
+  42% { opacity: 0.5; }
+  43% { opacity: 1; }
+  45% { opacity: 0.3; }
+  46% { opacity: 1; }
+}
+
+/* Corner brackets (HUD frame) */
+.hud-corners {
+  position: relative;
+}
+.hud-corners::before,
+.hud-corners::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  pointer-events: none;
+}
+.hud-corners::before {
+  top: 0; left: 0;
+  border-right: none;
+  border-bottom: none;
+}
+.hud-corners::after {
+  bottom: 0; right: 0;
+  border-left: none;
+  border-top: none;
+}
+
+/* Entrance animations */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up {
+  animation: fade-in-up 0.5s ease-out backwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in {
+  animation: fade-in 0.8s ease-out;
+}
+
+/* Glowing border on hover */
+.glow-hover {
+  transition: all 0.3s ease;
+}
+.glow-hover:hover {
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   GuardianX Spinning Neon Logo
+   - Continuously rotating (8s linear infinite)
+   - Neon emerald glow pulsing around it (no frame/border added)
+   - Shine sweep: a diagonal light streak crosses the logo every 3s
+   - Sparkle: 4 tiny twinkling dots orbit the logo
+   Usage: <GuardianXLogo size={48} /> or apply .gx-spin-logo to an <img>
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Continuous spin */
+@keyframes gx-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Pulsing neon glow (emerald + cyan) — no border, just light */
+@keyframes gx-neon-pulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 4px rgba(16, 185, 129, 0.9))
+      drop-shadow(0 0 12px rgba(16, 185, 129, 0.6))
+      drop-shadow(0 0 24px rgba(6, 182, 212, 0.4));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 8px rgba(16, 185, 129, 1))
+      drop-shadow(0 0 20px rgba(16, 185, 129, 0.8))
+      drop-shadow(0 0 36px rgba(6, 182, 212, 0.6));
+  }
+}
+
+/* Shine sweep — a moving light highlight across the logo */
+@keyframes gx-shine {
+  0%   { transform: translateX(-150%) rotate(25deg); opacity: 0; }
+  20%  { opacity: 0.8; }
+  50%  { transform: translateX(150%) rotate(25deg); opacity: 0; }
+  100% { transform: translateX(150%) rotate(25deg); opacity: 0; }
+}
+
+/* Sparkle twinkle */
+@keyframes gx-sparkle {
+  0%, 100% { opacity: 0; transform: scale(0.3); }
+  50%      { opacity: 1; transform: scale(1); }
+}
+
+/* The logo wrapper */
+.gx-logo-wrap {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  line-height: 0;
+}
+/* The spinning + glowing image itself */
+.gx-spin-logo {
+  animation:
+    gx-spin 8s linear infinite,
+    gx-neon-pulse 3s ease-in-out infinite;
+  display: block;
+  /* No border, no border-radius — keep it as a pure cutout */
+  border-radius: 0;
+  border: none;
+  /* Respect reduced-motion users */
+  will-change: transform, filter;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gx-spin-logo {
+    animation: gx-neon-pulse 4s ease-in-out infinite; /* keep glow, stop spin */
+  }
+}
+
+/* Hide the shine overlay + sparkles — logo should just rotate on its axis */
+.gx-shine-overlay { display: none; }
+.gx-sparkle { display: none; }
+
+/* ════════════════════════════════════════════════════════════════════
+   Animated Landing Demo — live, in-action cards
+   - Typewriter terminal lines appear one by one
+   - Pipeline stages light up sequentially
+   - KPI numbers count up + fluctuate
+   - AI briefing alerts slide in sequentially
+   - Neon shine sweep on each card (like the logo)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Card-level neon shine sweep (reuses gx-shine keyframe) */
+.demo-card {
+  position: relative;
+  overflow: hidden;
+}
+.demo-card .demo-shine {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+.demo-card .demo-shine::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: 0;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(167, 243, 208, 0) 35%,
+    rgba(167, 243, 208, 0.5) 50%,
+    rgba(167, 243, 208, 0) 65%,
+    transparent 100%
+  );
+  transform: translateX(-150%) rotate(20deg);
+  animation: demo-shine-sweep 4s ease-in-out infinite;
+}
+@keyframes demo-shine-sweep {
+  0%   { transform: translateX(-150%) rotate(20deg); opacity: 0; }
+  15%  { opacity: 0.8; }
+  40%  { transform: translateX(200%) rotate(20deg); opacity: 0; }
+  100% { transform: translateX(200%) rotate(20deg); opacity: 0; }
+}
+
+/* Terminal line entrance */
+@keyframes term-line-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.term-line {
+  animation: term-line-in 0.3s ease-out backwards;
+}
+
+/* Pipeline stage glow pulse (when active) */
+@keyframes stage-active {
+  0%, 100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+  50%      { box-shadow: 0 0 16px rgba(16, 185, 129, 0.7); }
+}
+.stage-active {
+  animation: stage-active 1.5s ease-in-out infinite;
+}
+
+/* KPI count-up pop */
+@keyframes kpi-pop {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.kpi-pop {
+  animation: kpi-pop 0.4s ease-out backwards;
+}
+
+/* AI alert slide-in */
+@keyframes alert-slide {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.alert-slide {
+  animation: alert-slide 0.4s ease-out backwards;
+}
+
+/* Scanning bar sweep (for terminal header) */
+@keyframes scan-bar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.scan-bar {
+  animation: scan-bar 2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-card .demo-shine::before,
+  .stage-active,
+  .scan-bar { animation: none; }
+  .term-line, .kpi-pop, .alert-slide { animation: none; opacity: 1; transform: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Landing page — cinematic extras
+   - CTA glow halo on hover
+   - Feature card scan sweep
+   - Attack-map scanline
+   - Final-CTA animated gradient banner
+   - 3D tilt card preserve-3d
+   ════════════════════════════════════════════════════════════════════ */
+
+/* CTA glow halo: smoothly expand shadow on hover */
+.cta-glow {
+  position: relative;
+  transition: box-shadow 0.3s ease, transform 0.15s ease;
+  will-change: box-shadow, transform;
+}
+.cta-glow:hover {
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.6),
+    0 0 24px rgba(16, 185, 129, 0.35),
+    0 0 48px rgba(6, 182, 212, 0.25),
+    0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Feature card scan sweep — moves a highlight bar across the code window */
+@keyframes feature-sweep {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(120%); opacity: 0; }
+}
+
+/* Attack map vertical scanline */
+.attack-scan {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(16, 185, 129, 0.04) 48%,
+    rgba(16, 185, 129, 0.12) 50%,
+    rgba(16, 185, 129, 0.04) 52%,
+    transparent 100%
+  );
+  animation: attack-scan-move 6s linear infinite;
+}
+@keyframes attack-scan-move {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+/* Final CTA — animated gradient banner background */
+.final-cta-bg {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(16, 185, 129, 0.25), transparent 60%),
+    radial-gradient(ellipse at 80% 30%, rgba(6, 182, 212, 0.22), transparent 60%),
+    radial-gradient(ellipse at 50% 90%, rgba(139, 92, 246, 0.20), transparent 60%),
+    linear-gradient(135deg, rgba(24, 24, 27, 0.95) 0%, rgba(9, 9, 11, 0.98) 100%);
+  background-size: 200% 200%, 200% 200%, 200% 200%, 100% 100%;
+  animation: final-cta-shift 12s ease-in-out infinite;
+}
+@keyframes final-cta-shift {
+  0%, 100% { background-position: 0% 0%, 100% 0%, 50% 100%, 0 0; }
+  33%      { background-position: 100% 100%, 0% 100%, 80% 0%, 0 0; }
+  66%      { background-position: 50% 100%, 50% 0%, 0% 50%, 0 0; }
+}
+
+/* 3D tilt card — preserve-3d for children with translateZ */
+.tilt-card {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Custom scrollbar for terminal panels */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.25);
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-glow:hover { box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4); }
+  .attack-scan,
+  .final-cta-bg { animation: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ROI calculator — native range slider styling
+   - Track is painted via inline `background: linear-gradient(...)` using
+     `currentColor` (driven by per-instance `--accent` CSS variable).
+   - Thumb is a glowing dot in the same accent color.
+   - Works in WebKit + Firefox. Color adapts to selected industry.
+   ════════════════════════════════════════════════════════════════════ */
+.roi-slider {
+  outline: none;
+  color: var(--accent, #34d399);
+}
+/* WebKit thumb */
+.roi-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: currentColor;
+  border: 2px solid rgba(9, 9, 11, 0.9);
+  box-shadow:
+    0 0 0 1px currentColor,
+    0 0 10px currentColor,
+    0 0 18px color-mix(in srgb, currentColor 60%, transparent);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.roi-slider::-webkit-slider-thumb:hover { transform: scale(1.18); }
+.roi-slider::-webkit-slider-thumb:active { transform: scale(1.05); }
+/* WebKit track (we use the element's own background for the fill, but
+   still need to neutralize the default track) */
+.roi-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: transparent;
+}
+/* Firefox thumb + track */
+.roi-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: currentColor;
+  border: 2px solid rgba(9, 9, 11, 0.9);
+  box-shadow:
+    0 0 0 1px currentColor,
+    0 0 10px currentColor;
+  cursor: pointer;
+}
+.roi-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: rgba(63, 63, 70, 0.6);
+}
+/* Firefox fill: mirror the WebKit gradient via a progress-color hack.
+   (--accent-driven, falls back to zinc track) */
+.roi-slider::-moz-range-progress {
+  height: 8px;
+  border-radius: 9999px;
+  background: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roi-slider::-webkit-slider-thumb { transition: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Performance utilities — perf-optimize task
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Skip rendering work for off-screen sections. The browser skips layout,
+   paint, and hit-testing for elements with `content-visibility: auto` when
+   they're outside the viewport — a huge win on the long GuardianX landing
+   page (12+ sections). `contain-intrinsic-size` provides an estimated
+   height so the scrollbar doesn't jump as sections hydrate. */
+.gx-cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 600px;
+}
+
+/* Hint to the browser that this element will animate via transform — the
+   compositor creates a separate GPU layer so the main thread doesn't have
+   to repaint on every frame. Use sparingly (only on elements that actually
+   animate) — overuse causes memory bloat. */
+.gx-will-transform {
+  will-change: transform;
+}
+
+/* Same idea, but for elements that animate opacity (e.g. fade-in entrants). */
+.gx-will-opacity {
+  will-change: opacity;
+}
+
+/* On reduced-motion devices, force these hints off — they cost memory and
+   don't help when nothing is animating. */
+@media (prefers-reduced-motion: reduce) {
+  .gx-will-transform,
+  .gx-will-opacity {
+    will-change: auto;
+  }
+}
+
+
