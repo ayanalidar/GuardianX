@@ -1,0 +1,783 @@
+     1→import { NextResponse } from "next/server";
+     2→import { db } from "@/lib/db";
+     3→import { requireAuth } from "@/lib/auth";
+     4→import ZAI from "z-ai-web-dev-sdk";
+     5→import { randomUUID } from "node:crypto";
+     6→
+     7→export const dynamic = "force-dynamic";
+     8→export const maxDuration = 30;
+     9→
+    10→// ── Types ────────────────────────────────────────────────────────────────────
+    11→type Category =
+    12→  | "idor"
+    13→  | "price_manipulation"
+    14→  | "workflow_bypass"
+    15→  | "rate_limit"
+    16→  | "privilege_escalation"
+    17→  | "mass_assignment";
+    18→
+    19→interface TestCase {
+    20→  testId: string;
+    21→  name: string;
+    22→  category: Category | string;
+    23→  endpoint: string;
+    24→  method: string;
+    25→  payload?: string;
+    26→  expectedBehavior: string;
+    27→  failureIndicator: string;
+    28→}
+    29→
+    30→interface EndpointInfo {
+    31→  path: string;
+    32→  method: string;
+    33→  status: number;
+    34→  bodyShape: string;
+    35→  contentType: string;
+    36→}
+    37→
+    38→interface ExecResult {
+    39→  testId: string;
+    40→  name: string;
+    41→  category: string;
+    42→  endpoint: string;
+    43→  method: string;
+    44→  payloadSent: string;
+    45→  responseStatus: number;
+    46→  responseSnippet: string;
+    47→  vulnerable: boolean;
+    48→  severity: string;
+    49→  cwe: string;
+    50→}
+    51→
+    52→interface FindingRow {
+    53→  title: string;
+    54→  severity: string;
+    55→  category: string;
+    56→  endpoint: string;
+    57→  method: string;
+    58→  description: string;
+    59→  proofRequest: string;
+    60→  proofResponse: string;
+    61→  payload: string;
+    62→  owasp: string;
+    63→}
+    64→
+    65→// ── Category → severity + CWE map ────────────────────────────────────────────
+    66→const CATEGORY_META: Record<
+    67→  string,
+    68→  { severity: string; cwe: string; label: string }
+    69→> = {
+    70→  idor: { severity: "high", cwe: "CWE-639", label: "Authorization Bypass (IDOR/BOLA)" },
+    71→  price_manipulation: { severity: "critical", cwe: "CWE-841", label: "Price/Quantity Manipulation" },
+    72→  workflow_bypass: { severity: "high", cwe: "CWE-841", label: "Workflow Bypass" },
+    73→  rate_limit: { severity: "medium", cwe: "CWE-770", label: "Rate-Limit Bypass" },
+    74→  privilege_escalation: { severity: "critical", cwe: "CWE-269", label: "Privilege Escalation" },
+    75→  mass_assignment: { severity: "high", cwe: "CWE-915", label: "Mass Assignment" },
+    76→};
+    77→
+    78→function resolveCategory(raw: string): string {
+    79→  const r = (raw || "").toLowerCase().trim();
+    80→  if (r.includes("idor") || r.includes("bola") || r.includes("authorization")) return "idor";
+    81→  if (r.includes("price") || r.includes("quantity")) return "price_manipulation";
+    82→  if (r.includes("workflow") || r.includes("skip")) return "workflow_bypass";
+    83→  if (r.includes("rate") || r.includes("limit") || r.includes("brute")) return "rate_limit";
+    84→  if (r.includes("privilege") || r.includes("admin") || r.includes("escalat")) return "privilege_escalation";
+    85→  if (r.includes("mass") || r.includes("assignment") || r.includes("role")) return "mass_assignment";
+    86→  return "idor";
+    87→}
+    88→
+    89→// ── SSRF guard: reject private/loopback/link-local/metadata hosts ─────────────
+    90→function rejectPrivateHost(hostname: string): boolean {
+    91→  const h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+    92→  if (h === "localhost" || h.endsWith(".localhost")) return true;
+    93→  if (h === "0.0.0.0" || h === "::" || h === "::1") return true;
+    94→  // IPv4
+    95→  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    96→  if (m) {
+    97→    const [a, b] = m.slice(1).map((n) => parseInt(n, 10));
+    98→    if (a === 10) return true;
+    99→    if (a === 127) return true;
+   100→    if (a === 0) return true;
+   101→    if (a === 169 && b === 254) return true; // link-local / cloud metadata
+   102→    if (a === 172 && b >= 16 && b <= 31) return true;
+   103→    if (a === 192 && b === 168) return true;
+   104→    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+   105→  }
+   106→  // .internal / .local / metadata hostnames
+   107→  if (h.endsWith(".internal") || h.endsWith(".local") || h === "metadata.google.internal") return true;
+   108→  return false;
+   109→}
+   110→
+   111→// ── LLM helper (chatWithFallback equivalent) ─────────────────────────────────
+   112→// The project's existing routes use ZAI directly (see /api/business-logic-test,
+   113→// /api/auto-remediation). `src/lib/llm.ts` is not present in this checkout, so
+   114→// we provide a local equivalent that matches the same calling convention.
+   115→let zaiPromise: Promise<ZAI> | null = null;
+   116→async function getZAI(): Promise<ZAI> {
+   117→  if (!zaiPromise) zaiPromise = ZAI.create();
+   118→  return zaiPromise;
+   119→}
+   120→
+   121→async function chatWithFallback(
+   122→  systemPrompt: string,
+   123→  userPrompt: string,
+   124→): Promise<{ content: string | null; usedFallback: boolean }> {
+   125→  try {
+   126→    const z = await getZAI();
+   127→    const completion = await z.chat.completions.create({
+   128→      messages: [
+   129→        { role: "system", content: systemPrompt },
+   130→        { role: "user", content: userPrompt },
+   131→      ],
+   132→      thinking: { type: "disabled" },
+   133→    });
+   134→    const content = completion.choices[0]?.message?.content ?? null;
+   135→    if (!content) return { content: null, usedFallback: true };
+   136→    return { content, usedFallback: false };
+   137→  } catch {
+   138→    return { content: null, usedFallback: true };
+   139→  }
+   140→}
+   141→
+   142→// ── JSON extraction ──────────────────────────────────────────────────────────
+   143→function extractJsonArray<T = unknown>(raw: string): T[] {
+   144→  if (!raw) return [];
+   145→  let s = raw.trim();
+   146→  // Strip ```json fences
+   147→  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+   148→  if (fence) s = fence[1].trim();
+   149→  // Slice to the outermost array braces
+   150→  const first = s.search(/\[/);
+   151→  const last = s.lastIndexOf("]");
+   152→  if (first !== -1 && last !== -1 && last > first) s = s.slice(first, last + 1);
+   153→  try {
+   154→    const parsed = JSON.parse(s);
+   155→    return Array.isArray(parsed) ? (parsed as T[]) : [];
+   156→  } catch {
+   157→    return [];
+   158→  }
+   159→}
+   160→
+   161→// ── API spec parsing ─────────────────────────────────────────────────────────
+   162→function parseApiSpec(spec: string): { path: string; method: string }[] {
+   163→  const out: { path: string; method: string }[] = [];
+   164→  // Try OpenAPI/Swagger JSON first
+   165→  try {
+   166→    const obj = JSON.parse(spec);
+   167→    const paths = obj.paths || {};
+   168→    for (const [path, methods] of Object.entries(paths)) {
+   169→      if (typeof methods !== "object" || methods === null) continue;
+   170→      for (const method of Object.keys(methods as Record<string, unknown>)) {
+   171→        if (["get", "post", "put", "patch", "delete"].includes(method.toLowerCase())) {
+   172→          out.push({ path, method: method.toUpperCase() });
+   173→        }
+   174→      }
+   175→    }
+   176→    if (out.length > 0) return out.slice(0, 30);
+   177→  } catch {
+   178→    /* fallthrough */
+   179→  }
+   180→  // Fall back: newline-delimited list of "METHOD path" or just "/path"
+   181→  for (const line of spec.split(/\r?\n/)) {
+   182→    const t = line.trim();
+   183→    if (!t || t.startsWith("#")) continue;
+   184→    const m = t.match(/^(GET|POST|PUT|PATCH|DELETE)\s+(\S+)$/i);
+   185→    if (m) out.push({ path: m[2], method: m[1].toUpperCase() });
+   186→    else if (t.startsWith("/")) out.push({ path: t.split(/\s+/)[0], method: "GET" });
+   187→  }
+   188→  return out.slice(0, 30);
+   189→}
+   190→
+   191→// ── Common API probe paths ───────────────────────────────────────────────────
+   192→const COMMON_API_PATHS = [
+   193→  "/api", "/api/v1", "/api/users", "/api/users/1", "/api/orders",
+   194→  "/api/products", "/api/cart", "/api/admin", "/api/admin/users",
+   195→  "/api/auth", "/api/auth/login", "/api/payments", "/api/checkout",
+   196→  "/api/profile", "/api/account", "/api/sessions", "/graphql",
+   197→];
+   198→
+   199→// ── HTTP fetch with 5s timeout ───────────────────────────────────────────────
+   200→async function timedFetch(
+   201→  url: string,
+   202→  init: RequestInit = {},
+   203→  timeoutMs = 5000,
+   204→): Promise<{ status: number; body: string; contentType: string }> {
+   205→  const ctrl = new AbortController();
+   206→  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+   207→  try {
+   208→    const res = await fetch(url, {
+   209→      ...init,
+   210→      signal: ctrl.signal,
+   211→      redirect: "follow",
+   212→      headers: {
+   213→        "User-Agent": "GuardianX-BusinessLogic/1.0",
+   214→        "Accept": "application/json, text/plain, */*",
+   215→        ...(init.headers || {}),
+   216→      },
+   217→    });
+   218→    const text = await res.text().catch(() => "");
+   219→    return {
+   220→      status: res.status,
+   221→      body: text,
+   222→      contentType: res.headers.get("content-type") || "",
+   223→    };
+   224→  } catch {
+   225→    return { status: 0, body: "", contentType: "" };
+   226→  } finally {
+   227→    clearTimeout(timer);
+   228→  }
+   229→}
+   230→
+   231→async function discoverEndpoints(
+   232→  base: string,
+   233→  apiSpec?: string,
+   234→): Promise<{ endpoints: EndpointInfo[]; discoveryLog: string[] }> {
+   235→  const discoveryLog: string[] = [];
+   236→  const candidates: { path: string; method: string }[] = [];
+   237→
+   238→  if (apiSpec && apiSpec.trim()) {
+   239→    const parsed = parseApiSpec(apiSpec);
+   240→    if (parsed.length > 0) {
+   241→      candidates.push(...parsed);
+   242→      discoveryLog.push(`Parsed ${parsed.length} endpoints from API spec.`);
+   243→    } else {
+   244→      discoveryLog.push("API spec provided but unparseable; falling back to common paths.");
+   245→    }
+   246→  }
+   247→
+   248→  if (candidates.length === 0) {
+   249→    candidates.push(...COMMON_API_PATHS.map((p) => ({ path: p, method: "GET" })));
+   250→    discoveryLog.push(`Probing ${COMMON_API_PATHS.length} common API paths.`);
+   251→  }
+   252→
+   253→  const endpoints: EndpointInfo[] = [];
+   254→  const seen = new Set<string>();
+   255→  for (const c of candidates.slice(0, 20)) {
+   256→    const key = `${c.method} ${c.path}`;
+   257→    if (seen.has(key)) continue;
+   258→    seen.add(key);
+   259→
+   260→    const url = c.path.startsWith("http")
+   261→      ? c.path
+   262→      : `${base.replace(/\/+$/, "")}${c.path.startsWith("/") ? "" : "/"}${c.path}`;
+   263→
+   264→    // SSRF guard re-check on resolved URL
+   265→    try {
+   266→      const u = new URL(url);
+   267→      if (rejectPrivateHost(u.hostname)) {
+   268→        discoveryLog.push(`Skipping ${key} — resolves to private host.`);
+   269→        continue;
+   270→      }
+   271→    } catch {
+   272→      continue;
+   273→    }
+   274→
+   275→    const r = await timedFetch(url, { method: c.method });
+   276→    const bodyShape = r.body
+   277→      ? r.body.slice(0, 200).replace(/\s+/g, " ").trim()
+   278→      : "(empty)";
+   279→    endpoints.push({
+   280→      path: c.path,
+   281→      method: c.method,
+   282→      status: r.status,
+   283→      bodyShape,
+   284→      contentType: r.contentType,
+   285→    });
+   286→    discoveryLog.push(
+   287→      `${key} → ${r.status || "timeout"} ${r.contentType.split(";")[0] || "?"} ${bodyShape.slice(0, 80)}`,
+   288→    );
+   289→  }
+   290→  return { endpoints, discoveryLog };
+   291→}
+   292→
+   293→// ── Heuristic test pattern generator (fallback when LLM unavailable) ─────────
+   294→function heuristicTestCases(base: string, endpoints: EndpointInfo[]): TestCase[] {
+   295→  const origin = base.replace(/\/+$/, "");
+   296→  const known = (p: string) =>
+   297→    endpoints.some((e) => e.path.toLowerCase().includes(p.toLowerCase()));
+   298→
+   299→  const cases: TestCase[] = [
+   300→    {
+   301→      testId: "BL-IDOR-01",
+   302→      name: "IDOR — sequential user ID swap (/users/123 → /users/124)",
+   303→      category: "idor",
+   304→      endpoint: known("users") ? `${origin}/api/users/124` : `${origin}/api/users/124`,
+   305→      method: "GET",
+   306→      expectedBehavior: "Server should refuse to return another user's record.",
+   307→      failureIndicator: '"id"\\s*:\\s*124|200 OK|"email"',
+   308→    },
+   309→    {
+   310→      testId: "BL-PRICE-01",
+   311→      name: "Price manipulation — negative order price",
+   312→      category: "price_manipulation",
+   313→      endpoint: known("orders") ? `${origin}/api/orders` : `${origin}/api/orders`,
+   314→      method: "POST",
+   315→      payload: JSON.stringify({ productId: 1, quantity: 1, price: -1 }),
+   316→      expectedBehavior: "Server should reject negative prices server-side.",
+   317→      failureIndicator: '"id"\\s*:|201|200|"orderId"|"success"\\s*:\\s*true',
+   318→    },
+   319→    {
+   320→      testId: "BL-PRICE-02",
+   321→      name: "Price manipulation — zero price order",
+   322→      category: "price_manipulation",
+   323→      endpoint: `${origin}/api/orders`,
+   324→      method: "POST",
+   325→      payload: JSON.stringify({ productId: 1, quantity: 1, price: 0 }),
+   326→      expectedBehavior: "Server should reject zero-priced orders.",
+   327→      failureIndicator: '"id"\\s*:|201|200|"orderId"',
+   328→    },
+   329→    {
+   330→      testId: "BL-PRICE-03",
+   331→      name: "Quantity overflow — 99,999,999 units in cart",
+   332→      category: "price_manipulation",
+   333→      endpoint: `${origin}/api/cart`,
+   334→      method: "POST",
+   335→      payload: JSON.stringify({ productId: 1, quantity: 99999999 }),
+   336→      expectedBehavior: "Server should cap quantity or reject the request.",
+   337→      failureIndicator: '"total"|"id"\\s*:|201|200|"success"\\s*:\\s*true',
+   338→    },
+   339→    {
+   340→      testId: "BL-WORKFLOW-01",
+   341→      name: "Workflow bypass — checkout without cart step",
+   342→      category: "workflow_bypass",
+   343→      endpoint: `${origin}/api/checkout`,
+   344→      method: "POST",
+   345→      payload: JSON.stringify({ items: [], paymentMethod: "free" }),
+   346→      expectedBehavior: "Server should refuse checkout when no cart/session exists.",
+   347→      failureIndicator: '"orderId"|"success"\\s*:\\s*true|201|200|confirmed',
+   348→    },
+   349→    {
+   350→      testId: "BL-RATELIMIT-01",
+   351→      name: "Rate-limit bypass — 50 rapid login attempts",
+   352→      category: "rate_limit",
+   353→      endpoint: `${origin}/api/auth/login`,
+   354→      method: "POST",
+   355→      payload: JSON.stringify({ email: "ratelimit-test@example.com", password: "wrong" }),
+   356→      expectedBehavior: "Server should throttle or block after several attempts.",
+   357→      failureIndicator: "no 429|all 2xx|all 4xx-but-not-429",
+   358→    },
+   359→    {
+   360→      testId: "BL-PRIV-01",
+   361→      name: "Privilege escalation — admin/users endpoint without auth",
+   362→      category: "privilege_escalation",
+   363→      endpoint: `${origin}/api/admin/users`,
+   364→      method: "GET",
+   365→      expectedBehavior: "Server should return 401/403 for unauthenticated admin requests.",
+   366→      failureIndicator: '"role"\\s*:\\s*"admin"|"users"\\s*:\\s*\\[|200 OK',
+   367→    },
+   368→    {
+   369→      testId: "BL-MASS-01",
+   370→      name: "Mass assignment — set role=admin on profile update",
+   371→      category: "mass_assignment",
+   372→      endpoint: `${origin}/api/profile`,
+   373→      method: "POST",
+   374→      payload: JSON.stringify({ name: "test", role: "admin", isAdmin: true }),
+   375→      expectedBehavior: "Server should ignore role/isAdmin fields submitted by a regular user.",
+   376→      failureIndicator: '"role"\\s*:\\s*"admin"|"isAdmin"\\s*:\\s*true|200 OK|"success"\\s*:\\s*true',
+   377→    },
+   378→    {
+   379→      testId: "BL-IDOR-02",
+   380→      name: "IDOR — sequential order ID enumeration",
+   381→      category: "idor",
+   382→      endpoint: `${origin}/api/orders/1001`,
+   383→      method: "GET",
+   384→      expectedBehavior: "Server should not expose another tenant's order by guessing IDs.",
+   385→      failureIndicator: '"orderId"|"userId"|"total"|200 OK',
+   386→    },
+   387→    {
+   388→      testId: "BL-WORKFLOW-02",
+   389→      name: "Workflow bypass — payment confirmation without payment",
+   390→      category: "workflow_bypass",
+   391→      endpoint: `${origin}/api/payments/confirm`,
+   392→      method: "POST",
+   393→      payload: JSON.stringify({ orderId: 1, paid: true }),
+   394→      expectedBehavior: "Server should require a real payment record before confirming.",
+   395→      failureIndicator: '"confirmed"|"success"\\s*:\\s*true|201|200|"status"\\s*:\\s*"paid"',
+   396→    },
+   397→  ];
+   398→  return cases;
+   399→}
+   400→
+   401→// ── Failure indicator matcher ────────────────────────────────────────────────
+   402→function matchesFailureIndicator(
+   403→  indicator: string,
+   404→  status: number,
+   405→  body: string,
+   406→  allStatuses?: number[],
+   407→): boolean {
+   408→  if (!indicator) return false;
+   409→  // Special-case the rate-limit sentinel
+   410→  if (indicator.includes("no 429")) {
+   411→    const statuses = allStatuses && allStatuses.length > 0 ? allStatuses : [status];
+   412→    const has429 = statuses.some((s) => s === 429);
+   413→    return !has429; // vulnerable if NONE were blocked
+   414→  }
+   415→  const text = `${status} ${body}`.toLowerCase();
+   416→  // Indicator may be regex or plain keywords (split by |)
+   417→  const parts = indicator.split("|").map((p) => p.trim()).filter(Boolean);
+   418→  for (const part of parts) {
+   419→    try {
+   420→      const re = new RegExp(part, "i");
+   421→      if (re.test(text)) return true;
+   422→    } catch {
+   423→      // plain keyword
+   424→      if (text.includes(part.toLowerCase())) return true;
+   425→    }
+   426→  }
+   427→  return false;
+   428→}
+   429→
+   430→// ── Test execution ───────────────────────────────────────────────────────────
+   431→async function executeTestCase(tc: TestCase): Promise<ExecResult> {
+   432→  const category = resolveCategory(tc.category);
+   433→  const meta = CATEGORY_META[category] || CATEGORY_META.idor;
+   434→
+   435→  // Rate-limit test: send 50 rapid requests
+   436→  if (category === "rate_limit") {
+   437→    const statuses: number[] = [];
+   438→    let lastBody = "";
+   439→    for (let i = 0; i < 50; i++) {
+   440→      const r = await timedFetch(tc.endpoint, {
+   441→        method: tc.method,
+   442→        headers: { "Content-Type": "application/json" },
+   443→        body: tc.payload || undefined,
+   444→      }, 3000);
+   445→      statuses.push(r.status);
+   446→      lastBody = r.body;
+   447→    }
+   448→    const vulnerable = matchesFailureIndicator(tc.failureIndicator, statuses[statuses.length - 1] || 0, lastBody, statuses);
+   449→    return {
+   450→      testId: tc.testId,
+   451→      name: tc.name,
+   452→      category,
+   453→      endpoint: tc.endpoint,
+   454→      method: tc.method,
+   455→      payloadSent: tc.payload || "(none)",
+   456→      responseStatus: statuses[statuses.length - 1] || 0,
+   457→      responseSnippet: `Sent 50 rapid requests. Status distribution: ${statuses
+   458→        .filter((v, i, a) => a.indexOf(v) === i)
+   459→        .map((s) => `${s}×${statuses.filter((x) => x === s).length}`)
+   460→        .join(", ")}`.slice(0, 600),
+   461→      vulnerable,
+   462→      severity: meta.severity,
+   463→      cwe: meta.cwe,
+   464→    };
+   465→  }
+   466→
+   467→  // Single-shot test
+   468→  const r = await timedFetch(tc.endpoint, {
+   469→    method: tc.method,
+   470→    headers: tc.payload ? { "Content-Type": "application/json" } : undefined,
+   471→    body: tc.payload || undefined,
+   472→  });
+   473→  const vulnerable = matchesFailureIndicator(tc.failureIndicator, r.status, r.body);
+   474→  return {
+   475→    testId: tc.testId,
+   476→    name: tc.name,
+   477→    category,
+   478→    endpoint: tc.endpoint,
+   479→    method: tc.method,
+   480→    payloadSent: tc.payload || "(none)",
+   481→    responseStatus: r.status,
+   482→    responseSnippet: r.body.slice(0, 600),
+   483→    vulnerable,
+   484→    severity: meta.severity,
+   485→    cwe: meta.cwe,
+   486→  };
+   487→}
+   488→
+   489→// ── LLM-driven test case generation ──────────────────────────────────────────
+   490→async function generateLlmTestCases(endpoints: EndpointInfo[]): Promise<TestCase[] | null> {
+   491→  const endpointList = endpoints
+   492→    .map((e) => `${e.method} ${e.path} → ${e.status} ${e.bodyShape.slice(0, 80)}`)
+   493→    .join("\n");
+   494→
+   495→  const systemPrompt =
+   496→    "You are GuardianX's Business Logic Testing engine. Given these API endpoints:\n" +
+   497→    `${endpointList}\n\n` +
+   498→    "Generate 10 business-logic test cases that check for:\n" +
+   499→    "- Authorization bypass (IDOR/BOLA — accessing other users' resources)\n" +
+   500→    "- Price/quantity manipulation (negative prices, zero quantities, overflow)\n" +
+   501→    "- Workflow bypass (skipping steps in a multi-step process)\n" +
+   502→    "- Rate-limit bypass (sending many requests rapidly)\n" +
+   503→    "- Privilege escalation (accessing admin endpoints as a regular user)\n" +
+   504→    "- Mass assignment (setting fields the user shouldn't control)\n\n" +
+   505→    "Return JSON: [{testId, name, category, endpoint, method, payload, expectedBehavior, failureIndicator}]\n" +
+   506→    "category must be one of: idor, price_manipulation, workflow_bypass, rate_limit, privilege_escalation, mass_assignment\n" +
+   507→    "endpoint must be a full URL. failureIndicator is a regex or keyword list separated by | (e.g. 'admin|200 OK').\n" +
+   508→    "Return ONLY the JSON array — no prose, no code fences.";
+   509→
+   510→  const userPrompt =
+   511→    `Discovered endpoints:\n${endpointList}\n\nGenerate the 10 test cases now.`;
+   512→
+   513→  const { content, usedFallback } = await chatWithFallback(systemPrompt, userPrompt);
+   514→  if (usedFallback || !content) return null;
+   515→
+   516→  const arr = extractJsonArray<TestCase>(content);
+   517→  if (arr.length === 0) return null;
+   518→
+   519→  // Normalize: ensure each test has an id + category in our vocabulary
+   520→  return arr.slice(0, 10).map((tc, i) => ({
+   521→    testId: tc.testId || `BL-LLM-${String(i + 1).padStart(2, "0")}`,
+   522→    name: tc.name || "Untitled LLM test",
+   523→    category: resolveCategory(tc.category),
+   524→    endpoint: tc.endpoint || "/",
+   525→    method: (tc.method || "GET").toUpperCase(),
+   526→    payload: tc.payload,
+   527→    expectedBehavior: tc.expectedBehavior || "",
+   528→    failureIndicator: tc.failureIndicator || "",
+   529→  }));
+   530→}
+   531→
+   532→// ── POST handler ─────────────────────────────────────────────────────────────
+   533→export async function POST(req: Request) {
+   534→  const auth = requireAuth(req);
+   535→  if (!auth.ok) return auth.response;
+   536→
+   537→  let body: { targetUrl?: string; apiSpec?: string };
+   538→  try {
+   539→    body = await req.json();
+   540→  } catch {
+   541→    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+   542→  }
+   543→
+   544→  const targetUrl = (body.targetUrl || "").trim();
+   545→  if (!targetUrl) {
+   546→    return NextResponse.json({ error: "targetUrl required." }, { status: 400 });
+   547→  }
+   548→
+   549→  // ── Validate URL + SSRF guard ──────────────────────────────────────────────
+   550→  let parsed: URL;
+   551→  try {
+   552→    parsed = new URL(targetUrl);
+   553→  } catch {
+   554→    return NextResponse.json({ error: "Invalid targetUrl." }, { status: 400 });
+   555→  }
+   556→  if (!["http:", "https:"].includes(parsed.protocol)) {
+   557→    return NextResponse.json({ error: "Only http/https targets allowed." }, { status: 400 });
+   558→  }
+   559→  if (rejectPrivateHost(parsed.hostname)) {
+   560→    return NextResponse.json(
+   561→      { error: "Refusing to scan private/loopback/link-local hosts (SSRF guard)." },
+   562→      { status: 400 },
+   563→    );
+   564→  }
+   565→
+   566→  // ── Create Engagement ─────────────────────────────────────────────────────
+   567→  const base = `${parsed.protocol}//${parsed.host}`;
+   568→  let engagementId: string;
+   569→  try {
+   570→    const target = await db.target.findFirst({
+   571→      where: { baseUrl: base },
+   572→      select: { id: true },
+   573→    });
+   574→    const targetId = (target?.id as string) || randomUUID();
+   575→    if (!target) {
+   576→      // Auto-create a Target row so the Engagement FK is valid (targetId is
+   577→      // non-nullable on Engagement). Reuse the same id we just minted.
+   578→      await db.target.create({
+   579→        data: {
+   580→          id: targetId,
+   581→          name: parsed.host,
+   582→          baseUrl: base,
+   583→          authorized: true,
+   584→        },
+   585→      });
+   586→    }
+   587→    const eng = await db.engagement.create({
+   588→      data: {
+   589→        targetId,
+   590→        status: "running",
+   591→        stageLabel: "business-logic",
+   592→      },
+   593→    });
+   594→    engagementId = eng.id as string;
+   595→  } catch (err) {
+   596→    return NextResponse.json(
+   597→      {
+   598→        error: "Failed to create engagement.",
+   599→        detail: err instanceof Error ? err.message : "unknown",
+   600→      },
+   601→      { status: 500 },
+   602→    );
+   603→  }
+   604→
+   605→  try {
+   606→    // ── Step 1: Discover endpoints ──────────────────────────────────────────
+   607→    const { endpoints, discoveryLog } = await discoverEndpoints(base, body.apiSpec);
+   608→    if (endpoints.length === 0) {
+   609→      await db.engagement.update({
+   610→        where: { id: engagementId },
+   611→        data: {
+   612→          status: "completed",
+   613→          crawlSummary: "No API endpoints responded.",
+   614→        },
+   615→      });
+   616→      return NextResponse.json({
+   617→        engagementId,
+   618→        testedCount: 0,
+   619→        vulnerableCount: 0,
+   620→        findings: [],
+   621→        discoveryLog,
+   622→        message: "No API endpoints discovered.",
+   623→      });
+   624→    }
+   625→
+   626→    // ── Step 2: Generate test cases (LLM with heuristic fallback) ───────────
+   627→    let testCases = await generateLlmTestCases(endpoints);
+   628→    let testSource = "llm";
+   629→    if (!testCases || testCases.length === 0) {
+   630→      testCases = heuristicTestCases(base, endpoints);
+   631→      testSource = "heuristic";
+   632→    }
+   633→
+   634→    // ── Step 3: Execute each test ───────────────────────────────────────────
+   635→    const results: ExecResult[] = [];
+   636→    for (const tc of testCases.slice(0, 10)) {
+   637→      // Re-SSRF-guard each absolute test endpoint (LLM may emit other hosts)
+   638→      try {
+   639→        const u = new URL(tc.endpoint);
+   640→        if (rejectPrivateHost(u.hostname)) {
+   641→          results.push({
+   642→            testId: tc.testId,
+   643→            name: tc.name,
+   644→            category: resolveCategory(tc.category),
+   645→            endpoint: tc.endpoint,
+   646→            method: tc.method,
+   647→            payloadSent: tc.payload || "(none)",
+   648→            responseStatus: 0,
+   649→            responseSnippet: "(skipped — endpoint resolves to private host)",
+   650→            vulnerable: false,
+   651→            severity: (CATEGORY_META[resolveCategory(tc.category)] || CATEGORY_META.idor).severity,
+   652→            cwe: (CATEGORY_META[resolveCategory(tc.category)] || CATEGORY_META.idor).cwe,
+   653→          });
+   654→          continue;
+   655→        }
+   656→      } catch {
+   657→        // leave to be skipped via timedFetch
+   658→      }
+   659→      const r = await executeTestCase(tc);
+   660→      results.push(r);
+   661→    }
+   662→
+   663→    // ── Step 4: Persist Finding rows for confirmed vulns ────────────────────
+   664→    const findings: FindingRow[] = [];
+   665→    for (const r of results.filter((x) => x.vulnerable)) {
+   666→      const meta = CATEGORY_META[r.category] || CATEGORY_META.idor;
+   667→      const proofRequest =
+   668→        `${r.method} ${r.endpoint}\n` +
+   669→        (r.payloadSent && r.payloadSent !== "(none)"
+   670→          ? `Content-Type: application/json\n\n${r.payloadSent}`
+   671→          : "(no body)");
+   672→      const proofResponse =
+   673→        `HTTP ${r.responseStatus}\n${r.responseSnippet}`.slice(0, 2000);
+   674→      const description =
+   675→        `${r.name}\n\n` +
+   676→        `Category: ${meta.label}\nCWE: ${r.cwe}\nSeverity: ${r.severity}\n\n` +
+   677→        `Tested endpoint: ${r.method} ${r.endpoint}\n` +
+   678→        `Payload sent: ${r.payloadSent}\n\n` +
+   679→        `Server response (HTTP ${r.responseStatus}):\n${r.responseSnippet.slice(0, 400)}\n\n` +
+   680→        `Why this is vulnerable: the response matched the failure indicator ` +
+   681→        `"${meta.label}" — the server failed to enforce the expected business-rule constraint.`;
+   682→
+   683→      const finding: FindingRow = {
+   684→        title: r.name,
+   685→        severity: r.severity,
+   686→        category: "business-logic",
+   687→        endpoint: r.endpoint,
+   688→        method: r.method,
+   689→        description,
+   690→        proofRequest,
+   691→        proofResponse,
+   692→        payload: r.payloadSent,
+   693→        owasp: r.cwe,
+   694→      };
+   695→      try {
+   696→        await db.finding.create({
+   697→          data: {
+   698→            engagementId,
+   699→            title: finding.title,
+   700→            severity: finding.severity,
+   701→            category: finding.category,
+   702→            endpoint: finding.endpoint,
+   703→            method: finding.method,
+   704→            description: finding.description,
+   705→            proofRequest: finding.proofRequest,
+   706→            proofResponse: finding.proofResponse,
+   707→            payload: finding.payload,
+   708→            owasp: finding.owasp,
+   709→            confidence: 0.75,
+   710→          },
+   711→        });
+   712→        findings.push(finding);
+   713→      } catch {
+   714→        // swallow — keep going so the API still returns the in-memory results
+   715→      }
+   716→    }
+   717→
+   718→    // ── Step 5: Mark Engagement complete ────────────────────────────────────
+   719→    await db.engagement.update({
+   720→      where: { id: engagementId },
+   721→      data: {
+   722→        status: "completed",
+   723→        crawlSummary: discoveryLog.join("\n").slice(0, 2000),
+   724→        completedAt: new Date().toISOString(),
+   725→      },
+   726→    });
+   727→
+   728→    // ── Step 6: Return summary ──────────────────────────────────────────────
+   729→    const criticalCount = findings.filter((f) => f.severity === "critical").length;
+   730→    const highCount = findings.filter((f) => f.severity === "high").length;
+   731→    const mediumCount = findings.filter((f) => f.severity === "medium").length;
+   732→
+   733→    return NextResponse.json({
+   734→      engagementId,
+   735→      targetUrl: base,
+   736→      testSource,
+   737→      discoveryLog,
+   738→      endpointsDiscovered: endpoints.length,
+   739→      testedCount: results.length,
+   740→      vulnerableCount: findings.length,
+   741→      criticalCount,
+   742→      highCount,
+   743→      mediumCount,
+   744→      findings: findings.map((f, i) => ({
+   745→        ...f,
+   746→        id: `${engagementId}-${i}`,
+   747→      })),
+   748→      results: results.map((r) => ({
+   749→        testId: r.testId,
+   750→        name: r.name,
+   751→        category: r.category,
+   752→        endpoint: r.endpoint,
+   753→        method: r.method,
+   754→        payload: r.payloadSent,
+   755→        responseStatus: r.responseStatus,
+   756→        responseSnippet: r.responseSnippet,
+   757→        vulnerable: r.vulnerable,
+   758→        severity: r.severity,
+   759→        cwe: r.cwe,
+   760→      })),
+   761→      categoryBreakdown: Object.keys(CATEGORY_META).map((cat) => ({
+   762→        category: cat,
+   763→        label: CATEGORY_META[cat].label,
+   764→        tested: results.filter((r) => r.category === cat).length,
+   765→        vulnerable: results.filter((r) => r.category === cat && r.vulnerable).length,
+   766→        severity: CATEGORY_META[cat].severity,
+   767→      })),
+   768→    });
+   769→  } catch (err) {
+   770→    await db.engagement.update({
+   771→      where: { id: engagementId },
+   772→      data: {
+   773→        status: "failed",
+   774→        crawlSummary: err instanceof Error ? err.message.slice(0, 1000) : "unknown error",
+   775→      },
+   776→    }).catch(() => undefined);
+   777→    return NextResponse.json(
+   778→      { error: "Business-logic testing failed.", detail: err instanceof Error ? err.message : "unknown" },
+   779→      { status: 500 },
+   780→    );
+   781→  }
+   782→}
+   783→

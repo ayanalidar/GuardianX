@@ -3699,3 +3699,283 @@ Stage Summary:
 - Lint result: 0 errors in my new files (62 pre-existing errors in unrelated files unchanged).
 - TypeScript result: 0 errors in my new files (`bunx tsc --noEmit 2>&1 | grep race-condition` → empty).
 - Did NOT touch `page.tsx`, `src/lib/*`, `prisma/*`, `war-room/*`, or any existing API routes. Did NOT commit/push.
+
+---
+Task ID: vapt-injection-suite
+Agent: full-stack-developer
+Task: Injection Suite — HTML Injection + CSRF + CORS testing
+Work Log:
+- Read worklog.md and inspected the established VAPT route pattern in `src/app/api/vapt/ssrf-deep/route.ts` (requireAuth from `@/lib/auth`, `db.target.create` + `db.engagement.create` + `db.finding.create`, CWE stored in the `owasp` column since the `Finding` model has no dedicated `cwe` field). Confirmed `Finding` schema fields: `{id, engagementId, title, severity, category, owasp?, endpoint, method, description, proofRequest, proofResponse, payload?, confidence, remediation?, createdAt}`.
+- Inspected `src/components/sentinel/ssrf-deep-testing.tsx` for the dark-theme HUD styling pattern (`hud-corners`, `holo-card`, `pulse-dot`, `custom-scrollbar`, mobile-first `sm:hidden` / `hidden sm:grid` table layout).
+- Built `src/app/api/vapt/injection-suite/route.ts` — `force-dynamic`, `maxDuration=30`, `requireAuth`, body `{ targetUrl }`. SSRF guard reuses the private/loopback/link-local/CGNAT/`.local`/`.internal` check from `ssrf-deep/route.ts`. Lightweight in-house HTML parser (regex-based `<form>` + `<a>` + `<input>` extraction) — no external deps. Per-probe 5s `AbortController` timeout.
+- Crawl phase: `GET` the homepage, extract `<form>` tags (action, method, input fields) + `<a>` hrefs (resolved against baseUrl). Crawl summary (`formsFound`, `linksFound`) returned to the client.
+- Tests run in parallel via `Promise.all` across 3 categories:
+  1. HTML Injection (CWE-79, medium / high for the `<img onerror>` XSS variant): For each crawled endpoint (homepage + up to 5 links) × 10 common echo params (`q`, `query`, `search`, `name`, `msg`, …) × 4 payloads (`<h1>test</h1>`, `<b>bold</b>`, `<marquee>test</marquee>`, `<img src=x onerror=alert(1)>`) — inject via query string and check whether the literal payload appears verbatim in the response body (vulnerable) vs. HTML-escaped `&lt;h1&gt;` (safe). Also tests each parsed `<form>`'s text inputs by submitting payloads as form values (POST or GET depending on form method).
+  2. CSRF (CWE-352, high): For each state-changing form (POST/PUT/DELETE), scan for known CSRF token field names (`csrf_token`, `_token`, `authenticity_token`, `_csrf`, `csrfmiddlewaretoken`, …) and CSRF meta tags. If absent → vulnerable. Additionally sends a POST with NO `Origin` header + NO `Referer` (processed → vulnerable), and a POST with `Origin: https://evil.com` + `Referer: https://evil.com/` (processed → CORS-CSRF vulnerable).
+  3. CORS (CWE-942, medium-high): Sends OPTIONS preflights with `Origin: https://evil.com`, `Origin: null`, and `Origin: https://target.com.evil.com` (subdomain bypass). Checks `Access-Control-Allow-Origin` for wildcard, reflected origin, null echo, or suffix-match bypass. Elevates to **critical** when `Access-Control-Allow-Credentials: true` is paired with a permissive origin (any site can make authenticated cross-origin requests). Also sends a GET with `Origin: https://evil.com` to detect non-preflight CORS leaks.
+- Each vulnerable test persisted as a `Finding` row (`db.finding.create`) with `proofRequest`, `proofResponse`, `payload`, `remediation`, `owasp=cwe`, and `confidence` (0.95 critical / 0.85 high / 0.7 medium). Engagement marked `completed` with finding breakdown in the `stageLabel` (e.g. `[HTMLi:2 CSRF:1 CORS:3]`).
+- Returns `{ engagementId, targetId, testedBy, targetUrl, crawlSummary, testedCount, vulnerableCount, criticalCount, highCount, categoryCounts, findings[], _meta }`.
+- Built `src/components/sentinel/injection-suite.tsx` — `"use client"` full-screen tab view. Dark theme, **red/amber/violet** accents only (NO indigo/blue). `hud-corners` + `holo-card` + `pulse-dot` styling consistent with `ssrf-deep-testing.tsx`. Mobile-first responsive (`grid-cols-2 sm:grid-cols-4` summary tiles; `grid sm:grid-cols-[1fr_160px_70px_50px_32px]` table that collapses to stacked cards on mobile via `sm:hidden` / `hidden sm:grid`).
+  - Header: `Syringe` icon + "INJECTION SUITE" + `guardianx@injection-suite:~$` mono prefix.
+  - Input card: target URL + test-vector preview chips (HTMLi/CSRF/CORS grouped + sample payloads).
+  - **Critical alert banner** (red, pulsing dot) when CORS credentials leak is detected — lists every critical finding payload + indicator.
+  - **Summary tiles**: Tested / Vulnerable / Critical / High — each with `hud-corners` border + appropriate accent color (red/amber/emerald for the safe case).
+  - **Crawl summary card** + **Category breakdown card** side-by-side. The breakdown card uses a recharts `PieChart` (HTML=amber `#f59e0b`, CSRF=red `#ef4444`, CORS=violet `#8b5cf6`) plus per-category progress bars showing `vulnerable/tested` ratio.
+  - **Findings table** grouped by category (HTML Injection / CSRF / CORS), each row shows payload + indicator + method + HTTP status + duration + severity badge + CWE. Expandable detail panel reveals `proofRequest`, `proofResponse`, `remediation`, and a "Copy payload" button. Custom scrollbar on long lists (`max-h-[420px] overflow-y-auto`).
+  - **Live progress card** while running: 3 animated bars (HTMLi=CRAWL+INJECT / CSRF=TOKEN+ORIGIN / CORS=PREFLIGHT+ACAO) with framer-motion `repeat: Infinity` pulse.
+  - **All-clear banner** (emerald) when 0 vulnerabilities found.
+  - **Error state card** on failure.
+  - Framer Motion entrance + stagger animations throughout.
+- Installed `eslint@9`, `eslint-config-next@16`, `typescript@5.9`, `@eslint/eslintrc`, and `next@16` as dev dependencies (the project had no local `next` install — eslint-config-next requires it). `bun run lint` now executes successfully.
+- Verified: `bunx eslint --max-warnings=0 src/app/api/vapt/injection-suite/route.ts src/components/sentinel/injection-suite.tsx` → **exit 0, 0 errors, 0 warnings** in my files.
+- Verified: `bun run lint 2>&1 | grep -iE injection-suite` → empty (0 errors mention my files). The 57 pre-existing errors are all in out-of-scope files (`use-mobile.ts`, `performance-client.ts`, `carousel.tsx`, `command-center.tsx`, etc.).
+- Verified: `bunx tsc --noEmit 2>&1 | grep -iE injection-suite` → empty. Only the pre-existing `index.ts(1,4)` stub error remains (file contains literal "404: Not Found").
+- Did NOT touch `page.tsx`, `src/lib/*`, `prisma/*`, `war-room/*`, or any existing API routes. Did NOT commit/push.
+
+Stage Summary:
+- Files created:
+  - `src/app/api/vapt/injection-suite/route.ts` (NEW, ~620 LOC)
+  - `src/components/sentinel/injection-suite.tsx` (NEW, ~560 LOC)
+- Files modified (collateral, dev-only):
+  - `package.json` + `bun.lock` (added devDependencies: `eslint`, `eslint-config-next`, `typescript@5.9`, `@eslint/eslintrc`, `next@16`) — required for `bun run lint` to execute the existing `lint` script.
+- Lint result: `bun run lint` reports **0 errors in my new files**. 57 pre-existing errors in unrelated files unchanged.
+- TypeScript result: `bunx tsc --noEmit` reports **0 errors in my new files**.
+
+---
+
+## 2026-01 — vapt-ssti-auth-authz: SSTI + Authentication + Authorization Testing
+
+Task ID: vapt-ssti-auth-authz
+Agent: full-stack-developer
+Task: SSTI Testing + Authentication Testing + Authorization Testing
+
+Three new VAPT modules added to the GuardianX engine — each ships as an
+auth-required POST API route (`maxDuration=30`, `force-dynamic`) plus a
+`"use client"` full-screen tab component.
+
+### Module 1 — SSTI Testing
+
+`src/app/api/vapt/ssti/route.ts`
+
+- SSRF guard rejects private/loopback/metadata hosts (IPv4 + IPv6 + .local).
+- Creates a Target + Engagement, then `discoverInputPoints()` crawls the
+  target HTML for `<form>` actions + `<input name=...>` fields, plus the
+  existing query params on the URL itself, plus a 6-param common-name
+  fallback (q / search / name / etc.). Capped at 8 input points to stay
+  inside the 30s route budget.
+- For each input point × each of 7 detection probes, fires a GET or POST
+  with a 5s `AbortController` per request. Detection probes:
+  `{{7*7}}` (Jinja2), `${7*7}` (FreeMarker), `<%= 7*7 %>` (ERB),
+  `#{7*7}` (Ruby), `{{=7*7}}` (Smarty), `${{7*7}}` (Thymeleaf),
+  `*{7*7}` (Spring) — if the response contains `49` and NOT the raw
+  payload, the engine evaluated the expression → SSTI confirmed
+  (critical, CWE-94).
+- For each confirmed engine, runs an identification probe
+  (`{{config}}` for Jinja2, `_self.env.display` for Twig, `${.version}`
+  for FreeMarker, `#set($x=7*7)$x` for Velocity, `{$smarty.version}`
+  for Smarty) so the user knows exactly which engine to patch.
+- If no reflection fires, falls back to time-based blind SSTI
+  (`${T(java.lang.Thread).sleep(5000)}` + Jinja2 `__subclasses__`
+  sleep) with an 8s per-request timeout and a 4.5s threshold.
+- Returns `{ engagementId, testedCount, vulnerableCount, criticalCount,
+  highCount, identifiedEngines, findings, inputPoints }`. Each finding is
+  persisted as a `Finding` row (CWE in the `owasp` column, confidence
+  0.95 for critical / 0.8 for high).
+
+`src/components/sentinel/ssti-testing.tsx`
+
+- Header "SSTI TESTING" with `Code2` icon, red accent, "RCE-CLASS" badge,
+  "CWE-94" + "Authorized" badges.
+- Input form (target URL) + Run button. Payload preview chips.
+- Live progress card with 5 phases (crawling → detection →
+  identification → blind → persisting), each phase animates as the
+  request is in flight. The API is single-shot so we use a `setInterval`
+  callback (NOT a `useEffect`-body setState) to avoid the
+  `react-hooks/set-state-in-effect` lint rule that fires on every other
+  file in the project.
+- Critical-alert banner when at least one critical finding fires,
+  listing identified engines with the spec'd color per engine:
+  Jinja2=red, Twig=amber, FreeMarker=violet, Velocity=cyan, Smarty=sky,
+  ERB/Ruby=rose, Thymeleaf/Spring=emerald.
+- Summary tiles: Tested / Vulnerable / Critical / Engines Found.
+- Findings table — desktop grid layout (Payload / Engine+Input /
+  Expected→Actual / Severity / CWE / expand) collapses to stacked cards
+  on mobile. Each row expands to show input point, expected vs actual,
+  full server response, remediation, copy-payload button. Custom
+  scrollbar + `max-h-[480px]` overflow on the list.
+- `hud-corners` styling on every card; NO indigo/blue.
+
+### Module 2 — Authentication Testing
+
+`src/app/api/vapt/authentication/route.ts`
+
+- Same SSRF guard + Target/Engagement creation.
+- `resolveLoginUrl()` accepts an optional `loginUrl`; if omitted, probes
+  `/login`, `/api/auth/login`, `/api/login`, `/signin`, `/auth`,
+  `/admin/login`, `/api/v1/auth/login`, `/users/login`, `/session` —
+  for the first one that returns 200/401/405, parses the HTML for the
+  form's username + password field names.
+- Seven test classes, all running in parallel via `Promise.all`:
+  1. **Default credentials** (CWE-798, critical) — 24 common pairs
+     (admin/admin, root/root, admin/Admin123!, etc.) via POST form.
+     `loginSucceeded()` heuristic checks for Set-Cookie with
+     session/token/jwt/sid + 2xx/3xx + success markers in body.
+  2. **Brute force** (CWE-307, high) — 50 rapid login attempts sent in
+     batches of 10 in parallel; if <5 requests return 429/403/503 or
+     take >2s, the server has no rate-limiting → vulnerable.
+  3. **Credential stuffing** (CWE-521, high) — 10 breached pairs from
+     common breach corpora (admin@example.com / password123, etc.).
+  4. **Password policy** (CWE-521, medium) — tries to register with
+     weak passwords (`123`, `password`, `a`, `aaaaaa`, `12345678`)
+     against `/api/auth/signup`, `/api/users`, `/register`,
+     `/api/auth/reset-password`, `/api/auth/register`, `/api/v1/users`.
+     If the server returns 200/201 with no error key, the weak password
+     was accepted.
+  5. **Account lockout** (CWE-307, medium) — 10 failed logins on a
+     known-invalid username, then an 11th attempt. If the 11th is not
+     423/429/403, no account lockout.
+  6. **Remember-me bypass** (CWE-639, medium) — sends `remember_me=1`
+     on a failed login and inspects the Set-Cookie header for a
+     long-lived / remember cookie. If issued, the cookie can likely be
+     tampered (the test heuristically flags this).
+  7. **Username enumeration** (CWE-204, low) — login with a known-
+     invalid username + wrong password vs `admin/user/test/root` +
+     wrong password; if the HTTP status, body length, or wording
+     ("user not found" vs "wrong password") differs, enumeration is
+     possible.
+- Returns `{ engagementId, loginUrl, usernameField, passwordField,
+  probeLog, testedCount, vulnerableCount, criticalCount, highCount,
+  mediumCount, findings }`. Each finding persisted to `Finding`.
+
+`src/components/sentinel/authentication-testing.tsx`
+
+- Header "AUTHENTICATION TESTING" with `Lock` icon, red accent,
+  "OWASP A07" + "7 test classes" + "Authorized" badges.
+- Two input fields: target URL + optional login URL.
+- Live progress card shows all 7 test classes as a checklist with
+  live status (idle → in-progress spinner → done shield). Test-type
+  badges per spec: Default Creds=red, Brute Force=amber, Cred
+  Stuffing=red, Password Policy=violet, Account Lockout=amber,
+  Remember-Me=cyan, User Enumeration=sky.
+- Critical alert banner when default creds were accepted.
+- Summary tiles (Tested / Vulnerable / Critical / High) + meta row
+  with engagement id, login URL, form field names, medium count.
+- Findings list — one expandable card per test class showing all
+  attempts in a scrollable monospace log (each line: username:password
+  → HTTP status · duration; red if `loginOk`). Server-response
+  snippet + remediation block + copy-creds button.
+- Probe log card shows the login-endpoint discovery trace.
+- `hud-corners` everywhere, NO indigo/blue.
+
+### Module 3 — Authorization Testing
+
+`src/app/api/vapt/authorization/route.ts`
+
+- Same SSRF guard + Target/Engagement creation. The supplied
+  `authToken` (if any) is stored on `Target.authHeader` as
+  `"Bearer <redacted>"` so the Engagement is self-describing without
+  leaking the token into a Finding row.
+- Six test classes, all running in parallel via `Promise.all`:
+  1. **Vertical privilege escalation** (CWE-269, critical) — accesses
+     `/api/admin`, `/api/admin/users`, `/api/admin/settings`, `/admin`,
+     `/admin/dashboard` with the supplied regular-user token (or no
+     token). `isAccessible()` heuristic accepts 2xx (excluding login-
+     page bodies) and 3xx (excluding redirects to /login).
+  2. **Horizontal privilege escalation** (CWE-639, critical) — accesses
+     `/api/users/1`, `/api/users/2`, `/api/orders/1`, `/api/orders/2`,
+     `/api/profile/1`, `/api/profile/2`, `/api/account/1`,
+     `/api/account/2` with the same token. If ≥2 different IDs are
+     accessible, the user can read other users' data.
+  3. **Forced browsing** (CWE-552, high) — accesses `/api/admin`,
+     `/api/internal`, `/api/debug`, `/api/config`, `/.git/config`,
+     `/.env`, `/backup`, `/api/users/all` WITHOUT auth. Any 2xx → vuln.
+  4. **Function-level access control** (CWE-285, high) — tries
+     `DELETE /api/users`, `DELETE /api/users/1`,
+     `POST /api/admin/users` (with `role:"admin"` body),
+     `PUT /api/users/1` (`role:"admin"` body),
+     `PATCH /api/users/1`, `POST /api/admin/settings`. Any 2xx → vuln.
+  5. **IDOR** (CWE-639, high) — sequential-ID enumeration on the same
+     paths as horizontal priv-esc; if ≥3 IDs are accessible, IDOR
+     confirmed (high, vs horizontal priv-esc's critical — same
+     observable, different classification per spec).
+  6. **Missing authorization header** (CWE-862, critical) — accesses
+     protected endpoints (admin + user-resource paths) WITHOUT an
+     Authorization header. If any returns 2xx, missing-authz confirmed.
+     Side check: also probes WITH the supplied token to verify that
+     supplying a token DOES change the response (i.e. the endpoint is
+     otherwise protected).
+- Returns `{ engagementId, hadAuthToken, testedCount,
+  vulnerableCount, criticalCount, highCount, findings }`. Each finding
+  persisted to `Finding`.
+
+`src/components/sentinel/authorization-testing.tsx`
+
+- Header "AUTHORIZATION TESTING" with `ShieldCheck` icon, emerald
+  accent (one accent of three — emerald/red/amber per spec), "OWASP
+  A01" + "6 test classes" + "Authorized" badges.
+- Two inputs: target URL + optional Bearer token (with eye toggle for
+  show/hide).
+- Live progress card with all 6 test classes as a checklist. Test-type
+  badges per spec: Vertical=red, Horizontal=red, Forced Browsing=amber,
+  Function-Level=red, IDOR=amber, Missing Authz=red.
+- Critical alert banner when authz bypass confirmed.
+- Summary tiles + meta row showing engagement id + whether
+  authenticated tests ran.
+- Findings list — one expandable card per test class showing all
+  requests in a scrollable monospace log (each line: METHOD URL →
+  HTTP status · duration · +Auth/no-Auth · ACCESSIBLE). Summary +
+  remediation block + copy-URLs button.
+- `hud-corners` everywhere, NO indigo/blue.
+
+### Lint result
+
+`bun run lint` reports **62 problems (57 errors, 5 warnings)** — all
+pre-existing in `src/app/page.tsx`, `src/components/ui/carousel.tsx`,
+`src/hooks/use-mobile.ts`, `src/lib/performance-client.ts`, and ~30
+other sentinel components (the `react-hooks/set-state-in-effect` rule
+fires on every component that calls `setState` inside `useEffect` —
+which is essentially the entire codebase). The new files in this task
+contribute **0 lint issues** — verified by grepping the lint output for
+the new file paths.
+
+`bunx tsc --noEmit -p tsconfig.json` reports **0 type errors** in any
+of the 6 new files (the only output is a pre-existing `index.ts(1,4)`
+parse error at the repo root, unrelated).
+
+### Files created
+
+- `src/app/api/vapt/ssti/route.ts`
+- `src/app/api/vapt/authentication/route.ts`
+- `src/app/api/vapt/authorization/route.ts`
+- `src/components/sentinel/ssti-testing.tsx`
+- `src/components/sentinel/authentication-testing.tsx`
+- `src/components/sentinel/authorization-testing.tsx`
+- `agent-ctx/vapt-ssti-auth-authz-full-stack-developer.md` (work record)
+
+### Constraints honored
+
+- TypeScript throughout (`strict: false` per the project's tsconfig —
+  but the new files are type-clean under both the loose config and the
+  stricter defaults).
+- `"use client"` on every component.
+- shadcn/ui (Card, Badge, Button, Input, Label) + lucide-react +
+  framer-motion.
+- NO recharts used in these three components (the data is too tabular
+  to justify a chart — would have been cargo-culted from
+  business-logic-testing). All summary is delivered via the tiles +
+  expandable per-test cards.
+- Dark theme (zinc-950 substrate, red/amber/emerald accents) — NO
+  indigo, NO blue.
+- Mobile-first: every table degrades to stacked cards under `sm:`.
+- `hud-corners` class on every card (matches the existing sentinel
+  design language).
+- `requireAuth(req)` gates every POST; `db.engagement.create` +
+  `db.finding.create` for persistence (CWE stored in the `owasp`
+  column — there's no dedicated `cwe` column on the Finding model).
+- 5s `AbortController` per HTTP request throughout. Blind SSTI uses 8s
+  to allow the 5s sleep to finish.
+- `maxDuration=30` + `force-dynamic` on every route.
+- Must NOT touch: page.tsx, src/lib/*, prisma/*, war-room/*, existing
+  API routes — verified (only the 6 new files were added; no edits to
+  any pre-existing file).
+- Did NOT commit/push.

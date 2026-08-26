@@ -38,6 +38,10 @@ import { GraphQLTesting } from "@/components/sentinel/graphql-testing";
 import { JwtAuthTesting } from "@/components/sentinel/jwt-auth-testing";
 import { RaceConditionTesting } from "@/components/sentinel/race-condition-testing";
 import { SsrfDeepTesting } from "@/components/sentinel/ssrf-deep-testing";
+import { InjectionSuite } from "@/components/sentinel/injection-suite";
+import { SstiTesting } from "@/components/sentinel/ssti-testing";
+import { AuthenticationTesting } from "@/components/sentinel/authentication-testing";
+import { AuthorizationTesting } from "@/components/sentinel/authorization-testing";
 import { RnDLab } from "@/components/sentinel/rnd-lab";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
@@ -81,9 +85,11 @@ import {
   FileText,
   Brain,
   Network,
+  Code2,
+  Lock,
 } from "lucide-react";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "business-logic" | "graphql" | "jwt-auth" | "race-condition" | "ssrf-deep";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "business-logic" | "graphql" | "jwt-auth" | "race-condition" | "ssrf-deep" | "injection-suite" | "ssti" | "authentication" | "authorization";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -412,6 +418,10 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <NavItem active={tab === "jwt-auth"} onClick={() => { setTab("jwt-auth"); setSidebarOpen(false); }} icon={KeyRound} label="JWT / Auth Testing" iconColor="text-rose-400" accentColor="rose" isNew />
               <NavItem active={tab === "race-condition"} onClick={() => { setTab("race-condition"); setSidebarOpen(false); }} icon={Zap} label="Race Conditions" iconColor="text-amber-400" accentColor="amber" isNew />
               <NavItem active={tab === "ssrf-deep"} onClick={() => { setTab("ssrf-deep"); setSidebarOpen(false); }} icon={Network} label="SSRF Deep Testing" iconColor="text-red-400" accentColor="red" isNew />
+              <NavItem active={tab === "injection-suite"} onClick={() => { setTab("injection-suite"); setSidebarOpen(false); }} icon={Bug} label="Injection Suite" iconColor="text-red-400" accentColor="red" isNew />
+              <NavItem active={tab === "ssti"} onClick={() => { setTab("ssti"); setSidebarOpen(false); }} icon={Code2} label="SSTI Testing" iconColor="text-violet-400" accentColor="violet" isNew />
+              <NavItem active={tab === "authentication"} onClick={() => { setTab("authentication"); setSidebarOpen(false); }} icon={Lock} label="Authentication Testing" iconColor="text-amber-400" accentColor="amber" isNew />
+              <NavItem active={tab === "authorization"} onClick={() => { setTab("authorization"); setSidebarOpen(false); }} icon={ShieldCheck} label="Authorization Testing" iconColor="text-emerald-400" accentColor="emerald" isNew />
             </NavGroup>
             {currentUser?.role === "admin" && (
               <NavGroup label="Administration" color="emerald">
@@ -479,6 +489,10 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "jwt-auth" ? "neon-rose text-rose-300" :
                   tab === "race-condition" ? "neon-amber text-amber-300" :
                   tab === "ssrf-deep" ? "neon-red text-red-300" :
+                  tab === "injection-suite" ? "neon-red text-red-300" :
+                  tab === "ssti" ? "neon-violet text-violet-300" :
+                  tab === "authentication" ? "neon-amber text-amber-300" :
+                  tab === "authorization" ? "neon-emerald text-emerald-300" :
                   tab === "users" ? "neon-emerald text-emerald-300" :
                   tab === "content" ? "neon-emerald text-emerald-300" :
                   tab === "contributors" ? "neon-emerald text-emerald-300" :
@@ -493,6 +507,10 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "jwt-auth" ? "JWT / Authentication Testing" :
                    tab === "race-condition" ? "Race Condition Testing" :
                    tab === "ssrf-deep" ? "SSRF Deep Testing" :
+                   tab === "injection-suite" ? "Injection Suite (HTMLi / CSRF / CORS)" :
+                   tab === "ssti" ? "SSTI Testing" :
+                   tab === "authentication" ? "Authentication Testing" :
+                   tab === "authorization" ? "Authorization Testing" :
                    tab === "patches" ? "Patch Review Queue" :
                    tab === "codebases" ? "Codebase Library" :
                    tab === "redagent" ? "RedAgent VAPT Engine" :
@@ -537,6 +555,14 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <RaceConditionTesting />
             ) : tab === "ssrf-deep" ? (
               <SsrfDeepTesting />
+            ) : tab === "injection-suite" ? (
+              <InjectionSuite />
+            ) : tab === "ssti" ? (
+              <SstiTesting />
+            ) : tab === "authentication" ? (
+              <AuthenticationTesting />
+            ) : tab === "authorization" ? (
+              <AuthorizationTesting />
             ) : (
               <>
                 <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>

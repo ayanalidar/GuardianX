@@ -12,5 +12,12 @@
     "@supabase/supabase-js": "^2.45.0",
     "socket.io": "^4.8.1",
     "z-ai-web-dev-sdk": "latest"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.6",
+    "eslint": "9",
+    "eslint-config-next": "16",
+    "next": "16",
+    "typescript": "5.9"
   }
 }

