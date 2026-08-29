@@ -42,5 +42,6 @@
   },
   "github": {
     "silent": true
-  }
+  },
+  "installCommand": "bun install"
 }

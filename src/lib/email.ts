@@ -54,6 +54,16 @@ export function getFromAddress(): string {
   return process.env.SMTP_FROM || process.env.SMTP_USER || "GuardianX <noreply@guardianx.cloud>";
 }
 
+/**
+ * Whether SMTP is configured (SMTP_HOST + SMTP_USER + SMTP_PASS all set).
+ * Routes that send email call this to decide whether to attempt delivery
+ * or skip silently. Resolves to a boolean so callers can `await` it in
+ * async contexts.
+ */
+export async function isSmtpConfigured(): Promise<boolean> {
+  return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
 export interface SendEmailResult {
   ok: boolean;
   messageId?: string;
