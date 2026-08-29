@@ -33,21 +33,20 @@ import { ClientsDashboard } from "@/components/sentinel/clients-dashboard";
 import { ClientDetail } from "@/components/sentinel/client-detail";
 import { CommandCenter } from "@/components/sentinel/command-center";
 import { ActivePipelines } from "@/components/sentinel/active-pipelines";
-import { BusinessLogicTesting } from "@/components/sentinel/business-logic-testing";
-import { GraphQLTesting } from "@/components/sentinel/graphql-testing";
-import { JwtAuthTesting } from "@/components/sentinel/jwt-auth-testing";
-import { RaceConditionTesting } from "@/components/sentinel/race-condition-testing";
-import { SsrfDeepTesting } from "@/components/sentinel/ssrf-deep-testing";
-import { InjectionSuite } from "@/components/sentinel/injection-suite";
-import { SstiTesting } from "@/components/sentinel/ssti-testing";
-import { AuthenticationTesting } from "@/components/sentinel/authentication-testing";
-import { AuthorizationTesting } from "@/components/sentinel/authorization-testing";
 import { RnDLab } from "@/components/sentinel/rnd-lab";
 import { PostureScoreCard } from "@/components/sentinel/posture-score-card";
 import { ThreatIntelPanel } from "@/components/sentinel/threat-intel-panel";
 import { RuntimeMonitor } from "@/components/sentinel/runtime-monitor";
 import { PipelineView } from "@/components/sentinel/pipeline-view";
 import { GuardianXLogo } from "@/components/sentinel/guardianx-logo";
+import { SupportChat } from "@/components/sentinel/support-chat";
+import { AnalystOnboarding } from "@/components/sentinel/analyst-onboarding";
+import { BillingPanel } from "@/components/sentinel/billing-panel";
+import { OrgSwitcher } from "@/components/sentinel/org-switcher";
+import { UserActivityMonitor } from "@/components/sentinel/user-activity-monitor";
+import { AdminTwoFactorBanner } from "@/components/sentinel/admin-2fa-banner";
+import { AnalystBanner } from "@/components/sentinel/analyst-banner";
+import { SettingsPanel } from "@/components/sentinel/settings-panel";
 import { usePipelineSocket } from "@/lib/sentinel/use-pipeline-socket";
 import {
   sentinelApi,
@@ -61,6 +60,7 @@ import {
   Activity,
   Boxes,
   Building2,
+  CreditCard,
   Crosshair,
   FlaskConical,
   Gavel,
@@ -75,21 +75,46 @@ import {
   RefreshCw,
   Search,
   ScanSearch,
+  Settings,
   Shield,
   ShieldAlert,
   ShieldCheck,
   ShieldHalf,
+  Clock,
+  Swords,
+  Lock,
+  Bug,
+  AlertTriangle,
   Sparkles,
   Users,
+  UserCog,
   Zap,
   FileText,
+  Atom,
   Brain,
-  Network,
-  Code2,
-  Lock,
+  Orbit,
+  LayoutGrid,
+  Bot,
 } from "lucide-react";
+import { ModulesOverview } from "@/components/sentinel/modules-overview";
+import { AgentX } from "@/components/sentinel/agent-x";
+import { PredictiveForecast } from "@/components/sentinel/predictive-forecast";
+import { QuantumScanner } from "@/components/sentinel/quantum-scanner";
+import { ThreatConstellation } from "@/components/sentinel/threat-constellation";
+import { AdversarialAI } from "@/components/sentinel/adversarial-ai";
+import { AptPersonaEngine } from "@/components/sentinel/apt-persona-engine";
+import { TimeTravelDebugger } from "@/components/sentinel/time-travel-debugger";
+import { VRThreatWalkthrough } from "@/components/sentinel/vr-threat-walkthrough";
+import { MovingTargetDefense } from "@/components/sentinel/moving-target-defense";
+import { CanaryTokens } from "@/components/sentinel/canary-tokens";
+import { PromptInjectionScanner } from "@/components/sentinel/prompt-injection-scanner";
+import { DeepfakeSimulator } from "@/components/sentinel/deepfake-simulator";
+import { PayPerVuln } from "@/components/sentinel/pay-per-vuln";
+import { SecurityCommons } from "@/components/sentinel/security-commons";
+import { ZkProofs } from "@/components/sentinel/zk-proofs";
+import { SelfSecurityDashboard } from "@/components/sentinel/self-security-dashboard";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "business-logic" | "graphql" | "jwt-auth" | "race-condition" | "ssrf-deep" | "injection-suite" | "ssti" | "authentication" | "authorization";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings" | "modules" | "forecast" | "quantum" | "constellation" | "agent-x" | "adversarial" | "apt-persona" | "time-travel" | "vr-walkthrough" | "moving-target" | "canary" | "prompt-injection" | "deepfake" | "pay-per-vuln" | "commons" | "zk-proofs" | "self-security";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -344,6 +369,40 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
     [toast]
   );
 
+  // ── Agent X callbacks ────────────────────────────────────────────────
+  // PERF: these were previously inline closures passed to <AgentX>, which
+  // meant AgentX re-rendered on every parent re-render (every 1Hz clock
+  // tick, every patch-list refresh, etc.). Memoizing them + AgentX's own
+  // React.memo wrapper means AgentX now only re-renders when `tab`,
+  // `currentUser`, `codebases`, or `patches` actually change.
+  const handleAgentClose = useCallback(() => setTab("dashboard"), []);
+  const handleAgentNavigate = useCallback((t: string) => setTab(t as Tab), []);
+  const handleAgentScan = useCallback(
+    (name: string) => {
+      const cb = codebases.find((c) =>
+        c.name.toLowerCase().includes(name.toLowerCase())
+      );
+      if (cb) handleScan(cb);
+    },
+    [codebases, handleScan]
+  );
+  const handleAgentApprovePatch = useCallback(
+    (id: string) => {
+      const p = patches.find(
+        (x) => x.patch_id === id || x.patch_id.endsWith(id)
+      );
+      if (p) handleSelectPatch(p);
+    },
+    [patches, handleSelectPatch]
+  );
+  const handleAgentSearch = useCallback((q: string) => {
+    setQuery(q);
+    setTab("patches");
+  }, []);
+  const handleAgentOpenWarRoom = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("guardianx:open-war-room"));
+  }, []);
+
   // ── derived ───────────────────────────────────────────────────────────
   const visiblePatches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -392,6 +451,10 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <div className="font-mono text-[9px] uppercase tracking-widest text-emerald-500/50">SOC Lab</div>
             </div>
           </button>
+          {/* Org / workspace switcher */}
+          <div className="border-b border-emerald-500/15 px-3 py-2" data-onboarding="clients">
+            <OrgSwitcher currentUser={currentUser} />
+          </div>
           <nav className="custom-scrollbar flex-1 overflow-y-auto p-2">
             <NavGroup label="Dashboard" color="emerald">
               <NavItem active={tab === "dashboard"} onClick={() => { setTab("dashboard"); setSelectedClientId(null); setSidebarOpen(false); }} icon={LayoutDashboard} label="Overview" accentColor="emerald" iconColor="text-emerald-400" />
@@ -411,21 +474,34 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             <NavGroup label="Advanced" color="amber">
               <NavItem active={tab === "rnd"} onClick={() => { setTab("rnd"); setSidebarOpen(false); }} icon={FlaskConical} label="R&D Lab" iconColor="text-violet-400" accentColor="violet" />
               <NavItem active={tab === "advanced"} onClick={() => { setTab("advanced"); setSidebarOpen(false); }} icon={Sparkles} label="Advanced Platform" iconColor="text-amber-400" accentColor="amber" />
+              <NavItem active={tab === "forecast"} onClick={() => { setTab("forecast"); setSidebarOpen(false); }} icon={Brain} label="Predictive Forecast" iconColor="text-cyan-400" accentColor="cyan" isNew />
+              <NavItem active={tab === "quantum"} onClick={() => { setTab("quantum"); setSidebarOpen(false); }} icon={Atom} label="Quantum Scanner" iconColor="text-violet-400" accentColor="violet" isNew />
+              <NavItem active={tab === "constellation"} onClick={() => { setTab("constellation"); setSidebarOpen(false); }} icon={Orbit} label="Threat Constellation" iconColor="text-emerald-400" accentColor="emerald" isNew />
+              <NavItem active={tab === "modules"} onClick={() => { setTab("modules"); setSidebarOpen(false); }} icon={LayoutGrid} label="All Modules" iconColor="text-amber-400" accentColor="amber" />
+              <NavItem active={tab === "billing"} onClick={() => { setTab("billing"); setSidebarOpen(false); }} icon={CreditCard} label="Billing" iconColor="text-emerald-400" accentColor="emerald" />
+              <NavItem active={tab === "settings"} onClick={() => { setTab("settings"); setSidebarOpen(false); }} icon={Settings} label="Settings" iconColor="text-zinc-300" accentColor="emerald" />
             </NavGroup>
-            <NavGroup label="Deep VAPT Suite" color="red">
-              <NavItem active={tab === "business-logic"} onClick={() => { setTab("business-logic"); setSidebarOpen(false); }} icon={Brain} label="Business Logic" iconColor="text-emerald-400" accentColor="emerald" isNew />
-              <NavItem active={tab === "graphql"} onClick={() => { setTab("graphql"); setSidebarOpen(false); }} icon={Network} label="GraphQL Testing" iconColor="text-cyan-400" accentColor="cyan" isNew />
-              <NavItem active={tab === "jwt-auth"} onClick={() => { setTab("jwt-auth"); setSidebarOpen(false); }} icon={KeyRound} label="JWT / Auth Testing" iconColor="text-rose-400" accentColor="rose" isNew />
-              <NavItem active={tab === "race-condition"} onClick={() => { setTab("race-condition"); setSidebarOpen(false); }} icon={Zap} label="Race Conditions" iconColor="text-amber-400" accentColor="amber" isNew />
-              <NavItem active={tab === "ssrf-deep"} onClick={() => { setTab("ssrf-deep"); setSidebarOpen(false); }} icon={Network} label="SSRF Deep Testing" iconColor="text-red-400" accentColor="red" isNew />
-              <NavItem active={tab === "injection-suite"} onClick={() => { setTab("injection-suite"); setSidebarOpen(false); }} icon={Bug} label="Injection Suite" iconColor="text-red-400" accentColor="red" isNew />
-              <NavItem active={tab === "ssti"} onClick={() => { setTab("ssti"); setSidebarOpen(false); }} icon={Code2} label="SSTI Testing" iconColor="text-violet-400" accentColor="violet" isNew />
-              <NavItem active={tab === "authentication"} onClick={() => { setTab("authentication"); setSidebarOpen(false); }} icon={Lock} label="Authentication Testing" iconColor="text-amber-400" accentColor="amber" isNew />
-              <NavItem active={tab === "authorization"} onClick={() => { setTab("authorization"); setSidebarOpen(false); }} icon={ShieldCheck} label="Authorization Testing" iconColor="text-emerald-400" accentColor="emerald" isNew />
+            <NavGroup label="AI Assistant" color="emerald">
+              <NavItem active={tab === "agent-x"} onClick={() => { setTab("agent-x"); setSidebarOpen(false); }} icon={Bot} label="Agent X" iconColor="text-emerald-400" accentColor="emerald" isNew />
+            </NavGroup>
+            <NavGroup label="Innovations" color="cyan">
+              <NavItem active={tab === "adversarial"} onClick={() => { setTab("adversarial"); setSidebarOpen(false); }} icon={ShieldAlert} label="Adversarial AI" iconColor="text-red-400" accentColor="red" isNew />
+              <NavItem active={tab === "apt-persona"} onClick={() => { setTab("apt-persona"); setSidebarOpen(false); }} icon={Swords} label="APT Persona Engine" iconColor="text-amber-400" accentColor="amber" isNew />
+              <NavItem active={tab === "time-travel"} onClick={() => { setTab("time-travel"); setSidebarOpen(false); }} icon={Clock} label="Time-Travel Debugger" iconColor="text-cyan-400" accentColor="cyan" isNew />
+              <NavItem active={tab === "vr-walkthrough"} onClick={() => { setTab("vr-walkthrough"); setSidebarOpen(false); }} icon={Orbit} label="VR Threat Walkthrough" iconColor="text-violet-400" accentColor="violet" isNew />
+              <NavItem active={tab === "moving-target"} onClick={() => { setTab("moving-target"); setSidebarOpen(false); }} icon={ShieldCheck} label="Moving Target Defense" iconColor="text-emerald-400" accentColor="emerald" isNew />
+              <NavItem active={tab === "canary"} onClick={() => { setTab("canary"); setSidebarOpen(false); }} icon={Radar} label="Canary Tokens" iconColor="text-amber-400" accentColor="amber" isNew />
+              <NavItem active={tab === "prompt-injection"} onClick={() => { setTab("prompt-injection"); setSidebarOpen(false); }} icon={Bug} label="Prompt Injection Scanner" iconColor="text-red-400" accentColor="red" isNew />
+              <NavItem active={tab === "deepfake"} onClick={() => { setTab("deepfake"); setSidebarOpen(false); }} icon={AlertTriangle} label="Deepfake Simulator" iconColor="text-rose-400" accentColor="rose" isNew />
+              <NavItem active={tab === "pay-per-vuln"} onClick={() => { setTab("pay-per-vuln"); setSidebarOpen(false); }} icon={CreditCard} label="Pay-Per-Vuln" iconColor="text-emerald-400" accentColor="emerald" isNew />
+              <NavItem active={tab === "commons"} onClick={() => { setTab("commons"); setSidebarOpen(false); }} icon={Users} label="Security Commons" iconColor="text-cyan-400" accentColor="cyan" isNew />
+              <NavItem active={tab === "zk-proofs"} onClick={() => { setTab("zk-proofs"); setSidebarOpen(false); }} icon={Lock} label="ZK Proofs" iconColor="text-violet-400" accentColor="violet" isNew />
+              <NavItem active={tab === "self-security"} onClick={() => { setTab("self-security"); setSidebarOpen(false); }} icon={Shield} label="Self-Security" iconColor="text-emerald-400" accentColor="emerald" isNew />
             </NavGroup>
             {currentUser?.role === "admin" && (
               <NavGroup label="Administration" color="emerald">
                 <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" accentColor="emerald" />
+                <NavItem active={tab === "user-activity"} onClick={() => { setTab("user-activity"); setSidebarOpen(false); }} icon={UserCog} label="User Activity" iconColor="text-emerald-400" accentColor="emerald" />
                 <NavItem active={tab === "content"} onClick={() => { setTab("content"); setSidebarOpen(false); }} icon={FileText} label="Content Editor" iconColor="text-emerald-400" accentColor="emerald" />
                 <NavItem active={tab === "contributors"} onClick={() => { setTab("contributors"); setSidebarOpen(false); }} icon={Users} label="Contributions" iconColor="text-emerald-400" accentColor="emerald" />
               </NavGroup>
@@ -484,15 +560,26 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   tab === "scraper" ? "neon-violet text-violet-300" :
                   tab === "dfir" ? "neon-red text-red-300" :
                   tab === "rnd" ? "neon-violet text-violet-300" :
-                  tab === "business-logic" ? "neon-emerald text-emerald-300" :
-                  tab === "graphql" ? "neon-cyan text-cyan-300" :
-                  tab === "jwt-auth" ? "neon-rose text-rose-300" :
-                  tab === "race-condition" ? "neon-amber text-amber-300" :
-                  tab === "ssrf-deep" ? "neon-red text-red-300" :
-                  tab === "injection-suite" ? "neon-red text-red-300" :
-                  tab === "ssti" ? "neon-violet text-violet-300" :
-                  tab === "authentication" ? "neon-amber text-amber-300" :
-                  tab === "authorization" ? "neon-emerald text-emerald-300" :
+                  tab === "forecast" ? "neon-cyan text-cyan-300" :
+                  tab === "quantum" ? "neon-violet text-violet-300" :
+                  tab === "constellation" ? "neon-emerald text-emerald-300" :
+                  tab === "modules" ? "neon-amber text-amber-300" :
+                  tab === "agent-x" ? "neon-emerald text-emerald-300" :
+                  tab === "adversarial" ? "neon-red text-red-300" :
+                  tab === "apt-persona" ? "neon-amber text-amber-300" :
+                  tab === "time-travel" ? "neon-cyan text-cyan-300" :
+                  tab === "vr-walkthrough" ? "neon-violet text-violet-300" :
+                  tab === "moving-target" ? "neon-emerald text-emerald-300" :
+                  tab === "canary" ? "neon-amber text-amber-300" :
+                  tab === "prompt-injection" ? "neon-red text-red-300" :
+                  tab === "deepfake" ? "neon-rose text-rose-300" :
+                  tab === "pay-per-vuln" ? "neon-emerald text-emerald-300" :
+                  tab === "commons" ? "neon-cyan text-cyan-300" :
+                  tab === "zk-proofs" ? "neon-violet text-violet-300" :
+                  tab === "self-security" ? "neon-emerald text-emerald-300" :
+                  tab === "billing" ? "neon-emerald text-emerald-300" :
+                  tab === "settings" ? "neon-emerald text-emerald-300" :
+                  tab === "user-activity" ? "neon-emerald text-emerald-300" :
                   tab === "users" ? "neon-emerald text-emerald-300" :
                   tab === "content" ? "neon-emerald text-emerald-300" :
                   tab === "contributors" ? "neon-emerald text-emerald-300" :
@@ -502,15 +589,23 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "clients" ? (selectedClientId ? "Client Pipeline" : "Client Engagements") :
                    tab === "pipelines" ? "Active Pipelines" :
                    tab === "rnd" ? "R&D Lab" :
-                   tab === "business-logic" ? "Business Logic Testing" :
-                   tab === "graphql" ? "GraphQL Testing" :
-                   tab === "jwt-auth" ? "JWT / Authentication Testing" :
-                   tab === "race-condition" ? "Race Condition Testing" :
-                   tab === "ssrf-deep" ? "SSRF Deep Testing" :
-                   tab === "injection-suite" ? "Injection Suite (HTMLi / CSRF / CORS)" :
-                   tab === "ssti" ? "SSTI Testing" :
-                   tab === "authentication" ? "Authentication Testing" :
-                   tab === "authorization" ? "Authorization Testing" :
+                   tab === "forecast" ? "Predictive Threat Forecast" :
+                   tab === "quantum" ? "Quantum-Readiness Scanner" :
+                   tab === "constellation" ? "3D Threat Constellation" :
+                   tab === "modules" ? "All Modules" :
+                   tab === "agent-x" ? "Agent X" :
+                   tab === "adversarial" ? "Adversarial AI Self-Attack" :
+                   tab === "apt-persona" ? "APT Persona Engine" :
+                   tab === "time-travel" ? "Time-Travel Posture Debugger" :
+                   tab === "vr-walkthrough" ? "VR Threat Walkthrough" :
+                   tab === "moving-target" ? "Moving Target Defense" :
+                   tab === "canary" ? "Cryptographic Canary Tokens" :
+                   tab === "prompt-injection" ? "AI Prompt Injection Scanner" :
+                   tab === "deepfake" ? "Deepfake Phishing Simulator" :
+                   tab === "pay-per-vuln" ? "Pay-Per-Vulnerability" :
+                   tab === "commons" ? "Security Commons" :
+                   tab === "zk-proofs" ? "Zero-Knowledge Proofs" :
+                   tab === "self-security" ? "GuardianX Self-Security" :
                    tab === "patches" ? "Patch Review Queue" :
                    tab === "codebases" ? "Codebase Library" :
                    tab === "redagent" ? "RedAgent VAPT Engine" :
@@ -519,6 +614,9 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "exfil" ? "Data Exfiltration Defense" :
                    tab === "scraper" ? "Web Scraping Audit Engine" :
                    tab === "dfir" ? "DFIR Command Center" :
+                   tab === "billing" ? "Billing & Subscription" :
+                   tab === "settings" ? "Settings" :
+                   tab === "user-activity" ? "User Activity Monitor" :
                    tab === "users" ? "User Management" :
                    tab === "content" ? "Content Editor" :
                    tab === "contributors" ? "Contributions" :
@@ -532,6 +630,16 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
             </div>
           </header>
           <main className="flex-1 p-4 sm:p-6">
+            {/* Admin 2FA banner (only shows for admins without 2FA enabled) */}
+            <AdminTwoFactorBanner
+              currentUser={currentUser}
+              onOpenSettings={() => setTab("settings")}
+            />
+            {/* Analyst banner (only shows for viewers) */}
+            <AnalystBanner
+              currentUser={currentUser}
+              onNavigate={(t) => setTab(t)}
+            />
             {tab === "dashboard" ? (
               <CommandCenter
                 onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }}
@@ -545,24 +653,67 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <ActivePipelines onSelectClient={(id) => { setSelectedClientId(id); setTab("clients"); }} onAddClient={() => setTab("clients")} />
             ) : tab === "rnd" ? (
               <RnDLab />
-            ) : tab === "business-logic" ? (
-              <BusinessLogicTesting />
-            ) : tab === "graphql" ? (
-              <GraphQLTesting />
-            ) : tab === "jwt-auth" ? (
-              <JwtAuthTesting />
-            ) : tab === "race-condition" ? (
-              <RaceConditionTesting />
-            ) : tab === "ssrf-deep" ? (
-              <SsrfDeepTesting />
-            ) : tab === "injection-suite" ? (
-              <InjectionSuite />
-            ) : tab === "ssti" ? (
-              <SstiTesting />
-            ) : tab === "authentication" ? (
-              <AuthenticationTesting />
-            ) : tab === "authorization" ? (
-              <AuthorizationTesting />
+            ) : tab === "forecast" ? (
+              <PredictiveForecast />
+            ) : tab === "quantum" ? (
+              <QuantumScanner />
+            ) : tab === "constellation" ? (
+              <ThreatConstellation />
+            ) : tab === "modules" ? (
+              <ModulesOverview onSelect={(f) => {
+                // Map feature category to the most relevant tab
+                const cat = f.category.toLowerCase();
+                if (cat.includes("dfir") || cat.includes("incident")) setTab("dfir");
+                else if (cat.includes("soc") || cat.includes("runtime")) setTab("soc");
+                else if (cat.includes("compliance") || cat.includes("grc")) setTab("compliance");
+                else if (cat.includes("exfil")) setTab("exfil");
+                else if (cat.includes("scraper") || cat.includes("audit")) setTab("scraper");
+                else if (cat.includes("research") || cat.includes("r&d")) setTab("rnd");
+                else if (cat.includes("billing")) setTab("billing");
+                else if (cat.includes("setting") || cat.includes("2fa")) setTab("settings");
+                else if (cat.includes("user") || cat.includes("contributor")) setTab("users");
+                else if (cat.includes("content")) setTab("content");
+                else if (cat.includes("patch")) setTab("patches");
+                else if (cat.includes("codebase")) setTab("codebases");
+                else if (cat.includes("vapt") || cat.includes("redagent")) setTab("redagent");
+                else setTab("advanced");
+              }} />
+            ) : tab === "agent-x" ? (
+              <AgentX
+                open={true}
+                onClose={handleAgentClose}
+                currentTab={tab}
+                currentUser={currentUser}
+                onNavigate={handleAgentNavigate}
+                onScan={handleAgentScan}
+                onApprovePatch={handleAgentApprovePatch}
+                onSearch={handleAgentSearch}
+                onOpenWarRoom={handleAgentOpenWarRoom}
+              />
+            ) : tab === "adversarial" ? (
+              <AdversarialAI />
+            ) : tab === "apt-persona" ? (
+              <AptPersonaEngine />
+            ) : tab === "time-travel" ? (
+              <TimeTravelDebugger />
+            ) : tab === "vr-walkthrough" ? (
+              <VRThreatWalkthrough />
+            ) : tab === "moving-target" ? (
+              <MovingTargetDefense />
+            ) : tab === "canary" ? (
+              <CanaryTokens />
+            ) : tab === "prompt-injection" ? (
+              <PromptInjectionScanner />
+            ) : tab === "deepfake" ? (
+              <DeepfakeSimulator />
+            ) : tab === "pay-per-vuln" ? (
+              <PayPerVuln />
+            ) : tab === "commons" ? (
+              <SecurityCommons />
+            ) : tab === "zk-proofs" ? (
+              <ZkProofs />
+            ) : tab === "self-security" ? (
+              <SelfSecurityDashboard />
             ) : (
               <>
                 <section className="mb-5 fade-in-up" style={{ animationDelay: "0.1s" }}>
@@ -587,6 +738,12 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   <DfirPanel />
                 ) : tab === "advanced" ? (
                   <AdvancedPanel />
+                ) : tab === "billing" ? (
+                  <BillingPanel currentUser={currentUser} />
+                ) : tab === "user-activity" ? (
+                  <UserActivityMonitor />
+                ) : tab === "settings" ? (
+                  <SettingsPanel currentUser={currentUser} />
                 ) : tab === "users" ? (
                   <UserManagementPanel />
                 ) : tab === "content" ? (
@@ -706,6 +863,13 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
         onOpenChange={setCredsOpen}
         onChanged={() => loadAll({ silent: true })}
       />
+
+      {/* Floating UI: onboarding tour (viewers, first login) + support chat (everyone) */}
+      <AnalystOnboarding
+        role={currentUser?.role}
+        onNavigate={(t) => setTab(t)}
+      />
+      <SupportChat currentUser={currentUser} bottomOffset={64} />
     </div>
   );
 }
@@ -844,6 +1008,7 @@ function NavItem({
   badgeColor = "emerald",
   iconColor,
   accentColor = "emerald",
+  isNew = false,
 }: {
   active: boolean;
   onClick: () => void;
@@ -853,6 +1018,7 @@ function NavItem({
   badgeColor?: "emerald" | "sky" | "red" | "cyan" | "purple" | "rose" | "violet" | "amber";
   iconColor?: string;
   accentColor?: "emerald" | "sky" | "red" | "cyan" | "purple" | "rose" | "violet" | "amber";
+  isNew?: boolean;
 }) {
   const accentMap: Record<string, { bg: string; text: string; ring: string; dot: string; badgeBg: string; badgeText: string }> = {
     emerald: { bg: "bg-emerald-500/10", text: "text-emerald-300", ring: "shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4),0_0_12px_rgba(16,185,129,0.15)]", dot: "bg-emerald-500", badgeBg: "bg-emerald-500/20", badgeText: "text-emerald-300" },
@@ -878,6 +1044,9 @@ function NavItem({
     >
       <Icon className={`size-4 shrink-0 ${active ? iconColor ?? a.text : iconColor ?? "text-zinc-500"}`} />
       <span className="flex-1 text-left font-medium">{label}</span>
+      {isNew && (
+        <span className="rounded-full bg-cyan-500/20 px-1.5 text-[9px] font-bold uppercase tracking-wider text-cyan-300">new</span>
+      )}
       {badge !== undefined && badge > 0 && (
         <span className={`rounded-full px-1.5 text-[10px] font-bold ${badgeA.badgeBg} ${badgeA.badgeText}`}>{badge}</span>
       )}

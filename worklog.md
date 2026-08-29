@@ -4130,3 +4130,62 @@ actual imports) — left as-is per the task spec.
 **Did NOT commit/push.**
 
 Work record: `agent-ctx/crypto-migration-full-stack-developer.md`.
+
+---
+
+## 2026-08-29 — recovery: restore war-room/gesture/voice/agent-x after git pull --rebase wipe
+
+**Task ID:** `recovery-war-room-gesture`
+**Agent:** main (Z.ai Code)
+**Task:** User reported "gesture isn't working at all". Investigation revealed a `git pull --rebase` (visible in `git reflog`) had checked out a remote state that wiped 92 source files from the working tree — including the entire `war-room/` directory (gesture-control, voice-control, war-room-overlay), `agent-x/`, `ai-visualizer/`, `command-center-voice.tsx`, plus 88 missing npm packages (including `@mediapipe/hands` which gesture control depends on).
+
+### Root cause
+
+Reflog showed: `git pull --rebase https://github.com/ayanalidar/GuardianX.git main` checked out commit `83b9942` (remote main), then the rebase was aborted. The abort returned HEAD to the local branch, but the working tree had already been reset — the 92 files that existed only as uncommitted working tree changes were lost. The current HEAD (`4f1e577`) never had them committed.
+
+### Recovery
+
+1. **Found dangling commit `83b9942`** via `git fsck --lost-found` — this commit contained all the missing files (it was the remote state briefly checked out during the rebase).
+2. **Restored all 92 missing source files** from `83b9942` via `git checkout 83b9942 -- <path>` for each file. This recovered:
+   - `src/components/sentinel/war-room/gesture-control.tsx` (1196 lines — MediaPipe Hands + Camera Utils, advanced gestures)
+   - `src/components/sentinel/war-room/voice-control.tsx` (original — push-to-talk, pre-continuous-mode)
+   - `src/components/sentinel/war-room/war-room-overlay.tsx` (original)
+   - `src/components/sentinel/agent-x/` (3 files — full Agent X tab)
+   - `src/components/sentinel/ai-visualizer/` (5 files — CircuitBoard, SignalBus, ImmersiveView, NeuralLink)
+   - `src/components/sentinel/command-center-voice.tsx`
+   - `src/app/api/agent-x/` (4 API routes)
+   - `src/lib/agent-x/` (2 files)
+   - `src/components/sentinel/landing/agent-x-showcase.tsx`
+   - + 70+ other API routes and lib files
+3. **Restored `command-center.tsx` and `page.tsx`** from `83b9942` (the current HEAD versions used a legacy `WarRoomMode` stub with no voice/gesture; the `83b9942` versions properly import `WarRoomOverlay` + `AgentX` + `ai-visualizer`).
+4. **Restored `package.json`** from `83b9942` and ran `bun install` — installed 88 missing packages including `@mediapipe/hands`, `@mediapipe/camera_utils`, `three`, `@react-three/drei`, `@react-three/fiber`, `framer-motion`, `recharts`, `@dnd-kit/*`, and all `@radix-ui/*` components.
+5. **Re-applied the always-on voice fix** to `war-room-overlay.tsx` (continuous mode default true + Always-on/Push-to-talk toggle button + Shift+V shortcut + localStorage persistence). This was lost when the file was wiped.
+6. **Installed `tailwindcss-animate`** + `@types/react@19` (also missing from the stripped package.json).
+
+### Verification
+
+- `bunx tsc --noEmit` → 0 errors in `war-room-overlay.tsx`.
+- Dev server: `GET / 200` — clean compile, no module-not-found errors.
+- Browser smoke-test (Agent Browser): landing page renders (`h1` = "Security that thinks, attacks, and heals itself"), **0 page errors**, **0 console errors**.
+- `@mediapipe/hands` + `@mediapipe/camera_utils` confirmed installed in `node_modules/`.
+- Gesture control file: 1196 lines, exports `GestureControl`, `GestureControlHandle`, `GestureEvent`. Imports `@mediapipe/hands` for `NormalizedLandmark` + `Results` types. Mounts via `WarRoomOverlay` → `<GestureControl ref={gestureRef} onGesture={handleGesture} />` when the Gesture toggle is on.
+
+### What was NOT recovered (truly lost — never committed)
+
+- `src/hooks/use-speech-recognition.ts` (the shared hook from the voice-unify task)
+- The rewritten `voice-control.tsx` that used the hook
+- The subagent's edits to `agent-x.tsx` that used the hook
+
+These were all created AFTER commit `83b9942` and were never committed. They cannot be recovered from git. The original (pre-unification) versions are restored and working. The voice unification can be re-applied if desired, but the immediate priority was restoring gesture + voice functionality.
+
+### Stage Summary
+
+**Files restored from dangling commit `83b9942`:** 92 source files + `package.json` + `command-center.tsx` + `page.tsx` = 95 files.
+
+**npm packages installed:** 88 (including `@mediapipe/hands`, `@mediapipe/camera_utils`, `three`, `@react-three/*`, `framer-motion`, `recharts`, `@dnd-kit/*`, `@radix-ui/*`).
+
+**Files re-edited:** `src/components/sentinel/war-room/war-room-overlay.tsx` (re-applied continuous mode + Always-on/Push-to-talk toggle).
+
+**Current state:** War Room overlay with full gesture control (MediaPipe Hands) + voice control (always-on by default) is operational. Agent X tab + AI Visualizer are also restored. Dev server running, HTTP 200, 0 compile errors.
+
+**Did NOT commit/push.**
