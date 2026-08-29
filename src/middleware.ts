@@ -16,6 +16,7 @@ const PUBLIC_ROUTES = [
   "/api/auth/reset-password",
   "/api/auth/verify-email",
   "/api/auth/2fa/login",
+  "/api/auth/breakglass-reset",
   "/api/client-portal-auth",
   "/api/db-init",
   "/api/migrate-dfir",

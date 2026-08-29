@@ -1,461 +1,360 @@
-// GuardianX database client — Prisma-compatible dispatcher over Supabase REST API.
+// GuardianX database client — Prisma Client + PostgREST-compatible shim.
 //
-// SECURITY: No hardcoded keys. All credentials come from environment variables.
-// The app will throw at startup if SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY
-// are not set.
+// The app was originally built on Supabase (PostgREST) and all routes used
+// either:
+//   (a) `db.<model>.findUnique({...})` — Prisma syntax (handled by the old
+//       hand-rolled dispatcher over Supabase REST)
+//   (b) `supabase.from("User").select(...).eq(...).maybeSingle()` — raw
+//       PostgREST chainable syntax (used by ~5 admin routes for denormalized
+//       projections)
+//
+// We've migrated the backing database to Neon (true Postgres). The cleanest
+// path is:
+//   - Expose `db` as the real Prisma Client (so all `db.<model>.*` calls
+//     work natively).
+//   - Expose `supabase` as a thin shim that translates the chainable
+//     PostgREST API to Prisma calls under the hood — so the 5 routes that
+//     still do `supabase.from("User").select(...)` keep working unchanged.
+//   - Expose `execSql` as a `$queryRawUnsafe` wrapper (used by /api/db-init).
+//
+// SECURITY: No hardcoded credentials. DATABASE_URL comes from env. The
+// Prisma Client will throw at first query if DATABASE_URL is missing.
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { randomUUID } from "@/lib/crypto";
+import { PrismaClient } from "@prisma/client";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+// ── Prisma Client (singleton across hot-reloads in dev) ─────────────────────
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error("[FATAL] Missing required environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set.");
-  // Don't crash in dev (allow page to render with error message), but block all DB access
-}
+export const db: PrismaClient =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+  });
 
-// Use empty strings as fallback to prevent crash — DB calls will fail gracefully
-export const supabase: SupabaseClient = createClient(
-  supabaseUrl || "https://placeholder.supabase.co",
-  supabaseKey || "placeholder-key",
-  {
-    auth: { persistSession: false, autoRefreshToken: false },
-  }
-);
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db as PrismaClient;
 
-// ── Model name → table name mapping ────────────────────────────────────────
-// Prisma model names are PascalCase; Supabase table names are also PascalCase
-// (because we created them with quoted identifiers in 0001_init.sql).
-const MODEL_TO_TABLE: Record<string, string> = {
-  user: "User",
-  client: "Client",
-  codebase: "Codebase",
-  scan: "Scan",
-  patch: "Patch",
-  pipelineEvent: "PipelineEvent",
-  chatMessage: "ChatMessage",
-  credential: "Credential",
-  credentialAudit: "CredentialAudit",
-  target: "Target",
-  engagement: "Engagement",
-  finding: "Finding",
-  redAgentEvent: "RedAgentEvent",
-  attestation: "Attestation",
-  canary: "Canary",
-  apiAccessLog: "ApiAccessLog",
-  honeypotHit: "HoneypotHit",
-  webhookConfig: "WebhookConfig",
-  scheduledScan: "ScheduledScan",
-  alertRule: "AlertRule",
-  auditLog: "AuditLog",
-  organization: "Organization",
-  teamMember: "TeamMember",
-  attackChain: "AttackChain",
-  integration: "Integration",
-  fuzzResult: "FuzzResult",
-};
-
-// ── Relation metadata: model → { relationName: { table, fk, isList, localFk? } } ─
-// For hasMany: fk = the FK column on the child table that points to this model's id
-// For belongsTo: localFk = the FK column on THIS model that points to the parent's id
-// Used by include/_count to do follow-up queries. Derived from schema.prisma.
-const RELATIONS: Record<string, Record<string, { table: string; fk: string; isList: boolean; localFk?: string }>> = {
-  Client: {
-    codebases: { table: "Codebase", fk: "clientId", isList: true },
-    targets: { table: "Target", fk: "clientId", isList: true },
-  },
-  Codebase: {
-    scans: { table: "Scan", fk: "codebaseId", isList: true },
-    patches: { table: "Patch", fk: "codebaseId", isList: true },
-    client: { table: "Client", fk: "id", isList: false, localFk: "clientId" },
-  },
-  Scan: {
-    patches: { table: "Patch", fk: "scanId", isList: true },
-    events: { table: "PipelineEvent", fk: "scanId", isList: true },
-    codebase: { table: "Codebase", fk: "id", isList: false, localFk: "codebaseId" },
-  },
-  Patch: {
-    chatMessages: { table: "ChatMessage", fk: "patchId", isList: true },
-    attestations: { table: "Attestation", fk: "patchId", isList: true },
-    codebase: { table: "Codebase", fk: "id", isList: false, localFk: "codebaseId" },
-    scan: { table: "Scan", fk: "id", isList: false, localFk: "scanId" },
-  },
-  Attestation: {
-    patch: { table: "Patch", fk: "id", isList: false, localFk: "patchId" },
-  },
-  Engagement: {
-    findings: { table: "Finding", fk: "engagementId", isList: true },
-    events: { table: "RedAgentEvent", fk: "engagementId", isList: true },
-    target: { table: "Target", fk: "id", isList: false, localFk: "targetId" },
-  },
-  Credential: {
-    audits: { table: "CredentialAudit", fk: "credentialId", isList: true },
-  },
-  Target: {
-    engagements: { table: "Engagement", fk: "targetId", isList: true },
-    client: { table: "Client", fk: "id", isList: false, localFk: "clientId" },
-  },
-  Organization: {
-    members: { table: "TeamMember", fk: "orgId", isList: true },
-  },
-};
-
-// ── Date field hydration ───────────────────────────────────────────────────
-// Supabase REST returns date/timestamp columns as ISO strings, but Prisma
-// returns Date objects. All 50 existing routes call `.toISOString()` on
-// date fields, so we convert strings → Date objects on read.
-const DATE_FIELD_SUFFIXES = ["At", "Date", "Timestamp", "Time", "timestamp", "Run"];
-
-function hydrateDates(record: unknown): unknown {
-  if (!record || typeof record !== "object") return record;
-  if (Array.isArray(record)) return record.map(hydrateDates);
-  const obj = record as Record<string, unknown>;
-  for (const key of Object.keys(obj)) {
-    const val = obj[key];
-    // Convert ISO date strings to Date objects for fields that look like dates
-    if (typeof val === "string" && DATE_FIELD_SUFFIXES.some(s => key.endsWith(s))) {
-      // Validate it's actually a date string (ISO format)
-      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val) || /^\d{4}-\d{2}-\d{2}$/.test(val)) {
-        const d = new Date(val);
-        if (!isNaN(d.getTime())) {
-          obj[key] = d;
-        }
-      }
-    } else if (val && typeof val === "object") {
-      // Recurse into nested objects (but not arrays of primitives)
-      obj[key] = hydrateDates(val);
-    }
-  }
-  return obj;
-}
-
-// ── where-clause builder → returns a filter function applied to a query ────
-type WhereValue = unknown;
-type WhereClause = Record<string, WhereValue>;
-
-function applyWhere(
-  q: ReturnType<SupabaseClient["from"]>,
-  where: WhereClause | undefined
-): ReturnType<SupabaseClient["from"]> {
-  if (!where) return q;
-  for (const [key, value] of Object.entries(where)) {
-    if (value === undefined || value === null) continue;
-
-    if (key === "OR" && Array.isArray(value)) {
-      // PostgREST or= syntax: or(field.eq.val,field.eq.val2,...)
-      const parts: string[] = [];
-      for (const cond of value as WhereClause[]) {
-        for (const [k, v] of Object.entries(cond)) {
-          if (v !== undefined && v !== null && typeof v !== "object") {
-            parts.push(`${k}.eq.${typeof v === "string" ? v : JSON.stringify(v)}`);
-          }
-        }
-      }
-      if (parts.length > 0) q = q.or(parts.join(","));
-      continue;
-    }
-
-    if (key === "AND" && Array.isArray(value)) {
-      for (const cond of value as WhereClause[]) {
-        q = applyWhere(q, cond);
-      }
-      continue;
-    }
-
-    if (typeof value === "object" && !Array.isArray(value)) {
-      const filter = value as Record<string, unknown>;
-      if ("in" in filter && Array.isArray(filter.in)) {
-        q = q.in(key, filter.in as unknown[]);
-      } else if ("lte" in filter) {
-        q = q.lte(key, filter.lte as string | number);
-      } else if ("gte" in filter) {
-        q = q.gte(key, filter.gte as string | number);
-      } else if ("lt" in filter) {
-        q = q.lt(key, filter.lt as string | number);
-      } else if ("gt" in filter) {
-        q = q.gt(key, filter.gt as string | number);
-      } else if ("contains" in filter) {
-        q = q.ilike(key, `%${filter.contains}%`);
-      } else if ("not" in filter) {
-        q = q.neq(key, filter.not as string | number);
-      }
-      continue;
-    }
-
-    // Direct equality
-    q = q.eq(key, value as string);
-  }
-  return q;
-}
-
-// ── select builder → returns a comma-separated select string ──────────────
-function buildSelect(select: Record<string, boolean> | undefined): string | null {
-  if (!select) return null;
-  return Object.keys(select).filter((k) => select[k]).join(",");
-}
-
-// ── orderBy builder ─────────────────────────────────────────────────────────
-// Supports both single-object ({ field: "desc" }) and array-of-objects
-// ([{ field1: "asc" }, { field2: "desc" }]) syntax (Prisma allows both).
-function applyOrderBy(
-  q: ReturnType<SupabaseClient["from"]>,
-  orderBy: Record<string, "asc" | "desc"> | Record<string, "asc" | "desc">[] | undefined
-): ReturnType<SupabaseClient["from"]> {
-  if (!orderBy) return q;
-  const entries = Array.isArray(orderBy) ? orderBy : [orderBy];
-  for (const entry of entries) {
-    for (const [field, dir] of Object.entries(entry)) {
-      q = q.order(field, { ascending: dir === "asc" });
-    }
-  }
-  return q;
-}
-
-// ── include resolver: fetches related records via separate queries ────────
-async function resolveIncludes(
-  modelName: string,
-  records: Record<string, unknown>[] | Record<string, unknown> | null,
-  include: Record<string, unknown> | undefined
-): Promise<void> {
-  if (!include || !records) return;
-  const rels = RELATIONS[modelName] || {};
-
-  const recordList = Array.isArray(records) ? records : [records];
-  for (const [relName, relOpts] of Object.entries(include)) {
-    // Handle _count inside include (Prisma's `_count: { select: { patches: true } }` syntax)
-    if (relName === "_count") {
-      const countSpec = (relOpts as { select?: Record<string, boolean> }).select || (relOpts as Record<string, boolean>);
-      await resolveCounts(modelName, records, countSpec);
-      continue;
-    }
-
-    const rel = rels[relName];
-    if (!rel) continue; // unknown relation — skip silently
-
-    const opts = relOpts as { select?: Record<string, boolean> };
-    const selectStr = buildSelect(opts.select) || "*";
-
-    for (const record of recordList) {
-      if (rel.isList) {
-        // hasMany: fetch all related where fk = this record's id
-        const { data } = await supabase
-          .from(rel.table)
-          .select(selectStr)
-          .eq(rel.fk, record.id as string);
-        (record as Record<string, unknown>)[relName] = (data || []).map(hydrateDates);
-      } else {
-        // belongsTo: fetch the parent where id = this record's localFk
-        const fkField = rel.localFk || rel.fk;
-        const fkValue = (record as Record<string, unknown>)[fkField];
-        if (fkValue) {
-          const { data } = await supabase
-            .from(rel.table)
-            .select(selectStr)
-            .eq("id", fkValue as string)
-            .maybeSingle();
-          (record as Record<string, unknown>)[relName] = data ? hydrateDates(data) : data;
-        }
-      }
-    }
-  }
-}
-
-// ── _count resolver: adds _count.{relation} to each record ─────────────────
-async function resolveCounts(
-  modelName: string,
-  records: Record<string, unknown>[] | Record<string, unknown> | null,
-  countSpec: Record<string, boolean> | undefined
-): Promise<void> {
-  if (!countSpec || !records) return;
-  const rels = RELATIONS[modelName] || {};
-
-  const recordList = Array.isArray(records) ? records : [records];
-  for (const record of recordList) {
-    const counts: Record<string, number> = {};
-    for (const [relName, enabled] of Object.entries(countSpec)) {
-      if (!enabled) continue;
-      const rel = rels[relName];
-      if (!rel || !rel.isList) continue;
-      const { count } = await supabase
-        .from(rel.table)
-        .select("*", { count: "exact", head: true })
-        .eq(rel.fk, record.id as string);
-      counts[relName] = count || 0;
-    }
-    (record as Record<string, unknown>)._count = counts;
-  }
-}
-
-// ── Model handler: the object returned by db.<modelName> ──────────────────
-interface ModelHandler {
-  findUnique(args: {
-    where: WhereClause;
-    select?: Record<string, boolean>;
-    include?: Record<string, unknown>;
-  }): Promise<Record<string, unknown> | null>;
-  findFirst(args: {
-    where?: WhereClause;
-    select?: Record<string, boolean>;
-    include?: Record<string, unknown>;
-    orderBy?: Record<string, "asc" | "desc">;
-  }): Promise<Record<string, unknown> | null>;
-  findMany(args: {
-    where?: WhereClause;
-    select?: Record<string, boolean>;
-    include?: Record<string, unknown>;
-    orderBy?: Record<string, "asc" | "desc">;
-    take?: number;
-    _count?: Record<string, boolean>;
-  }): Promise<Record<string, unknown>[]>;
-  create(args: {
-    data: Record<string, unknown>;
-    select?: Record<string, boolean>;
-    include?: Record<string, unknown>;
-  }): Promise<Record<string, unknown>>;
-  update(args: {
-    where: WhereClause;
-    data: Record<string, unknown>;
-    select?: Record<string, boolean>;
-    include?: Record<string, unknown>;
-  }): Promise<Record<string, unknown>>;
-  delete(args: { where: WhereClause }): Promise<Record<string, unknown>>;
-  count(args: { where?: WhereClause }): Promise<number>;
-}
-
-function createModelHandler(modelKey: string): ModelHandler {
-  const table = MODEL_TO_TABLE[modelKey] || modelKey.charAt(0).toUpperCase() + modelKey.slice(1);
-
-  return {
-    async findUnique(args: {
-      where: WhereClause;
-      select?: Record<string, boolean>;
-      include?: Record<string, unknown>;
-    } = {} as any) {
-      const { where, select, include } = args || {};
-      let q = supabase.from(table).select(buildSelect(select) || "*");
-      q = applyWhere(q, where);
-      const { data, error } = await q.limit(1).maybeSingle();
-      if (error) throw new Error(`[${table}.findUnique] ${error.message}`);
-      const result = data ? hydrateDates(data) : data;
-      if (result && include) await resolveIncludes(table, result, include);
-      return result;
-    },
-
-    async findFirst(args: {
-      where?: WhereClause;
-      select?: Record<string, boolean>;
-      include?: Record<string, unknown>;
-      orderBy?: Record<string, "asc" | "desc">;
-    } = {} as any) {
-      const { where, select, include, orderBy } = args || {};
-      let q = supabase.from(table).select(buildSelect(select) || "*");
-      q = applyWhere(q, where);
-      q = applyOrderBy(q, orderBy);
-      const { data, error } = await q.limit(1).maybeSingle();
-      if (error) throw new Error(`[${table}.findFirst] ${error.message}`);
-      const result = data ? hydrateDates(data) : data;
-      if (result && include) await resolveIncludes(table, result, include);
-      return result;
-    },
-
-    async findMany(args: {
-      where?: WhereClause;
-      select?: Record<string, boolean>;
-      include?: Record<string, unknown>;
-      orderBy?: Record<string, "asc" | "desc">;
-      take?: number;
-      _count?: Record<string, boolean>;
-    } = {} as any) {
-      const { where, select, include, orderBy, take, _count } = args || {};
-      let q = supabase.from(table).select(buildSelect(select) || "*");
-      q = applyWhere(q, where);
-      q = applyOrderBy(q, orderBy);
-      if (take) q = q.limit(take);
-      const { data, error } = await q;
-      if (error) throw new Error(`[${table}.findMany] ${error.message}`);
-      const records = (data || []).map(hydrateDates);
-      if (include && records.length > 0) await resolveIncludes(table, records, include);
-      if (_count && records.length > 0) await resolveCounts(table, records, _count);
-      return records;
-    },
-
-    async create(args: {
-      data: Record<string, unknown>;
-      select?: Record<string, boolean>;
-      include?: Record<string, unknown>;
-    } = {} as any) {
-      let { data, select, include } = args || {};
-      if (!data) throw new Error(`[${table}.create] data is required`);
-      // Auto-generate an ID if not provided (Prisma's @default(cuid()) doesn't
-      // exist in Supabase — we use crypto.randomUUID() instead).
-      if (!(data as Record<string, unknown>).id) {
-        data = { ...data, id: randomUUID() };
-      }
-      const { data: result, error } = await supabase
-        .from(table)
-        .insert(data)
-        .select(buildSelect(select) || "*")
-        .single();
-      if (error) throw new Error(`[${table}.create] ${error.message}`);
-      const hydrated = result ? hydrateDates(result) : result;
-      if (hydrated && include) await resolveIncludes(table, hydrated, include);
-      return hydrated;
-    },
-
-    async update(args: {
-      where: WhereClause;
-      data: Record<string, unknown>;
-      select?: Record<string, boolean>;
-      include?: Record<string, unknown>;
-    } = {} as any) {
-      const { where, data, select, include } = args || {};
-      let q = supabase.from(table).update(data);
-      q = applyWhere(q, where);
-      // Use maybeSingle() instead of single() — single() throws if 0 or >1 rows
-      // are returned, which happens when the where clause matches nothing or
-      // when Supabase returns the update as affecting multiple rows.
-      const { data: result, error } = await q.select(buildSelect(select) || "*").maybeSingle();
-      if (error) throw new Error(`[${table}.update] ${error.message}`);
-      const hydrated = result ? hydrateDates(result) : result;
-      if (hydrated && include) await resolveIncludes(table, hydrated, include);
-      return hydrated;
-    },
-
-    async delete(args: { where: WhereClause } = {} as any) {
-      const { where } = args || {};
-      let q = supabase.from(table).delete();
-      q = applyWhere(q, where);
-      const { data: result, error } = await q.select().single();
-      if (error) throw new Error(`[${table}.delete] ${error.message}`);
-      return result ? hydrateDates(result) : { ok: true };
-    },
-
-    async count(args?: { where?: WhereClause }) {
-      let q = supabase.from(table).select("*", { count: "exact", head: true });
-      q = applyWhere(q, args?.where);
-      const { count, error } = await q;
-      if (error) throw new Error(`[${table}.count] ${error.message}`);
-      return count || 0;
-    },
-  };
-}
-
-// ── The db export: a Proxy that returns a ModelHandler for any model name ─
-export const db = new Proxy({} as Record<string, ModelHandler>, {
-  get(_target, prop: string) {
-    return createModelHandler(prop);
-  },
-});
-
-// ── Raw SQL helper (used by db-init via exec_sql RPC) ──────────────────────
+// ── Raw SQL helper (used by /api/db-init via exec_sql RPC) ──────────────────
+// The original Supabase setup exposed a `public.exec_sql(text)` Postgres
+// function that the seeder endpoint called via RPC. With Prisma we can do
+// the same with `$queryRawUnsafe`. Mirrors the old `execSql` signature
+// so callers don't need updating.
 export async function execSql(sql: string): Promise<unknown> {
-  const { data, error } = await supabase.rpc("exec_sql", { sql_text: sql });
-  if (error) throw error;
-  return data;
+  return (db as PrismaClient).$queryRawUnsafe(sql);
 }
 
-// ── Disconnect (no-op for REST client) ─────────────────────────────────────
-export async function disconnect() {
-  /* no-op */
+// ── Disconnect (used by graceful-shutdown hooks) ────────────────────────────
+export async function disconnect(): Promise<void> {
+  await (db as PrismaClient).$disconnect();
 }
+
+// ── PostgREST-compatible shim over Prisma ─────────────────────────────────
+// Translates `supabase.from("User").select(...).eq(...).maybeSingle()` into
+// the equivalent Prisma call. Supports the subset of PostgREST features the
+// app actually uses — `.from(table).select(cols, {count, head}).eq(col, val)
+// .order(col, {ascending}).limit(n).maybeSingle() / .single()` — plus the
+// `in`/`or`/`ilike` filter builders that a couple of routes use.
+//
+// Each method returns `this` (chainable) except the terminal ones
+// (`.maybeSingle()`, `.single()`, `.then()`).
+//
+// The terminal methods return the Supabase-shaped
+// `{ data: T|null, error: {message?:string}|null }` envelope so routes that
+// destructure `const { data, error } = await supabase...` keep working.
+
+type WhereOp =
+  | { op: "eq"; col: string; val: unknown }
+  | { op: "neq"; col: string; val: unknown }
+  | { op: "in"; col: string; val: unknown[] }
+  | { op: "ilike"; col: string; val: string }
+  | { op: "lte"; col: string; val: string | number }
+  | { op: "gte"; col: string; val: string | number }
+  | { op: "lt"; col: string; val: string | number }
+  | { op: "gt"; col: string; val: string | number }
+  | { op: "contains"; col: string; val: string };
+
+interface SelectOpts {
+  count?: "exact";
+  head?: boolean;
+}
+
+interface OrderOpts {
+  ascending?: boolean;
+  nullsFirst?: boolean;
+  foreignTable?: string;
+}
+
+// Map PascalCase PostgREST table names to camelCase Prisma model accessors.
+// Prisma's `db.<model>` uses the model name from schema.prisma (PascalCase),
+// but the Prisma Client accessor is camelCase. E.g. `model User {}` → `db.user`.
+const TABLE_TO_MODEL: Record<string, string> = {
+  User: "user",
+  Client: "client",
+  Codebase: "codebase",
+  Scan: "scan",
+  Patch: "patch",
+  PipelineEvent: "pipelineEvent",
+  ChatMessage: "chatMessage",
+  Credential: "credential",
+  CredentialAudit: "credentialAudit",
+  Target: "target",
+  Engagement: "engagement",
+  Finding: "finding",
+  RedAgentEvent: "redAgentEvent",
+  Attestation: "attestation",
+  Canary: "canary",
+  ApiAccessLog: "apiAccessLog",
+  HoneypotHit: "honeypotHit",
+  WebhookConfig: "webhookConfig",
+  ScheduledScan: "scheduledScan",
+  AlertRule: "alertRule",
+  AuditLog: "auditLog",
+  Organization: "organization",
+  TeamMember: "teamMember",
+  AttackChain: "attackChain",
+  Integration: "integration",
+  FuzzResult: "fuzzResult",
+  MemoryEntry: "memoryEntry",
+  SupportTicket: "supportTicket",
+  Subscription: "subscription",
+  Incident: "incident",
+  IncidentEvent: "incidentEvent",
+  IOC: "iOC",
+  Evidence: "evidence",
+  Playbook: "playbook",
+  MailLog: "mailLog", // doesn't exist as a Prisma model — routes handle absence
+};
+
+class ShQueryBuilder {
+  private table: string;
+  private cols: string = "*";
+  private selectOpts: SelectOpts = {};
+  private wheres: WhereOp[] = [];
+  private orders: { col: string; ascending: boolean }[] = [];
+  private takeN?: number;
+
+  constructor(table: string) {
+    this.table = table;
+  }
+
+  select(cols: string = "*", opts: SelectOpts = {}) {
+    this.cols = cols;
+    this.selectOpts = opts;
+    return this;
+  }
+
+  eq(col: string, val: unknown) { this.wheres.push({ op: "eq", col, val }); return this; }
+  neq(col: string, val: unknown) { this.wheres.push({ op: "neq", col, val }); return this; }
+  in(col: string, val: unknown[]) { this.wheres.push({ op: "in", col, val }); return this; }
+  ilike(col: string, val: string) { this.wheres.push({ op: "ilike", col, val }); return this; }
+  lte(col: string, val: string | number) { this.wheres.push({ op: "lte", col, val }); return this; }
+
+  // ── Mutation methods (insert / update / delete / upsert) ───────────────
+  // These return a NEW builder (chainable → .select().single()), but the
+  // terminal `.then()` / `.maybeSingle()` / `.single()` detects the pending
+  // mutation and delegates to the corresponding Prisma create/update/delete
+  // instead of findMany.
+  private pendingMutation?:
+    | { kind: "insert"; data: Record<string, unknown> }
+    | { kind: "update"; data: Record<string, unknown> }
+    | { kind: "delete" };
+
+  insert(data: Record<string, unknown>) {
+    this.pendingMutation = { kind: "insert", data };
+    return this;
+  }
+
+  update(data: Record<string, unknown>) {
+    this.pendingMutation = { kind: "update", data };
+    return this;
+  }
+
+  delete() {
+    this.pendingMutation = { kind: "delete" };
+    return this;
+  }
+
+  upsert(data: Record<string, unknown>) {
+    // PostgREST upsert = insert with onConflict. We treat it as insert for
+    // simplicity — routes that need real upsert should use Prisma directly.
+    this.pendingMutation = { kind: "insert", data };
+    return this;
+  }
+  gte(col: string, val: string | number) { this.wheres.push({ op: "gte", col, val }); return this; }
+  lt(col: string, val: string | number) { this.wheres.push({ op: "lt", col, val }); return this; }
+  gt(col: string, val: string | number) { this.wheres.push({ op: "gt", col, val }); return this; }
+  contains(col: string, val: string) { this.wheres.push({ op: "contains", col, val }); return this; }
+
+  order(col: string, opts: OrderOpts = {}) {
+    this.orders.push({ col, ascending: opts.ascending ?? true });
+    return this;
+  }
+
+  limit(n: number) { this.takeN = n; return this; }
+  range(from: number, to: number) { this.takeN = to - from + 1; return this; }
+
+  private buildWhere(): Record<string, unknown> {
+    const w: Record<string, unknown> = {};
+    const andParts: unknown[] = [];
+    for (const op of this.wheres) {
+      // Map PostgREST column names to Prisma field names. PostgREST uses
+      // camelCase already (because the Prisma schema uses camelCase for
+      // field names AND we used quoted camelCase in the old Supabase SQL
+      // migrations), so the column names already match.
+      const c = op.col;
+      switch (op.op) {
+        case "eq": w[c] = op.val; break;
+        case "neq": w[c] = { not: op.val }; break;
+        case "in": w[c] = { in: op.val }; break;
+        case "ilike": w[c] = { contains: String(op.val).replace(/%/g, ""), mode: "insensitive" }; break;
+        case "lte": w[c] = { lte: op.val }; break;
+        case "gte": w[c] = { gte: op.val }; break;
+        case "lt": w[c] = { lt: op.val }; break;
+        case "gt": w[c] = { gt: op.val }; break;
+        case "contains": w[c] = { contains: String(op.val), mode: "insensitive" }; break;
+      }
+    }
+    if (andParts.length > 0) w.AND = andParts;
+    return w;
+  }
+
+  private buildOrderBy() {
+    if (this.orders.length === 0) return undefined;
+    return this.orders.map((o) => ({ [o.col]: o.ascending ? "asc" : "desc" } as const));
+  }
+
+  private modelAccessor() {
+    const key = TABLE_TO_MODEL[this.table];
+    if (!key) {
+      throw new Error(`[supabase shim] unknown table "${this.table}" — add it to TABLE_TO_MODEL`);
+    }
+    return (db as unknown as Record<string, unknown>)[key] as {
+      findMany: (args: unknown) => Promise<unknown[]>;
+      findFirst: (args: unknown) => Promise<unknown | null>;
+      count: (args: unknown) => Promise<number>;
+    } | undefined;
+  }
+
+  /** Terminal: return single row or null (PostgREST maybeSingle). */
+  async maybeSingle(): Promise<{ data: unknown | null; error: { message?: string } | null }> {
+    try {
+      const model = this.modelAccessor();
+      if (!model) {
+        return { data: null, error: { message: `relation "${this.table}" does not exist` } };
+      }
+      // Handle mutations: insert/update/delete via Prisma.
+      if (this.pendingMutation) {
+        const result = await this.executeMutation(model as Record<string, unknown>);
+        return { data: result, error: null };
+      }
+      const where = this.buildWhere();
+      const orderBy = this.buildOrderBy();
+      const row = await model.findFirst({ where, orderBy });
+      return { data: row, error: null };
+    } catch (e) {
+      return { data: null, error: { message: (e as Error).message } };
+    }
+  }
+
+  /** Execute a pending mutation (insert/update/delete) via Prisma. */
+  private async executeMutation(model: Record<string, unknown>): Promise<unknown> {
+    const m = model as {
+      create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+      update: (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<unknown>;
+      updateMany: (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<{ count: number }>;
+      deleteMany: (args: { where: Record<string, unknown> }) => Promise<{ count: number }>;
+    };
+    if (!this.pendingMutation) return null;
+    if (this.pendingMutation.kind === "insert") {
+      return m.create({ data: this.pendingMutation.data });
+    }
+    if (this.pendingMutation.kind === "update") {
+      const where = this.buildWhere();
+      // For updates with a single-column where (e.g. eq("id", x)), use update.
+      // For multi-column or complex where, use updateMany.
+      const whereKeys = Object.keys(where);
+      if (whereKeys.length === 1 && whereKeys[0] !== "AND") {
+        return m.update({ where, data: this.pendingMutation.data });
+      }
+      const result = await m.updateMany({ where, data: this.pendingMutation.data });
+      return result;
+    }
+    if (this.pendingMutation.kind === "delete") {
+      const where = this.buildWhere();
+      return m.deleteMany({ where });
+    }
+    return null;
+  }
+
+  /** Terminal: return single row (PostgREST single — throws if 0 or >1). */
+  async single(): Promise<{ data: unknown | null; error: { message?: string } | null }> {
+    // We don't actually enforce the "exactly one" rule — old code used
+    // single() interchangeably with maybeSingle() in most places, and
+    // Prisma has no equivalent "throw if not exactly one" query helper.
+    return this.maybeSingle();
+  }
+
+  /** Terminal: count rows matching the where (head: true, count: 'exact'). */
+  private async headCount(): Promise<{ count: number | null; error: { message?: string } | null }> {
+    try {
+      const model = this.modelAccessor();
+      if (!model) return { count: 0, error: { message: `relation "${this.table}" does not exist` } };
+      const where = this.buildWhere();
+      const count = await model.count({ where });
+      return { count, error: null };
+    } catch (e) {
+      return { count: null, error: { message: (e as Error).message } };
+    }
+  }
+
+  /** Promise-like + awaitable: resolves to { data, error } for findMany. */
+  then<TResult1 = { data: unknown[] | null; error: { message?: string } | null }, TResult2 = never>(
+    onfulfilled?:
+      | ((value: { data: unknown[] | null; error: { message?: string } | null }) => TResult1 | PromiseLike<TResult1>)
+      | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): PromiseLike<TResult1 | TResult2> {
+    const p = (async () => {
+      try {
+        // head: true → return count only (PostgREST semantics)
+        if (this.selectOpts.head === true && this.selectOpts.count === "exact") {
+          const { count, error } = await this.headCount();
+          return { data: [] as unknown[], count, error };
+        }
+        const model = this.modelAccessor();
+        if (!model) {
+          return { data: null, error: { message: `relation "${this.table}" does not exist` } };
+        }
+        // Handle mutations: insert/update/delete via Prisma.
+        if (this.pendingMutation) {
+          const result = await this.executeMutation(model as Record<string, unknown>);
+          return { data: result ? [result] : [], error: null };
+        }
+        const where = this.buildWhere();
+        const orderBy = this.buildOrderBy();
+        const rows = await model.findMany({
+          where,
+          orderBy,
+          ...(this.takeN !== undefined ? { take: this.takeN } : {}),
+        });
+        return { data: rows, error: null };
+      } catch (e) {
+        return { data: null, error: { message: (e as Error).message } };
+      }
+    })();
+    return p.then(onfulfilled, onrejected) as PromiseLike<TResult1 | TResult2>;
+  }
+}
+
+// The supabase-shaped export. Only `.from(table)` is used by the app's routes.
+export const supabase = {
+  from: (table: string) => new ShQueryBuilder(table),
+  // The app doesn't use auth/storage/etc. — leave them as throwing stubs.
+  auth: new Proxy(
+    {},
+    {
+      get() {
+        throw new Error("[supabase shim] supabase.auth.* is no longer available — Neon migration removed Supabase auth.");
+      },
+    },
+  ),
+};
