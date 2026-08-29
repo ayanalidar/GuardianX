@@ -4460,3 +4460,75 @@ The git-wipe recovery (earlier today) restored an OLD version of `src/lib/db.ts`
 ### Files changed
 
 - `src/components/sentinel/landing/features-data.ts` — added 27 new Lucide icon imports + 28 new feature entries to the `FEATURES` array. No other file touched.
+
+---
+
+## 2026-08-29 — scanner-fix: make the "Scan Your Website Free" widget use real API
+
+**Task ID:** `scanner-fix`
+**Agent:** main (Z.ai Code)
+**Task:** User scanned guardianx.cloud with their own "Scan Your Website Free" widget and got 5 false findings (SQLi, XSS, admin panel, TLS 1.0, server header). Asked why it's showing false reports.
+
+### Root cause
+
+The `ScanWidget` component (`src/components/sentinel/landing/scan-widget.tsx`) was a **fully simulated/fake scanner**. The code at line 257-260 literally did:
+```js
+// Pick 3-5 findings at random (deterministic-ish: shuffle + slice).
+const shuffled = [...SAMPLE_FINDINGS].sort(() => Math.random() - 0.5);
+const count = 3 + Math.floor(Math.random() * 3);
+setFindings(shuffled.slice(0, count));
+```
+
+It had a hardcoded array of 8 fake findings (SQL Injection, Reflected XSS, Default admin panel, TLS 1.0, etc.) and randomly picked 3-5 to display — regardless of what URL was entered. The 30-second "scanning" animation was purely cosmetic. Meanwhile, a REAL scanner existed at `/api/public-scan/scan` (591 lines, does actual HTTP recon) but the widget **never called it**.
+
+### Work Log
+
+1. **Added `/api/public-scan/scan`, `/api/public-scan/recent`, `/api/public-scan/send-report` to `PUBLIC_ROUTES`** in `src/middleware.ts` — the middleware was blocking the scan API with 401 "Authentication required".
+
+2. **Rewrote `ScanWidget.startScan()`** to call the REAL `/api/public-scan/scan` API instead of picking random fake findings:
+   - Sends `POST /api/public-scan/scan` with `{url: normalized}`
+   - Maps the real API response (which has `id, title, severity, category, endpoint, method, description, remediation`) to the widget's `SampleFinding` shape
+   - Adds an `owaspForCategory()` helper to map the API's category field to OWASP Top 10:2021 references for display
+   - Shows an error (NOT fake findings) if the API fails
+
+3. **Fixed the progress animation** — the old animation auto-advanced to "findings" after 30 seconds regardless of the API. Changed it to animate to 90% and wait for the real API to complete, then the `startScan()` async function transitions to "findings" when the API returns.
+
+4. **Added the `WebsiteScan` Prisma model** to both `prisma/schema.prisma` and `prisma/schema.production.prisma` — the scan API does `db.websiteScan.create()` but the model didn't exist in the schema. This caused `TypeError: Cannot read properties of undefined (reading 'create')` on Vercel.
+
+5. **Changed "demo mode" / "target saved" label** to "live scan" since the widget now does a real scan.
+
+### Verification (all on production)
+
+- **Scanning example.com**: Score 80, 7 real findings:
+  - MEDIUM: Missing HSTS
+  - MEDIUM: Missing CSP
+  - LOW: Missing X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+  - LOW: Server header discloses software/version
+
+- **Scanning guardianx.cloud**: Score 85, 8 real findings:
+  - MEDIUM: Missing Content-Security-Policy
+  - LOW: Missing X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+  - LOW: Server header discloses software/version (Vercel)
+  - INFO: security.txt present, robots.txt accessible
+
+- **Browser test**: Scrolled to scan widget → entered "example.com" → clicked "Scan Now" → progress animation ran → "Found 7 potential vulnerabilities on https://example.com/" with REAL findings displayed. 0 console errors.
+
+### What changed
+
+**Files modified:**
+- `src/middleware.ts` — added `/api/public-scan/*` to PUBLIC_ROUTES
+- `src/components/sentinel/landing/scan-widget.tsx` — rewrote `startScan()` to call real API, added `owaspForCategory()`, fixed progress animation
+- `prisma/schema.prisma` — added `WebsiteScan` model
+- `prisma/schema.production.prisma` — added `WebsiteScan` model
+
+### What the scanner now actually checks (real, not fake)
+- Fetches the target URL (10s timeout)
+- Checks 6 security headers: HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- Checks Server + X-Powered-By header disclosure
+- Probes 5 well-known paths: /robots.txt, /security.txt, /.well-known/security.txt, /.env, /.git/HEAD
+- For /.env and /.git/HEAD: fetches the content and verifies it actually looks like the file (not a SPA 404 returning 200 + index.html)
+- TLS certificate issues (if the HTTPS handshake fails)
+- LLM-generated executive summary (falls back to templated summary on failure)
+- Computes a 0-100 security score
+
+**Deployed to:** `guardian-x-cloud/guardianx` on Vercel → `https://www.guardianx.cloud`

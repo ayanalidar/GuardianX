@@ -156,6 +156,23 @@ const SEV_META: Record<
 const RATE_LIMIT_MS = 60 * 60 * 1000; // 1 scan per hour
 const SCAN_TOTAL_MS = 30_000;
 
+// Map the API's category field to an OWASP Top 10:2021 reference for display.
+function owaspForCategory(category: string): string {
+  switch (category) {
+    case "headers":
+    case "tls":
+      return "A05:2021"; // Security Misconfiguration
+    case "disclosure":
+      return "A05:2021";
+    case "exposure":
+      return "A01:2021"; // Broken Access Control
+    case "recon":
+      return "A05:2021";
+    default:
+      return "A05:2021";
+  }
+}
+
 function normalizeUrl(raw: string): string | null {
   let u = raw.trim();
   if (!u) return null;
@@ -228,24 +245,6 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
     }
     setUrl(normalized);
 
-    // Best-effort: record this URL as a Target so the sales team can see what
-    // visitors are probing. Failure is fine — we proceed with the mock scan.
-    try {
-      const res = await fetch("/api/targets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: normalized,
-          baseUrl: normalized,
-          authorized: false,
-          notes: "Submitted via homepage ScanWidget (free scan lead).",
-        }),
-      });
-      setTargetCreated(res.ok);
-    } catch {
-      setTargetCreated(false);
-    }
-
     // Persist rate-limit stamp immediately.
     try {
       localStorage.setItem("gx_scan_last_run", String(Date.now()));
@@ -254,33 +253,80 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
       // ignore
     }
 
-    // Pick 3-5 findings at random (deterministic-ish: shuffle + slice).
-    const shuffled = [...SAMPLE_FINDINGS].sort(() => Math.random() - 0.5);
-    const count = 3 + Math.floor(Math.random() * 3); // 3..5
-    setFindings(shuffled.slice(0, count));
-
-    // Begin the simulated scan.
+    // Clear previous findings + begin the scan animation.
+    setFindings([]);
     setPhase("scanning");
     setScanPhaseIdx(0);
     setProgress(0);
+
+    // Call the REAL scanner API (/api/public-scan/scan) — which does actual
+    // HTTP recon: fetches the URL, checks security headers (HSTS, CSP,
+    // X-Frame-Options, etc.), probes well-known paths (/.env, /.git/HEAD,
+    // /robots.txt), and checks Server/X-Powered-By headers. No more fake
+    // random findings — every finding shown is a real issue on the target.
+    try {
+      const res = await fetch("/api/public-scan/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: normalized }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Scan failed. Please try again.");
+      }
+      // Map the real API findings to the widget's SampleFinding shape.
+      const realFindings: SampleFinding[] = (data.findings || []).map(
+        (f: {
+          id: string;
+          title: string;
+          severity: string;
+          category: string;
+          endpoint: string;
+          method: string;
+          description: string;
+          remediation: string;
+        }) => ({
+          id: f.id,
+          title: f.title,
+          severity: f.severity as SampleFinding["severity"],
+          owasp: owaspForCategory(f.category),
+          endpoint: f.endpoint,
+          method: f.method,
+          description: f.description,
+          remediation: f.remediation,
+        }),
+      );
+      setFindings(realFindings);
+      // If the real scan finished before the animation, jump to 100%.
+      setProgress(100);
+      // Brief delay so the progress bar visibly completes before showing findings.
+      setTimeout(() => setPhase("findings"), 400);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Scan failed. Please try again.");
+      setPhase("idle");
+    }
   };
 
-  // Drive the simulated scan progress.
+  // Drive the scan progress animation.
+  // The progress bar animates from 0→90% over ~15 seconds to give the user
+  // visual feedback while the real API runs. It does NOT auto-advance to
+  // 100% or transition to "findings" — the startScan() async function does
+  // that when the real API returns. This decouples the animation from the
+  // actual scan latency (which varies by target).
   useEffect(() => {
     if (phase !== "scanning") return;
-    const phaseDuration = SCAN_TOTAL_MS / SCAN_PHASES.length;
+    const phaseDuration = (SCAN_TOTAL_MS / 2) / SCAN_PHASES.length; // animate to 90% in half the time
     const startedAt = Date.now();
     let raf = 0;
     const tick = () => {
       const elapsed = Date.now() - startedAt;
-      const pct = Math.min(100, (elapsed / SCAN_TOTAL_MS) * 100);
+      // Ease toward 90% — never reach 100% here (that's set by startScan on completion)
+      const pct = Math.min(90, (elapsed / ((SCAN_TOTAL_MS / 2))) * 90);
       setProgress(pct);
       const idx = Math.min(SCAN_PHASES.length - 1, Math.floor(elapsed / phaseDuration));
       setScanPhaseIdx(idx);
-      if (elapsed >= SCAN_TOTAL_MS) {
-        setPhase("findings");
-        return;
-      }
+      // Do NOT auto-advance to "findings" — wait for the real API to complete.
+      // The animation just loops at 90% until startScan() transitions the phase.
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -438,15 +484,9 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                   <span className="text-sm font-semibold text-zinc-100">
                     Scanning <span className="text-emerald-300">{url}</span>
                   </span>
-                  {targetCreated ? (
-                    <span className="ml-auto rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[9px] text-emerald-300">
-                      target saved
-                    </span>
-                  ) : (
-                    <span className="ml-auto rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-400">
-                      demo mode
-                    </span>
-                  )}
+                  <span className="ml-auto rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[9px] text-emerald-300">
+                    live scan
+                  </span>
                 </div>
 
                 {/* Progress bar */}

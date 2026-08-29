@@ -458,3 +458,25 @@ model Contributor {
   joinedAt             DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }
+
+model WebsiteScan {
+  id             String   @id @default(cuid())
+  url            String
+  email          String?
+  status         String   @default("running")
+  score          Int?
+  findingsCount  Int      @default(0)
+  criticalCount  Int      @default(0)
+  highCount      Int      @default(0)
+  mediumCount    Int      @default(0)
+  lowCount       Int      @default(0)
+  findings       String   @default("[]")
+  ipAddress      String?
+  userAgent      String?
+  duration       Int?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+}

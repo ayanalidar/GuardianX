@@ -30,6 +30,9 @@ const PUBLIC_ROUTES = [
   "/api/billing/webhook",
   "/api/demo/access",
   "/api/site-content",
+  "/api/public-scan/scan",
+  "/api/public-scan/recent",
+  "/api/public-scan/send-report",
 ];
 
 // In-memory rate limit store (per Edge function instance)
