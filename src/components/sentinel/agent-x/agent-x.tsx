@@ -11,26 +11,20 @@
  * the main panel whenever `tab === "agent-x"` and controls visibility
  * via the `open` prop. When `open={false}` the component renders nothing.
  *
- * Voice architecture (rebuilt — no longer uses <VoiceControl>):
+ * Voice architecture (uses the shared `useSpeechRecognition` hook):
  *
- *   - We own a `SpeechRecognition` instance directly so we can hook the
- *     `onsoundstart` / `onsoundend` events for voice-activity detection.
- *   - `speakingRef` gates the recognition `onend` auto-restart: when
- *     Agent X is speaking, a browser-side silence timeout that fires
- *     `onend` is suppressed (no auto-restart). The mic is *still live*
- *     to the extent the browser allows it — so if the user starts
- *     speaking mid-TTS, `onsoundstart` fires and we cancel TTS
- *     immediately (interruptible).
- *   - When TTS finishes (`utterance.onend`), we flip `speakingRef` off
- *     and restart recognition if it had stopped.
- *
- * Streaming TTS:
- *
- *   - Replies are split into sentences. The first sentence is spoken
- *     immediately as a "fast first response"; subsequent sentences are
- *     queued (`onend` of utterance N triggers start of N+1). Display
- *     is also progressive: the message bubble starts with the first
- *     sentence and grows as subsequent chunks arrive.
+ *   - The hook owns the `SpeechRecognition` instance, auto-restart-on-
+ *     silence, barge-in (speaking interrupts TTS), the Web Audio
+ *     AnalyserNode waveform, and streaming sentence-by-sentence TTS.
+ *   - We wire `onFinalTranscript` → `sendMessage(text)` so a spoken
+ *     phrase is dispatched exactly like a typed one.
+ *   - The greeting flow sets `pendingPostGreetingListenRef` before
+ *     calling `voice.speak(greeting)`; a separate effect watches the
+ *     `voice.speaking` true→false transition and calls `voice.start()`
+ *     once TTS finishes (so the mic opens only after the greeting).
+ *   - Display is still progressive: the message bubble starts with the
+ *     first sentence and grows as subsequent chunks arrive (driven by
+ *     a length-based timer, not by TTS playback events).
  *
  * Layout (when open):
  *
@@ -91,6 +85,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useSpeechRecognition,
+  drawWaveform,
+} from "@/hooks/use-speech-recognition";
 
 // ─── Public types (unchanged — back-compat with page.tsx) ───────────────────
 
@@ -184,96 +182,6 @@ const STORAGE_KEY = "agent_x_conversation";
 const MAX_HISTORY = 20;
 const PROACTIVE_POLL_MS = 5 * 60 * 1000; // 5 minutes (was 60s)
 
-// ─── Web Speech API ambient types ───────────────────────────────────────────
-// SpeechRecognition isn't in the TS DOM lib. Declare just enough to type
-// the surface we use. Loose by design — the API is non-standard.
-
-interface SpeechRecognitionAlternativeLike {
-  readonly transcript: string;
-  readonly confidence: number;
-}
-interface SpeechRecognitionResultLike {
-  readonly length: number;
-  item(index: number): SpeechRecognitionAlternativeLike;
-  readonly isFinal: boolean;
-  [index: number]: SpeechRecognitionAlternativeLike;
-}
-interface SpeechRecognitionResultListLike {
-  readonly length: number;
-  item(index: number): SpeechRecognitionResultLike;
-  [index: number]: SpeechRecognitionResultLike;
-}
-interface SpeechRecognitionEventLike extends Event {
-  readonly resultIndex: number;
-  readonly results: SpeechRecognitionResultListLike;
-}
-interface SpeechRecognitionErrorEventLike extends Event {
-  readonly error: string;
-  readonly message: string;
-}
-interface SpeechRecognitionLike extends EventTarget {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  maxAlternatives: number;
-  start(): void;
-  stop(): void;
-  abort(): void;
-  onresult: ((ev: SpeechRecognitionEventLike) => void) | null;
-  onerror: ((ev: SpeechRecognitionErrorEventLike) => void) | null;
-  onend: (() => void) | null;
-  onstart: (() => void) | null;
-  onspeechstart: (() => void) | null;
-  onspeechend: (() => void) | null;
-  onsoundstart: (() => void) | null;
-  onsoundend: (() => void) | null;
-}
-type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
-
-function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as {
-    SpeechRecognition?: SpeechRecognitionCtor;
-    webkitSpeechRecognition?: SpeechRecognitionCtor;
-  };
-  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
-}
-
-// ─── Voice persona: lower-pitched voice picker ───────────────────────────────
-
-function pickPersonaVoice(
-  voices: SpeechSynthesisVoice[],
-): SpeechSynthesisVoice | null {
-  if (!voices.length) return null;
-  const maleNames = /david|alex|daniel|fred|james|mark|oliver|george|rishi|arjun/i;
-  return (
-    voices.find((v) => /^en[-_]US/i.test(v.lang) && maleNames.test(v.name)) ||
-    voices.find((v) => /^en[-_]GB/i.test(v.lang) && maleNames.test(v.name)) ||
-    voices.find((v) => /^en/i.test(v.lang) && maleNames.test(v.name)) ||
-    voices.find((v) => /en[-_]US/i.test(v.lang) && /google|samantha|jenny/i.test(v.name)) ||
-    voices.find((v) => /^en/i.test(v.lang)) ||
-    voices[0] ||
-    null
-  );
-}
-
-// ─── Sentence splitter (for streaming TTS) ──────────────────────────────────
-// Splits a reply into speakable chunks. Splits on `.`, `!`, `?`, and
-// newlines, keeping the punctuation with the sentence. Filters out empty
-// chunks (e.g. trailing periods). Keeps the splitter simple — we don't
-// need NLP-grade segmentation for SOC analyst replies.
-
-function splitIntoSentences(text: string): string[] {
-  const trimmed = text.trim();
-  if (!trimmed) return [];
-  // Match runs that end with . ! ? or end-of-string, including the punctuation.
-  const matches = trimmed.match(/[^.!?]*[.!?]+|[^.!?]+$/g);
-  if (!matches) return [trimmed];
-  return matches
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-}
-
 // ─── Quick actions (static, always visible) ─────────────────────────────────
 
 interface QuickAction {
@@ -315,31 +223,28 @@ function AgentXInner({
   const [providerName, setProviderName] = useState<string>("…");
 
   // ── Voice state ─────────────────────────────────────────────────────────
-  const [listening, setListening] = useState(false);
-  const [speakingLocal, setSpeakingLocal] = useState(false);
+  // `interim` is mirrored locally so the JSX can read it as a plain state
+  // value; all other voice state (listening, speaking, supported, error)
+  // is read directly from the `voice` hook return below.
   const [interim, setInterim] = useState("");
-  const [supported, setSupported] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
 
   // ── Refs mirroring state for use inside stable callbacks ────────────────
-  // The SpeechRecognition handlers are bound once; we need the latest
-  // `thinking` + `currentTab` + `messages` + `speaking` without re-subscribing.
+  // The hook owns the SpeechRecognition + Web Audio refs internally; we
+  // only need refs for chat-related state and the waveform canvas.
   const currentTabRef = useRef(currentTab);
   const messagesRef = useRef<AgentMessage[]>(messages);
   const thinkingRef = useRef(thinking);
   const openRef = useRef(open);
-  const speakingRef = useRef(false);
   const greetedRef = useRef(false);
-  const userStoppedRef = useRef(true); // true until the user (or greeting) starts listening
   const latestTranscriptRef = useRef("");
 
-  // ── SpeechRecognition + Web Audio refs ──────────────────────────────────
-  const ctorRef = useRef<SpeechRecognitionCtor | null>(null);
-  const recRef = useRef<SpeechRecognitionLike | null>(null);
-  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const micStreamRef = useRef<MediaStream | null>(null);
+  // ── Greeting flow: gates the speaking→listening handoff ─────────────────
+  // Set to true right before calling `voice.speak(greeting)`; cleared by
+  // the speaking-transition effect after it calls `voice.start()`.
+  const pendingPostGreetingListenRef = useRef(false);
+  const prevSpeakingRef = useRef(false);
+
+  // ── Waveform canvas (DOM ref + rAF handle) ───────────────────────────────
   const rafRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -347,6 +252,29 @@ function AgentXInner({
   const lastPatchIdsRef = useRef<Set<string>>(new Set());
 
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // ── Shared voice engine ─────────────────────────────────────────────────
+  // The hook owns the SpeechRecognition instance, auto-restart-on-silence,
+  // barge-in (speaking interrupts TTS), the Web Audio AnalyserNode waveform,
+  // and streaming sentence-by-sentence TTS. We wire `onFinalTranscript` to
+  // `sendMessage` so spoken phrases are dispatched exactly like typed ones.
+  const voice = useSpeechRecognition({
+    continuous: true, // Agent X is always-on
+    enabled: open, // only auto-restart when the tab is open
+    voicePersona: "agent", // male lower-pitched voice
+    onFinalTranscript: (text: string) => {
+      latestTranscriptRef.current = text;
+      void sendMessage(text);
+    },
+    onInterim: (text: string) => setInterim(text),
+  });
+
+  // Keep a stable ref so callbacks (sendMessage, greeting flow, proactive
+  // poll) don't need to depend on `voice` identity churn.
+  const voiceRef = useRef(voice);
+  useEffect(() => {
+    voiceRef.current = voice;
+  }, [voice]);
 
   // ── Mirror state into refs ──────────────────────────────────────────────
   useEffect(() => {
@@ -361,24 +289,6 @@ function AgentXInner({
   useEffect(() => {
     openRef.current = open;
   }, [open]);
-
-  // ── Feature detection (post-hydration to avoid SSR mismatch) ────────────
-  useEffect(() => {
-    ctorRef.current = getSpeechRecognitionCtor();
-    setSupported(!!ctorRef.current);
-
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      const loadVoices = () => {
-        voicesRef.current = window.speechSynthesis.getVoices();
-      };
-      loadVoices();
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-      return () => {
-        window.speechSynthesis.onvoiceschanged = null;
-      };
-    }
-    return;
-  }, []);
 
   // ── Restore prior conversation from localStorage on first open ──────────
   const restoredRef = useRef(false);
@@ -438,197 +348,28 @@ function AgentXInner({
     };
   }, [open]);
 
-  // ── Build a SpeechRecognition instance (lazy) ───────────────────────────
-  const ensureRecognition = useCallback((): SpeechRecognitionLike | null => {
-    if (!ctorRef.current) return null;
-    if (recRef.current) return recRef.current;
-    const rec = new ctorRef.current();
-    rec.lang = "en-US";
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.maxAlternatives = 1;
-
-    rec.onstart = () => {
-      userStoppedRef.current = false;
-      setListening(true);
-      setVoiceError(null);
-    };
-
-    rec.onsoundstart = () => {
-      // User started making noise — if we're speaking, that's an interrupt.
-      if (speakingRef.current) {
-        try {
-          window.speechSynthesis.cancel();
-        } catch {
-          /* noop */
-        }
-        speakingRef.current = false;
-        setSpeakingLocal(false);
-      }
-    };
-
-    rec.onspeechstart = () => {
-      // Same interrupt semantics — speech is a stronger signal than sound.
-      if (speakingRef.current) {
-        try {
-          window.speechSynthesis.cancel();
-        } catch {
-          /* noop */
-        }
-        speakingRef.current = false;
-        setSpeakingLocal(false);
-      }
-    };
-
-    rec.onsoundend = () => {
-      /* Just VAD bookkeeping — no action needed. */
-    };
-
-    rec.onresult = (ev: SpeechRecognitionEventLike) => {
-      const results = ev.results;
-      let interimText = "";
-      let finalText = "";
-      for (let i = ev.resultIndex; i < results.length; i++) {
-        const alt = results[i]?.[0];
-        if (!alt) continue;
-        const t = alt.transcript;
-        if (results[i].isFinal) finalText += t;
-        else interimText += t;
-      }
-      setInterim(interimText);
-      if (finalText.trim()) {
-        latestTranscriptRef.current = finalText.trim();
-        setInterim("");
-        // Send the final transcript to the chat endpoint.
-        void sendMessage(latestTranscriptRef.current);
-      }
-    };
-
-    rec.onerror = (ev: SpeechRecognitionErrorEventLike) => {
-      // "no-speech" and "aborted" are routine in continuous mode — don't surface.
-      if (ev.error === "no-speech" || ev.error === "aborted") return;
-      if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
-        setVoiceError("Mic permission denied");
-      } else if (ev.error === "network") {
-        setVoiceError("Network error during recognition");
-      }
-    };
-
-    rec.onend = () => {
-      setListening(false);
-      setInterim("");
-      // Auto-restart gate: don't restart if (a) the user explicitly stopped,
-      // (b) Agent X is currently speaking (let the utterance.onend handler
-      // restart), or (c) the panel is no longer open.
-      if (
-        !openRef.current ||
-        userStoppedRef.current ||
-        speakingRef.current
-      ) {
-        return;
-      }
-      try {
-        rec.start();
-      } catch {
-        /* InvalidStateError if start() raced — ignored; onend will fire again */
-      }
-    };
-
-    recRef.current = rec;
-    return rec;
-  }, []);
-
-  // ── Start listening ──────────────────────────────────────────────────────
-  const startListening = useCallback(() => {
-    const rec = ensureRecognition();
-    if (!rec) return;
-    userStoppedRef.current = false;
-    try {
-      rec.start();
-    } catch {
-      /* InvalidStateError if start() raced — ignored */
+  // ── Speaking-transition effect: start listening after the greeting ────────
+  // Watches `voice.speaking` for a true→false transition. If the greeting
+  // flow set `pendingPostGreetingListenRef`, we clear it and start the mic
+  // — this is the post-port equivalent of the old TTS onAllDone callback.
+  useEffect(() => {
+    if (
+      prevSpeakingRef.current &&
+      !voice.speaking &&
+      pendingPostGreetingListenRef.current
+    ) {
+      pendingPostGreetingListenRef.current = false;
+      voice.start();
     }
-    void ensureMicAnalyser();
-  }, [ensureRecognition]);
-
-  // ── Stop listening (user-initiated) ─────────────────────────────────────
-  const stopListening = useCallback(() => {
-    userStoppedRef.current = true;
-    const rec = recRef.current;
-    if (!rec) return;
-    try {
-      rec.stop();
-    } catch {
-      /* noop */
-    }
-    stopMicAnalyser();
-  }, []);
-
-  // ── Mic toggle (button click) ────────────────────────────────────────────
-  const micToggle = useCallback(() => {
-    if (listening) stopListening();
-    else startListening();
-  }, [listening, startListening, stopListening]);
-
-  // ── Web Audio API: wire up AnalyserNode on the mic stream ────────────────
-  // Used by the waveform canvas. Created lazily on first startListening and
-  // torn down on stopListening + on unmount.
-  const ensureMicAnalyser = useCallback(async () => {
-    if (analyserRef.current) return;
-    if (typeof window === "undefined") return;
-    if (!navigator.mediaDevices?.getUserMedia) return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true },
-      });
-      micStreamRef.current = stream;
-      const Ctx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext?: typeof AudioContext })
-          .webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      audioCtxRef.current = ctx;
-      const src = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 64;
-      analyser.smoothingTimeConstant = 0.7;
-      src.connect(analyser);
-      analyserRef.current = analyser;
-    } catch {
-      /* Permission denied or unavailable — waveform just stays empty */
-    }
-  }, []);
-
-  const stopMicAnalyser = useCallback(() => {
-    if (rafRef.current != null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (micStreamRef.current) {
-      for (const track of micStreamRef.current.getTracks()) {
-        try {
-          track.stop();
-        } catch {
-          /* noop */
-        }
-      }
-      micStreamRef.current = null;
-    }
-    if (audioCtxRef.current) {
-      try {
-        void audioCtxRef.current.close();
-      } catch {
-        /* noop */
-      }
-      audioCtxRef.current = null;
-    }
-    analyserRef.current = null;
-  }, []);
+    prevSpeakingRef.current = voice.speaking;
+  }, [voice.speaking, voice]);
 
   // ── Waveform render loop (only when listening && !speaking) ──────────────
+  // Slim version — delegates the actual drawing to the shared `drawWaveform`
+  // helper (same pattern as `war-room/voice-control.tsx`). The hook owns the
+  // AnalyserNode; we just poll it via `voice.analyser` each frame.
   useEffect(() => {
-    if (!listening || speakingLocal) {
+    if (!voice.listening || voice.speaking) {
       if (rafRef.current != null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
@@ -647,37 +388,8 @@ function AgentXInner({
     if (!canvas) return;
     const ctx2d = canvas.getContext("2d");
     if (!ctx2d) return;
-
     const draw = () => {
-      const analyser = analyserRef.current;
-      if (!analyser) {
-        rafRef.current = requestAnimationFrame(draw);
-        return;
-      }
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      analyser.getByteFrequencyData(dataArray);
-
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx2d.clearRect(0, 0, w, h);
-
-      // Draw a centerline baseline.
-      const barCount = Math.min(bufferLength, 32);
-      const gap = 2;
-      const barWidth = (w - gap * (barCount - 1)) / barCount;
-      for (let i = 0; i < barCount; i++) {
-        const v = dataArray[i] / 255; // 0..1
-        const barH = Math.max(2, v * h);
-        const x = i * (barWidth + gap);
-        const y = (h - barH) / 2;
-        // Gradient: emerald → cyan.
-        const grad = ctx2d.createLinearGradient(0, y, 0, y + barH);
-        grad.addColorStop(0, "rgba(16,185,129,0.9)");
-        grad.addColorStop(1, "rgba(34,211,238,0.7)");
-        ctx2d.fillStyle = grad;
-        ctx2d.fillRect(x, y, barWidth, barH);
-      }
+      drawWaveform(voice.analyser, ctx2d, canvas.width, canvas.height);
       rafRef.current = requestAnimationFrame(draw);
     };
     rafRef.current = requestAnimationFrame(draw);
@@ -687,97 +399,7 @@ function AgentXInner({
         rafRef.current = null;
       }
     };
-  }, [listening, speakingLocal]);
-
-  // ── Streaming TTS: speak sentences sequentially ──────────────────────────
-  // The first sentence is spoken immediately. Each utterance's `onend`
-  // triggers the next sentence. While speaking, `speakingRef` is true →
-  // the recognition `onend` auto-restart is gated off (no race).
-  // The mic stays live to the extent the browser allows — if the user
-  // starts talking, `onsoundstart` cancels TTS (see ensureRecognition).
-  const speakChunked = useCallback(
-    (text: string, opts?: { onAllDone?: () => void }) => {
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-        opts?.onAllDone?.();
-        return;
-      }
-      const trimmed = text.trim();
-      if (!trimmed) {
-        opts?.onAllDone?.();
-        return;
-      }
-      const synth = window.speechSynthesis;
-      synth.cancel(); // interrupt any in-flight utterance
-      const chunks = splitIntoSentences(trimmed);
-      if (chunks.length === 0) {
-        opts?.onAllDone?.();
-        return;
-      }
-      const voices = voicesRef.current.length
-        ? voicesRef.current
-        : synth.getVoices();
-      const preferred = pickPersonaVoice(voices);
-
-      speakingRef.current = true;
-      setSpeakingLocal(true);
-
-      // If recognition is currently running, stop it so the browser doesn't
-      // pick up its own TTS as "speech" (we'll restart on completion).
-      const wasListening = listening;
-      if (wasListening) {
-        try {
-          recRef.current?.stop();
-        } catch {
-          /* noop */
-        }
-      }
-
-      let idx = 0;
-      const speakNext = () => {
-        if (idx >= chunks.length) {
-          speakingRef.current = false;
-          setSpeakingLocal(false);
-          opts?.onAllDone?.();
-          // Restart listening if it was live before we started speaking.
-          if (wasListening && openRef.current && !userStoppedRef.current) {
-            try {
-              recRef.current?.start();
-            } catch {
-              /* InvalidStateError if start() raced — onend will retry */
-            }
-          }
-          return;
-        }
-        const chunk = chunks[idx];
-        idx += 1;
-        const u = new SpeechSynthesisUtterance(chunk);
-        if (preferred) u.voice = preferred;
-        u.rate = 0.95;
-        u.pitch = 0.85;
-        u.volume = 1;
-        u.onend = () => {
-          // Defer to next tick to avoid the synth racing ahead.
-          window.setTimeout(speakNext, 0);
-        };
-        u.onerror = () => {
-          speakingRef.current = false;
-          setSpeakingLocal(false);
-          opts?.onAllDone?.();
-        };
-        synth.speak(u);
-      };
-      speakNext();
-    },
-    [listening],
-  );
-
-  // ── Stop TTS (manual mute) ───────────────────────────────────────────────
-  const stopSpeaking = useCallback(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    speakingRef.current = false;
-    setSpeakingLocal(false);
-  }, []);
+  }, [voice.listening, voice.speaking, voice.analyser]);
 
   // ── Execute Agent X actions returned from the chat endpoint ─────────────
   const executeActions = useCallback(
@@ -828,8 +450,8 @@ function AgentXInner({
       if (!trimmed || thinkingRef.current) return;
 
       // Stop any in-flight TTS — the user is talking over Agent X.
-      if (speakingRef.current) {
-        stopSpeaking();
+      if (voiceRef.current.speaking) {
+        voiceRef.current.stopSpeaking();
       }
 
       setInput("");
@@ -860,9 +482,14 @@ function AgentXInner({
 
         const reply = data.reply?.trim() || "I didn't catch that. Try again.";
 
-        // Stream the reply: split into sentences, display first sentence
-        // immediately, then progressively append the rest as TTS plays.
-        const sentences = splitIntoSentences(reply);
+        // Split the reply into sentences for progressive display. The
+        // hook owns sentence-splitting for *TTS* internally; this split is
+        // purely for the message-bubble reveal cadence.
+        const sentences = (reply.trim().match(/[^.!?]*[.!?]+|[^.!?]+$/g) || [
+          reply,
+        ])
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
         const firstSentence = sentences[0] || reply;
         const rest = sentences.slice(1);
 
@@ -879,15 +506,9 @@ function AgentXInner({
 
         executeActions(data.actions);
 
-        // Speak the first sentence immediately; subsequent sentences are
-        // queued by the chunked speaker (its onend triggers the next).
-        speakChunked(reply, {
-          onAllDone: () => {
-            // After all chunks have played, ensure the full text is in the
-            // message bubble (in case the chunker appended progressively
-            // faster/slower than expected — this is idempotent).
-          },
-        });
+        // Speak the full reply via the shared hook (it handles
+        // sentence-by-sentence TTS + barge-in internally).
+        voiceRef.current.speak(reply, { interrupt: true });
 
         // Progressive display: append subsequent sentences at a cadence
         // that roughly matches the speaking rate. We use a timer based on
@@ -914,12 +535,12 @@ function AgentXInner({
             kind: "error",
           },
         ]);
-        speakChunked(errMsg);
+        voiceRef.current.speak(errMsg);
       } finally {
         setThinking(false);
       }
     },
-    [appendToMessage, executeActions, speakChunked, stopSpeaking],
+    [appendToMessage, executeActions],
   );
 
   // ── On open: fetch briefing ONCE, greet + speak, start listening after TTS ─
@@ -960,15 +581,12 @@ function AgentXInner({
           },
         ]);
 
-        // Speak greeting. After TTS finishes (utterance.onend → onAllDone),
-        // start listening. This guarantees the mic opens only after the
-        // greeting is done — no race with TTS playback.
-        speakChunked(greeting, {
-          onAllDone: () => {
-            if (cancelled || !openRef.current) return;
-            startListening();
-          },
-        });
+        // Speak greeting via the shared hook. The speaking-transition
+        // effect above watches `voice.speaking` for the true→false edge
+        // and calls `voice.start()` once the greeting finishes — so the
+        // mic opens only after TTS is done (no race with playback).
+        pendingPostGreetingListenRef.current = true;
+        voiceRef.current.speak(greeting);
       } catch {
         /* network/silent failure — tab still usable via text input */
       }
@@ -977,10 +595,9 @@ function AgentXInner({
     return () => {
       cancelled = true;
     };
-    // Intentionally only depend on `open` — we want the greeting to fire
-    // exactly once per activation. currentUser + speakChunked + startListening
-    // are stable or accessed via refs.
-  }, [open, currentUser, speakChunked, startListening]);
+    // Intentionally only depend on `open` + `currentUser` — we want the
+    // greeting to fire exactly once per activation. `voiceRef` is stable.
+  }, [open, currentUser]);
 
   // ── Proactive monitoring: poll briefing every 5 min, alert on NEW patch IDs ─
   useEffect(() => {
@@ -1020,7 +637,7 @@ function AgentXInner({
               kind: "alert",
             },
           ]);
-          speakChunked(msg);
+          voiceRef.current.speak(msg);
         }
 
         lastPatchIdsRef.current = currentPatchIds;
@@ -1029,40 +646,16 @@ function AgentXInner({
       }
     }, PROACTIVE_POLL_MS);
     return () => window.clearInterval(id);
-  }, [open, speakChunked]);
+  }, [open]);
 
   // ── Stop TTS + listening when the panel closes ──────────────────────────
+  // The hook owns the underlying teardown (rec.abort, speechSynthesis.cancel,
+  // mic tracks, AudioContext close). We just ask it to stop both sides.
   useEffect(() => {
     if (open) return;
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    speakingRef.current = false;
-    setSpeakingLocal(false);
-    userStoppedRef.current = true;
-    try {
-      recRef.current?.stop();
-    } catch {
-      /* noop */
-    }
-    stopMicAnalyser();
-  }, [open, stopMicAnalyser]);
-
-  // ── Cleanup TTS + recognition on unmount ──────────────────────────────────
-  useEffect(() => {
-    return () => {
-      userStoppedRef.current = true;
-      try {
-        recRef.current?.abort();
-      } catch {
-        /* noop */
-      }
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-      stopMicAnalyser();
-    };
-  }, [stopMicAnalyser]);
+    voiceRef.current.stopSpeaking();
+    voiceRef.current.stop();
+  }, [open]);
 
   // ── Conversation export (.txt) ───────────────────────────────────────────
   const exportConversation = useCallback(() => {
@@ -1104,9 +697,6 @@ function AgentXInner({
       /* noop */
     }
   }, []);
-
-  // ── Derived display state ────────────────────────────────────────────────
-  const speaking = speakingLocal;
 
   // ── If closed, render nothing ────────────────────────────────────────────
   if (!open) return null;
@@ -1150,36 +740,36 @@ function AgentXInner({
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={micToggle}
-            disabled={!supported}
+            onClick={voice.toggle}
+            disabled={!voice.supported}
             aria-label={
-              !supported
+              !voice.supported
                 ? "Voice unsupported"
-                : listening
+                : voice.listening
                   ? "Stop listening"
                   : "Start listening"
             }
             title={
-              !supported
+              !voice.supported
                 ? "Web Speech API unavailable. Try Chrome."
-                : listening
+                : voice.listening
                   ? "Stop listening"
                   : "Start listening"
             }
             className={`relative flex size-8 items-center justify-center rounded-md border transition-all ${
-              listening
+              voice.listening
                 ? "border-red-500/60 bg-red-500/20"
-                : supported
+                : voice.supported
                   ? "border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20"
                   : "cursor-not-allowed border-zinc-800 bg-zinc-900 opacity-50"
             }`}
           >
-            {listening ? (
+            {voice.listening ? (
               <MicOff className="size-4 text-red-300" />
             ) : (
               <Mic className="size-4 text-emerald-300" />
             )}
-            {listening && (
+            {voice.listening && (
               <motion.span
                 initial={{ scale: 1, opacity: 0.6 }}
                 animate={{ scale: 1.4, opacity: 0 }}
@@ -1337,7 +927,7 @@ function AgentXInner({
 
             {/* ── Live interim transcript (while listening) ─────────────────── */}
             <AnimatePresence>
-              {listening && interim && (
+              {voice.listening && interim && (
                 <motion.div
                   key="interim"
                   initial={{ opacity: 0, y: 8 }}
@@ -1359,7 +949,7 @@ function AgentXInner({
               <div className="flex h-32 flex-col items-center justify-center gap-2 text-center">
                 <Bot className="size-6 text-emerald-500/40" />
                 <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">
-                  {supported
+                  {voice.supported
                     ? "Initializing Agent X…"
                     : "Voice unsupported — type below"}
                 </p>
@@ -1369,7 +959,7 @@ function AgentXInner({
 
           {/* ── Status strip (waveform / speaking indicator) ─────────────────── */}
           <div className="shrink-0 border-t border-emerald-500/10 bg-zinc-950/60 px-3 py-1.5">
-            {speaking ? (
+            {voice.speaking ? (
               <div className="flex items-center gap-2">
                 <motion.span
                   animate={{ opacity: [0.4, 1, 0.4] }}
@@ -1382,13 +972,13 @@ function AgentXInner({
                 </span>
                 <button
                   type="button"
-                  onClick={stopSpeaking}
+                  onClick={voice.stopSpeaking}
                   className="ml-auto font-mono text-[9px] uppercase tracking-wider text-zinc-500 underline-offset-2 hover:text-amber-200 hover:underline"
                 >
                   mute
                 </button>
               </div>
-            ) : listening ? (
+            ) : voice.listening ? (
               <div className="flex items-center gap-2">
                 <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
                 <span className="font-mono text-[9px] uppercase tracking-wider text-emerald-300/80">
@@ -1406,15 +996,15 @@ function AgentXInner({
               <div className="flex items-center gap-2">
                 <Activity className="size-3 text-zinc-500" />
                 <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-500">
-                  {supported
+                  {voice.supported
                     ? "Standing by — speak or type"
                     : "Voice unsupported — type below"}
                 </span>
               </div>
             )}
-            {voiceError && (
+            {voice.error && (
               <p className="mt-1 font-mono text-[9px] uppercase tracking-wider text-rose-400/80">
-                {voiceError}
+                {voice.error}
               </p>
             )}
           </div>

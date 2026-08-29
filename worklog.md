@@ -4189,3 +4189,89 @@ These were all created AFTER commit `83b9942` and were never committed. They can
 **Current state:** War Room overlay with full gesture control (MediaPipe Hands) + voice control (always-on by default) is operational. Agent X tab + AI Visualizer are also restored. Dev server running, HTTP 200, 0 compile errors.
 
 **Did NOT commit/push.**
+
+---
+Task ID: voice-unify-agent-x-v2
+Agent: full-stack-developer
+Task: Port Agent X (agent-x.tsx) to use the shared useSpeechRecognition hook, removing duplicated speech boilerplate.
+
+Work Log:
+- Read `/home/z/my-project/worklog.md` tail (last ~100 lines) to match the existing worklog style; read `src/hooks/use-speech-recognition.ts` (the shared hook) and `src/components/sentinel/war-room/voice-control.tsx` (the reference consumer) to understand the hook's public API and the slim waveform-canvas pattern.
+- Read the full original `src/components/sentinel/agent-x/agent-x.tsx` (1735 lines) to inventory every voice-related section: duplicated Web Speech ambient types, `getSpeechRecognitionCtor`, `pickPersonaVoice`, `splitIntoSentences`, the inline refs (`ctorRef`/`recRef`/`voicesRef`/`audioCtxRef`/`analyserRef`/`micStreamRef`/`rafRef`/`canvasRef`), `ensureRecognition`, `startListening`/`stopListening`/`micToggle`, `ensureMicAnalyser`/`stopMicAnalyser`, the inline waveform draw loop, `speakChunked`, `stopSpeaking`, the feature-detection `useEffect`, the greeting flow `useEffect`, the proactive poll `useEffect`, the onClose `useEffect`, and the cleanup-on-unmount `useEffect`.
+- Added `import { useSpeechRecognition, drawWaveform } from "@/hooks/use-speech-recognition";` next to the existing UI imports.
+- Deleted the entire duplicated Web Speech API ambient-types block (`SpeechRecognitionAlternativeLike` / `SpeechRecognitionResultLike` / `SpeechRecognitionResultListLike` / `SpeechRecognitionEventLike` / `SpeechRecognitionErrorEventLike` / `SpeechRecognitionLike` / `SpeechRecognitionCtor`), the `getSpeechRecognitionCtor()` factory, the `pickPersonaVoice()` helper, and the `splitIntoSentences()` helper — all now owned by the hook.
+- Removed the local voice state (`listening`, `speakingLocal`, `supported`, `voiceError`) and the inline voice refs (`ctorRef`, `recRef`, `voicesRef`, `audioCtxRef`, `analyserRef`, `micStreamRef`, `speakingRef`, `userStoppedRef`). Kept a local `interim` state mirrored via `onInterim`, plus `rafRef` + `canvasRef` for the waveform canvas.
+- Wired the shared hook: `const voice = useSpeechRecognition({ continuous: true, enabled: open, voicePersona: "agent", onFinalTranscript: (text) => { latestTranscriptRef.current = text; void sendMessage(text); }, onInterim: (text) => setInterim(text) })`. Added a stable `voiceRef = useRef(voice)` + a sync `useEffect` so callbacks (`sendMessage`, greeting flow, proactive poll, onClose) don't churn on `voice` identity changes.
+- Removed the feature-detection `useEffect` (the hook owns ctor caching + TTS voice warming via its own init effect + `useSyncExternalStore` for `supported`).
+- Deleted `ensureRecognition`, `startListening`, `stopListening`, `micToggle`, `ensureMicAnalyser`, `stopMicAnalyser`, `speakChunked`, and `stopSpeaking` callbacks — all replaced by `voice.start` / `voice.stop` / `voice.toggle` / `voice.speak` / `voice.stopSpeaking`.
+- Replaced the inline ~60-line waveform render loop with the slim version copied from `war-room/voice-control.tsx`: a `useEffect` gated on `voice.listening && !voice.speaking` that runs `drawWaveform(voice.analyser, ctx2d, canvas.width, canvas.height)` in a `requestAnimationFrame` loop, clears the canvas on teardown, and depends on `[voice.listening, voice.speaking, voice.analyser]`.
+- Added the speaking-transition `useEffect` (per task spec): watches `voice.speaking` for a true→false edge; when `pendingPostGreetingListenRef.current` is true, clears it and calls `voice.start()`. Deps `[voice.speaking, voice]`.
+- Refactored `sendMessage`: replaced `if (speakingRef.current) stopSpeaking()` with `if (voiceRef.current.speaking) voiceRef.current.stopSpeaking()`; replaced the `speakChunked(reply, { onAllDone })` and `speakChunked(errMsg)` calls with `voiceRef.current.speak(reply, { interrupt: true })` and `voiceRef.current.speak(errMsg)`. Inlined the sentence-split regex (`reply.trim().match(/[^.!?]*[.!?]+|[^.!?]+$/g)`) for the progressive-display cadence since `splitIntoSentences` is no longer at module scope (the hook owns TTS splitting internally). Updated the deps array from `[appendToMessage, executeActions, speakChunked, stopSpeaking]` to `[appendToMessage, executeActions]`.
+- Refactored the greeting flow `useEffect`: kept the `/api/agent-x/briefing` fetch + greeting-string build + `setMessages` push unchanged; replaced `speakChunked(greeting, { onAllDone: () => startListening() })` with `pendingPostGreetingListenRef.current = true; voiceRef.current.speak(greeting)`. The speaking-transition effect handles the `voice.start()` call once TTS finishes. Updated deps from `[open, currentUser, speakChunked, startListening]` to `[open, currentUser]`.
+- Refactored the proactive poll `useEffect`: replaced `speakChunked(msg)` with `voiceRef.current.speak(msg)`. Updated deps from `[open, speakChunked]` to `[open]` (the interval now reads `voiceRef.current` rather than closing over `speakChunked`).
+- Refactored the onClose `useEffect`: replaced the manual teardown (speechSynthesis.cancel, setSpeakingLocal(false), userStoppedRef, recRef.stop, stopMicAnalyser) with `voiceRef.current.stopSpeaking(); voiceRef.current.stop();`. Updated deps from `[open, stopMicAnalyser]` to `[open]`.
+- Removed the cleanup-on-unmount `useEffect` entirely — the hook's own unmount cleanup already aborts the recognizer, cancels speechSynthesis, stops mic tracks, and closes the AudioContext.
+- Removed the `const speaking = speakingLocal;` derived-state line.
+- Updated all JSX references: mic button `onClick={micToggle}` → `onClick={voice.toggle}`, `disabled={!supported}` → `disabled={!voice.supported}`, `aria-label`/`title`/`className` ternaries switched from `listening`/`supported` to `voice.listening`/`voice.supported`; status strip `speaking`/`listening`/`stopSpeaking`/`voiceError`/`supported` → `voice.speaking`/`voice.listening`/`voice.stopSpeaking`/`voice.error`/`voice.supported`; empty-state `supported` → `voice.supported`; interim-transcript gate `listening` → `voice.listening`.
+- Updated the file's top doc comment ("Voice architecture" section) to describe the new hook-based architecture (hook owns SpeechRecognition + auto-restart + barge-in + AnalyserNode + streaming TTS; greeting flow uses `pendingPostGreetingListenRef` + the speaking-transition effect).
+- Verified: `bunx tsc --noEmit 2>&1 | grep -E "agent-x|use-speech-recognition"` → 0 matches (0 errors in touched files). The only tsc errors in the repo are an unrelated `index.ts(1,4): error TS1005` in a mini-service, not in our touched files.
+- Verified: `rg -n "SpeechRecognitionLike|getSpeechRecognitionCtor|pickPersonaVoice|splitIntoSentences|ensureRecognition|ensureMicAnalyser|stopMicAnalyser|speakChunked" src/components/sentinel/agent-x/agent-x.tsx` → 0 matches (all removed symbols gone, including from comments).
+- Verified: `"use client"` directive still at line 1; `AgentXProps`, `AgentXUser`, `AgentX = memo(AgentXInner)`, and `export default AgentX` unchanged; `BriefingPanel`, `BriefingStat`, `buildPostureSummary`, `executeActions`, `appendToMessage`, `STORAGE_KEY` persistence, `MAX_HISTORY`, greeting flow, proactive poll, quick-action chips, and conversation UI all unchanged.
+- Did NOT run `bun run build` or `bun run lint` (per task constraint — tsc only). Did NOT commit/push.
+
+Stage Summary:
+- **Files touched:** only `src/components/sentinel/agent-x/agent-x.tsx` (1 file, as required).
+- **Line count:** 1735 → 1325 (−410 lines, ~24% smaller). The reduction comes from deleting the duplicated Web Speech types/helpers (~90 lines), the inline `ensureRecognition` (~100 lines), `speakChunked` (~75 lines), `ensureMicAnalyser`/`stopMicAnalyser` (~55 lines), `startListening`/`stopListening`/`micToggle` (~30 lines), `stopSpeaking` (~7 lines), the feature-detection effect (~17 lines), the cleanup-on-unmount effect (~13 lines), and the inline waveform draw loop (~60 lines) — partially offset by adding the hook call, `voiceRef`, the speaking-transition effect, and the slim waveform effect (~70 lines added back).
+- **Architecture:** Agent X now delegates ALL voice concerns (SpeechRecognition lifecycle, auto-restart-on-silence, barge-in, AnalyserNode waveform, streaming sentence-by-sentence TTS, mic-track + AudioContext teardown) to the shared `useSpeechRecognition` hook — the same hook used by `war-room/voice-control.tsx`. Agent X's component body is now purely chat logic + UI chrome.
+- **Greeting flow:** preserved exactly (fetch briefing → build greeting → speak → start listening after TTS). The old `speakChunked(greeting, { onAllDone: () => startListening() })` is now `pendingPostGreetingListenRef.current = true; voice.speak(greeting)` + a `useEffect` watching `voice.speaking` true→false that calls `voice.start()` and clears the ref. No 600ms timer; the mic opens only after TTS finishes.
+- **tsc:** 0 errors in `agent-x.tsx` or `use-speech-recognition.ts`.
+- **Work record:** `agent-ctx/voice-unify-agent-x-v2-full-stack-developer.md`.
+
+---
+
+## 2026-08-29 — voice-unify-v2 + mediapipe-local: re-create shared voice hook + local MediaPipe loading
+
+**Task ID:** `voice-unify-v2` + `mediapipe-local`
+**Agent:** main (Z.ai Code) + full-stack-developer subagent
+**Task:** After the git-wipe recovery restored original voice-control.tsx (old architecture, no real waveform, no barge-in) + MediaPipe loading from CDN (blocked by ad blockers), user reported: "Gesture init failed: MediaPipe Hands library failed to load" + "war room still have old voice, still need to tap to talk."
+
+### Work Log
+
+#### MediaPipe local loading (`mediapipe-local`)
+
+1. **Copied WASM/model assets** from `node_modules/@mediapipe/hands/` to `public/mediapipe/hands/`:
+   - `hands_solution_simd_wasm_bin.wasm` (6MB)
+   - `hands_solution_simd_wasm_bin.js`
+   - `hands_solution_packed_assets.data` (4.3MB)
+   - `hands_solution_packed_assets_loader.js`
+   - `hand_landmark_full.tflite` (5.5MB)
+   - `hand_landmark_lite.tflite` (2MB)
+   - `hands.binarypb`
+2. **Updated `locateFile`** in `gesture-control.tsx` (line 818) from `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}` → `/mediapipe/hands/${file}`.
+3. **Verified** via `curl`: WASM (HTTP 200, 6MB), assets (HTTP 200, 4.3MB), tflite (HTTP 200, 5.5MB) — all served locally, no CDN dependency.
+
+#### Shared voice hook (`voice-unify-v2`)
+
+4. **Re-created `src/hooks/use-speech-recognition.ts`** (~320 lines) — the shared hook that was lost in the git wipe. Exports `useSpeechRecognition(opts)` + `drawWaveform(analyser, ctx2d, w, h)`. Owns: SpeechRecognition instance, auto-restart-on-silence, barge-in (`onsoundstart`/`onspeechstart` cancel TTS), real Web Audio `AnalyserNode` waveform, streaming sentence TTS, SSR-safe feature detection.
+5. **Rewrote `src/components/sentinel/war-room/voice-control.tsx`** (855 → ~370 lines) — now a thin consumer of the hook. Kept: `parseVoiceCommand()`, `VoiceControlHandle`, `VoiceControlState`, `continuous` prop, compact + full UIs. **Upgraded**: fake CSS waveform → real `<canvas>` + `drawWaveform()`. **Added**: barge-in (first time for War Room voice). The `continuous` prop now defaults to `true` (always-on).
+6. **Subagent ported `src/components/sentinel/agent-x/agent-x.tsx`** (1735 → 1325 lines, −410 lines). Removed all duplicated speech types/functions/refs/callbacks. Kept chat logic, greeting flow (via `pendingPostGreetingListenRef` + speaking-transition effect), proactive poll, conversation UI. Grep confirms 0 remaining references to removed symbols.
+
+### Verification
+
+- `bunx tsc --noEmit` → 0 errors in `use-speech-recognition.ts`, `voice-control.tsx`, `agent-x.tsx`. (Only the pre-existing `index.ts(1,4)` artifact remains.)
+- Dev server: `GET / 200` in 0.18s, clean compile.
+- Browser smoke-test: landing page renders, `h1` = "Security that thinks, attacks, and heals itself", **0 page errors**, **0 console errors**.
+- MediaPipe files: served locally from `/mediapipe/hands/` — verified via `curl` (WASM 6MB HTTP 200, assets 4.3MB HTTP 200, model 5.5MB HTTP 200).
+
+### Stage Summary
+
+**Files created:** `src/hooks/use-speech-recognition.ts` (~320 lines).
+**Files modified:** `src/components/sentinel/war-room/voice-control.tsx` (rewritten, ~370 lines), `src/components/sentinel/agent-x/agent-x.tsx` (1735 → 1325 lines), `src/components/sentinel/war-room/gesture-control.tsx` (locateFile CDN → local).
+**Files copied:** 10 MediaPipe WASM/model assets → `public/mediapipe/hands/`.
+
+**Behavioral changes:**
+- Gesture control: loads MediaPipe from local server, no CDN dependency — no more "library failed to load" on ad-blocker/network issues.
+- War Room voice: now uses the shared hook with real Web Audio waveform + barge-in + robust auto-restart. Always-on by default — tap mic once, then just talk.
+- Agent X voice: same shared hook, same behavior as War Room voice.
+
+**Did NOT commit/push.**

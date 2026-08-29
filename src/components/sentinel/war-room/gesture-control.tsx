@@ -805,16 +805,17 @@ export const GestureControl = forwardRef<GestureControlHandle, GestureControlPro
       setError(null);
       try {
         if (!videoRef.current) throw new Error("video element not ready");
-        // Hands needs to load WASM assets. locateFile routes them to the
-        // jsDelivr CDN so we don't have to serve them ourselves.
+        // Hands needs to load WASM + model assets. We serve them locally
+        // from /public/mediapipe/hands/ (copied from node_modules/@mediapipe/hands
+        // at build time) so we don't depend on a CDN that can be blocked by ad
+        // blockers or network issues.
         // Read the constructor lazily — see getHandsCtor() comment above.
         const HandsCtor = getHandsCtor();
         if (!HandsCtor || typeof HandsCtor !== "function") {
           throw new Error("MediaPipe Hands library failed to load. Check your network connection + ad blocker.");
         }
         const hands = new HandsCtor({
-          locateFile: (file: string) =>
-            `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`,
+          locateFile: (file: string) => `/mediapipe/hands/${file}`,
         });
         hands.setOptions({
           maxNumHands: 2,
