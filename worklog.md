@@ -4424,3 +4424,39 @@ The git-wipe recovery (earlier today) restored an OLD version of `src/lib/db.ts`
 - Role: `admin`
 
 **Deployed to:** `guardian-x-cloud/guardianx` on Vercel → `https://www.guardianx.cloud`
+
+---
+
+## 2026-08-29 — modules-catalog-restore: reconstruct 60+ module catalog in features-data.ts
+
+**Task ID:** `modules-catalog-restore`
+**Agent:** full-stack-developer
+**Task:** Reconstruct the 60+ module catalog in `src/components/sentinel/landing/features-data.ts` (lost in the git-wipe). The file had dropped to 33 feature entries; needed 60+ so every sidebar tab has a corresponding feature card.
+
+### Work Log
+
+- Read the current `features-data.ts` — 33 entries (10 original + Voice/Gesture/Neural/Memory/RBAC jaredrhod entries), the `Feature` interface, and the `FEATURES` export.
+- Read `src/app/page.tsx` lines 540–624 to extract the exact tab labels and each tab's accent color (the `tab === "..." ? "neon-X text-X-300"` color map).
+- Mapped each of the 28 missing sidebar tabs to:
+  - a Lucide icon (27 new icons added to the import block; `ShieldCheck` was already imported and reused for Self-Security)
+  - a color from the allowed palette (emerald / red / amber / cyan / violet / rose / sky / purple / orange — no indigo, no blue), taken from the page.tsx accent color for that tab
+  - a category (matching the task spec: Self-Attack, AI, Threat Sim, Defense, Trust, Visibility, Social Eng, Forecasting, Economics, AI Security, Post-Quantum, Runtime, Training, Privacy, IR, SOC, Platform, Metrics, SAST)
+  - a 1–2 sentence description explaining what the module does
+- Added `isNew: true` to the 16 new-innovation modules (adversarial, agent-x, apt-persona, canary, commons, constellation, deepfake, forecast, moving-target, pay-per-vuln, prompt-injection, quantum, self-security, time-travel, vr-walkthrough, zk-proofs). Admin/infra modules (DFIR, SOC, Advanced, Billing, Settings, Users, Content, Contributors, User-Activity, Pipelines, Clients, Codebases) deliberately have NO `isNew` flag per spec.
+- Appended the 28 new entries after the existing `Multi-Tenant RBAC + Organizations` entry, before the closing `]`, with a `// ── NEW: 28 restored module catalog entries ──` comment divider.
+- Did NOT touch any other file. Only `src/components/sentinel/landing/features-data.ts` was modified.
+- Ran `bunx tsc --noEmit 2>&1 | grep features-data` → 0 matches (= 0 errors in features-data.ts).
+  - Note: tsc reports 2 unrelated errors in root `index.ts` and `mini-services/*/index.ts` — those are pre-existing and outside this task's scope.
+
+### Stage Summary
+
+- **Final feature count: 61 entries** (33 existing + 28 new = 61, satisfying the 60+ requirement).
+- **`isNew: true` count: 22 entries** (6 existing + 16 new innovation modules).
+- **Color palette**: every new entry uses red / emerald / amber / cyan / violet / rose / sky — no indigo, no blue, no out-of-palette colors.
+- **Icon imports**: 27 new Lucide icons added to the import block (Bot, Sparkles, Drama, Bird, Users, Orbit, Clapperboard, TrendingUp, Shuffle, Coins, Terminal, Atom, Rewind, Glasses, EyeOff, Siren, Telescope, SlidersHorizontal, CreditCard, Settings, UserCog, PenLine, Trophy, LineChart, GitMerge, Briefcase, FolderGit2). All verified to exist in lucide-react 0.525.0.
+- **TypeScript**: `tsc --noEmit | grep features-data` returns nothing — 0 errors in the file. The `Feature` interface and `FEATURES` export name are unchanged.
+- **Pattern fidelity**: every new entry follows the exact same property order (`icon → title → category → desc → color → neon → border → glow → bg → isNew?`) and the same Tailwind/CSS class structure as the existing entries.
+
+### Files changed
+
+- `src/components/sentinel/landing/features-data.ts` — added 27 new Lucide icon imports + 28 new feature entries to the `FEATURES` array. No other file touched.
