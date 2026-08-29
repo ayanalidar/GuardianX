@@ -346,3 +346,33 @@ export async function chatWithFallback(opts: {
     };
   }
 }
+
+// ── Web search with fallback ──────────────────────────────────────────────
+// Tries ZAI web_search (only available in Z.ai sandbox), then falls back to
+// an empty array if unavailable. Callers should handle the empty array
+// gracefully (show "no results" in the UI).
+export async function webSearchWithFallback(
+  query: string,
+  num: number = 10,
+): Promise<Array<{ url: string; name: string; snippet: string; host_name: string; date: string }>> {
+  try {
+    // Only attempt ZAI web search if ZAI_CONFIG is set — otherwise it will
+    // throw and waste latency. On Vercel, ZAI_CONFIG is typically not set
+    // (Groq is used for chat instead), so we return empty + let the UI
+    // show "no results".
+    if (!process.env.ZAI_CONFIG) return [];
+    ensureZaiConfig();
+    const ZAIModule = await import("z-ai-web-dev-sdk");
+    const ZAI = ZAIModule.default;
+    const z = await ZAI.create();
+    const results = await z.functions.invoke("web_search", {
+      query,
+      num,
+      recency_days: 30,
+    });
+    return (results as Array<{ url: string; name: string; snippet: string; host_name: string; date: string }>) || [];
+  } catch (err) {
+    console.warn("[llm] web_search failed:", err instanceof Error ? err.message : err);
+    return [];
+  }
+}

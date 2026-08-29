@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import ZAI from "z-ai-web-dev-sdk";
+import { chatWithFallback } from "@/lib/llm";
 import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -77,19 +77,17 @@ Rules:
 - If asked for a summary, give bullet points
 - If you don't know something, say so`;
 
-    const zai = await ZAI.create();
     const messages = [
-      { role: "system", content: systemPrompt },
       ...history.slice(-6).map((h: { role: string; content: string }) => ({ role: h.role, content: h.content })),
       { role: "user", content: message },
     ];
 
-    const response = await zai.chat.completions.create({
+    const result = await chatWithFallback({
+      system: systemPrompt,
       messages,
-      thinking: { type: "disabled" },
+      fallback: () => "I'm having trouble connecting to the LLM right now. Please try again in a moment.",
     });
-
-    const reply = response.choices[0]?.message?.content || "I couldn't process that request.";
+    const reply = result.content;
 
     return NextResponse.json({
       reply,

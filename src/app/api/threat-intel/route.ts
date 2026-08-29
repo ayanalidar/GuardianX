@@ -1,28 +1,20 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import ZAI from "z-ai-web-dev-sdk";
+import { webSearchWithFallback } from "@/lib/llm";
 import { getUserFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
-
-let zaiPromise: Promise<ZAI> | null = null;
-async function sdk() {
-  if (!zaiPromise) zaiPromise = ZAI.create();
-  return zaiPromise;
-}
 
 // GET /api/threat-intel, fetch latest CVEs via web search + cross-reference codebases.
 export async function GET(req: Request) {
   const user = getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
-    const z = await sdk();
-    const results = await z.functions.invoke("web_search", {
-      query: "latest critical CVE vulnerability disclosure 2024 2025",
-      num: 10,
-      recency_days: 30,
-    });
+    const results = await webSearchWithFallback(
+      "latest critical CVE vulnerability disclosure 2024 2025",
+      10,
+    );
 
     const codebases = await db.codebase.findMany({
       select: { name: true, description: true },
