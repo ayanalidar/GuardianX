@@ -1,3 +1,8 @@
 node_modules/
 .env
 logs/
+.next/
+dev.log
+*.log
+.zscripts/
+tool-results/
