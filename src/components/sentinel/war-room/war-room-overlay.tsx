@@ -56,7 +56,7 @@ import { CircuitBoard } from "../ai-visualizer/circuit-board";
 import { useSignalBus, type VisualizerEvent } from "../ai-visualizer/signal-bus";
 import { VoiceControl, type VoiceControlHandle, type VoiceCommand } from "./voice-control";
 import { GestureControl, type GestureControlHandle, type GestureEvent } from "./gesture-control";
-import { SafeSection } from "../safe-boundary";
+import { SafeSection } from "@/components/safe-boundary";
 
 export interface WarRoomOverlayProps {
   open: boolean;
