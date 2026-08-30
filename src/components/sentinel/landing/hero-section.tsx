@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Terminal, Zap } from "lucide-react";
+import { ArrowRight, Film, Terminal, Zap } from "lucide-react";
 import { GuardianXLogo } from "../guardianx-logo";
 import { ParticleNetworkBackground } from "./particle-bg";
 import { GlowOrb } from "./glow-orb";
@@ -20,7 +20,13 @@ import { useCountUp, formatInt } from "./use-count-up";
  *  - Live-scan terminal that types a real exploit + patch sequence
  *  - CTA buttons with hover glow + click-particle emission
  */
-export function HeroSection({ onEnter }: { onEnter: () => void }) {
+export function HeroSection({
+  onEnter,
+  onTryDemo,
+}: {
+  onEnter: () => void;
+  onTryDemo: () => void;
+}) {
   const [counterRef, counterVal] = useCountUp(2847, { duration: 2400, delay: 600 });
 
   return (
@@ -65,6 +71,10 @@ export function HeroSection({ onEnter }: { onEnter: () => void }) {
             <Terminal className="size-5" />
             Enter the Lab Console
             <ArrowRight className="size-4" />
+          </GlowCTA>
+          <GlowCTA onClick={onTryDemo} variant="outline">
+            <Film className="size-5" />
+            Try Demo
           </GlowCTA>
           <GlowCTA href="#features" variant="outline">
             Explore 50+ Modules
@@ -132,7 +142,7 @@ export function HeroSection({ onEnter }: { onEnter: () => void }) {
               </div>
             </div>
             <TerminalTyping />
-            <div className="mt-3 flex items-center justify-between border-t border-zinc-800/80 pt-2 font-mono text-[10px] text-zinc-500">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-zinc-800/80 pt-2 font-mono text-[9px] text-zinc-500 sm:text-[10px]">
               <span className="text-emerald-400/80">● agent: redagent-1</span>
               <span className="text-cyan-400/80">sandbox: running</span>
               <span className="text-violet-400/80">attestation: pending</span>

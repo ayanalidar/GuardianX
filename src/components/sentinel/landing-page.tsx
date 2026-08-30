@@ -64,6 +64,7 @@ function SectionPlaceholder() {
 
 interface LandingPageProps {
   onEnter: () => void;
+  onTryDemo: () => void;
 }
 
 const TECH_STACK = [
@@ -98,7 +99,7 @@ const COMPLIANCE = ["OWASP Top 10", "PCI-DSS", "ISO 27001", "SOC 2", "NIST", "DP
  * Dark theme: zinc-950 base, emerald/cyan/violet/red accents.
  * Existing `SiteHeader` and `SiteFooter` preserved. `onEnter` prop preserved.
  */
-export function LandingPage({ onEnter }: LandingPageProps) {
+export function LandingPage({ onEnter, onTryDemo }: LandingPageProps) {
   return (
     <div className="scanlines cyber-vignette relative min-h-screen overflow-hidden bg-background text-foreground">
       {/* Ambient color glows, multi-color */}
@@ -114,7 +115,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
 
         <main>
           {/* 1. Hero */}
-          <HeroSection onEnter={onEnter} />
+          <HeroSection onEnter={onEnter} onTryDemo={onTryDemo} />
 
           {/* 1b. Live vulnerability feed ticker (DB-backed, mock fallback) */}
           <VulnFeed />

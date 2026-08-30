@@ -48,7 +48,7 @@ In Git Bash:
 ```bash
 cat > .env.local << 'EOF'
 SUPABASE_URL=https://ekjsieovspkuqdjhxwct.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVranNpZW92c3BrdXFkamh4d2N0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTQ3NDUzNCwiZXhwIjoyMTAxMDUwNTM0fQ.wSRwd24RFJHmQBlszGuVkGUmyA1dUzvEVM-ZMZJFIBA
+SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY_PLACEHOLDER
 NEXT_PUBLIC_SUPABASE_URL=https://ekjsieovspkuqdjhxwct.supabase.co
 JWT_SECRET=guardianx-dev-secret-change-in-production
 ENGINE_URL=http://localhost:3003
@@ -71,7 +71,7 @@ cd mini-services/sentinel-engine
 bun install
 cat > .env << 'EOF'
 SUPABASE_URL=https://ekjsieovspkuqdjhxwct.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVranNpZW92c3BrdXFkamh4d2N0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTQ3NDUzNCwiZXhwIjoyMTAxMDUwNTM0fQ.wSRwd24RFJHmQBlszGuVkGUmyA1dUzvEVM-ZMZJFIBA
+SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY_PLACEHOLDER
 NEXT_PUBLIC_SUPABASE_URL=https://ekjsieovspkuqdjhxwct.supabase.co
 JWT_SECRET=guardianx-dev-secret-change-in-production
 ZAI_API_KEY=placeholder

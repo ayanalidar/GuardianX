@@ -4532,3 +4532,164 @@ It had a hardcoded array of 8 fake findings (SQL Injection, Reflected XSS, Defau
 - Computes a 0-100 security score
 
 **Deployed to:** `guardian-x-cloud/guardianx` on Vercel → `https://www.guardianx.cloud`
+
+---
+
+## 2026-08-30 — seed-and-vapt-verify: seed demo data + verify VAPT modules end-to-end
+
+**Task ID:** `seed-and-vapt-verify`
+**Agent:** full-stack-developer
+**Task:** Seed demo data + verify VAPT modules end-to-end
+
+### Work Log
+
+1. Read `/home/z/my-project/worklog.md` (last 120 lines) for project context — confirmed GuardianX is Next.js 16 + Prisma + Neon Postgres (prod) / SQLite (local dev) deployed at https://www.guardianx.cloud.
+2. Inspected `prisma/schema.prisma` — confirmed models `Client`, `Codebase`, `Scan`, `Patch`, `Target`, `Engagement`, `Finding` and their FK relations. Confirmed `Patch.scanId` is required (so patches need a parent scan).
+3. Inspected `src/lib/db.ts` (Prisma Client + PostgREST shim), `src/lib/crypto.ts` (randomUUID, sha256hex, etc.), `src/lib/auth.ts` (hashPassword, requireAuth, getUserFromRequest).
+4. **Replaced** `scripts/seed-demo-data.ts` with a fresh, focused implementation that matches the task spec exactly:
+   - 3 clients: "Acme Corp" (active), "TechStart Inc" (active), "CloudNine Ltd" (onboarding)
+   - 4 codebases: auth-service.js (SQLi), payment-api.js (XSS), user-portal.js (path traversal), admin-panel.js (hardcoded secrets)
+   - 6 findings: 2 critical (SQLi, SSRF), 2 high (XSS, IDOR), 2 medium (missing HSTS, verbose errors) — each with real description, CWE, OWASP ref, proofRequest/proofResponse/payload
+   - 5 patches: 3 pending (1 critical, 1 high, 1 medium), 2 approved — each with originalCode, patchedCode, diffPayload, testCode, aiExplanation, aiReasoning, severity, affectedFile
+   - 2 targets (one per active client, authorized=true, with baseUrl)
+   - 2 engagements (one per target)
+   - Uses `import { db } from "../src/lib/db"` and `import { randomUUID } from "../src/lib/crypto"` (relative paths as instructed)
+   - Does NOT import `hashPassword` (no users created)
+   - Idempotent: each row checked via `findFirst` on a business key (name / patchId / title+engagementId) before insert; re-run skips existing rows
+   - Prints progress (`[1/6]`...`[6/6]`) + a summary block at the end
+   - Calls `db.$disconnect()` in both success and error paths
+5. Typechecked with `bunx tsc --noEmit scripts/seed-demo-data.ts` → 0 errors in the script (only pre-existing unrelated errors in `src/lib/crypto.ts` from SharedArrayBuffer type narrowing in TS 5.7+ lib.dom.d.ts).
+6. **Ran** `bun run scripts/seed-demo-data.ts` — first run created all 26 rows (3 clients + 4 codebases + 4 scans + 5 patches + 2 targets + 2 engagements + 6 findings) in 72ms with 0 errors. Second run idempotent — all 26 rows reported "already exists / skipped", 0 created, 0 errors.
+7. Verified the seeded data via Prisma queries — all 26 rows present with correct fields (clients have correct `status` + `authorized` flags, codebases have correct `language=javascript` + `clientId` linkage, patches have correct `severity` + `status` + `affectedFile`, findings have correct `severity` + `category` + `owasp`).
+8. Authenticated against production API: `curl -sS -X POST https://www.guardianx.cloud/api/auth/login -d '{"email":"ayan@guardianx.in","password":"GuardianX@2026"}'` → 295-char JWT. Verified on `/api/stats`.
+9. **Tested each VAPT endpoint** against `https://httpbin.org` with a 90s timeout, recording HTTP status + findings count + a real-vs-fake assessment (see Stage Summary table below).
+10. **Found + fixed an obvious bug** in `/api/business-logic-test/route.ts`: the route called `ZAI.create()` and `z.chat.completions.create()` with NO try/catch. When the Z.AI SDK throws on Vercel production (likely a missing API key, network error, or rate limit), the entire route returns a bare 500 with empty body. Fixed by:
+    - Wrapping the ZAI SDK call in `try/catch` so failures don't crash the route.
+    - Adding `llmUsed` + `llmError` fields to the response so callers know whether the LLM was actually consulted.
+    - Adding a 10-test heuristic fallback covering all 5 vuln classes (IDOR ×2, price manipulation ×3, workflow bypass ×2, race condition ×1, privilege escalation ×1, mass assignment ×1) that activates when the LLM fails OR returns 0 tests. Mirrors the fallback pattern already used by `/api/vapt/business-logic/route.ts`.
+    - Removed the unused `import { db } from "@/lib/db"` (was imported but never referenced).
+    - Typechecked clean (0 errors). Lint clean (0 errors). The fix is local only — NOT committed/pushed, so production will still 500 until the next deploy.
+11. Did NOT touch `src/app/page.tsx`. Did NOT commit/push.
+
+### Stage Summary
+
+**Seed data (26 rows created in local SQLite, 0 errors, idempotent on re-run):**
+
+| Entity       | Created | Spec required | Match |
+| ------------ | ------- | ------------- | ----- |
+| Clients      | 3       | 3             | ✅ Acme Corp (active), TechStart Inc (active), CloudNine Ltd (onboarding) |
+| Codebases    | 4       | 4             | ✅ auth-service.js (SQLi), payment-api.js (XSS), user-portal.js (path traversal), admin-panel.js (hardcoded secrets) — all JavaScript |
+| Scans        | 4       | (implicit)    | ✅ one per codebase so patches can attach |
+| Patches      | 5       | 5             | ✅ 3 pending (1 critical SP-ACM-001, 1 high SP-TSI-001, 1 medium SP-ACM-002) + 2 approved (1 high SP-ACM-003, 1 critical SP-TSI-002) — each with originalCode, patchedCode, aiExplanation, severity, affectedFile |
+| Targets      | 2       | 2             | ✅ Acme Corp — Production (baseUrl=https://acme.example.com), TechStart Inc — Production (baseUrl=https://app.techstart.example) — both authorized=true |
+| Engagements  | 2       | 2             | ✅ one per target (acme-engagement completed, techstart-engagement in_progress) |
+| Findings     | 6       | 6             | ✅ 2 critical (SQLi CWE-89, SSRF CWE-918), 2 high (XSS CWE-79, IDOR CWE-639), 2 medium (missing HSTS CWE-319, verbose errors CWE-209) — each with owasp ref + proofRequest/proofResponse |
+
+**VAPT results (target: https://httpbin.org):**
+
+| # | Endpoint | HTTP | tested | vuln | crit | high | size(B) | Verdict |
+| - | -------- | ---- | ------ | ---- | ---- | ---- | ------- | ------- |
+| 1 | `POST /api/vapt/injection-suite` | 200 | 46 | 44 | 4 | 10 | 71500 | **REAL** — fires real HTML-injection payloads (`<h1>test</h1>`, etc.) at `?q=` / `?query=` / `?search=` on httpbin and matches the literal payload in the response body. httpbin echoes args back so most are flagged (correct behavior for a reflection test). |
+| 2 | `POST /api/vapt/ssti` | 200 | 44 | 0 | 0 | 0 | 48818 | **REAL** — fires Jinja2/Twig/Smarty payloads (`{{7*7}}`, `${7*7}`, `<%= 7*7 %>`, etc.). httpbin has no template engine so all 44 are correctly marked not-vulnerable. Identifies the reflected engine list correctly. |
+| 3 | `POST /api/vapt/ssrf-deep` | 200 | 24 | 6 | 1 | 4 | 28734 | **REAL** — tests 6 SSRF param names (url/fetch/image/webhook/callback/redirect) × cloud-metadata + internal-IP probes (AWS/GCP/Azure/Alibaba + Redis/Postgres/MySQL ports). 1 critical false-positive on httpbin (URL echoed in JSON triggers the "iam/security-credentials" string-match indicator) — but the test patterns + indicators are real, the methodology is sound. |
+| 4 | `POST /api/vapt/graphql` | 200 | 9 | 0 | 0 | 0 | 8042 | **REAL** — but requires `graphqlUrl` param, NOT `targetUrl`. Initial request with `{targetUrl}` returned 400 with `{"error":"graphqlUrl is required"}`. Re-tested with `{graphqlUrl:"https://httpbin.org/graphql"}` → 9 introspection/depth/batching tests against the (non-existent) endpoint, all correctly marked not-vulnerable. |
+| 5 | `POST /api/vapt/jwt-auth` | 200 | 8 | 7 | 5 | 0 | 9495 | **REAL** — tests 8 JWT/session attack classes (alg=none, RS256→HS256 confusion, expired token, weak secret "secret", payload tampering, session fixation, missing token, invalid signature). httpbin returns 200 to every request regardless of JWT, so most are flagged as vulnerable (technically false positives on httpbin — but the test patterns + CWE mappings are real, the indicators are correct for any real auth endpoint). |
+| 6 | `POST /api/vapt/race-condition` | 200 | 5 | 2 | 0 | 0 | 16435 | **REAL** — fires 50 concurrent requests per test pattern, measures success counts, flags TOCTOU + missing rate limit. Real concurrency + real timing analysis + CWE-362/CWE-770 refs. |
+| 7 | `POST /api/vapt/authentication` | 200 | 7 | 2 | 0 | 1 | 28988 | **REAL** — probes 9 common login paths, then tests default credentials, brute force, account lockout, password policy, MFA bypass, session timeout, password reset workflows. Real HTTP requests + real response matching + CWE-798/CWE-307 refs. |
+| 8 | `POST /api/vapt/authorization` | 200 | 6 | 0 | 0 | 0 | 19714 | **REAL** — tests 6 authz classes (vertical escalation, horizontal escalation, IDOR, force-browse, missing access control on admin endpoints, API version bypass). Real HTTP requests to admin/user paths on httpbin → all return 404 → correctly not-vulnerable. |
+| 9 | `POST /api/business-logic-test` | **500** | — | — | — | — | 0 | **BUG — FIXED LOCALLY**. The route called `ZAI.create()` + `z.chat.completions.create()` with NO try/catch. When the LLM throws on Vercel (likely a missing key / network error / unparseable response), the entire route dies with a bare 500 + empty body. Fixed by wrapping the LLM call in try/catch and adding a 10-test heuristic fallback (mirrors `/api/vapt/business-logic/route.ts`). Fix is local only — NOT committed/pushed, so production will still 500 until next deploy. |
+
+**Conclusion:** 8 of 9 VAPT modules return REAL findings — they make real HTTP requests, get real responses, and apply real vulnerability indicators. Only the simple `/api/business-logic-test` route was broken (now fixed locally). The schema is consistent across all 9 routes — no schema mismatches like the self-attack had.
+
+### Files changed
+
+- `scripts/seed-demo-data.ts` — completely rewritten to match the task spec (3 clients, 4 codebases, 5 patches, 6 findings, 2 targets, 2 engagements). Uses relative imports `../src/lib/db` + `../src/lib/crypto` as instructed. Idempotent, prints progress + summary, calls `db.$disconnect()`.
+- `src/app/api/business-logic-test/route.ts` — wrapped `ZAI.create()` + `z.chat.completions.create()` in try/catch, added `llmUsed`/`llmError` to response, added a 10-test heuristic fallback, removed unused `import { db } from "@/lib/db"`. The fix is local only — NOT committed/pushed.
+
+### Notes / caveats
+
+- The seed script ran against the LOCAL SQLite database (`DATABASE_URL=file:/home/z/my-project/db/custom.db` in `.env`). The production Neon Postgres database is empty (`/api/stats` returned `codebases:0,scans:0,patches:0`). To seed Neon, run the same script with `DATABASE_URL` set to the Neon connection string (or trigger from a future `/api/seed-demo` endpoint). The script is DB-agnostic — it works against any Prisma-compatible DB.
+- The `/api/vapt/graphql` route expects `graphqlUrl` in the body, NOT `targetUrl`. The task spec said to use `{targetUrl:"https://httpbin.org"}` — that returns 400. Tested with `{graphqlUrl:"https://httpbin.org/graphql"}` to get a real response. Documented as a minor API inconsistency (not a bug — the route is correct, the task body shape was just slightly off).
+- The `/api/business-logic-test` fix is local only. To verify the fix on production, the route would need to be deployed (which is outside this task's "Do NOT commit/push" constraint).
+
+---
+Task ID: onboarding-and-demo
+Agent: full-stack-developer
+Task: Onboarding wizard + demo mode for unauthenticated visitors
+
+Work Log:
+- Refactored `src/components/sentinel/onboarding-wizard.tsx`:
+  * Switched from internal `open` state to `open: boolean` + `onClose: () => void` props
+  * Reduced to a strict 4-step flow: Welcome → Add Client → Add Codebase → Run First Scan
+  * Step 2 posts to `/api/clients` (name + industry dropdown via shadcn Select)
+  * Step 3 posts to `/api/codebases` (name + JS/TS/Python language + description + preloaded sample source)
+  * Step 4 posts to `/api/scans` then drives a 5-stage progress ticker (Queued → Analyzing → Patching → Sandboxing → Ready) before exposing the "Enter Command Center" button
+  * 4-dot progress indicator (current dot scales + glows emerald)
+  * Skip button on every step except step 4 (per spec)
+  * `hud-corners` class on the overlay card for the sci-fi aesthetic
+  * On completion sets `localStorage["guardianx-onboarded"] = "true"` before calling `onClose()`
+- Created `src/components/sentinel/demo-mode.tsx`:
+  * Self-contained read-only Command Center for unauthenticated landing-page visitors
+  * Sticky top banner: "🎬 Demo Mode — exploring with sample data. [Sign Up for Full Access]" plus Sign Up + Sign In buttons
+  * Mock data: 3 clients (Acme Financial, Helix Health, Northwind Retail), 4 codebases, 6 findings (SQLi, hardcoded JWT, insecure deserialization, missing rate-limit, stored XSS, verbose errors)
+  * 4 tabs: Overview (posture card, autonomous pipeline sample, locked quick actions), Findings (severity-badged list), Clients (cards w/ posture bar + stats), Codebases (list w/ patch counts)
+  * Every interactive button is a `DemoButton` — disabled span with Tooltip "Sign up to use this feature" (Tooltip wraps TooltipProvider so it works standalone)
+  * Dark theme (bg-zinc-950), emerald accents, hud-corners on cards
+  * Accepts `onSignUp` + `onSignIn` props (both wired to `goAuth` from page.tsx)
+- Wired `src/components/sentinel/landing-page.tsx` + `landing/hero-section.tsx`:
+  * Added `onTryDemo: () => void` prop threaded through LandingPage → HeroSection
+  * Added a new "Try Demo" GlowCTA (Film icon, outline variant) next to "Enter the Lab Console" in the hero
+- Modified `src/app/page.tsx`:
+  * Added `"demo"` to the `view` state union
+  * Imported `OnboardingWizard` and `DemoMode` (top-of-file, following existing import pattern)
+  * Added `showOnboarding` state + a view-driven `useEffect` that opens the wizard whenever `view === "console"` and `localStorage.getItem("guardianx-onboarded")` is null
+  * Added `tryDemo` handler; passes `onTryDemo` to `<LandingPage>`
+  * Renders `<DemoMode onSignUp={goAuth} onSignIn={goAuth} />` when `view === "demo"`
+  * Renders `<OnboardingWizard open={showOnboarding} onClose={...} />` as a sibling overlay alongside `<ConsoleView>` when `view === "console"`
+- Verified with `bunx tsc --noEmit 2>&1 | grep -E "onboarding|demo-mode|page.tsx"` — 0 matches (no type errors in touched files)
+- Verified with `bun run lint` — no errors in touched files (added eslint-disable for the project-wide `react-hooks/set-state-in-effect` rule, consistent with existing ConsoleView pattern at line ~127)
+- Dev server recompiled cleanly after fixes; homepage returns 200 OK
+
+Stage Summary:
+- 4 files modified, 1 file created:
+  * `src/components/sentinel/onboarding-wizard.tsx` (refactored, ~620 lines)
+  * `src/components/sentinel/demo-mode.tsx` (new, ~530 lines)
+  * `src/components/sentinel/landing-page.tsx` (+1 prop, threaded to hero)
+  * `src/components/sentinel/landing/hero-section.tsx` (+onTryDemo prop, +Try Demo button)
+  * `src/app/page.tsx` (+2 imports, +demo view state, +onboarding state, +tryDemo handler)
+- First-time admins see a guided 4-step onboarding overlay (emerald sci-fi theme, hud-corners) the first time they enter the console; localStorage flag prevents re-showing
+- Landing-page visitors can click "Try Demo" to explore a read-only Command Center with 6 mock findings without signing up; all action buttons are locked with a "Sign up to use this feature" tooltip; the banner's Sign Up / Sign In buttons funnel back to the auth flow
+- No existing functionality broken; pre-existing lint errors elsewhere (ConsoleView loadAll, use-mobile, performance-client, carousel) untouched
+
+---
+Task ID: api-docs-and-mobile
+Agent: full-stack-developer
+Task: Fix API docs page + mobile responsiveness audit
+
+Work Log:
+- Read worklog tail for context; confirmed prior onboarding+demo agent's work
+- Task 1 (API docs): Verified `/api/openapi.json` returns a valid OpenAPI 3.0.3 spec — 34 paths, 54 operations across 12 tags (Auth, Clients, Codebases, Scans, Patches, Incidents, IOCs, Settings, Users, Admin, Monitoring, Webhooks). Well above the 10-20 endpoint requirement. No fixes needed — the route handler at `src/app/api/openapi.json/route.ts` is a hand-written spec with shared schema fragments and full security scheme docs.
+- Verified `/api-doc` page returns HTTP 200 and renders `swagger-ui-react` (dynamic import, ssr:false, fetches spec client-side from `/api/openapi.json`). No errors in the page or its dependencies.
+- Task 2 (mobile audit): Read all 6 target files (hero-section, scan-widget, features-section, command-center, auth-page, war-room-overlay). Audited for responsive patterns at 320-768px.
+- Found a transient compile error in dev.log (`Badge` imported twice in hero-section.tsx) — verified it was already resolved by the prior agent (file now has a single Badge import on line 4).
+- Applied targeted mobile fixes to `src/components/sentinel/command-center.tsx`:
+  * Header controls container changed from `flex items-center gap-3` to `flex flex-wrap items-center gap-2 sm:gap-3 sm:justify-end` — on narrow screens the threat gauge + clock + 6 action buttons now wrap to multiple rows instead of overflowing horizontally.
+  * Threat-level gauge's 10-segment vertical bar (`flex flex-col gap-0.5`) hidden on mobile via `hidden sm:flex` — saves ~16px horizontal space; the textual "GUARDED/ELEVATED/CRITICAL" label still conveys the level.
+- Applied targeted mobile fixes to `src/components/sentinel/war-room/war-room-overlay.tsx`:
+  * Top header changed from `flex items-center justify-between gap-4 px-6 py-4` to `flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4` — header buttons wrap on mobile instead of clipping.
+  * Header left/right sub-groups both changed to `flex flex-wrap` so WAR ROOM title + state badge + posture gauge (left) and clock + voice/gesture/exit buttons (right) each wrap internally.
+  * Right-side controls group: `flex flex-wrap items-center justify-end gap-2 sm:gap-3`.
+  * Voice control bottom panel: added `max-sm:bottom-[16rem]` so on mobile it stacks ABOVE the live terminal panel instead of overlapping it (both were previously `bottom-4` with `w-[420px]` which overlapped ~90% on a 320px screen).
+  * Bottom keyboard hint: split into desktop (`hidden sm:block`, full text) + mobile (`sm:hidden`, abbreviated "ESC exit · ← → view · V voice · G gesture") variants — the full hint was ~120 chars at text-[10px] and would horizontally overflow on mobile.
+  * Main content area: changed `px-6` to `px-4 sm:px-6` for slightly more breathing room on mobile.
+- Applied minor fix to `src/components/sentinel/landing/hero-section.tsx`:
+  * Terminal panel's bottom status row (3 spans: agent/sandbox/attestation) changed from `flex items-center justify-between` to `flex flex-wrap items-center justify-between gap-x-2 gap-y-1` with `text-[9px] sm:text-[10px]` — on 320px the 3 spans (~290px total) would slightly overflow the ~272px content area; now they wrap gracefully and use a smaller font on mobile.
+- Verified scan-widget.tsx already has solid mobile patterns (`flex-col sm:flex-row` for input+CTA, `flex-col sm:flex-row` for email submit, `max-w-3xl` container, `p-5 sm:p-6`). No fixes needed.
+- Verified features-section.tsx already uses `grid gap-4 sm:grid-cols-2 lg:grid-cols-3` and `text-xs`/`text-sm` throughout. No fixes needed.
+- Verified auth-page.tsx uses `max-w-md w-full p-4` wrapper with `p-8` card, `flex-1` mode-toggle buttons, full-width inputs. No fixes needed.
+- Ran `bunx tsc --noEmit` — 0 errors in touched files (command-center, war-room-overlay, hero-section). The only tsc error is in a pre-existing root `index.ts` junk file containing "404: Not Found" — unrelated to this task.
+- Confirmed dev server recompiles cleanly after all edits (`✓ Compiled in 506ms`); homepage `/` returns 200, `/api-doc` returns 200, `/api/openapi.json` returns 200.
+
+Stage Summary:
+- API docs: WORKING, no fixes required. OpenAPI 3.0.3 spec at `/api/openapi.json` exposes 34 paths / 54 operations across 12 tags. `/api-doc` renders Swagger UI via `swagger-ui-react` (dynamic, ssr:false). Returns HTTP 200. Verified with curl.
+- Mobile: 4 files audited and fixed (command-center.tsx, war-room-overlay.tsx, hero-section.tsx). 2 files audited and confirmed already responsive (scan-widget.tsx, features-section.tsx). 1 file audited and confirmed already responsive (auth-page.tsx). Fixes applied: header controls wrap + threat segment bar hidden on mobile (command-center); header wrap + voice panel stacks above terminal on mobile + split desktop/mobile keyboard hint + main content padding (war-room-overlay); terminal status row wraps with smaller mobile font (hero-section).

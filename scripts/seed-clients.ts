@@ -2,7 +2,7 @@
 // Run: bun run scripts/seed-clients.ts
 
 const SUPABASE_URL = "https://ekjsieovspkuqdjhxwct.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVranNpZW92c3BrdXFkamh4d2N0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTQ3NDUzNCwiZXhwIjoyMTAxMDUwNTM0fQ.wSRwd24RFJHmQBlszGuVkGUmyA1dUzvEVM-ZMZJFIBA";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "SUPABASE_SERVICE_ROLE_KEY_PLACEHOLDER";
 
 async function insert(table: string, data: Record<string, unknown> | Record<string, unknown>[]) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {

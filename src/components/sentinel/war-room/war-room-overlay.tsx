@@ -423,8 +423,8 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
         <div className="scanlines cyber-vignette pointer-events-none absolute inset-0 opacity-40" />
 
         {/* ── Top header ─────────────────────────────────────────────────── */}
-        <header className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-4">
+        <header className="absolute left-0 right-0 top-0 z-20 flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
               <span className="neon-emerald">WAR</span>{" "}
               <span className="neon-red">ROOM</span>
@@ -443,7 +443,7 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
             {/* Clock */}
             <div className="rounded-lg border border-emerald-500/30 bg-zinc-950/80 px-3 py-1.5 font-mono backdrop-blur">
               <div className="text-[8px] uppercase tracking-wider text-emerald-500/60">SYS TIME</div>
@@ -554,7 +554,7 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
         </nav>
 
         {/* ── Main content area ──────────────────────────────────────────── */}
-        <main className="absolute inset-x-0 top-[140px] bottom-[260px] z-10 overflow-y-auto px-6 custom-scrollbar sm:bottom-[280px]">
+        <main className="absolute inset-x-0 top-[140px] bottom-[260px] z-10 overflow-y-auto px-4 custom-scrollbar sm:bottom-[280px] sm:px-6">
           <div className="mx-auto max-w-7xl">
             <AnimatePresence mode="wait">
               {view === "overview" && (
@@ -763,13 +763,14 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
         </div>
 
         {/* ── Bottom-center-right: voice control (toggle) ────────────────── */}
+        {/* On mobile (below sm), stack above the live terminal to avoid overlap. */}
         <AnimatePresence>
           {voiceOn && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="absolute bottom-4 right-4 z-20 w-[420px] max-w-[calc(100vw-2rem)]"
+              className="absolute bottom-4 right-4 z-20 w-[420px] max-w-[calc(100vw-2rem)] max-sm:bottom-[16rem]"
             >
               <VoiceControl
                 ref={voiceRef}
@@ -796,9 +797,15 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
         </AnimatePresence>
 
         {/* ── Bottom hint ───────────────────────────────────────────────── */}
-        <div className="pointer-events-none absolute bottom-1 left-1/2 z-10 -translate-x-1/2">
+        {/* Full hint on desktop, abbreviated on mobile so it doesn't overflow. */}
+        <div className="pointer-events-none absolute bottom-1 left-1/2 z-10 hidden -translate-x-1/2 sm:block">
           <div className="rounded-full border border-zinc-700/50 bg-zinc-950/60 px-4 py-1 font-mono text-[10px] uppercase tracking-widest text-zinc-500 backdrop-blur">
             ESC — exit · ← → — view · V — voice · Shift+V — always-on / push-to-talk · G — gesture · fist — close
+          </div>
+        </div>
+        <div className="pointer-events-none absolute bottom-1 left-1/2 z-10 -translate-x-1/2 sm:hidden">
+          <div className="rounded-full border border-zinc-700/50 bg-zinc-950/60 px-3 py-1 font-mono text-[9px] uppercase tracking-wider text-zinc-500 backdrop-blur">
+            ESC exit · ← → view · V voice · G gesture
           </div>
         </div>
       </motion.div>

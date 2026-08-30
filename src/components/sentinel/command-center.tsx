@@ -20,8 +20,20 @@ import { LiveExploitTerminal } from "./live-exploit-terminal";
 import { GuardianChat } from "./guardian-chat";
 import { ServiceLauncher } from "./service-launcher";
 import { ServiceStatusChips } from "./service-status-chips";
-import { SignalBusProvider, ImmersiveView, CircuitBoard } from "./ai-visualizer";
-import { WarRoomOverlay } from "./war-room/war-room-overlay";
+import { SignalBusProvider, CircuitBoard } from "./ai-visualizer";
+import dynamic from "next/dynamic";
+// Lazy-load the War Room overlay + ImmersiveView — they pull in MediaPipe Hands
+// (6MB WASM), framer-motion, and Three.js. Loading them eagerly on every page
+// load tanks the landing page's initial bundle. With dynamic() they're only
+// loaded when the user actually opens them.
+const WarRoomOverlay = dynamic(
+  () => import("./war-room/war-room-overlay").then((m) => m.WarRoomOverlay),
+  { ssr: false },
+);
+const ImmersiveView = dynamic(
+  () => import("./ai-visualizer").then((m) => m.ImmersiveView),
+  { ssr: false },
+);
 
 interface ClientSummary {
   id: string;
@@ -253,7 +265,7 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 sm:justify-end">
             {/* Threat level gauge */}
             <div className={`flex items-center gap-2 rounded-lg border ${threatCfg.border} ${threatCfg.bg} px-3 py-2`}>
               <Gauge className={`size-4 ${threatCfg.text} ${threatLevel >= 30 ? "animate-pulse" : ""}`} />
@@ -263,7 +275,8 @@ export function CommandCenter({ onSelectClient, onAddClient }: CommandCenterProp
                   {threatLevel >= 60 ? "CRITICAL" : threatLevel >= 30 ? "ELEVATED" : "GUARDED"}
                 </div>
               </div>
-              <div className="flex flex-col gap-0.5">
+              {/* 10-segment vertical bar — hidden on mobile to save horizontal space */}
+              <div className="hidden flex-col gap-0.5 sm:flex">
                 {[...Array(10)].map((_, i) => (
                   <div
                     key={i}

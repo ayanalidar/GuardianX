@@ -8,3 +8,4 @@ dev.log
 tool-results/
 .vercel
 .env*
+db/

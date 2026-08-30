@@ -113,13 +113,16 @@ import { PayPerVuln } from "@/components/sentinel/pay-per-vuln";
 import { SecurityCommons } from "@/components/sentinel/security-commons";
 import { ZkProofs } from "@/components/sentinel/zk-proofs";
 import { SelfSecurityDashboard } from "@/components/sentinel/self-security-dashboard";
+import { OnboardingWizard } from "@/components/sentinel/onboarding-wizard";
+import { DemoMode } from "@/components/sentinel/demo-mode";
 
 type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings" | "modules" | "forecast" | "quantum" | "constellation" | "agent-x" | "adversarial" | "apt-persona" | "time-travel" | "vr-walkthrough" | "moving-target" | "canary" | "prompt-injection" | "deepfake" | "pay-per-vuln" | "commons" | "zk-proofs" | "self-security";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
-  const [view, setView] = useState<"landing" | "console" | "auth">("landing");
+  const [view, setView] = useState<"landing" | "console" | "auth" | "demo">("landing");
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string; name: string; role: string } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     // Check for existing session
@@ -133,6 +136,24 @@ export default function Home() {
       setView("console");
     }
   }, []);
+
+  // Show the onboarding wizard the first time a user enters the console
+  // and hasn't yet completed it (flag stored in localStorage).
+  useEffect(() => {
+    if (view !== "console") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowOnboarding(false);
+      return;
+    }
+    try {
+      const done = localStorage.getItem("guardianx-onboarded");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (!done) setShowOnboarding(true);
+    } catch {
+      // localStorage unavailable (private mode) — skip onboarding.
+    }
+  }, [view]);
+
   const enterConsole = () => {
     setView("console");
     localStorage.setItem("guardianx-view", "console");
@@ -142,6 +163,7 @@ export default function Home() {
     localStorage.setItem("guardianx-view", "landing");
   };
   const goAuth = () => setView("auth");
+  const tryDemo = () => setView("demo");
   const handleAuth = (user: { id: string; email: string; name: string; role: string }, _token: string) => {
     setCurrentUser(user);
     setView("console");
@@ -158,9 +180,20 @@ export default function Home() {
     return <AuthPage onAuth={handleAuth} />;
   }
   if (view === "landing") {
-    return <LandingPage onEnter={goAuth} />;
+    return <LandingPage onEnter={goAuth} onTryDemo={tryDemo} />;
   }
-  return <ConsoleView onBackToLanding={backToLanding} currentUser={currentUser} onLogout={handleLogout} />;
+  if (view === "demo") {
+    return <DemoMode onSignUp={goAuth} onSignIn={goAuth} />;
+  }
+  return (
+    <>
+      <ConsoleView onBackToLanding={backToLanding} currentUser={currentUser} onLogout={handleLogout} />
+      <OnboardingWizard
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+      />
+    </>
+  );
 }
 
 function ConsoleView({ onBackToLanding, currentUser, onLogout }: {

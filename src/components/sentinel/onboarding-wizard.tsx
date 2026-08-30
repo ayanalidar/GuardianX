@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { GuardianXLogo } from "./guardianx-logo";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -17,82 +24,119 @@ import {
   ChevronLeft,
   X,
   Loader2,
-  Upload,
   Rocket,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 
 const STORAGE_KEY = "guardianx-onboarded";
 
-interface CreatedClient { id: string; name: string; }
-interface CreatedCodebase { id: string; name: string; }
-
-interface OnboardingWizardProps {
-  /** Called when the user finishes the wizard (or skips to dashboard). */
-  onComplete?: () => void;
+interface CreatedClient {
+  id: string;
+  name: string;
+}
+interface CreatedCodebase {
+  id: string;
+  name: string;
 }
 
-const TOTAL_STEPS = 5;
+interface OnboardingWizardProps {
+  /** Controls overlay visibility. */
+  open: boolean;
+  /** Called when the user closes, finishes, or skips the wizard. */
+  onClose: () => void;
+}
 
-// Tiny vulnerable sample so the user can run a scan immediately without
-// having to bring their own code. intentionally obvious SQLi pattern.
+const TOTAL_STEPS = 4;
+
+const INDUSTRIES = [
+  { value: "fintech", label: "Fintech / Banking" },
+  { value: "healthcare", label: "Healthcare / MedTech" },
+  { value: "ecommerce", label: "E-commerce / Retail" },
+  { value: "saas", label: "SaaS / Cloud" },
+  { value: "government", label: "Government / Public" },
+  { value: "energy", label: "Energy / Utilities" },
+  { value: "manufacturing", label: "Manufacturing / IoT" },
+  { value: "other", label: "Other" },
+];
+
+const LANGUAGES = [
+  { value: "javascript", label: "JavaScript" },
+  { value: "typescript", label: "TypeScript" },
+  { value: "python", label: "Python" },
+];
+
+// Tiny vulnerable sample so the user can immediately run a scan without
+// having to bring their own code. Intentionally obvious SQLi pattern.
 const SAMPLE_CODE = `// Sample vulnerable Node.js handler
 app.get("/user", (req, res) => {
   const id = req.query.id;
-  // BUG: string concatenation, classic SQL injection
+  // BUG: string concatenation → classic SQL injection
   db.query("SELECT * FROM users WHERE id = " + id, (err, rows) => {
     res.json(rows);
   });
 });`;
 
-export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+const SCAN_STAGES = [
+  { label: "Queued", desc: "Scan submitted to engine" },
+  { label: "Analyzing", desc: "SAST pattern matching + LLM triage" },
+  { label: "Patching", desc: "Generating AI-candidate patches" },
+  { label: "Sandboxing", desc: "Adversarial test harness" },
+  { label: "Ready", desc: "Findings queued for review" },
+];
+
+export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
 
-  // Form state across steps
+  // Step 2 — client form
   const [clientName, setClientName] = useState("");
-  const [clientUrl, setClientUrl] = useState("");
+  const [clientIndustry, setClientIndustry] = useState("");
   const [createdClient, setCreatedClient] = useState<CreatedClient | null>(null);
 
+  // Step 3 — codebase form
   const [codebaseName, setCodebaseName] = useState("");
+  const [codebaseLang, setCodebaseLang] = useState("typescript");
   const [codebaseDesc, setCodebaseDesc] = useState("");
   const [createdCodebase, setCreatedCodebase] = useState<CreatedCodebase | null>(null);
 
+  // Step 4 — scan progress
   const [busy, setBusy] = useState(false);
   const [scanStarted, setScanStarted] = useState(false);
+  const [scanStage, setScanStage] = useState(0);
 
-  // Show the wizard on first mount if the user has not finished onboarding.
+  // Reset internal state whenever the overlay is reopened.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const done = localStorage.getItem(STORAGE_KEY);
-      if (done !== "true") {
-        // Small delay so the dashboard can paint first, then the modal slides in.
-        const id = setTimeout(() => setOpen(true), 600);
-        return () => clearTimeout(id);
-      }
-    } catch {
-      // localStorage might be unavailable (private mode), skip the wizard.
-    }
-  }, []);
+    if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStep(0);
+    setCreatedClient(null);
+    setCreatedCodebase(null);
+    setScanStarted(false);
+    setScanStage(0);
+  }, [open]);
+
+  // Drive the fake scan-progress ticker when a scan has been launched.
+  useEffect(() => {
+    if (!scanStarted) return;
+    if (scanStage >= SCAN_STAGES.length - 1) return;
+    const id = setTimeout(() => setScanStage((s) => Math.min(s + 1, SCAN_STAGES.length - 1)), 1100);
+    return () => clearTimeout(id);
+  }, [scanStarted, scanStage]);
 
   const finish = useCallback(() => {
     try {
       localStorage.setItem(STORAGE_KEY, "true");
     } catch {
-      // Ignore localStorage failures (e.g. privacy mode).
+      // Ignore localStorage failures (e.g. private mode).
     }
-    setOpen(false);
-    onComplete?.();
-  }, [onComplete]);
+    onClose();
+  }, [onClose]);
 
-  const handleSkipToDashboard = useCallback(() => {
+  const handleSkip = useCallback(() => {
     finish();
   }, [finish]);
 
-  // ── Step 1: Add your first client ─────────────────────────────────────
+  // ── Step 2: Add your first client ───────────────────────────────────────
   const submitClient = useCallback(async () => {
     if (!clientName.trim()) {
       toast({
@@ -109,7 +153,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: clientName.trim(),
-          targetUrl: clientUrl.trim() || undefined,
+          description: clientIndustry
+            ? `Industry: ${INDUSTRIES.find((i) => i.value === clientIndustry)?.label ?? clientIndustry}`
+            : undefined,
           status: "onboarding",
         }),
       });
@@ -130,9 +176,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     } finally {
       setBusy(false);
     }
-  }, [clientName, clientUrl, toast]);
+  }, [clientName, clientIndustry, toast]);
 
-  // ── Step 2: Upload your first codebase ────────────────────────────────
+  // ── Step 3: Add a codebase ──────────────────────────────────────────────
   const submitCodebase = useCallback(async () => {
     if (!codebaseName.trim()) {
       toast({
@@ -150,7 +196,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         body: JSON.stringify({
           name: codebaseName.trim(),
           description: codebaseDesc.trim() || undefined,
-          language: "javascript",
+          language: codebaseLang,
           sourceCode: SAMPLE_CODE,
           clientId: createdClient?.id,
         }),
@@ -159,22 +205,22 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       if (!res.ok) throw new Error(data.error || "Failed to create codebase");
       setCreatedCodebase({ id: data.id, name: data.name });
       toast({
-        title: "Codebase uploaded",
+        title: "Codebase added",
         description: `${data.name} is ready for scanning.`,
       });
       setStep(3);
     } catch (err) {
       toast({
         variant: "destructive",
-        title: "Could not upload codebase",
+        title: "Could not add codebase",
         description: err instanceof Error ? err.message : "Unknown error",
       });
     } finally {
       setBusy(false);
     }
-  }, [codebaseName, codebaseDesc, createdClient, toast]);
+  }, [codebaseName, codebaseLang, codebaseDesc, createdClient, toast]);
 
-  // ── Step 3: Run your first scan ───────────────────────────────────────
+  // ── Step 4: Run the first scan ──────────────────────────────────────────
   const startScan = useCallback(async () => {
     if (!createdCodebase) {
       toast({
@@ -194,11 +240,11 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start scan");
       setScanStarted(true);
+      setScanStage(1);
       toast({
         title: "Scan started",
         description: `Autonomous pipeline is analyzing ${createdCodebase.name}.`,
       });
-      setStep(4);
     } catch (err) {
       toast({
         variant: "destructive",
@@ -210,7 +256,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   }, [createdCodebase, toast]);
 
-  // ── Render ────────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
     <AnimatePresence>
       {open && (
@@ -219,7 +265,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-md sm:p-6"
+          className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-zinc-950/95 p-3 backdrop-blur sm:p-6"
           role="dialog"
           aria-modal="true"
           aria-labelledby="onboarding-title"
@@ -229,7 +275,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="holo-card-sharp hud-corners scanlines cyber-vignette relative my-auto w-full max-w-lg overflow-hidden rounded-xl border border-emerald-500/30 bg-zinc-950/95 shadow-[0_0_60px_rgba(16,185,129,0.18)]"
+            className="relative my-auto w-full max-w-lg overflow-hidden rounded-xl border border-emerald-500/30 bg-zinc-950 shadow-[0_0_60px_rgba(16,185,129,0.18)] hud-corners"
           >
             {/* Top accent bar */}
             <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
@@ -249,7 +295,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               </div>
               <button
                 type="button"
-                onClick={handleSkipToDashboard}
+                onClick={handleSkip}
                 aria-label="Skip onboarding"
                 className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
               >
@@ -257,21 +303,26 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               </button>
             </div>
 
-            {/* Progress dots */}
-            <div className="flex items-center gap-1.5 px-5 pt-3 sm:px-6">
+            {/* Progress dots — 4 dots, current highlighted */}
+            <div className="flex items-center justify-center gap-2 px-5 pt-4 sm:px-6">
               {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                 <div
                   key={i}
-                  className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-                    i <= step ? "bg-emerald-500" : "bg-zinc-800"
+                  className={`size-2 rounded-full transition-all duration-300 ${
+                    i === step
+                      ? "scale-125 bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.7)]"
+                      : i < step
+                        ? "bg-emerald-500/60"
+                        : "bg-zinc-700"
                   }`}
                 />
               ))}
             </div>
 
-            {/* Body: animated step content */}
+            {/* Body — animated step content */}
             <div className="relative px-5 py-6 sm:px-6">
               <AnimatePresence mode="wait">
+                {/* ── Step 1: Welcome ─────────────────────────────────────── */}
                 {step === 0 && (
                   <StepBody key="welcome">
                     <div className="flex flex-col items-center text-center">
@@ -280,37 +331,38 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                         id="onboarding-title"
                         className="mt-5 text-2xl font-bold tracking-tight text-zinc-50"
                       >
-                        Welcome to <span className="neon-emerald text-emerald-300">GuardianX</span>
+                        Welcome to <span className="text-emerald-300">GuardianX</span>
                       </h2>
                       <p className="mt-2 max-w-sm text-sm text-zinc-400">
-                        Autonomous security operations for the modern SOC. Lets get your first
-                        client, codebase, and scan set up in under a minute.
+                        Autonomous security operations for the modern SOC. Let&apos;s get your
+                        first client, codebase, and scan set up in under a minute.
                       </p>
                       <div className="mt-5 grid w-full grid-cols-1 gap-2 sm:grid-cols-3">
                         <FeaturePill icon={Building2} label="Add a client" />
-                        <FeaturePill icon={Boxes} label="Upload code" />
+                        <FeaturePill icon={Boxes} label="Add a codebase" />
                         <FeaturePill icon={Zap} label="Run a scan" />
                       </div>
                     </div>
                     <WizardFooter>
                       <Button
-                        onClick={() => setStep(1)}
-                        className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
-                      >
-                        Get Started
-                        <ChevronRight className="ml-1 size-4" />
-                      </Button>
-                      <Button
                         variant="ghost"
-                        onClick={handleSkipToDashboard}
+                        onClick={handleSkip}
                         className="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
                       >
                         Skip for now
+                      </Button>
+                      <Button
+                        onClick={() => setStep(1)}
+                        className="bg-emerald-600 text-white hover:bg-emerald-500"
+                      >
+                        Get Started
+                        <ChevronRight className="ml-1 size-4" />
                       </Button>
                     </WizardFooter>
                   </StepBody>
                 )}
 
+                {/* ── Step 2: Add your first client ─────────────────────── */}
                 {step === 1 && (
                   <StepBody key="client">
                     <StepHeader
@@ -322,7 +374,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                     <div className="mt-5 space-y-4">
                       <div className="space-y-1.5">
                         <Label htmlFor="ob-client-name" className="text-xs text-zinc-400">
-                          Client Name *
+                          Client Name <span className="text-red-400">*</span>
                         </Label>
                         <Input
                           id="ob-client-name"
@@ -334,16 +386,28 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="ob-client-url" className="text-xs text-zinc-400">
-                          Target URL
+                        <Label htmlFor="ob-client-industry" className="text-xs text-zinc-400">
+                          Industry
                         </Label>
-                        <Input
-                          id="ob-client-url"
-                          value={clientUrl}
-                          onChange={(e) => setClientUrl(e.target.value)}
-                          placeholder="https://app.acme.example"
-                          className="border-zinc-800 bg-zinc-900/60 text-zinc-100 placeholder:text-zinc-600 focus-visible:border-emerald-500/50"
-                        />
+                        <Select value={clientIndustry} onValueChange={setClientIndustry}>
+                          <SelectTrigger
+                            id="ob-client-industry"
+                            className="w-full border-zinc-800 bg-zinc-900/60 text-zinc-100 focus-visible:border-emerald-500/50"
+                          >
+                            <SelectValue placeholder="Select an industry" />
+                          </SelectTrigger>
+                          <SelectContent className="border-zinc-800 bg-zinc-950 text-zinc-100">
+                            {INDUSTRIES.map((ind) => (
+                              <SelectItem
+                                key={ind.value}
+                                value={ind.value}
+                                className="focus:bg-emerald-500/10 focus:text-emerald-300"
+                              >
+                                {ind.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       {createdClient && (
                         <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
@@ -357,26 +421,24 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                     <WizardFooter>
                       <Button
                         variant="ghost"
-                        onClick={() => setStep(2)}
+                        onClick={handleSkip}
                         className="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
                       >
                         Skip
                       </Button>
                       <div className="flex gap-2">
-                        {step > 0 && (
-                          <Button
-                            variant="outline"
-                            onClick={() => setStep(0)}
-                            className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
-                          >
-                            <ChevronLeft className="mr-1 size-4" />
-                            Back
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          onClick={() => setStep(0)}
+                          className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+                        >
+                          <ChevronLeft className="mr-1 size-4" />
+                          Back
+                        </Button>
                         <Button
                           onClick={submitClient}
                           disabled={busy}
-                          className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
+                          className="bg-emerald-600 text-white hover:bg-emerald-500"
                         >
                           {busy ? (
                             <Loader2 className="mr-1 size-4 animate-spin" />
@@ -390,18 +452,19 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   </StepBody>
                 )}
 
+                {/* ── Step 3: Add a codebase ────────────────────────────── */}
                 {step === 2 && (
                   <StepBody key="codebase">
                     <StepHeader
                       icon={Boxes}
-                      iconColor="text-sky-400"
-                      title="Upload your first codebase"
+                      iconColor="text-cyan-400"
+                      title="Add a codebase"
                       subtitle="Drop a codebase so the SAST engine has something to analyze. A tiny vulnerable sample is preloaded so you can run a scan immediately."
                     />
                     <div className="mt-5 space-y-4">
                       <div className="space-y-1.5">
                         <Label htmlFor="ob-cb-name" className="text-xs text-zinc-400">
-                          Codebase Name *
+                          Codebase Name <span className="text-red-400">*</span>
                         </Label>
                         <Input
                           id="ob-cb-name"
@@ -411,6 +474,30 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                           className="border-zinc-800 bg-zinc-900/60 text-zinc-100 placeholder:text-zinc-600 focus-visible:border-emerald-500/50"
                           autoFocus
                         />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="ob-cb-lang" className="text-xs text-zinc-400">
+                          Language
+                        </Label>
+                        <Select value={codebaseLang} onValueChange={setCodebaseLang}>
+                          <SelectTrigger
+                            id="ob-cb-lang"
+                            className="w-full border-zinc-800 bg-zinc-900/60 text-zinc-100 focus-visible:border-emerald-500/50"
+                          >
+                            <SelectValue placeholder="Select a language" />
+                          </SelectTrigger>
+                          <SelectContent className="border-zinc-800 bg-zinc-950 text-zinc-100">
+                            {LANGUAGES.map((lang) => (
+                              <SelectItem
+                                key={lang.value}
+                                value={lang.value}
+                                className="focus:bg-emerald-500/10 focus:text-emerald-300"
+                              >
+                                {lang.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="ob-cb-desc" className="text-xs text-zinc-400">
@@ -424,25 +511,17 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                           className="border-zinc-800 bg-zinc-900/60 text-zinc-100 placeholder:text-zinc-600 focus-visible:border-emerald-500/50"
                         />
                       </div>
-                      <div className="rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
-                        <div className="mb-2 flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                          <Upload className="size-3" />
-                          Preloaded sample (SQL injection)
-                        </div>
-                        <pre className="custom-scrollbar max-h-32 overflow-auto rounded bg-zinc-950/80 p-2 font-mono text-[10px] leading-relaxed text-zinc-400">
-{SAMPLE_CODE}
-                        </pre>
-                      </div>
                       {createdClient && (
                         <p className="text-[10px] text-zinc-500">
-                          Will be linked to: <span className="text-emerald-400">{createdClient.name}</span>
+                          Will be linked to:{" "}
+                          <span className="text-emerald-400">{createdClient.name}</span>
                         </p>
                       )}
                     </div>
                     <WizardFooter>
                       <Button
                         variant="ghost"
-                        onClick={() => setStep(3)}
+                        onClick={handleSkip}
                         className="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
                       >
                         Skip
@@ -459,20 +538,21 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                         <Button
                           onClick={submitCodebase}
                           disabled={busy}
-                          className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
+                          className="bg-emerald-600 text-white hover:bg-emerald-500"
                         >
                           {busy ? (
                             <Loader2 className="mr-1 size-4 animate-spin" />
                           ) : (
-                            <Upload className="mr-1 size-4" />
+                            <Boxes className="mr-1 size-4" />
                           )}
-                          Upload Codebase
+                          Add Codebase
                         </Button>
                       </div>
                     </WizardFooter>
                   </StepBody>
                 )}
 
+                {/* ── Step 4: Run your first scan ───────────────────────── */}
                 {step === 3 && (
                   <StepBody key="scan">
                     <StepHeader
@@ -489,135 +569,86 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                             <span className="font-semibold">{createdCodebase.name}</span>
                           </div>
                           <p className="mt-1 text-xs text-emerald-400/70">
-                            Codebase ready. Click below to launch the autonomous pipeline.
+                            {scanStarted
+                              ? "Scan running — watch the pipeline below."
+                              : "Codebase ready. Click below to launch the autonomous pipeline."}
                           </p>
                         </div>
                       ) : (
                         <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-300">
                           <div className="flex items-center gap-2">
-                            <Sparkles className="size-4" />
-                            <span className="font-semibold">No codebase uploaded</span>
+                            <ShieldCheck className="size-4" />
+                            <span className="font-semibold">No codebase added</span>
                           </div>
                           <p className="mt-1 text-xs text-amber-400/80">
-                            You skipped the upload step. You can run a scan later from the Codebases tab once you add a real codebase.
+                            You skipped the codebase step. You can run a scan later from the
+                            Codebases tab once you add a real codebase.
                           </p>
                         </div>
                       )}
 
+                      {/* Pipeline progress */}
                       <div className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
                         <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
                           Pipeline stages
                         </div>
                         <ol className="space-y-1.5 text-xs text-zinc-400">
-                          <li className="flex items-center gap-2">
-                            <span className="size-1.5 rounded-full bg-emerald-500" />
-                            Detect vulnerabilities
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="size-1.5 rounded-full bg-emerald-500" />
-                            Generate AI patches
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="size-1.5 rounded-full bg-emerald-500" />
-                            Sandbox and adversarial test
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <span className="size-1.5 rounded-full bg-emerald-500" />
-                            Queue for review
-                          </li>
+                          {SCAN_STAGES.map((s, i) => {
+                            const reached = scanStarted && i <= scanStage;
+                            const current = scanStarted && i === scanStage;
+                            return (
+                              <li
+                                key={s.label}
+                                className={`flex items-center gap-2 transition-colors ${
+                                  current ? "text-emerald-300" : reached ? "text-zinc-300" : ""
+                                }`}
+                              >
+                                {reached ? (
+                                  <CheckCircle2 className="size-3.5 text-emerald-400" />
+                                ) : current ? (
+                                  <Loader2 className="size-3.5 animate-spin text-emerald-400" />
+                                ) : (
+                                  <span className="size-1.5 rounded-full bg-zinc-700" />
+                                )}
+                                <span className="font-medium">{s.label}</span>
+                                <span className="text-zinc-600">— {s.desc}</span>
+                              </li>
+                            );
+                          })}
                         </ol>
                       </div>
                     </div>
                     <WizardFooter>
                       <Button
-                        variant="ghost"
-                        onClick={() => setStep(4)}
-                        className="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-                      >
-                        Skip
-                      </Button>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => setStep(2)}
-                          className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
-                        >
-                          <ChevronLeft className="mr-1 size-4" />
-                          Back
-                        </Button>
-                        <Button
-                          onClick={startScan}
-                          disabled={busy || !createdCodebase || scanStarted}
-                          className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
-                        >
-                          {busy ? (
-                            <Loader2 className="mr-1 size-4 animate-spin" />
-                          ) : scanStarted ? (
-                            <CheckCircle2 className="mr-1 size-4" />
-                          ) : (
-                            <Rocket className="mr-1 size-4" />
-                          )}
-                          {scanStarted ? "Scan Started" : "Run Scan"}
-                        </Button>
-                      </div>
-                    </WizardFooter>
-                  </StepBody>
-                )}
-
-                {step === 4 && (
-                  <StepBody key="done">
-                    <div className="flex flex-col items-center text-center">
-                      <div className="relative">
-                        <GuardianXLogo size={72} />
-                        <span className="absolute -right-2 -top-1 flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.6)]">
-                          <CheckCircle2 className="size-4" />
-                        </span>
-                      </div>
-                      <h2 className="mt-5 text-2xl font-bold tracking-tight text-zinc-50">
-                        You are all set!
-                      </h2>
-                      <p className="mt-2 max-w-sm text-sm text-zinc-400">
-                        GuardianX is configured and your first pipeline is ready. Head to the
-                        dashboard to monitor everything in real time.
-                      </p>
-
-                      <div className="mt-5 w-full space-y-2 text-left">
-                        <SummaryRow
-                          icon={Building2}
-                          label="Client added"
-                          value={createdClient?.name || "Skipped"}
-                          ok={!!createdClient}
-                        />
-                        <SummaryRow
-                          icon={Boxes}
-                          label="Codebase uploaded"
-                          value={createdCodebase?.name || "Skipped"}
-                          ok={!!createdCodebase}
-                        />
-                        <SummaryRow
-                          icon={Zap}
-                          label="First scan"
-                          value={scanStarted ? "Launched" : "Skipped"}
-                          ok={scanStarted}
-                        />
-                      </div>
-                    </div>
-                    <WizardFooter>
-                      <Button
                         variant="outline"
-                        onClick={() => setStep(3)}
+                        onClick={() => setStep(2)}
                         className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
                       >
                         <ChevronLeft className="mr-1 size-4" />
                         Back
                       </Button>
-                      <Button
-                        onClick={finish}
-                        className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border"
-                      >
-                        <ShieldCheck className="mr-1 size-4" />
-                        Enter Dashboard
-                      </Button>
+                      {!scanStarted ? (
+                        <Button
+                          onClick={startScan}
+                          disabled={busy || !createdCodebase}
+                          className="bg-emerald-600 text-white hover:bg-emerald-500"
+                        >
+                          {busy ? (
+                            <Loader2 className="mr-1 size-4 animate-spin" />
+                          ) : (
+                            <Rocket className="mr-1 size-4" />
+                          )}
+                          Run First Scan
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={finish}
+                          className="bg-emerald-600 text-white hover:bg-emerald-500"
+                        >
+                          <ShieldCheck className="mr-1 size-4" />
+                          Enter Command Center
+                        </Button>
+                      )}
                     </WizardFooter>
                   </StepBody>
                 )}
@@ -630,7 +661,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────
+// ── Sub-components ──────────────────────────────────────────────────────────
 
 function StepBody({ children }: { children: React.ReactNode }) {
   return (
@@ -688,35 +719,6 @@ function FeaturePill({
     <div className="flex items-center justify-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/40 px-2 py-2 text-[10px] font-medium text-zinc-300">
       <Icon className="size-3 text-emerald-400" />
       {label}
-    </div>
-  );
-}
-
-function SummaryRow({
-  icon: Icon,
-  label,
-  value,
-  ok,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  ok: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-md border border-zinc-800 bg-zinc-900/40 px-3 py-2">
-      <Icon className={`size-4 ${ok ? "text-emerald-400" : "text-zinc-500"}`} />
-      <div className="flex-1 min-w-0">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{label}</div>
-        <div className="truncate text-xs font-medium text-zinc-200">{value}</div>
-      </div>
-      {ok ? (
-        <CheckCircle2 className="size-4 text-emerald-400" />
-      ) : (
-        <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[9px] uppercase tracking-wider text-zinc-500">
-          Skipped
-        </span>
-      )}
     </div>
   );
 }
