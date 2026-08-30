@@ -56,6 +56,7 @@ import { CircuitBoard } from "../ai-visualizer/circuit-board";
 import { useSignalBus, type VisualizerEvent } from "../ai-visualizer/signal-bus";
 import { VoiceControl, type VoiceControlHandle, type VoiceCommand } from "./voice-control";
 import { GestureControl, type GestureControlHandle, type GestureEvent } from "./gesture-control";
+import { SafeSection } from "../safe-boundary";
 
 export interface WarRoomOverlayProps {
   open: boolean;
@@ -573,6 +574,7 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
           <div className="mx-auto max-w-7xl">
             <AnimatePresence mode="wait">
               {view === "overview" && (
+                <SafeSection name="War Room — Overview">
                 <motion.div
                   key="overview"
                   initial={{ opacity: 0, y: 8 }}
@@ -586,9 +588,11 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
                   <KpiBig label="FINDINGS" value={totalFindings} icon={Bug} color="cyan" />
                   <KpiBig label="CRITICAL" value={criticalFindings} icon={AlertTriangle} color="red" pulse={criticalFindings > 0} />
                 </motion.div>
+                </SafeSection>
               )}
 
               {view === "clients" && (
+                <SafeSection name="War Room — Clients">
                 <motion.div
                   key="clients"
                   initial={{ opacity: 0, y: 8 }}
@@ -629,9 +633,11 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
                     )}
                   </PanelCard>
                 </motion.div>
+                </SafeSection>
               )}
 
               {view === "patches" && (
+                <SafeSection name="War Room — Patches">
                 <motion.div
                   key="patches"
                   initial={{ opacity: 0, y: 8 }}
@@ -696,9 +702,11 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
                     )}
                   </PanelCard>
                 </motion.div>
+                </SafeSection>
               )}
 
               {view === "findings" && (
+                <SafeSection name="War Room — Findings">
                 <motion.div
                   key="findings"
                   initial={{ opacity: 0, y: 8 }}
@@ -746,9 +754,11 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
                     )}
                   </PanelCard>
                 </motion.div>
+                </SafeSection>
               )}
 
               {view === "system" && (
+                <SafeSection name="War Room — System">
                 <motion.div
                   key="system"
                   initial={{ opacity: 0, y: 8 }}
@@ -767,6 +777,7 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
                     </div>
                   </PanelCard>
                 </motion.div>
+                </SafeSection>
               )}
             </AnimatePresence>
           </div>
