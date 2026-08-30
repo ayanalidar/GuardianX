@@ -104,6 +104,21 @@ interface PatchRow {
   status: string;
   affectedFile?: string;
 }
+
+// Normalize the /api/patches/pending response (which uses snake_case:
+// patch_id, internal_id, affected_file) into the PatchRow shape (camelCase)
+// that the War Room's JSX expects. Without this, p.id is undefined and
+// React crashes on the missing `key` prop.
+function normalizePatch(p: Record<string, unknown>): PatchRow {
+  return {
+    id: (p.internal_id as string) || (p.id as string) || (p.patch_id as string) || crypto.randomUUID(),
+    patchId: (p.patch_id as string) || (p.patchId as string) || undefined,
+    title: (p.title as string) || "Untitled patch",
+    severity: (p.severity as string) || "medium",
+    status: (p.status as string) || "pending",
+    affectedFile: (p.affected_file as string) || (p.affectedFile as string) || undefined,
+  };
+}
 interface CodebaseRow {
   id: string;
   name: string;
@@ -225,7 +240,7 @@ export function WarRoomOverlay({ open, onClose, initialView = "overview" }: WarR
         if (cancelled) return;
         if (Array.isArray(c)) setClients(c as ClientRow[]);
         if (Array.isArray(f)) setFindings(f as FindingRow[]);
-        if (Array.isArray(p)) setPatches(p as PatchRow[]);
+        if (Array.isArray(p)) setPatches(p.map((row) => normalizePatch(row as Record<string, unknown>)));
         if (ps && typeof ps.overall === "number") setPosture(ps);
       } finally {
         if (!cancelled) setLoading(false);
