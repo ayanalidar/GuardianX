@@ -17,6 +17,8 @@ interface GlowCTAProps {
   children: ReactNode;
   onClick?: () => void;
   href?: string;
+  /** For external links: opens in a new tab with rel="noopener noreferrer" */
+  external?: boolean;
   variant?: "solid" | "outline";
   className?: string;
 }
@@ -35,6 +37,7 @@ export function GlowCTA({
   children,
   onClick,
   href,
+  external = false,
   variant = "solid",
   className,
 }: GlowCTAProps) {
@@ -111,7 +114,12 @@ export function GlowCTA({
   if (href) {
     return (
       <div ref={ref} className="relative inline-block">
-        <a href={href} onClick={handleClick} className="inline-block">
+        <a
+          href={href}
+          onClick={handleClick}
+          className="inline-block"
+          {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        >
           {inner}
         </a>
       </div>

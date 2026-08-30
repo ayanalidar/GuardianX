@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Film, Terminal, Zap } from "lucide-react";
+import { ArrowRight, Film, GraduationCap, Terminal, Zap } from "lucide-react";
 import { GuardianXLogo } from "../guardianx-logo";
 import { ParticleNetworkBackground } from "./particle-bg";
 import { GlowOrb } from "./glow-orb";
@@ -75,6 +75,11 @@ export function HeroSection({
           <GlowCTA onClick={onTryDemo} variant="outline">
             <Film className="size-5" />
             Try Demo
+          </GlowCTA>
+          <GlowCTA href="https://academy.guardianx.cloud" external variant="outline">
+            <GraduationCap className="size-5" />
+            GuardianX Academy
+            <ArrowRight className="size-4" />
           </GlowCTA>
           <GlowCTA href="#features" variant="outline">
             Explore 50+ Modules
