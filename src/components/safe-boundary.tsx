@@ -173,6 +173,7 @@ export function SafeSection({
         )
       }
       onError={(error, info) => {
+        try { void import("@/lib/rum").then(({ rum }) => rum.recordError(name, error.message)); } catch {}
         // Fire-and-forget — don't block the UI on the log.
         try {
           void fetch("/api/audit-log", {

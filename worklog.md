@@ -4693,3 +4693,92 @@ Work Log:
 Stage Summary:
 - API docs: WORKING, no fixes required. OpenAPI 3.0.3 spec at `/api/openapi.json` exposes 34 paths / 54 operations across 12 tags. `/api-doc` renders Swagger UI via `swagger-ui-react` (dynamic, ssr:false). Returns HTTP 200. Verified with curl.
 - Mobile: 4 files audited and fixed (command-center.tsx, war-room-overlay.tsx, hero-section.tsx). 2 files audited and confirmed already responsive (scan-widget.tsx, features-section.tsx). 1 file audited and confirmed already responsive (auth-page.tsx). Fixes applied: header controls wrap + threat segment bar hidden on mobile (command-center); header wrap + voice panel stacks above terminal on mobile + split desktop/mobile keyboard hint + main content padding (war-room-overlay); terminal status row wraps with smaller mobile font (hero-section).
+
+---
+
+## 2026-08-30 — advanced-self-healing: 5-layer autonomous crash prevention system
+
+**Task ID:** `advanced-self-healing`
+**Agent:** main (Z.ai Code)
+
+### What was built
+
+A 5-layer self-healing system that prevents crashes before they happen, auto-repairs bad data, and gives real-time visibility into platform health.
+
+### Layer 1: Schema Inference Engine (`src/lib/schema-inference.ts`)
+- **Learns** the real shape of each API endpoint by observing 3 successful responses
+- **Validates** all future responses against the learned schema
+- **Detects drift** — if a field disappears or a type changes, logs a warning + reports to the health dashboard
+- Schemas persist to `localStorage` so they survive page reloads
+- Auto-camelCase normalization built-in
+
+### Layer 2: Auto-Repair Data Layer (`src/lib/auto-repair.ts`)
+- Instead of returning `[]` on failure, **repairs** the data:
+  - Missing `id`? Generates a UUID
+  - Missing `title`/`name`? Fills with "Untitled"
+  - Missing `severity`? Defaults to "medium"
+  - `severity` is a number? Auto-converts to string
+  - `confidence` is a string? Parses to number
+  - null items in array? Filters them out
+  - Expected array but got object? Wraps in array
+  - Expected object but got array? Takes first item
+- Every repair is logged with a description
+
+### Layer 3: Circuit Breaker + Smart Retry (`src/lib/circuit-breaker.ts`)
+- **Circuit Breaker**: If an endpoint fails >50% of the last 10 calls, "trips" the circuit → returns cached/last-good response for 60s → then tests with one request (half-open) → if success, closes circuit
+- **Smart Retry**: Exponential backoff (500ms → 1s → 2s) on 5xx and network errors. Max 2 retries. 4xx errors are not retried (permanent).
+- States: CLOSED (normal), OPEN (failing, return cache), HALF_OPEN (testing)
+
+### Layer 4: Real-time Health Dashboard (`src/components/sentinel/health-dashboard.tsx`)
+- Admin-only tab "System Health" in the sidebar
+- Shows:
+  - **User Health Score** (0-100, aggregated from RUM)
+  - Active sessions, API calls, errors, slow renders
+  - Server health checks (pings 8 key endpoints)
+  - Per-endpoint performance table (calls, failures, failure rate, avg duration)
+  - Circuit breaker states (closed/open/half-open)
+  - Schema inference status (fields learned, drift warnings)
+  - Recent error boundary triggers
+- Auto-refreshes every 30 seconds
+
+### Layer 5: Synthetic User Monitoring / RUM (`src/lib/rum.ts` + `src/app/api/rum/report/route.ts`)
+- Tracks every API call (endpoint, duration, success/failure, status)
+- Tracks every error boundary trigger (component name + error message)
+- Tracks slow renders (>100ms via PerformanceObserver)
+- Batches events every 30s + sends to `/api/rum/report`
+- Also flushes on page unload (`keepalive: true`)
+- Server stores last 100 sessions in-memory
+- Aggregates into User Health Score (0-100)
+
+### Integration
+All 5 layers are integrated into `safeApi()` (in `src/lib/safe-api.ts`). The flow:
+1. **Circuit Breaker** checks if the endpoint is healthy enough to call
+2. If yes → **Smart Retry** fetches with exponential backoff
+3. On success → **Schema Inference** learns + validates the shape
+4. → **Auto-Repair** fixes any missing/mistyped fields
+5. → **RUM** records the call duration + success for the dashboard
+6. On failure → returns cached response or safe fallback
+
+### Files created
+- `src/lib/schema-inference.ts` (~220 lines)
+- `src/lib/auto-repair.ts` (~180 lines)
+- `src/lib/circuit-breaker.ts` (~220 lines)
+- `src/lib/rum.ts` (~170 lines)
+- `src/app/api/rum/report/route.ts` (~100 lines)
+- `src/app/api/health-monitor/route.ts` (~55 lines)
+- `src/components/sentinel/health-dashboard.tsx` (~280 lines)
+
+### Files modified
+- `src/lib/safe-api.ts` — integrated all 5 layers into `safeApi()`
+- `src/components/safe-boundary.tsx` — hooked RUM into error boundary triggers
+- `src/app/page.tsx` — added "System Health" admin tab + HealthDashboard
+- `src/middleware.ts` — added `/api/rum/report` to PUBLIC_ROUTES
+
+### Verified on production
+- ✅ Health Dashboard renders ("System Health Monitor" h1)
+- ✅ Server health checks section works
+- ✅ RUM endpoint returns data (`avgHealthScore: 100`)
+- ✅ 0 console errors
+- ✅ All existing functionality still works (War Room, Patches, etc.)
+
+**Deployed to:** `guardian-x-cloud/guardianx` on Vercel → `https://www.guardianx.cloud`

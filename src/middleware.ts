@@ -33,6 +33,7 @@ const PUBLIC_ROUTES = [
   "/api/public-scan/scan",
   "/api/public-scan/recent",
   "/api/public-scan/send-report",
+  "/api/rum/report",
 ];
 
 // In-memory rate limit store (per Edge function instance)

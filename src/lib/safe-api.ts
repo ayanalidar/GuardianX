@@ -68,23 +68,28 @@ export interface SafeApiOptions {
   /** Whether to normalize snake_case → camelCase (default true). Set false
    *  for endpoints that intentionally use snake_case (rare). */
   normalize?: boolean;
-  /** Whether to retry once on network error (default true). */
+  /** Whether to retry on 5xx with exponential backoff (default true). */
   retry?: boolean;
   /** Timeout in ms (default 15000). */
   timeoutMs?: number;
   /** Auth token (Bearer). If omitted, reads from localStorage. */
   token?: string;
+  /** Expected response shape for auto-repair ("array" | "object"). */
+  expectedShape?: "array" | "object";
+  /** Required fields — if missing, auto-generated (e.g. "id", "title"). */
+  requiredFields?: string[];
+  /** Whether to run schema inference + drift detection (default true). */
+  inferSchema?: boolean;
 }
 
-/**
- * Fetch an API endpoint safely. Returns the parsed JSON response with
- * snake_case keys auto-converted to camelCase. On any error (network,
- * 4xx, 5xx, parse failure), returns `fallback` (defaults to `[]` for
- * list endpoints or `null` for single-item endpoints).
- *
- * Never throws — the component always gets a usable value.
- */
-export async function safeApi<T>(
+// ── Integrated safe fetch with all 5 layers ──────────────────────────────
+// Layer 1: Schema Inference (learn + validate)
+// Layer 2: Auto-Repair (fix bad data)
+// Layer 3: Circuit Breaker + Smart Retry
+// Layer 4: Health Dashboard (via RUM events)
+// Layer 5: RUM (records every API call)
+
+async function safeApiIntegrated<T>(
   endpoint: string,
   options: SafeApiOptions = {},
   fallback: T = ([] as unknown) as T,
@@ -97,6 +102,9 @@ export async function safeApi<T>(
     retry = true,
     timeoutMs = 15_000,
     token,
+    expectedShape,
+    requiredFields,
+    inferSchema = true,
   } = options;
 
   const authToken = token ?? getAuthToken();
@@ -108,56 +116,139 @@ export async function safeApi<T>(
     requestHeaders["Authorization"] = `Bearer ${authToken}`;
   }
 
-  const doFetch = async (): Promise<Response> => {
+  // ── Layer 3: Circuit Breaker — check if we should even try ───────────────
+  const { circuitBreaker } = await import("./circuit-breaker");
+  const circuitCheck = circuitBreaker.canRequest(endpoint);
+  if (!circuitCheck.allowed) {
+    // Circuit is OPEN → return cached response or fallback
+    if (circuitCheck.hasCache && circuitCheck.cachedResponse !== null) {
+      return circuitCheck.cachedResponse as T;
+    }
+    return fallback;
+  }
+
+  // ── Build the fetch function for smart retry ─────────────────────────────
+  const doFetch = async (): Promise<{ ok: boolean; status: number; data: unknown }> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      return await fetch(endpoint, {
+      const response = await fetch(endpoint, {
         method,
         headers: requestHeaders,
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
+      const text = await response.text();
+      let data: unknown = null;
+      if (text && text.trim()) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = text;
+        }
+      }
+      return { ok: response.ok, status: response.status, data };
     } finally {
       clearTimeout(timer);
     }
   };
 
-  try {
-    let response = await doFetch();
+  // ── Layer 3: Smart Retry (exponential backoff) ───────────────────────────
+  let result: { ok: boolean; status: number; data: unknown; attempts: number };
+  const startTime = Date.now();
 
-    // Retry once on 5xx or network error (Vercel cold-start).
-    if (retry && (response.status >= 500 || response.status === 0)) {
-      await new Promise((r) => setTimeout(r, 500));
-      response = await doFetch();
-    }
-
-    if (!response.ok) {
-      console.warn(`[safeApi] ${method} ${endpoint} → HTTP ${response.status}`);
-      return fallback;
-    }
-
-    const text = await response.text();
-    if (!text || text.trim() === "") {
-      return fallback;
-    }
-
-    let parsed: unknown;
+  if (retry) {
+    result = await circuitBreaker.fetchWithRetry(endpoint, doFetch);
+  } else {
     try {
-      parsed = JSON.parse(text);
-    } catch (parseErr) {
-      console.warn(`[safeApi] ${endpoint} → JSON parse failed:`, parseErr);
-      return fallback;
+      const r = await doFetch();
+      result = { ...r, attempts: 1 };
+      if (r.ok) {
+        circuitBreaker.recordSuccess(endpoint, r.data);
+      } else {
+        circuitBreaker.recordFailure(endpoint);
+      }
+    } catch {
+      result = { ok: false, status: 0, data: null, attempts: 1 };
+      circuitBreaker.recordFailure(endpoint);
     }
+  }
 
-    // Auto-normalize snake_case → camelCase.
-    const result = normalize ? normalizeValue(parsed) : parsed;
+  const duration = Date.now() - startTime;
 
-    return result as T;
-  } catch (err) {
-    console.warn(`[safeApi] ${method} ${endpoint} → error:`, err);
+  // ── Layer 5: RUM — record the API call ────────────────────────────────────
+  try {
+    const { rum } = await import("./rum");
+    rum.recordApiCall(endpoint, duration, result.ok, result.status);
+  } catch {
+    /* RUM is optional — don't block */
+  }
+
+  if (!result.ok) {
+    console.warn(`[safeApi] ${method} ${endpoint} → HTTP ${result.status} (${duration}ms, ${result.attempts} attempts)`);
     return fallback;
   }
+
+  let data = result.data;
+
+  // ── Layer 1: Schema Inference — learn + validate ──────────────────────────
+  if (inferSchema && data !== null) {
+    try {
+      const { schemaInferrer } = await import("./schema-inference");
+      schemaInferrer.learn(endpoint, data);
+      schemaInferrer.validate(endpoint, data);
+    } catch {
+      /* schema inference is optional */
+    }
+  }
+
+  // ── Normalize snake_case → camelCase ──────────────────────────────────────
+  if (normalize && data !== null) {
+    data = normalizeValue(data);
+  }
+
+  // ── Layer 2: Auto-Repair — fix missing fields + type mismatches ──────────
+  if (expectedShape || requiredFields) {
+    try {
+      const { autoRepair } = await import("./auto-repair");
+      const repairResult = autoRepair(data, {
+        expectedShape,
+        requiredFields,
+        normalizeCase: normalize,
+      });
+      data = repairResult.data;
+      if (repairResult.repaired) {
+        console.info(`[safeApi] auto-repaired ${endpoint}: ${repairResult.repairs.join(", ")}`);
+      }
+    } catch {
+      /* auto-repair is optional */
+    }
+  }
+
+  return data as T;
+}
+
+/**
+ * Fetch an API endpoint safely. Returns the parsed JSON response with
+ * snake_case keys auto-converted to camelCase. On any error (network,
+ * 4xx, 5xx, parse failure), returns `fallback` (defaults to `[]` for
+ * list endpoints or `null` for single-item endpoints).
+ *
+ * Integrated with 5 self-healing layers:
+ *   1. Schema Inference — learns + validates response shapes
+ *   2. Auto-Repair — fixes missing fields + type mismatches
+ *   3. Circuit Breaker — prevents cascading failures
+ *   4. Smart Retry — exponential backoff on 5xx
+ *   5. RUM — records every call for the health dashboard
+ *
+ * Never throws — the component always gets a usable value.
+ */
+export async function safeApi<T>(
+  endpoint: string,
+  options: SafeApiOptions = {},
+  fallback: T = ([] as unknown) as T,
+): Promise<T> {
+  return safeApiIntegrated<T>(endpoint, options, fallback);
 }
 
 /** Read the auth token from localStorage (client-side only). */

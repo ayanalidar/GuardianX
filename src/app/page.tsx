@@ -47,6 +47,7 @@ import { UserActivityMonitor } from "@/components/sentinel/user-activity-monitor
 import { AdminTwoFactorBanner } from "@/components/sentinel/admin-2fa-banner";
 import { AnalystBanner } from "@/components/sentinel/analyst-banner";
 import { SettingsPanel } from "@/components/sentinel/settings-panel";
+import { HealthDashboard } from "@/components/sentinel/health-dashboard";
 import { usePipelineSocket } from "@/lib/sentinel/use-pipeline-socket";
 import {
   sentinelApi,
@@ -116,7 +117,7 @@ import { SelfSecurityDashboard } from "@/components/sentinel/self-security-dashb
 import { OnboardingWizard } from "@/components/sentinel/onboarding-wizard";
 import { DemoMode } from "@/components/sentinel/demo-mode";
 
-type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings" | "modules" | "forecast" | "quantum" | "constellation" | "agent-x" | "adversarial" | "apt-persona" | "time-travel" | "vr-walkthrough" | "moving-target" | "canary" | "prompt-injection" | "deepfake" | "pay-per-vuln" | "commons" | "zk-proofs" | "self-security";
+type Tab = "dashboard" | "clients" | "pipelines" | "rnd" | "patches" | "codebases" | "redagent" | "compliance" | "soc" | "exfil" | "scraper" | "advanced" | "users" | "dfir" | "content" | "contributors" | "billing" | "user-activity" | "settings" | "modules" | "forecast" | "quantum" | "constellation" | "agent-x" | "adversarial" | "apt-persona" | "time-travel" | "vr-walkthrough" | "moving-target" | "canary" | "prompt-injection" | "deepfake" | "pay-per-vuln" | "commons" | "zk-proofs" | "self-security" | "health";
 type SortKey = "severity" | "recent";
 
 export default function Home() {
@@ -535,6 +536,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
               <NavGroup label="Administration" color="emerald">
                 <NavItem active={tab === "users"} onClick={() => { setTab("users"); setSidebarOpen(false); }} icon={Users} label="User Management" iconColor="text-emerald-400" accentColor="emerald" />
                 <NavItem active={tab === "user-activity"} onClick={() => { setTab("user-activity"); setSidebarOpen(false); }} icon={UserCog} label="User Activity" iconColor="text-emerald-400" accentColor="emerald" />
+                <NavItem active={tab === "health"} onClick={() => { setTab("health"); setSidebarOpen(false); }} icon={Activity} label="System Health" iconColor="text-emerald-400" accentColor="emerald" isNew />
                 <NavItem active={tab === "content"} onClick={() => { setTab("content"); setSidebarOpen(false); }} icon={FileText} label="Content Editor" iconColor="text-emerald-400" accentColor="emerald" />
                 <NavItem active={tab === "contributors"} onClick={() => { setTab("contributors"); setSidebarOpen(false); }} icon={Users} label="Contributions" iconColor="text-emerald-400" accentColor="emerald" />
               </NavGroup>
@@ -649,6 +651,7 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                    tab === "dfir" ? "DFIR Command Center" :
                    tab === "billing" ? "Billing & Subscription" :
                    tab === "settings" ? "Settings" :
+                   tab === "health" ? "System Health Monitor" :
                    tab === "user-activity" ? "User Activity Monitor" :
                    tab === "users" ? "User Management" :
                    tab === "content" ? "Content Editor" :
@@ -777,6 +780,8 @@ function ConsoleView({ onBackToLanding, currentUser, onLogout }: {
                   <UserActivityMonitor />
                 ) : tab === "settings" ? (
                   <SettingsPanel currentUser={currentUser} />
+                ) : tab === "health" ? (
+                  <HealthDashboard />
                 ) : tab === "users" ? (
                   <UserManagementPanel />
                 ) : tab === "content" ? (
