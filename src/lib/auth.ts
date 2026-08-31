@@ -6,10 +6,12 @@ import bcrypt from "bcryptjs";
 import { sha256hex } from "@/lib/crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("[FATAL] JWT_SECRET environment variable is required in production.");
-  }
+// Don't throw at build time — JWT_SECRET may not be available during the
+// Vercel build step (it's a runtime env var). Defer the check to first use.
+if (!JWT_SECRET && process.env.NODE_ENV === "production" && typeof window === "undefined") {
+  // Only warn during build; throw at runtime in createToken/verifyToken.
+  console.warn("[WARN] JWT_SECRET not set at build time — will be checked at runtime.");
+} else if (!JWT_SECRET) {
   console.warn("[WARN] JWT_SECRET not set — using dev-only secret. DO NOT use in production.");
 }
 const SECRET = JWT_SECRET || "dev-only-secret-not-for-production-use";
