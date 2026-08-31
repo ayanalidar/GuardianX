@@ -30,9 +30,13 @@ export function HeroSection({
   const [counterRef, counterVal] = useCountUp(2847, { duration: 2400, delay: 600 });
 
   return (
-    <section className="relative isolate overflow-hidden px-4 pb-20 pt-28 sm:px-6 sm:pt-32">
+    <section
+      role="region"
+      aria-label="Hero section"
+      className="relative isolate overflow-hidden px-4 pb-20 pt-28 sm:px-6 sm:pt-32"
+    >
       {/* Particle network bg, contained to this section */}
-      <div aria-hidden className="absolute inset-0 -z-10">
+      <div aria-hidden="true" className="absolute inset-0 -z-10">
         <ParticleNetworkBackground density={70} />
       </div>
 
@@ -44,7 +48,7 @@ export function HeroSection({
           transition={{ duration: 0.6, delay: 0.15 }}
         >
           <Badge className="mb-6 border-emerald-500/30 bg-emerald-500/10 text-emerald-300 neon-border">
-            <Zap className="size-3" />
+            <Zap className="size-3" aria-hidden="true" />
             Autonomous Security Operations Platform
           </Badge>
           <h1 className="mx-auto max-w-4xl text-center text-4xl font-bold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
@@ -68,18 +72,18 @@ export function HeroSection({
           className="mt-10 flex flex-wrap items-center justify-center gap-4"
         >
           <GlowCTA onClick={onEnter} variant="solid">
-            <Terminal className="size-5" />
+            <Terminal className="size-5" aria-hidden="true" />
             Enter the Lab Console
-            <ArrowRight className="size-4" />
+            <ArrowRight className="size-4" aria-hidden="true" />
           </GlowCTA>
           <GlowCTA onClick={onTryDemo} variant="outline">
-            <Film className="size-5" />
+            <Film className="size-5" aria-hidden="true" />
             Try Demo
           </GlowCTA>
           <GlowCTA href="https://academy.guardianx.cloud" external variant="outline">
-            <GraduationCap className="size-5" />
+            <GraduationCap className="size-5" aria-hidden="true" />
             GuardianX Academy
-            <ArrowRight className="size-4" />
+            <ArrowRight className="size-4" aria-hidden="true" />
           </GlowCTA>
           <GlowCTA href="#features" variant="outline">
             Explore 50+ Modules
@@ -99,10 +103,11 @@ export function HeroSection({
           className="holo-card-sharp hud-corners relative overflow-hidden p-6"
           >
             <div className="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-red-400/80">
-              <span className="relative flex size-2">
+              <span className="relative flex size-2" aria-hidden="true">
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
                 <span className="relative inline-flex size-2 rounded-full bg-red-500" />
               </span>
+              <span className="sr-only">Live: </span>
               Live threat counter
             </div>
             <div className="flex items-baseline gap-2">
@@ -112,13 +117,13 @@ export function HeroSection({
               >
                 {formatInt(counterVal)}
               </motion.span>
-              <span className="text-sm font-mono text-zinc-500">+ this month</span>
+              <span className="text-sm font-mono text-zinc-400">+ this month</span>
             </div>
             <div className="mt-2 text-xs text-zinc-400">
               Vulnerabilities found across all GuardianX engagements this month.
             </div>
             {/* Mini trend bars */}
-            <div className="mt-4 flex h-12 items-end gap-1">
+            <div className="mt-4 flex h-12 items-end gap-1" role="img" aria-label="Mini bar chart of weekly threat counts">
               {Array.from({ length: 18 }).map((_, i) => {
                 const h = 20 + ((i * 37) % 80);
                 return (
@@ -138,16 +143,16 @@ export function HeroSection({
           <div className="holo-card-sharp hud-corners relative overflow-hidden p-4">
             <div className="mb-3 flex items-center justify-between">
               <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-emerald-400/80">
-                <Terminal className="size-3" /> Live scan in progress
+                <Terminal className="size-3" aria-hidden="true" /> Live scan in progress
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" aria-hidden="true">
                 <span className="size-2 rounded-full bg-red-500/70" />
                 <span className="size-2 rounded-full bg-amber-500/70" />
                 <span className="size-2 rounded-full bg-emerald-500/70" />
               </div>
             </div>
             <TerminalTyping />
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-zinc-800/80 pt-2 font-mono text-[9px] text-zinc-500 sm:text-[10px]">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-zinc-800/80 pt-2 font-mono text-[9px] text-zinc-400 sm:text-[10px]" aria-hidden="true">
               <span className="text-emerald-400/80">● agent: redagent-1</span>
               <span className="text-cyan-400/80">sandbox: running</span>
               <span className="text-violet-400/80">attestation: pending</span>

@@ -331,23 +331,23 @@ function FeatureCardScan({ feature }: { feature: Feature }) {
   };
   return (
     <div className="relative mb-3 overflow-hidden rounded-md border border-zinc-800 bg-black/70 p-2 font-mono text-[10px] leading-snug">
-      <div className="mb-1 flex items-center gap-1 text-zinc-600">
-        <Icon className={`size-3 ${feature.color}`} />
+      <div className="mb-1 flex items-center gap-1 text-zinc-400">
+        <Icon className={`size-3 ${feature.color}`} aria-hidden="true" />
         <span>{snippet.lang}</span>
-        <span className="ml-auto size-1.5 rounded-full bg-emerald-500/70" />
+        <span className="ml-auto size-1.5 rounded-full bg-emerald-500/70" aria-hidden="true" />
       </div>
       <div className="space-y-0.5">
         {snippet.code.map((line, i) => (
-          <div key={i} className={i === 0 ? "text-zinc-500" : "text-zinc-400"}>
+          <div key={i} className={i === 0 ? "text-zinc-400" : "text-zinc-400"}>
             {line}
           </div>
         ))}
       </div>
       {/* Sweep highlight */}
-      <div className="feature-sweep pointer-events-none absolute inset-x-0 top-0 h-12 -translate-x-full bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent group-hover:animate-[feature-sweep_1.8s_ease-in-out_infinite]" />
+      <div className="feature-sweep pointer-events-none absolute inset-x-0 top-0 h-12 -translate-x-full bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent group-hover:animate-[feature-sweep_1.8s_ease-in-out_infinite]" aria-hidden="true" />
       {/* Result badge */}
       <div className="mt-2 inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] text-emerald-300">
-        <Sparkles className="size-2.5" /> {snippet.badge}
+        <Sparkles className="size-2.5" aria-hidden="true" /> {snippet.badge}
       </div>
     </div>
   );
@@ -397,10 +397,10 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <section id="features" role="region" aria-label="Platform features" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
       <div className="mb-10 text-center">
         <div className="mb-2 flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">
-          <Code2 className="size-3" /> {"// Capabilities"}
+          <Code2 className="size-3" aria-hidden="true" /> {"// Capabilities"}
         </div>
         <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">Everything you need to secure your code</h2>
         <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-400">
@@ -416,9 +416,9 @@ export function FeaturesSection() {
       <div className="mt-8 flex justify-center">
         <a
           href="/features"
-          className="inline-flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300 transition-colors hover:bg-emerald-500/20"
+          className="inline-flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300 transition-colors hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
         >
-          <Terminal className="size-4" /> See all 50+ modules
+          <Terminal className="size-4" aria-hidden="true" /> See all 50+ modules
         </a>
       </div>
     </section>

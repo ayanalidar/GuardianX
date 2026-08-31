@@ -58,9 +58,9 @@ const SECURITY_STATS = [
 
 export function SiteFooter() {
   return (
-    <footer className="relative z-10 mt-auto overflow-hidden border-t border-emerald-500/15 bg-zinc-950/95 backdrop-blur-xl">
+    <footer role="contentinfo" className="relative z-10 mt-auto overflow-hidden border-t border-emerald-500/15 bg-zinc-950/95 backdrop-blur-xl">
       {/* Top glow line */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
+      <div aria-hidden="true" className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
 
       {/* Ambient glow */}
       <div aria-hidden className="pointer-events-none absolute -top-20 left-1/2 h-40 w-[60rem] -translate-x-1/2 rounded-full bg-emerald-500/5 blur-3xl" />
@@ -75,11 +75,11 @@ export function SiteFooter() {
         >
           <div className="text-center sm:text-left">
             <h3 className="text-lg font-bold text-zinc-50">Ready to secure your assets?</h3>
-            <p className="mt-1 text-xs text-zinc-500">One click. Full VAPT. Professional report. AI-driven patches.</p>
+            <p className="mt-1 text-xs text-zinc-400">One click. Full VAPT. Professional report. AI-driven patches.</p>
           </div>
-          <a href="/">
+          <a href="/" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-md">
             <Button className="bg-emerald-600 text-white hover:bg-emerald-500 neon-border">
-              <Terminal className="size-4" /> Enter Lab Console <ArrowRight className="size-4" />
+              <Terminal className="size-4" aria-hidden="true" /> Enter Lab Console <ArrowRight className="size-4" aria-hidden="true" />
             </Button>
           </a>
         </motion.div>
@@ -88,16 +88,16 @@ export function SiteFooter() {
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <a href="/" className="flex items-center gap-2.5">
+            <a href="/" className="flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-md" aria-label="GuardianX home">
               <GuardianXLogo size={48} />
               <span className="text-lg font-bold tracking-tight text-zinc-50">
                 Guardian<span className="text-emerald-400 neon-emerald">X</span>
               </span>
             </a>
-            <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+            <p className="mt-3 text-xs leading-relaxed text-zinc-400">
               Autonomous Security Operations Platform. AI-driven SAST, DAST, exploit generation, adversarial patching, and VAPT reporting, all in one.
             </p>
-            <div className="mt-4 flex flex-wrap gap-1.5">
+            <div className="mt-4 flex flex-wrap gap-1.5" aria-label="Compliance certifications">
               {TRUST_BADGES.map((badge) => (
                 <span key={badge} className="rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2 py-0.5 text-[9px] font-medium text-emerald-300/70">
                   {badge}
@@ -108,47 +108,47 @@ export function SiteFooter() {
 
           {/* Link sections */}
           {FOOTER_SECTIONS.map((section) => (
-            <div key={section.title}>
+            <nav key={section.title} aria-label={section.title}>
               <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">{section.title}</div>
               <div className="space-y-2">
                 {section.links.map((link) => (
                   <a
                     key={link.label + link.href}
                     href={link.href}
-                    className="group flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-emerald-400"
+                    className="group flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 rounded"
                   >
-                    <span className="size-1 rounded-full bg-zinc-700 transition-colors group-hover:bg-emerald-400" />
+                    <span className="size-1 rounded-full bg-zinc-700 transition-colors group-hover:bg-emerald-400" aria-hidden="true" />
                     {link.label}
                   </a>
                 ))}
               </div>
-            </div>
+            </nav>
           ))}
 
           {/* Contact */}
           <div>
             <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-emerald-500/60">Contact</div>
             <div className="space-y-2.5">
-              <a href="https://www.guardianx.cloud" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-2 text-xs text-zinc-400 transition-colors hover:text-emerald-400">
-                <Globe className="size-3.5 text-emerald-400/60 group-hover:text-emerald-400" />
+              <a href="https://www.guardianx.cloud" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-2 text-xs text-zinc-400 transition-colors hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 rounded">
+                <Globe className="size-3.5 text-emerald-400/60 group-hover:text-emerald-400" aria-hidden="true" />
                 www.guardianx.cloud
               </a>
-              <a href="mailto:hello@guardianx.in" className="group flex items-center gap-2 text-xs text-zinc-400 transition-colors hover:text-emerald-400">
-                <Mail className="size-3.5 text-emerald-400/60 group-hover:text-emerald-400" />
+              <a href="mailto:hello@guardianx.in" className="group flex items-center gap-2 text-xs text-zinc-400 transition-colors hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 rounded">
+                <Mail className="size-3.5 text-emerald-400/60 group-hover:text-emerald-400" aria-hidden="true" />
                 hello@guardianx.in
               </a>
-              <a href="tel:+917006712347" className="group flex items-center gap-2 text-xs text-zinc-400 transition-colors hover:text-emerald-400">
-                <Phone className="size-3.5 text-emerald-400/60 group-hover:text-emerald-400" />
+              <a href="tel:+917006712347" className="group flex items-center gap-2 text-xs text-zinc-400 transition-colors hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 rounded">
+                <Phone className="size-3.5 text-emerald-400/60 group-hover:text-emerald-400" aria-hidden="true" />
                 +91 70067 12347
               </a>
             </div>
 
             {/* Security indicators */}
-            <div className="mt-4 grid grid-cols-2 gap-1.5">
+            <div className="mt-4 grid grid-cols-2 gap-1.5" aria-label="Security indicators">
               {SECURITY_STATS.map((stat) => (
                 <div key={stat.label} className="flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/40 px-2 py-1">
-                  <stat.icon className="size-2.5 text-emerald-400/60" />
-                  <span className="text-[9px] font-mono text-zinc-500">{stat.label}</span>
+                  <stat.icon className="size-2.5 text-emerald-400/60" aria-hidden="true" />
+                  <span className="text-[9px] font-mono text-zinc-400">{stat.label}</span>
                 </div>
               ))}
             </div>
@@ -158,30 +158,30 @@ export function SiteFooter() {
         {/* Bottom bar */}
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-zinc-800/60 pt-6 sm:flex-row">
           <div className="flex items-center gap-2">
-            <ShieldHalf className="size-4 text-emerald-400/50" />
-            <span className="text-[11px] text-zinc-600">
+            <ShieldHalf className="size-4 text-emerald-400/50" aria-hidden="true" />
+            <span className="text-[11px] text-zinc-400">
               © 2026 GuardianX. All rights reserved. Built for autonomous security.
             </span>
           </div>
-          <div className="flex items-center gap-4 text-[10px] text-zinc-700">
-            <a href="/blog" className="transition-colors hover:text-emerald-400">Blog</a>
-            <span>·</span>
-            <a href="/status" className="inline-flex items-center gap-1 transition-colors hover:text-emerald-400">
-              <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
+          <nav aria-label="Footer utilities" className="flex items-center gap-4 text-[10px] text-zinc-400">
+            <a href="/blog" className="transition-colors hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 rounded">Blog</a>
+            <span aria-hidden="true">·</span>
+            <a href="/status" className="inline-flex items-center gap-1 transition-colors hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 rounded">
+              <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" aria-hidden="true" />
               Status
             </a>
-            <span>·</span>
-            <a href="/privacy" className="transition-colors hover:text-emerald-400">Privacy</a>
-            <span>·</span>
-            <a href="/terms" className="transition-colors hover:text-emerald-400">Terms</a>
-            <span>·</span>
+            <span aria-hidden="true">·</span>
+            <a href="/privacy" className="transition-colors hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 rounded">Privacy</a>
+            <span aria-hidden="true">·</span>
+            <a href="/terms" className="transition-colors hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 rounded">Terms</a>
+            <span aria-hidden="true">·</span>
             <span className="font-mono">v1.0.0</span>
-          </div>
+          </nav>
         </div>
       </div>
 
       {/* Bottom glow line */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/10 to-transparent" />
+      <div aria-hidden="true" className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/10 to-transparent" />
     </footer>
   );
 }

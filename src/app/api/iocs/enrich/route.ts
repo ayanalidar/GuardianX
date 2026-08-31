@@ -72,10 +72,10 @@ export async function GET(req: Request) {
     // Persist the IOC if it doesn't exist + record the enrichment.
     try {
       const normalized = value.trim().toLowerCase();
-      const existing = await db.ioc.findFirst({ where: { value: normalized } });
+      const existing = await db.iOC.findFirst({ where: { value: normalized } });
       const notes = `Enrichment: ${result.merged.reputation} (score ${result.merged.maxScore}). Providers: ${result.results.map((r) => r.provider).join(", ")}`;
       if (existing) {
-        await db.ioc.update({
+        await db.iOC.update({
           where: { id: existing.id as string },
           data: {
             lastSeen: new Date(),
@@ -85,7 +85,7 @@ export async function GET(req: Request) {
           },
         });
       } else {
-        await db.ioc.create({
+        await db.iOC.create({
           data: {
             iocType: type,
             value: normalized,

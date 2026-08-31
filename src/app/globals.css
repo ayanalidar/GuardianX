@@ -943,4 +943,42 @@
   }
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   Accessibility — global reduced-motion fallback (WCAG 2.1 AA 2.3.3)
+   When the user has requested reduced motion at the OS level, kill ALL
+   animations, transitions, scroll-smoothing, and the spin/pulse loops.
+   This applies to framer-motion keyframes, Tailwind `animate-*` utilities,
+   custom keyframes (gx-spin, gx-neon-pulse, gx-shine, pulse-dot, etc.),
+   and the `scanlines` overlay drift. Visual states (final color/opacity)
+   are still rendered — only the *motion* is suppressed.
+   ════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Hide purely decorative infinite animations entirely. */
+  .animate-ping,
+  .animate-pulse,
+  .animate-spin,
+  .animate-bounce,
+  .pulse-dot,
+  .gx-spin-logo,
+  .scanlines::before,
+  .scanlines::after {
+    animation: none !important;
+  }
+  /* Disable framer-motion transforms so the final state is shown immediately
+     without motion interpolation. */
+  [style*="transform"],
+  [style*="opacity:0"] {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
 

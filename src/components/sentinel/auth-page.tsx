@@ -125,8 +125,8 @@ export function AuthPage({ onAuth }: AuthPageProps) {
   return (
     <div className="scanlines cyber-vignette relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 p-4">
       {/* Background */}
-      <div aria-hidden className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-40" />
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+      <div aria-hidden="true" className="cyber-grid pointer-events-none fixed inset-0 z-0 opacity-40" />
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 left-1/2 h-96 w-[44rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-emerald-700/10 blur-3xl" />
       </div>
@@ -152,18 +152,24 @@ export function AuthPage({ onAuth }: AuthPageProps) {
         </div>
 
         {/* Mode toggle */}
-        <div className="mb-6 flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1">
+        <div className="mb-6 flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1" role="tablist" aria-label="Authentication mode">
           <button
+            type="button"
             onClick={() => setMode("login")}
-            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all ${
+            role="tab"
+            aria-selected={mode === "login"}
+            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
               mode === "login" ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             Sign In
           </button>
           <button
+            type="button"
             onClick={() => setMode("signup")}
-            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all ${
+            role="tab"
+            aria-selected={mode === "signup"}
+            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
               mode === "signup" ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
@@ -175,42 +181,48 @@ export function AuthPage({ onAuth }: AuthPageProps) {
         <div className="space-y-4">
           {mode === "signup" && (
             <div>
-              <Label className="text-xs text-zinc-400">Full Name</Label>
+              <Label htmlFor="auth-name" className="text-xs text-zinc-400">Full Name</Label>
               <div className="relative mt-1">
-                <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
                 <Input
+                  id="auth-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="John Doe"
-                  className="border-zinc-700 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-600 focus-visible:border-emerald-500/50"
+                  autoComplete="name"
+                  className="border-zinc-700 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-400 focus-visible:border-emerald-500/50"
                 />
               </div>
             </div>
           )}
           <div>
-            <Label className="text-xs text-zinc-400">Email</Label>
+            <Label htmlFor="auth-email" className="text-xs text-zinc-400">Email</Label>
             <div className="relative mt-1">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+              <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
               <Input
+                id="auth-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="border-zinc-700 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-600 focus-visible:border-emerald-500/50"
+                autoComplete="email"
+                className="border-zinc-700 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-400 focus-visible:border-emerald-500/50"
               />
             </div>
           </div>
           <div>
-            <Label className="text-xs text-zinc-400">Password</Label>
+            <Label htmlFor="auth-password" className="text-xs text-zinc-400">Password</Label>
             <div className="relative mt-1">
-              <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+              <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
               <Input
+                id="auth-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                 placeholder="••••••••"
-                className="border-zinc-700 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-600 focus-visible:border-emerald-500/50"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                className="border-zinc-700 bg-zinc-900/60 pl-9 text-zinc-200 placeholder:text-zinc-400 focus-visible:border-emerald-500/50"
               />
             </div>
           </div>
@@ -218,26 +230,27 @@ export function AuthPage({ onAuth }: AuthPageProps) {
           <Button
             onClick={handleSubmit}
             disabled={loading || !email || !password || (mode === "signup" && !name)}
-            className="w-full bg-emerald-600 py-2.5 text-white hover:bg-emerald-500"
+            className="w-full bg-emerald-600 py-2.5 text-white hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
           >
             {loading ? (
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <>
                 {mode === "login" ? "Sign In" : "Create Account"}
-                <ArrowRight className="size-4" />
+                <ArrowRight className="size-4" aria-hidden="true" />
               </>
             )}
           </Button>
 
           {dbError && (
             <motion.div
+              role="alert"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               className="mt-2 overflow-hidden rounded-lg border border-amber-500/40 bg-amber-500/10 p-4"
             >
               <div className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" aria-hidden="true" />
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-amber-200">
                     Database not initialized
@@ -250,10 +263,10 @@ export function AuthPage({ onAuth }: AuthPageProps) {
                     size="sm"
                     onClick={initializeDb}
                     disabled={initLoading}
-                    className="mt-2 h-7 border-amber-500/40 bg-amber-500/10 text-[11px] text-amber-200 hover:bg-amber-500/20"
+                    className="mt-2 h-7 border-amber-500/40 bg-amber-500/10 text-[11px] text-amber-200 hover:bg-amber-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                   >
                     {initLoading ? (
-                      <Loader2 className="size-3 animate-spin" />
+                      <Loader2 className="size-3 animate-spin" aria-hidden="true" />
                     ) : (
                       "Try auto-init"
                     )}
@@ -276,18 +289,18 @@ export function AuthPage({ onAuth }: AuthPageProps) {
 
         {/* Role info */}
         {mode === "signup" && (
-          <div className="mt-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
+          <div role="status" className="mt-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
             <Badge className="border border-emerald-500/30 bg-emerald-500/10 text-[9px] text-emerald-300">
-              <Sparkles className="size-2.5" /> First account becomes Admin
+              <Sparkles className="size-2.5" aria-hidden="true" /> First account becomes Admin
             </Badge>
-            <p className="mt-1.5 text-[10px] text-zinc-500">
+            <p className="mt-1.5 text-[10px] text-zinc-400">
               Roles: Admin (full access) · Analyst (scan + review) · Viewer (read-only)
             </p>
           </div>
         )}
 
         {/* Footer */}
-        <div className="mt-6 text-center text-[10px] text-zinc-600">
+        <div className="mt-6 text-center text-[10px] text-zinc-400">
           www.guardianx.cloud · hello@guardianx.in · +91 70067 12347
         </div>
       </motion.div>

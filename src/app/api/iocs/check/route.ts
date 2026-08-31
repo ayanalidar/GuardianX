@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const value = rawValue.toLowerCase();
 
   try {
-    const ioc = await db.ioc.findFirst({
+    const ioc = await db.iOC.findFirst({
       where: { value },
     });
 
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     let updated: Record<string, unknown> | null = ioc as Record<string, unknown>;
     if (ioc.isActive) {
       try {
-        updated = await db.ioc.update({
+        updated = await db.iOC.update({
           where: { id: ioc.id as string },
           data: {
             hitCount: ((ioc.hitCount as number) || 0) + 1,

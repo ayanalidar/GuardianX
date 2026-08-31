@@ -117,7 +117,7 @@ export function GlowCTA({
         <a
           href={href}
           onClick={handleClick}
-          className="inline-block"
+          className="inline-block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
           {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         >
           {inner}
@@ -128,7 +128,11 @@ export function GlowCTA({
 
   return (
     <div ref={ref} className="relative inline-block">
-      <button type="button" onClick={handleClick} className="inline-block">
+      <button
+        type="button"
+        onClick={handleClick}
+        className="inline-block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+      >
         {inner}
       </button>
     </div>

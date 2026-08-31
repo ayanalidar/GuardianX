@@ -35,7 +35,7 @@ export async function GET(req: Request) {
       if (!isNaN(n) && n > 0) args.take = n;
     }
 
-    const iocs = await db.ioc.findMany(args);
+    const iocs = await db.iOC.findMany(args);
 
     const safeParse = (s: unknown): string[] => {
       if (!s || typeof s !== "string") return [];
@@ -90,12 +90,12 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    const existing = await db.ioc.findUnique({ where: { id } });
+    const existing = await db.iOC.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "IOC not found" }, { status: 404 });
     }
 
-    const updated = await db.ioc.update({
+    const updated = await db.iOC.update({
       where: { id },
       data: { isActive: !!isActive },
     });
@@ -140,7 +140,7 @@ export async function POST(req: Request) {
   try {
     // Look up by unique value (case-insensitive lookup is not supported via
     // the REST proxy, so we store canonical lowercased values).
-    const existing = await db.ioc.findFirst({
+    const existing = await db.iOC.findFirst({
       where: { value: normalizedValue },
     });
 
@@ -152,7 +152,7 @@ export async function POST(req: Request) {
           ? finalConfidence
           : existing.confidence;
 
-      const updated = await db.ioc.update({
+      const updated = await db.iOC.update({
         where: { id: existing.id as string },
         data: {
           hitCount: ((existing.hitCount as number) || 0) + 1,
@@ -182,7 +182,7 @@ export async function POST(req: Request) {
         ? tags
         : null;
 
-    const ioc = await db.ioc.create({
+    const ioc = await db.iOC.create({
       data: {
         iocType,
         value: normalizedValue,

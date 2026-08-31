@@ -433,7 +433,7 @@ export async function executeFix(action: SelfHealAction): Promise<FixResult> {
         // that matches an anomaly's sourceIp gets flagged.
         const [anomalies, iocs] = await Promise.all([
           db.apiAccessLog.findMany({ take: 200, orderBy: { timestamp: "desc" } }),
-          db.ioc.findMany({ where: { isActive: true }, take: 200, orderBy: { lastSeen: "desc" } }),
+          db.iOC.findMany({ where: { isActive: true }, take: 200, orderBy: { lastSeen: "desc" } }),
         ]);
         const iocIps = new Set(iocs.map((i: Record<string, unknown>) => String(i.value).toLowerCase()));
         const hits = (anomalies as Array<Record<string, unknown>>).filter((a) =>

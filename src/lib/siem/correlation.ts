@@ -387,11 +387,11 @@ async function executeAction(
       }
       try {
         // Upsert: if IOC with this value exists, bump hitCount + lastSeen.
-        const existing = await db.ioc.findFirst({
+        const existing = await db.iOC.findFirst({
           where: { value: String(value).toLowerCase() },
         });
         if (existing) {
-          const updated = await db.ioc.update({
+          const updated = await db.iOC.update({
             where: { id: existing.id as string },
             data: {
               hitCount: ((existing.hitCount as number) || 0) + 1,
@@ -401,7 +401,7 @@ async function executeAction(
           });
           return { upserted: true, iocId: updated.id, bumped: true };
         }
-        const created = await db.ioc.create({
+        const created = await db.iOC.create({
           data: {
             iocType,
             value: String(value).toLowerCase(),

@@ -370,6 +370,8 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
   return (
     <section
       id="scan-widget"
+      role="region"
+      aria-label="Free website vulnerability scan"
       className="relative isolate overflow-hidden px-4 py-20 sm:px-6"
     >
       {/* Background gradient */}
@@ -395,7 +397,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
       <div className="mx-auto max-w-3xl">
         <div className="mb-8 text-center">
           <div className="mb-2 flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-widest text-emerald-500/70">
-            <Zap className="size-3" /> {"// Free instant scan"}
+            <Zap className="size-3" aria-hidden="true" /> {"// Free instant scan"}
           </div>
           <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">
             Scan Your Website Free
@@ -420,7 +422,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
               >
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <div className="relative flex-1">
-                    <Globe className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                    <Globe className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
                     <input
                       type="url"
                       inputMode="url"
@@ -431,38 +433,38 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") startScan();
                       }}
-                      className="w-full rounded-md border border-zinc-700 bg-zinc-900/60 py-3 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                      className="w-full rounded-md border border-zinc-700 bg-zinc-900/60 py-3 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus-visible:ring-2 focus-visible:ring-emerald-500/60"
                       aria-label="Website URL to scan"
                     />
                   </div>
                   <GlowCTA onClick={startScan} variant="solid" className="!px-6 !py-3 !text-sm">
-                    <Radar className="size-4" />
+                    <Radar className="size-4" aria-hidden="true" />
                     Scan Now
                   </GlowCTA>
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] text-zinc-600">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] text-zinc-400">
                   <div className="flex items-center gap-3">
                     <span className="inline-flex items-center gap-1">
-                      <Lock className="size-3" /> Non-intrusive · no payloads sent
+                      <Lock className="size-3" aria-hidden="true" /> Non-intrusive · no payloads sent
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <Clock className="size-3" /> ~30s
+                      <Clock className="size-3" aria-hidden="true" /> ~30s
                     </span>
                   </div>
                   <span>1 scan / hour</span>
                 </div>
 
                 {error ? (
-                  <div className="mt-3 flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-                    <AlertCircle className="size-3.5 shrink-0" />
+                  <div role="alert" className="mt-3 flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                    <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
                     {error}
                   </div>
                 ) : null}
 
                 {!canScan && rateLimitedUntil !== null ? (
-                  <div className="mt-3 flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-                    <Clock className="size-3.5 shrink-0" />
+                  <div role="status" className="mt-3 flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                    <Clock className="size-3.5 shrink-0" aria-hidden="true" />
                     You&apos;ve used your free scan for this hour. Next scan available in{" "}
                     {timeLeftLabel(rateLimitedUntil - now)}.
                   </div>
@@ -480,7 +482,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                 transition={{ duration: 0.25 }}
               >
                 <div className="mb-4 flex items-center gap-2">
-                  <Loader2 className="size-4 animate-spin text-emerald-400" />
+                  <Loader2 className="size-4 animate-spin text-emerald-400" aria-hidden="true" />
                   <span className="text-sm font-semibold text-zinc-100">
                     Scanning <span className="text-emerald-300">{url}</span>
                   </span>
@@ -490,7 +492,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                 </div>
 
                 {/* Progress bar */}
-                <div className="relative mb-4 h-2 overflow-hidden rounded-full bg-zinc-800">
+                <div className="relative mb-4 h-2 overflow-hidden rounded-full bg-zinc-800" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Scan progress">
                   <motion.div
                     className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-400"
                     style={{ width: `${progress}%` }}
@@ -511,15 +513,15 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                             ? "border-emerald-500/30 bg-emerald-500/5"
                             : state === "active"
                             ? "border-cyan-500/40 bg-cyan-500/10"
-                            : "border-zinc-800 bg-zinc-900/40 text-zinc-600"
+                            : "border-zinc-800 bg-zinc-900/40 text-zinc-400"
                         }`}
                       >
                         {state === "done" ? (
-                          <CheckCircle2 className="size-4 text-emerald-400" />
+                          <CheckCircle2 className="size-4 text-emerald-400" aria-hidden="true" />
                         ) : state === "active" ? (
-                          <Loader2 className={`size-4 animate-spin ${p.color}`} />
+                          <Loader2 className={`size-4 animate-spin ${p.color}`} aria-hidden="true" />
                         ) : (
-                          <Icon className={`size-4 ${p.color} opacity-40`} />
+                          <Icon className={`size-4 ${p.color} opacity-40`} aria-hidden="true" />
                         )}
                         <span
                           className={
@@ -527,7 +529,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                               ? "text-emerald-300"
                               : state === "active"
                               ? p.color
-                              : "text-zinc-600"
+                              : "text-zinc-400"
                           }
                         >
                           {p.label}
@@ -552,7 +554,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                 transition={{ duration: 0.25 }}
               >
                 <div className="mb-4 flex items-center gap-2">
-                  <ShieldAlert className="size-5 text-red-400" />
+                  <ShieldAlert className="size-5 text-red-400" aria-hidden="true" />
                   <span className="text-sm font-semibold text-zinc-100">
                     Found {findings.length} potential vulnerabilities on{" "}
                     <span className="text-red-300">{url}</span>
@@ -577,10 +579,10 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                             </span>
                             <h4 className={`text-sm font-semibold ${m.color}`}>{f.title}</h4>
                           </div>
-                          <span className="font-mono text-[10px] text-zinc-500">OWASP {f.owasp}</span>
+                          <span className="font-mono text-[10px] text-zinc-400">OWASP {f.owasp}</span>
                         </div>
                         <p className="text-xs leading-relaxed text-zinc-400">{f.description}</p>
-                        <div className="mt-2 flex items-center gap-2 font-mono text-[10px] text-zinc-600">
+                        <div className="mt-2 flex items-center gap-2 font-mono text-[10px] text-zinc-400">
                           <span className="rounded bg-zinc-800 px-1.5 py-0.5">{f.method}</span>
                           <span className="text-cyan-300/70">{f.endpoint}</span>
                         </div>
@@ -591,7 +593,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
 
                 <div className="mt-5 rounded-md border border-cyan-500/30 bg-cyan-500/5 p-4">
                   <div className="mb-2 flex items-center gap-2">
-                    <Mail className="size-4 text-cyan-400" />
+                    <Mail className="size-4 text-cyan-400" aria-hidden="true" />
                     <span className="text-sm font-semibold text-cyan-200">
                       Enter your email for the complete report
                     </span>
@@ -610,23 +612,23 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") submitEmail();
                       }}
-                      className="flex-1 rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                      className="flex-1 rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus-visible:ring-2 focus-visible:ring-cyan-500/60"
                       aria-label="Email address for full report"
                     />
                     <button
                       type="button"
                       onClick={submitEmail}
-                      className="inline-flex items-center justify-center gap-1 rounded-md border border-cyan-500/40 bg-cyan-500/15 px-4 py-2.5 text-sm font-medium text-cyan-200 transition-colors hover:bg-cyan-500/25"
+                      className="inline-flex items-center justify-center gap-1 rounded-md border border-cyan-500/40 bg-cyan-500/15 px-4 py-2.5 text-sm font-medium text-cyan-200 transition-colors hover:bg-cyan-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                     >
-                      <Mail className="size-4" /> Send Report
+                      <Mail className="size-4" aria-hidden="true" /> Send Report
                     </button>
                   </div>
                   {error ? (
-                    <div className="mt-2 flex items-center gap-2 text-xs text-red-300">
-                      <AlertCircle className="size-3.5" /> {error}
+                    <div role="alert" className="mt-2 flex items-center gap-2 text-xs text-red-300">
+                      <AlertCircle className="size-3.5" aria-hidden="true" /> {error}
                     </div>
                   ) : null}
-                  <div className="mt-2 font-mono text-[10px] text-zinc-600">
+                  <div className="mt-2 font-mono text-[10px] text-zinc-400">
                     We respect your privacy. No spam, unsubscribe anytime.
                   </div>
                 </div>
@@ -649,7 +651,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                   transition={{ type: "spring", stiffness: 220, delay: 0.1 }}
                   className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full border border-emerald-500/50 bg-emerald-500/15"
                 >
-                  <ShieldCheck className="size-7 text-emerald-400" />
+                  <ShieldCheck className="size-7 text-emerald-400" aria-hidden="true" />
                 </motion.div>
                 <h3 className="text-xl font-bold text-zinc-50">Report sent!</h3>
                 <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
@@ -660,7 +662,7 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
 
                 <div className="mt-6 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4">
                   <div className="mb-2 flex items-center justify-center gap-2 text-sm font-semibold text-emerald-200">
-                    <Lock className="size-4" /> Want continuous scanning + auto-patching?
+                    <Lock className="size-4" aria-hidden="true" /> Want continuous scanning + auto-patching?
                   </div>
                   <p className="mx-auto mb-4 max-w-md text-xs text-zinc-400">
                     Sign up for full GuardianX access: scheduled scans, AI-generated
@@ -669,12 +671,12 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
                   <div className="flex flex-wrap items-center justify-center gap-3">
                     <GlowCTA onClick={onEnter} variant="solid" className="!px-5 !py-2.5 !text-sm">
                       Sign up for full access
-                      <ArrowRight className="size-4" />
+                      <ArrowRight className="size-4" aria-hidden="true" />
                     </GlowCTA>
                     <button
                       type="button"
                       onClick={reset}
-                      className="inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-300"
+                      className="inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                     >
                       Scan another site
                     </button>
@@ -686,8 +688,8 @@ export function ScanWidget({ onEnter }: { onEnter: () => void }) {
         </div>
 
         {/* Footnote */}
-        <div className="mt-4 flex items-center justify-center gap-2 text-center font-mono text-[10px] text-zinc-600">
-          <Lock className="size-3" />
+        <div className="mt-4 flex items-center justify-center gap-2 text-center font-mono text-[10px] text-zinc-400">
+          <Lock className="size-3" aria-hidden="true" />
           External scan only · for authenticated testing, sign up + add the target as authorized.
         </div>
       </div>
