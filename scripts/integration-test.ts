@@ -14,8 +14,8 @@
  */
 
 const BASE = process.env.BASE_URL || "https://www.guardianx.cloud";
-const EMAIL = process.env.TEST_EMAIL || "ayan@guardianx.in";
-const PASSWORD = process.env.TEST_PASSWORD || "GuardianX@2026";
+const EMAIL = process.env.TEST_EMAIL || "${process.env.TEST_EMAIL || "test@example.com"}";
+const PASSWORD = process.env.TEST_PASSWORD || "${process.env.TEST_PASSWORD || "test-password"}";
 
 interface EndpointTest {
   method: "GET" | "POST";
