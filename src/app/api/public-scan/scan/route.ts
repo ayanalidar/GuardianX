@@ -357,15 +357,23 @@ export async function POST(req: Request) {
   const userAgent = req.headers.get("user-agent");
 
   // ── Create the scan row (status=running) ──────────────────────────────────
-  const scan = await db.websiteScan.create({
-    data: {
-      url,
-      email,
-      status: "running",
-      ipAddress,
-      userAgent,
-    },
-  });
+  // Wrapped in try/catch — if the DB is unavailable or the table doesn't
+  // exist yet, we still run the scan and return results (just don't persist).
+  let scanId: string | null = null;
+  try {
+    const scan = await db.websiteScan.create({
+      data: {
+        url,
+        email,
+        status: "running",
+        ipAddress,
+        userAgent,
+      },
+    });
+    scanId = scan.id;
+  } catch (dbErr) {
+    console.warn("[public-scan/scan] DB create failed — running scan without persistence:", dbErr instanceof Error ? dbErr.message : dbErr);
+  }
 
   // ── Run real recon ────────────────────────────────────────────────────────
   const findings: ScanFinding[] = [];
@@ -550,14 +558,11 @@ export async function POST(req: Request) {
   const completedAt = new Date();
 
   // ── Persist results ───────────────────────────────────────────────────────
-  try {
+  if (scanId) {
+    try {
     await db.websiteScan.update({
-      where: { id: scan.id },
+      where: { id: scanId },
       data: {
-        // We always reach this point with at least one finding (the "could
-        // not fetch" info finding if the main URL failed) — so "completed"
-        // is the right status. A future iteration could mark "failed" only
-        // when zero probes succeeded AND no findings were produced at all.
         status: "completed",
         score,
         findingsCount: findings.length,
@@ -572,11 +577,11 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[public-scan/scan] failed to persist scan row:", err);
-    // Even if persistence fails, return what we found to the caller.
   }
+  } // end if (scanId)
 
   return NextResponse.json({
-    scanId: scan.id,
+    scanId: scanId || "untracked",
     url,
     score,
     findingsCount: findings.length,
