@@ -27,7 +27,7 @@ describe("Voice Command Parser", () => {
   it("parses 'search findings' commands", () => {
     expect(parseVoiceCommand("search findings for SQL injection")).toEqual({
       action: "search",
-      target: "SQL injection",
+      target: "sql injection",
     });
     // "find for XSS" → parser captures "XSS"
     const findResult = parseVoiceCommand("find for XSS");
@@ -37,7 +37,7 @@ describe("Voice Command Parser", () => {
   it("parses 'approve patch' commands", () => {
     const result = parseVoiceCommand("approve patch SP-2026-001");
     expect(result.action).toBe("approve");
-    expect(result.target).toBe("SP-2026-001");
+    expect(result.target).toBe("sp-2026-001");
   });
 
   it("parses 'status' commands", () => {

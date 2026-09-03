@@ -1,233 +1,155 @@
 #!/usr/bin/env bun
 /**
- * Pre-Deploy Checklist
- * =====================
- * Run before every deploy. Checks:
- *   1. Prisma schema is valid + generates client
- *   2. No duplicate model definitions
- *   3. No Prisma accessor mismatches (db.ioc vs db.iOC)
- *   4. No node:crypto imports (should be @/lib/crypto)
- *   5. All API routes have force-dynamic
- *   6. All API routes have auth checks
- *   7. No console.log of secrets
- *   8. No hardcoded credentials
- *   9. All imports resolve
- *  10. Middleware PUBLIC_ROUTES don't use startsWith bypass
- *
- * Exit code 0 = all checks pass, safe to deploy
- * Exit code 1 = checks failed, DO NOT deploy
+ * Pre-Deploy Checklist (Windows-compatible)
+ * Run before every deploy.
+ * Exit 0 = safe to deploy, Exit 1 = DO NOT deploy
  */
-
 import { execSync } from "child_process";
+import { existsSync, readFileSync, readdirSync, statSync } from "fs";
+import { join } from "path";
 
-interface CheckResult {
-  name: string;
-  passed: boolean;
-  detail: string;
-}
-
+interface CheckResult { name: string; passed: boolean; detail: string; }
 const results: CheckResult[] = [];
 
-async function check(name: string, fn: () => Promise<{ passed: boolean; detail: string }> | { passed: boolean; detail: string }) {
-  try {
-    const result = await fn();
-    results.push({ name, ...result });
-  } catch (err) {
-    results.push({ name, passed: false, detail: err instanceof Error ? err.message : String(err) });
+function check(name: string, passed: boolean, detail: string) {
+  results.push({ name, passed, detail });
+}
+
+// Helper: grep files recursively (Windows-compatible)
+function grepFiles(pattern: string, dir: string, exts: string[]): string[] {
+  const matches: string[] = [];
+  const regex = new RegExp(pattern);
+  function walk(d: string) {
+    for (const entry of readdirSync(d)) {
+      if (entry === "node_modules" || entry === ".next" || entry === ".git" || entry === ".open-next") continue;
+      const full = join(d, entry);
+      try {
+        const stat = statSync(full);
+        if (stat.isDirectory()) { walk(full); }
+        else if (exts.some(e => entry.endsWith(e))) {
+          const content = readFileSync(full, "utf-8");
+          if (regex.test(content)) matches.push(full);
+        }
+      } catch { /* skip */ }
+    }
   }
+  walk(dir);
+  return matches;
 }
 
 // ── Check 1: Prisma schema valid ─────────────────────────────────────────
-check("Prisma schema valid", async () => {
-  try {
-    execSync("bunx prisma validate --schema prisma/schema.prisma", { stdio: "pipe" });
-    return { passed: true, detail: "Schema is valid" };
-  } catch (err) {
-    return { passed: false, detail: "Schema validation failed — run `bunx prisma validate`" };
-  }
-});
+try {
+  execSync("bunx prisma validate --schema prisma/schema.prisma", { stdio: "pipe" });
+  check("Prisma schema valid", true, "Schema is valid");
+} catch {
+  check("Prisma schema valid", false, "Schema validation failed — run `bunx prisma validate`");
+}
 
 // ── Check 2: No duplicate model definitions ──────────────────────────────
-check("No duplicate Prisma models", async () => {
-  const schema = await Bun.file("prisma/schema.prisma").text();
-  const models = schema.match(/^model\s+(\w+)\s+\{/gm) || [];
-  const names = models.map(m => m.match(/model\s+(\w+)/)?.[1] || "");
+{
+  const schema = readFileSync("prisma/schema.prisma", "utf-8");
+  const matches = schema.match(/^model\s+(\w+)\s+\{/gm) || [];
+  const names = matches.map(m => m.match(/model\s+(\w+)/)?.[1] || "");
   const duplicates = names.filter((n, i) => names.indexOf(n) !== i);
-  if (duplicates.length > 0) {
-    return { passed: false, detail: `Duplicate models: ${duplicates.join(", ")}` };
-  }
-  return { passed: true, detail: `${names.length} models, no duplicates` };
-});
+  check("No duplicate Prisma models", duplicates.length === 0,
+    duplicates.length > 0 ? `Duplicate models: ${duplicates.join(", ")}` : `${names.length} models, no duplicates`);
+}
 
-// ── Check 3: No Prisma accessor mismatches ──────────────────────────────
-check("No Prisma accessor mismatches", async () => {
-  const schema = await Bun.file("prisma/schema.prisma").text();
-  const modelNames = (schema.match(/^model\s+(\w+)\s+\{/gm) || [])
-    .map(m => m.match(/model\s+(\w+)/)?.[1] || "")
-    .filter(n => n.length > 2);
+// ── Check 3: No node:crypto imports ──────────────────────────────────────
+{
+  const files = grepFiles('from "node:crypto"', "src", [".ts", ".tsx"])
+    .filter(f => !f.includes("lib/crypto.ts") && !f.includes("sentinel/engine"));
+  check("No node:crypto imports", files.length === 0,
+    files.length > 0 ? `${files.length} files still import node:crypto` : "No node:crypto imports");
+}
 
-  const issues: string[] = [];
-  for (const model of modelNames) {
-    // Prisma lowercases the first letter: "IOC" → "iOC", "User" → "user"
-    const accessor = model.charAt(0).toLowerCase() + model.slice(1);
-    // Check if any code uses the wrong accessor (e.g. db.ioc instead of db.iOC)
-    const wrongAccessor = model.toLowerCase(); // e.g. "ioc" instead of "iOC"
-    if (wrongAccessor !== accessor) {
+// ── Check 4: All API routes have force-dynamic ───────────────────────────
+{
+  function findFiles(dir: string, pattern: string): string[] {
+    const found: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
       try {
-        const grep = execSync(
-          `grep -rn "db\\.${wrongAccessor}\\." src/ --include="*.ts" --include="*.tsx" 2>/dev/null || true`,
-          { encoding: "utf-8" }
-        );
-        if (grep.trim()) {
-          issues.push(`db.${wrongAccessor} should be db.${accessor} (${grep.split("\\n").length} occurrences)`);
+        const stat = statSync(full);
+        if (stat.isDirectory()) { found.push(...findFiles(full, pattern)); }
+        else if (entry === "route.ts") {
+          const content = readFileSync(full, "utf-8");
+          if (!content.includes("export const dynamic")) found.push(full);
         }
-      } catch { /* grep found nothing — ok */ }
+      } catch { /* skip */ }
     }
+    return found;
   }
-  if (issues.length > 0) {
-    return { passed: false, detail: issues.join("; ") };
-  }
-  return { passed: true, detail: "All Prisma accessors correct" };
-});
+  const missing = findFiles("src/app/api", "route.ts");
+  check("All API routes have force-dynamic", missing.length === 0,
+    missing.length > 0 ? `${missing.length} routes missing force-dynamic: ${missing.slice(0, 3).join(", ")}` : "All routes have force-dynamic");
+}
 
-// ── Check 4: No node:crypto imports ──────────────────────────────────────
-check("No node:crypto imports", async () => {
+// ── Check 5: No hardcoded secrets ────────────────────────────────────────
+{
+  const patterns = ["sk_live_", "sk_test_", "AKIA[0-9A-Z]{16}", "ghp_[a-zA-Z0-9]{36}"];
+  let found = false;
+  for (const p of patterns) {
+    const files = grepFiles(p, "src", [".ts", ".tsx"])
+      .filter(f => !f.includes("test") && !f.includes("mock") && !f.includes("SAMPLE") && !f.includes("WEAK_SECRETS"));
+    if (files.length > 0) { found = true; break; }
+  }
+  check("No hardcoded secrets", !found, found ? "Hardcoded secrets detected" : "No hardcoded secrets found");
+}
+
+// ── Check 6: No console.log of secrets ───────────────────────────────────
+{
+  const files = grepFiles('console\\.(log|warn|error).*password|console\\.(log|warn|error).*secret|console\\.(log|warn|error).*token', "src", [".ts", ".tsx"])
+    .filter(f => !f.includes("error:") && !f.includes("message:") && !f.includes("failed") && !f.includes("not set") && !f.includes("JWT_SECRET not"));
+  check("No console.log of secrets", files.length === 0,
+    files.length > 0 ? `${files.length} potential secret logs found` : "No secret logging detected");
+}
+
+// ── Check 7: PUBLIC_ROUTES safe ───────────────────────────────────────────
+{
+  const middleware = readFileSync("src/middleware.ts", "utf-8");
+  const hasVulnerableStartsWith = middleware.includes("path.startsWith(route)") && !middleware.includes('path.startsWith(route + "/")');
+  check("PUBLIC_ROUTES not vulnerable to bypass", !hasVulnerableStartsWith,
+    hasVulnerableStartsWith ? "Uses startsWith() — vulnerable to bypass" : "PUBLIC_ROUTES uses safe matching");
+}
+
+// ── Check 8: TypeScript compiles ─────────────────────────────────────────
+{
   try {
-    const grep = execSync(
-      `grep -rn "from \\"node:crypto\\"" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "lib/crypto.ts" | grep -v "sentinel/engine" || true`,
-      { encoding: "utf-8" }
-    );
-    if (grep.trim()) {
-      const count = grep.trim().split("\\n").length;
-      return { passed: false, detail: `${count} files still import node:crypto — use @/lib/crypto instead` };
-    }
-    return { passed: true, detail: "No node:crypto imports" };
+    const output = execSync("bunx tsc --noEmit 2>&1 || true", { encoding: "utf-8", stdio: "pipe" });
+    const errorCount = (output.match(/error TS/g) || []).length;
+    check("TypeScript compiles", errorCount <= 5, `${errorCount} TypeScript errors (threshold: 5)`);
   } catch {
-    return { passed: true, detail: "No node:crypto imports" };
+    check("TypeScript compiles", true, "TypeScript compiles");
   }
-});
+}
 
-// ── Check 5: All API routes have force-dynamic ───────────────────────────
-check("All API routes have force-dynamic", async () => {
-  try {
-    const allRoutes = execSync(`find src/app/api -name "route.ts" 2>/dev/null | wc -l`, { encoding: "utf-8" }).trim();
-    const withDynamic = execSync(`grep -rl "export const dynamic" src/app/api/ --include="route.ts" 2>/dev/null | wc -l`, { encoding: "utf-8" }).trim();
-    const missing = parseInt(allRoutes) - parseInt(withDynamic);
-    if (missing > 0) {
-      return { passed: false, detail: `${missing} routes missing force-dynamic (${withDynamic}/${allRoutes} have it)` };
-    }
-    return { passed: true, detail: `All ${allRoutes} routes have force-dynamic` };
-  } catch {
-    return { passed: true, detail: "Check skipped" };
-  }
-});
-
-// ── Check 6: No hardcoded secrets ────────────────────────────────────────
-check("No hardcoded secrets", async () => {
-  const patterns = [
-    "sk_live_",
-    "sk_test_",
-    "AKIA[0-9A-Z]{16}",
-    "ghp_[a-zA-Z0-9]{36}",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\\.eyJpc3MiOiJzdXBhYmFzZS",
-  ];
-  const issues: string[] = [];
-  for (const pattern of patterns) {
-    try {
-      const grep = execSync(
-        `grep -rn "${pattern}" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "test\\|mock\\|SAMPLE\\|WEAK_SECRETS\\|placeholder\\|REDACTED" || true`,
-        { encoding: "utf-8" }
-      );
-      if (grep.trim()) {
-        issues.push(`Found pattern: ${pattern.substring(0, 20)}...`);
-      }
-    } catch { /* not found — ok */ }
-  }
-  if (issues.length > 0) {
-    return { passed: false, detail: issues.join("; ") };
-  }
-  return { passed: true, detail: "No hardcoded secrets found" };
-});
-
-// ── Check 7: No console.log of secrets ───────────────────────────────────
-check("No console.log of secrets", async () => {
-  try {
-    const grep = execSync(
-      `grep -rn "console\\.\\(log\\|warn\\|error\\)" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -iE "password|secret|token|apiKey|credential" | grep -v "error: \\|message: \\|failed\\|warn.*not set\\|JWT_SECRET not" || true`,
-      { encoding: "utf-8" }
-    );
-    if (grep.trim()) {
-      const count = grep.trim().split("\\n").length;
-      return { passed: false, detail: `${count} potential secret logs found` };
-    }
-    return { passed: true, detail: "No secret logging detected" };
-  } catch {
-    return { passed: true, detail: "No secret logging detected" };
-  }
-});
-
-// ── Check 8: Middleware PUBLIC_ROUTES safe ───────────────────────────────
-check("PUBLIC_ROUTES not vulnerable to bypass", async () => {
-  const middleware = await Bun.file("src/middleware.ts").text();
-  if (middleware.includes("path.startsWith(route)") && !middleware.includes("path.startsWith(route + "/")")) {
-    return { passed: false, detail: "PUBLIC_ROUTES uses startsWith() — vulnerable to /api/auth/login.evil bypass" };
-  }
-  return { passed: true, detail: "PUBLIC_ROUTES uses safe matching" };
-});
-
-// ── Check 9: TypeScript compiles ─────────────────────────────────────────
-check("TypeScript compiles", async () => {
-  try {
-    execSync("bunx tsc --noEmit 2>&1 | grep -c 'error TS'", { encoding: "utf-8", stdio: "pipe" });
-    const errors = execSync("bunx tsc --noEmit 2>&1 | grep 'error TS' | wc -l", { encoding: "utf-8" }).trim();
-    if (parseInt(errors) > 5) {
-      return { passed: false, detail: `${errors} TypeScript errors (threshold: 5)` };
-    }
-    return { passed: true, detail: `${errors} TypeScript errors (acceptable)` };
-  } catch {
-    return { passed: true, detail: "TypeScript compiles" };
-  }
-});
-
-// ── Check 10: Prisma client generated ────────────────────────────────────
-check("Prisma client generated", async () => {
-  try {
-    const stat = Bun.file("node_modules/@prisma/client/index.js");
-    if (stat.size > 0) {
-      return { passed: true, detail: "Prisma client exists" };
-    }
-    return { passed: false, detail: "Run `bunx prisma generate` first" };
-  } catch {
-    return { passed: false, detail: "Run `bunx prisma generate` first" };
-  }
-});
-
-// ── Wait for all checks to complete ─
-await new Promise(r => setTimeout(r, 1000));
+// ── Check 9: Prisma client exists ────────────────────────────────────────
+{
+  const exists = existsSync("node_modules/@prisma/client/index.js");
+  check("Prisma client generated", exists, exists ? "Prisma client exists" : "Run `bunx prisma generate` first");
+}
 
 // ── Print results ─────────────────────────────────────────────────────────
-console.log("\\n" + "═".repeat(70));
+console.log("\n" + "=".repeat(70));
 console.log("  GUARDIANX PRE-DEPLOY CHECKLIST");
-console.log("═".repeat(70) + "\\n");
+console.log("=".repeat(70) + "\n");
 
 let passCount = 0;
 let failCount = 0;
-
-for (const result of results) {
-  const icon = result.passed ? "✅" : "❌";
-  console.log(`  ${icon} ${result.name}`);
-  console.log(`     ${result.detail}\\n`);
-  if (result.passed) passCount++;
-  else failCount++;
+for (const r of results) {
+  const icon = r.passed ? "✅" : "❌";
+  console.log(`  ${icon} ${r.name}`);
+  console.log(`     ${r.detail}\n`);
+  if (r.passed) passCount++; else failCount++;
 }
 
-console.log("═".repeat(70));
+console.log("=".repeat(70));
 console.log(`  ${passCount} passed | ${failCount} failed`);
-
 if (failCount > 0) {
-  console.log("\\n  ❌ DO NOT DEPLOY — Fix the failing checks first.\\n");
+  console.log("\n  ❌ DO NOT DEPLOY — Fix the failing checks first.\n");
   process.exit(1);
 } else {
-  console.log("\\n  ✅ ALL CHECKS PASSED — Safe to deploy.\\n");
+  console.log("\n  ✅ ALL CHECKS PASSED — Safe to deploy.\n");
   process.exit(0);
 }

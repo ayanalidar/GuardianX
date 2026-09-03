@@ -1,0 +1,694 @@
+PS C:\Users\ayana> cd D:\GuardianX
+PS D:\GuardianX>
+PS D:\GuardianX> # 1. Save any local changes
+PS D:\GuardianX> git stash
+No local changes to save
+PS D:\GuardianX>
+PS D:\GuardianX> # 2. Fetch latest from GitHub
+PS D:\GuardianX> git fetch origin
+remote: Enumerating objects: 27, done.
+remote: Counting objects: 100% (20/20), done.
+remote: Compressing objects: 100% (11/11), done.
+remote: Total 27 (delta 8), reused 19 (delta 8), pack-reused 7 (from 1)
+Unpacking objects: 100% (27/27), 22.93 KiB | 225.00 KiB/s, done.
+From https://github.com/ayanalidar/GuardianX
+   0c17291..687ce46  main       -> origin/main
+PS D:\GuardianX>
+PS D:\GuardianX> # 3. Force-reset to latest
+PS D:\GuardianX> git reset --hard origin/main
+HEAD is now at 687ce46 feat: CI/CD pipeline + comprehensive test suite + pre-deploy checklist
+PS D:\GuardianX>
+PS D:\GuardianX> # 4. Install dependencies (nothing new this time, but safe to run)
+PS D:\GuardianX> bun install
+[1.72ms] ".env.local", ".env"
+bun install v1.3.14 (0d9b296a)
+
+Checked 1482 installs across 1718 packages (no changes) [1491.00ms]
+PS D:\GuardianX>
+PS D:\GuardianX> # 5. Generate Prisma client (schema unchanged since last update)
+PS D:\GuardianX> bunx prisma generate
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+
+✔ Generated Prisma Client (v6.19.3) to .\node_modules\@prisma\client in 278ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+
+PS D:\GuardianX>
+PS D:\GuardianX> # 6. Run the pre-deploy checklist (verify everything is clean)
+PS D:\GuardianX> bun run scripts/pre-deploy-check.ts
+The system cannot find the path specified.
+The system cannot find the path specified.
+The system cannot find the path specified.
+The system cannot find the path specified.
+The system cannot find the path specified.
+The system cannot find the path specified.
+The system cannot find the path specified.
+The system cannot find the path specified.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+The system cannot find the path specified.
+'true' is not recognized as an internal or external command,
+operable program or batch file.
+\n══════════════════════════════════════════════════════════════════════
+  GUARDIANX PRE-DEPLOY CHECKLIST
+══════════════════════════════════════════════════════════════════════\n
+  ✅ Prisma schema valid
+     Schema is valid\n
+  ✅ No node:crypto imports
+     No node:crypto imports\n
+  ✅ All API routes have force-dynamic
+     Check skipped\n
+  ✅ No hardcoded secrets
+     No hardcoded secrets found\n
+  ✅ No console.log of secrets
+     No secret logging detected\n
+  ✅ TypeScript compiles
+     TypeScript compiles\n
+  ✅ Prisma client generated
+     Prisma client exists\n
+  ✅ No duplicate Prisma models
+     34 models, no duplicates\n
+  ✅ No Prisma accessor mismatches
+     All Prisma accessors correct\n
+  ❌ PUBLIC_ROUTES not vulnerable to bypass
+     PUBLIC_ROUTES uses startsWith() — vulnerable to /api/auth/login.evil bypass\n
+══════════════════════════════════════════════════════════════════════
+  9 passed | 1 failed
+\n  ❌ DO NOT DEPLOY — Fix the failing checks first.\n
+PS D:\GuardianX>
+PS D:\GuardianX> # 7. Run the test suite
+PS D:\GuardianX> bun test tests/
+bun test v1.3.14 (0d9b296a)
+
+tests\api-integration.test.ts:
+✓ Authentication > logs in with valid credentials [0.18ms]
+✓ Authentication > rejects invalid credentials [0.29ms]
+✓ Authentication > rejects missing credentials [0.32ms]
+✓ API Route Shape Validation > GET /api/stats returns correct shape [0.54ms]
+✓ API Route Shape Validation > GET /api/posture-score returns correct shape [0.05ms]
+✓ API Route Shape Validation > GET /api/clients returns correct shape [0.02ms]
+✓ API Route Shape Validation > GET /api/codebases returns correct shape
+✓ API Route Shape Validation > GET /api/findings?limit=5 returns correct shape [0.02ms]
+✓ API Route Shape Validation > GET /api/patches/pending returns correct shape [0.03ms]
+✓ API Route Shape Validation > GET /api/health returns correct shape
+✓ Auth Protection > GET /api/stats requires auth [0.18ms]
+✓ Auth Protection > GET /api/stats rejects forged JWT [0.13ms]
+✓ Auth Protection > GET /api/clients requires auth
+✓ Auth Protection > GET /api/clients rejects forged JWT
+✓ Auth Protection > GET /api/findings requires auth [0.01ms]
+✓ Auth Protection > GET /api/findings rejects forged JWT
+✓ Auth Protection > GET /api/patches/pending requires auth
+✓ Auth Protection > GET /api/patches/pending rejects forged JWT
+✓ Auth Protection > GET /api/users requires auth
+✓ Auth Protection > GET /api/users rejects forged JWT
+✓ SSRF Protection > blocks scanning private IPs [0.40ms]
+✓ SSRF Protection > blocks recon on private IPs [0.27ms]
+✓ Security Headers > sets Content-Security-Policy [0.14ms]
+169 |     expect(csp).toContain("default-src");
+170 |   });
+171 |
+172 |   it("sets X-Frame-Options", async () => {
+173 |     const res = await fetch(`${BASE_URL}/`);
+174 |     expect(res.headers.get("x-frame-options")).toBe("DENY");
+                                                     ^
+error: expect(received).toBe(expected)
+
+Expected: "DENY"
+Received: "SAMEORIGIN"
+
+      at <anonymous> (D:\GuardianX\tests\api-integration.test.ts:174:48)
+✗ Security Headers > sets X-Frame-Options [1505.11ms]
+✓ Security Headers > sets X-Content-Type-Options [350.92ms]
+✓ Security Headers > sets HSTS [302.73ms]
+✓ Native Tools > CyberChef SHA256 works [0.29ms]
+✓ Native Tools > CyberChef Base64 encode works [0.19ms]
+✓ Native Tools > CyberChef UUID generates [0.33ms]
+
+tests\auth.test.ts:
+[WARN] JWT_SECRET not set — using dev-only secret. DO NOT use in production.
+✓ Auth: password hashing > hashPassword returns a bcrypt hash [312.73ms]
+✓ Auth: password hashing > verifyPassword accepts correct password [572.35ms]
+✓ Auth: password hashing > verifyPassword rejects wrong password [593.58ms]
+✓ Auth: JWT tokens > createToken + verifyToken round-trip [5.75ms]
+✓ Auth: JWT tokens > verifyToken rejects invalid token [0.53ms]
+✓ Auth: JWT tokens > verifyToken rejects empty string [0.14ms]
+
+tests\auto-repair.test.ts:
+✓ Auto-Repair Data Layer > generates missing id field [1.10ms]
+✓ Auto-Repair Data Layer > generates missing title field [0.35ms]
+✓ Auto-Repair Data Layer > generates missing severity field [0.30ms]
+✓ Auto-Repair Data Layer > normalizes snake_case to camelCase [0.70ms]
+✓ Auto-Repair Data Layer > filters null items from array [0.16ms]
+✓ Auto-Repair Data Layer > wraps single object in array when array expected [0.07ms]
+✓ Auto-Repair Data Layer > returns empty array for null input [0.09ms]
+✓ Auto-Repair Data Layer > converts severity from number to string [0.20ms]
+✓ Auto-Repair Data Layer > does not repair already-valid data [0.10ms]
+
+tests\email-templates.test.ts:
+✓ email templates: XSS payloads in the NAME field are escaped > welcomeAdminHtml escapes <script> in name [0.65ms]
+✓ email templates: XSS payloads in the NAME field are escaped > welcomePendingHtml escapes <script> in name [0.31ms]
+✓ email templates: XSS payloads in the NAME field are escaped > accountApprovedHtml escapes <script> in name [0.37ms]
+✓ email templates: XSS payloads in the NAME field are escaped > accountRejectedHtml escapes <script> in name [0.65ms]
+✓ email templates: XSS payloads in the NAME field are escaped > passwordResetHtml escapes <script> in name [0.37ms]
+✓ email templates: XSS payloads in the NAME field are escaped > emailVerificationHtml escapes <script> in name [0.32ms]
+✓ email templates: XSS payloads in the EMAIL field are escaped > welcomeAdminHtml escapes script-injection in email [0.16ms]
+✓ email templates: XSS payloads in the EMAIL field are escaped > welcomePendingHtml escapes script-injection in name (email not rendered in body) [0.13ms]
+✓ email templates: XSS payloads in the EMAIL field are escaped > accountApprovedHtml escapes script-injection in email [0.28ms]
+✓ email templates: XSS payloads in the EMAIL field are escaped > accountRejectedHtml escapes script-injection in email [0.14ms]
+✓ email templates: XSS payloads in the EMAIL field are escaped > passwordResetHtml escapes script-injection in email [0.12ms]
+✓ email templates: XSS payloads in the EMAIL field are escaped > emailVerificationHtml escapes script-injection in email [0.16ms]
+✓ email templates: hostile URL payloads in resetLink / verificationLink are HTML-escaped > passwordResetHtml escapes angle brackets + quotes in a hostile reset link [0.10ms]
+✓ email templates: hostile URL payloads in resetLink / verificationLink are HTML-escaped > emailVerificationHtml escapes angle brackets + quotes in a hostile verification link [0.12ms]
+✓ email templates: hostile URL payloads in resetLink / verificationLink are HTML-escaped > passwordResetHtml escapes <script> embedded in a legit-looking reset link [0.35ms]
+✓ email templates: hostile URL payloads in resetLink / verificationLink are HTML-escaped > emailVerificationHtml escapes <script> embedded in a legit-looking verification link [0.26ms]
+✓ email templates: accountRejectedHtml escapes the reason field > reason with <script> is escaped [0.12ms]
+✓ email templates: accountRejectedHtml escapes the reason field > reason with an on* event handler attribute is escaped [0.07ms]
+✓ email templates: an attacker can't break out of the href attribute > resetLink with a double-quote can't close the href attribute [0.09ms]
+✓ email templates: an attacker can't break out of the href attribute > verificationLink with a single-quote can't break out of the href attribute [0.12ms]
+✓ email templates: structural sanity (legit inputs render without surprises) > welcomeAdminHtml produces a non-empty HTML document [0.30ms]
+✓ email templates: structural sanity (legit inputs render without surprises) > passwordResetHtml includes the raw reset link in escaped form [0.13ms]
+✓ email templates: structural sanity (legit inputs render without surprises) > emailVerificationHtml includes the raw verification link in escaped form [0.11ms]
+
+tests\password-strength.test.ts:
+✓ Password strength > returns very weak for short passwords [0.56ms]
+✓ Password strength > returns strong for complex passwords [0.37ms]
+✓ Password strength > provides feedback for weak passwords [0.14ms]
+✓ Password strength > reduces score for common patterns [0.06ms]
+✓ Password strength > handles empty string [0.05ms]
+
+tests\rbac.test.ts:
+✓ RBAC: buildOwnershipFilter > viewer's filter excludes admin's clients [1.09ms]
+✓ RBAC: buildOwnershipFilter > admin's filter is empty (sees ALL clients) [0.42ms]
+✓ RBAC: buildOwnershipFilter > unauthenticated request matches nothing (filter = { id: '__never__' }) [0.27ms]
+✓ RBAC: buildOwnershipFilter > unapproved user matches nothing (treated as unauthenticated) [0.74ms]
+prisma:error
+Invalid `model.findFirst()` invocation in
+D:\GuardianX\src\lib\db.ts:251:31
+
+  248 }
+  249 const where = this.buildWhere();
+  250 const orderBy = this.buildOrderBy();
+→ 251 const row = await model.findFirst({
+        where: {
+          id: "client-admin-1",
+          ownerId: "viewer-001",
+          ~~~~~~~
+      ?   AND?: ClientWhereInput | ClientWhereInput[],
+      ?   OR?: ClientWhereInput[],
+      ?   NOT?: ClientWhereInput | ClientWhereInput[],
+      ?   name?: StringFilter | String,
+      ?   description?: StringNullableFilter | String | Null,
+      ?   contactName?: StringNullableFilter | String | Null,
+      ?   contactEmail?: StringNullableFilter | String | Null,
+      ?   contactPhone?: StringNullableFilter | String | Null,
+      ?   targetUrl?: StringNullableFilter | String | Null,
+      ?   repoUrl?: StringNullableFilter | String | Null,
+      ?   scope?: StringNullableFilter | String | Null,
+      ?   authorized?: BoolFilter | Boolean,
+      ?   frameworks?: StringNullableFilter | String | Null,
+      ?   status?: StringFilter | String,
+      ?   createdAt?: DateTimeFilter | DateTime,
+      ?   updatedAt?: DateTimeFilter | DateTime,
+      ?   codebases?: CodebaseListRelationFilter,
+      ?   targets?: TargetListRelationFilter
+        },
+        orderBy: undefined
+      })
+
+Unknown argument `ownerId`. Available options are marked with ?.
+✓ RBAC: canAccessClient (by ID) > viewer gets 403 when accessing admin's client by ID [48.60ms]
+prisma:error
+Invalid `model.findFirst()` invocation in
+D:\GuardianX\src\lib\db.ts:251:31
+
+  248 }
+  249 const where = this.buildWhere();
+  250 const orderBy = this.buildOrderBy();
+→ 251 const row = await model.findFirst({
+        where: {
+          id: "client-other-1",
+          ownerId: "viewer-001",
+          ~~~~~~~
+      ?   AND?: ClientWhereInput | ClientWhereInput[],
+      ?   OR?: ClientWhereInput[],
+      ?   NOT?: ClientWhereInput | ClientWhereInput[],
+      ?   name?: StringFilter | String,
+      ?   description?: StringNullableFilter | String | Null,
+      ?   contactName?: StringNullableFilter | String | Null,
+      ?   contactEmail?: StringNullableFilter | String | Null,
+      ?   contactPhone?: StringNullableFilter | String | Null,
+      ?   targetUrl?: StringNullableFilter | String | Null,
+      ?   repoUrl?: StringNullableFilter | String | Null,
+      ?   scope?: StringNullableFilter | String | Null,
+      ?   authorized?: BoolFilter | Boolean,
+      ?   frameworks?: StringNullableFilter | String | Null,
+      ?   status?: StringFilter | String,
+      ?   createdAt?: DateTimeFilter | DateTime,
+      ?   updatedAt?: DateTimeFilter | DateTime,
+      ?   codebases?: CodebaseListRelationFilter,
+      ?   targets?: TargetListRelationFilter
+        },
+        orderBy: undefined
+      })
+
+Unknown argument `ownerId`. Available options are marked with ?.
+✓ RBAC: canAccessClient (by ID) > viewer gets 403 when accessing ANOTHER viewer's client by ID [6.30ms]
+prisma:error
+Invalid `model.findFirst()` invocation in
+D:\GuardianX\src\lib\db.ts:251:31
+
+  248 }
+  249 const where = this.buildWhere();
+  250 const orderBy = this.buildOrderBy();
+→ 251 const row = await model.findFirst({
+        where: {
+          id: "client-mine",
+          ownerId: "viewer-001",
+          ~~~~~~~
+      ?   AND?: ClientWhereInput | ClientWhereInput[],
+      ?   OR?: ClientWhereInput[],
+      ?   NOT?: ClientWhereInput | ClientWhereInput[],
+      ?   name?: StringFilter | String,
+      ?   description?: StringNullableFilter | String | Null,
+      ?   contactName?: StringNullableFilter | String | Null,
+      ?   contactEmail?: StringNullableFilter | String | Null,
+      ?   contactPhone?: StringNullableFilter | String | Null,
+      ?   targetUrl?: StringNullableFilter | String | Null,
+      ?   repoUrl?: StringNullableFilter | String | Null,
+      ?   scope?: StringNullableFilter | String | Null,
+      ?   authorized?: BoolFilter | Boolean,
+      ?   frameworks?: StringNullableFilter | String | Null,
+      ?   status?: StringFilter | String,
+      ?   createdAt?: DateTimeFilter | DateTime,
+      ?   updatedAt?: DateTimeFilter | DateTime,
+      ?   codebases?: CodebaseListRelationFilter,
+      ?   targets?: TargetListRelationFilter
+        },
+        orderBy: undefined
+      })
+
+Unknown argument `ownerId`. Available options are marked with ?.
+192 |       status: "active",
+193 |       createdAt: "2024-01-03T00:00:00.000Z",
+194 |     });
+195 |     const req = authedReq(viewerToken, "http://localhost/api/clients/client-mine");
+196 |     const result = await canAccessClient(req, "client-mine");
+197 |     expect(result.ok).toBe(true);
+                            ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (D:\GuardianX\tests\rbac.test.ts:197:23)
+✗ RBAC: canAccessClient (by ID) > viewer CAN access their OWN client by ID [4.44ms]
+✓ RBAC: canAccessClient (by ID) > admin CAN access any client (other viewer's) [0.99ms]
+✓ RBAC: canAccessClient (by ID) > admin CAN access admin's own client [0.75ms]
+✓ RBAC: canAccessClient (by ID) > unauthenticated request returns 401 [0.49ms]
+prisma:error
+Invalid `model.findFirst()` invocation in
+D:\GuardianX\src\lib\db.ts:251:31
+
+  248 }
+  249 const where = this.buildWhere();
+  250 const orderBy = this.buildOrderBy();
+→ 251 const row = await model.findFirst({
+        where: {
+          id: "client-mine",
+          ownerId: "viewer-001",
+          ~~~~~~~
+      ?   AND?: ClientWhereInput | ClientWhereInput[],
+      ?   OR?: ClientWhereInput[],
+      ?   NOT?: ClientWhereInput | ClientWhereInput[],
+      ?   name?: StringFilter | String,
+      ?   description?: StringNullableFilter | String | Null,
+      ?   contactName?: StringNullableFilter | String | Null,
+      ?   contactEmail?: StringNullableFilter | String | Null,
+      ?   contactPhone?: StringNullableFilter | String | Null,
+      ?   targetUrl?: StringNullableFilter | String | Null,
+      ?   repoUrl?: StringNullableFilter | String | Null,
+      ?   scope?: StringNullableFilter | String | Null,
+      ?   authorized?: BoolFilter | Boolean,
+      ?   frameworks?: StringNullableFilter | String | Null,
+      ?   status?: StringFilter | String,
+      ?   createdAt?: DateTimeFilter | DateTime,
+      ?   updatedAt?: DateTimeFilter | DateTime,
+      ?   codebases?: CodebaseListRelationFilter,
+      ?   targets?: TargetListRelationFilter
+        },
+        orderBy: undefined
+      })
+
+Unknown argument `ownerId`. Available options are marked with ?.
+✓ RBAC: canAccessClient (by ID) > supabase error on the Client lookup returns 403 (fail-safe) [3.79ms]
+prisma:error
+Invalid `db.client.create()` invocation in
+D:\GuardianX\src\app\api\clients\route.ts:229:36
+
+  226 }
+  227
+  228 try {
+→ 229   const client = await db.client.create(
+The table `main.Client` does not exist in the current database.
+244 |         "Content-Type": "application/json",
+245 |       },
+246 |       body: JSON.stringify({ name: "My New Client" }),
+247 |     });
+248 |     const createRes = await POST(createReq);
+249 |     expect(createRes.status).toBe(201);
+                                   ^
+error: expect(received).toBe(expected)
+
+Expected: 201
+Received: 500
+
+      at <anonymous> (D:\GuardianX\tests\rbac.test.ts:249:30)
+✗ RBAC: viewer can create + see own client (end-to-end via route) > viewer POSTs a client → ownerId is set to viewer → viewer sees it in GET /api/clients [159.76ms]
+prisma:error
+Invalid `db.client.findMany()` invocation in
+D:\GuardianX\src\app\api\clients\route.ts:32:39
+
+  29 }
+  30
+  31 // 1. Fetch all clients (1 query)
+→ 32 const clients = await db.client.findMany(
+The table `main.Client` does not exist in the current database.
+271 |
+272 |   test("viewer does NOT see admin's clients in GET /api/clients", async () => {
+273 |     const { GET } = await import("@/app/api/clients/route");
+274 |     const listReq = authedReq(viewerToken);
+275 |     const listRes = await GET(listReq);
+276 |     expect(listRes.status).toBe(200);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: 200
+Received: 500
+
+      at <anonymous> (D:\GuardianX\tests\rbac.test.ts:276:28)
+✗ RBAC: viewer can create + see own client (end-to-end via route) > viewer does NOT see admin's clients in GET /api/clients [10.30ms]
+prisma:error
+Invalid `db.client.findMany()` invocation in
+D:\GuardianX\src\app\api\clients\route.ts:32:39
+
+  29 }
+  30
+  31 // 1. Fetch all clients (1 query)
+→ 32 const clients = await db.client.findMany(
+The table `main.Client` does not exist in the current database.
+284 |
+285 |   test("admin DOES see all clients (admin's + other viewers') in GET /api/clients", async () => {
+286 |     const { GET } = await import("@/app/api/clients/route");
+287 |     const listReq = authedReq(adminToken);
+288 |     const listRes = await GET(listReq);
+289 |     expect(listRes.status).toBe(200);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: 200
+Received: 500
+
+      at <anonymous> (D:\GuardianX\tests\rbac.test.ts:289:28)
+✗ RBAC: viewer can create + see own client (end-to-end via route) > admin DOES see all clients (admin's + other viewers') in GET /api/clients [2.72ms]
+prisma:error
+Invalid `db.client.findUnique()` invocation in
+D:\GuardianX\src\app\api\clients\[id]\route.ts:15:36
+
+  12 const { id } = await params;
+  13
+  14 try {
+→ 15   const client = await db.client.findUnique(
+The table `main.Client` does not exist in the current database.
+300 |       viewerToken,
+301 |       "http://localhost/api/clients/client-admin-1"
+302 |     );
+303 |     const ctx = { params: Promise.resolve({ id: "client-admin-1" }) };
+304 |     const res = await GET(req, ctx as never);
+305 |     expect(res.status).toBe(403);
+                             ^
+error: expect(received).toBe(expected)
+
+Expected: 403
+Received: 500
+
+      at <anonymous> (D:\GuardianX\tests\rbac.test.ts:305:24)
+✗ RBAC: viewer can create + see own client (end-to-end via route) > viewer cannot access admin's client detail via GET /api/clients/[id] (403) [13.92ms]
+✓ RBAC: getVisibleClientIds > admin returns null (no filter needed — sees all) [0.52ms]
+prisma:error
+Invalid `model.findMany()` invocation in
+D:\GuardianX\src\lib\db.ts:334:34
+
+  331 }
+  332 const where = this.buildWhere();
+  333 const orderBy = this.buildOrderBy();
+→ 334 const rows = await model.findMany({
+        where: {
+          ownerId: "viewer-001",
+          ~~~~~~~
+      ?   AND?: ClientWhereInput | ClientWhereInput[],
+      ?   OR?: ClientWhereInput[],
+      ?   NOT?: ClientWhereInput | ClientWhereInput[],
+      ?   id?: StringFilter | String,
+      ?   name?: StringFilter | String,
+      ?   description?: StringNullableFilter | String | Null,
+      ?   contactName?: StringNullableFilter | String | Null,
+      ?   contactEmail?: StringNullableFilter | String | Null,
+      ?   contactPhone?: StringNullableFilter | String | Null,
+      ?   targetUrl?: StringNullableFilter | String | Null,
+      ?   repoUrl?: StringNullableFilter | String | Null,
+      ?   scope?: StringNullableFilter | String | Null,
+      ?   authorized?: BoolFilter | Boolean,
+      ?   frameworks?: StringNullableFilter | String | Null,
+      ?   status?: StringFilter | String,
+      ?   createdAt?: DateTimeFilter | DateTime,
+      ?   updatedAt?: DateTimeFilter | DateTime,
+      ?   codebases?: CodebaseListRelationFilter,
+      ?   targets?: TargetListRelationFilter
+        },
+        orderBy: undefined
+      })
+
+Unknown argument `ownerId`. Available options are marked with ?.
+[ownership] getVisibleClientIds failed:
+Invalid `model.findMany()` invocation in
+D:\GuardianX\src\lib\db.ts:334:34
+
+  331 }
+  332 const where = this.buildWhere();
+  333 const orderBy = this.buildOrderBy();
+→ 334 const rows = await model.findMany({
+        where: {
+          ownerId: "viewer-001",
+          ~~~~~~~
+      ?   AND?: ClientWhereInput | ClientWhereInput[],
+      ?   OR?: ClientWhereInput[],
+      ?   NOT?: ClientWhereInput | ClientWhereInput[],
+      ?   id?: StringFilter | String,
+      ?   name?: StringFilter | String,
+      ?   description?: StringNullableFilter | String | Null,
+      ?   contactName?: StringNullableFilter | String | Null,
+      ?   contactEmail?: StringNullableFilter | String | Null,
+      ?   contactPhone?: StringNullableFilter | String | Null,
+      ?   targetUrl?: StringNullableFilter | String | Null,
+      ?   repoUrl?: StringNullableFilter | String | Null,
+      ?   scope?: StringNullableFilter | String | Null,
+      ?   authorized?: BoolFilter | Boolean,
+      ?   frameworks?: StringNullableFilter | String | Null,
+      ?   status?: StringFilter | String,
+      ?   createdAt?: DateTimeFilter | DateTime,
+      ?   updatedAt?: DateTimeFilter | DateTime,
+      ?   codebases?: CodebaseListRelationFilter,
+      ?   targets?: TargetListRelationFilter
+        },
+        orderBy: undefined
+      })
+
+Unknown argument `ownerId`. Available options are marked with ?.
+317 |     __pushRow("Client", { id: "client-v1", ownerId: "viewer-001" });
+318 |     __pushRow("Client", { id: "client-v2", ownerId: "viewer-001" });
+319 |     const req = authedReq(viewerToken);
+320 |     const ids = await getVisibleClientIds(req);
+321 |     expect(Array.isArray(ids)).toBe(true);
+322 |     expect(ids).toEqual(expect.arrayContaining(["client-v1", "client-v2"]));
+                      ^
+error: expect(received).toEqual(expected)
+
+Expected: ExpectArrayContaining {}
+Received: []
+
+      at <anonymous> (D:\GuardianX\tests\rbac.test.ts:322:17)
+✗ RBAC: getVisibleClientIds > viewer returns only their own client IDs (excludes admin's + other viewers') [3.97ms]
+✓ RBAC: getVisibleClientIds > unauthenticated returns empty array [0.44ms]
+✓ RBAC: isAdmin + getAuthenticatedUser helpers > isAdmin returns true for admin role [0.18ms]
+✓ RBAC: isAdmin + getAuthenticatedUser helpers > isAdmin returns false for viewer role [0.16ms]
+✓ RBAC: isAdmin + getAuthenticatedUser helpers > isAdmin returns false for null [0.08ms]
+✓ RBAC: isAdmin + getAuthenticatedUser helpers > getAuthenticatedUser returns null for unapproved user (fail-safe) [0.98ms]
+✓ RBAC: isAdmin + getAuthenticatedUser helpers > getAuthenticatedUser returns user for approved viewer [0.59ms]
+✓ RBAC: isAdmin + getAuthenticatedUser helpers > getAuthenticatedUser returns user for approved admin [0.63ms]
+
+tests\safe-api.test.ts:
+✓ Safe API — Key Normalization > converts snake_case to camelCase [0.12ms]
+✓ Safe API — Key Normalization > leaves camelCase untouched [0.14ms]
+✓ Safe API — Key Normalization > leaves simple keys untouched [0.06ms]
+✓ Safe API — Key Normalization > normalizes nested objects [0.21ms]
+✓ Safe API — Key Normalization > normalizes arrays of objects [0.13ms]
+✓ Safe API — Key Normalization > handles null and undefined [0.05ms]
+✓ Safe API — Key Normalization > handles primitives [0.04ms]
+
+tests\sanitize.test.ts:
+✓ Sanitize: sanitizeText > trims whitespace [0.15ms]
+✓ Sanitize: sanitizeText > removes null bytes [0.14ms]
+✓ Sanitize: sanitizeText > removes control characters [0.16ms]
+✓ Sanitize: sanitizeText > preserves newlines and tabs [0.06ms]
+✓ Sanitize: sanitizeText > truncates to max length [0.11ms]
+✓ Sanitize: sanitizeText > returns empty string for non-string input [0.04ms]
+✓ Sanitize: sanitizeEmail > trims and lowercases [0.16ms]
+✓ Sanitize: sanitizeEmail > returns empty for invalid email [0.05ms]
+✓ Sanitize: sanitizeEmail > accepts valid email [0.03ms]
+✓ Sanitize: sanitizeHtml > removes script tags [0.22ms]
+✓ Sanitize: sanitizeHtml > removes on* event handlers [0.07ms]
+✓ Sanitize: sanitizeHtml > removes javascript: URLs [0.05ms]
+✓ Sanitize: sanitizeHtml > removes iframe tags [0.09ms]
+
+tests\schema.test.ts:
+14 |
+15 |     const missing = requiredModels.filter(
+16 |       (model) => !schema.includes(`model ${model} {`)
+17 |     );
+18 |
+19 |     expect(missing, `Missing models: ${missing.join(", ")}`).toEqual([]);
+                                                                  ^
+error: Missing models: Subscription, SupportTicket, MemoryEntry, FeatureRequest, CommunityRule
+
+- []
++ [
++   "Subscription",
++   "SupportTicket",
++   "MemoryEntry",
++   "FeatureRequest",
++   "CommunityRule",
++ ]
+
+- Expected  - 1
++ Received  + 7
+
+      at <anonymous> (D:\GuardianX\tests\schema.test.ts:19:62)
+✗ Schema Validation (Prisma models) > schema.prisma has all required models [3.12ms]
+✓ Schema Validation (Prisma models) > schema.production.prisma has all required models [3.76ms]
+✓ Schema Validation (Prisma models) > WebsiteScan has reportSent and reportPath fields [0.73ms]
+✓ Schema Validation (Prisma models) > no duplicate model definitions [1.38ms]
+
+tests\voice-command.test.ts:
+✓ Voice Command Parser > parses 'scan' commands [0.21ms]
+✓ Voice Command Parser > parses 'show' / 'navigate' commands [0.18ms]
+23 |       target: "clients",
+24 |     });
+25 |   });
+26 |
+27 |   it("parses 'search findings' commands", () => {
+28 |     expect(parseVoiceCommand("search findings for SQL injection")).toEqual({
+                                                                        ^
+error: expect(received).toEqual(expected)
+
+  {
+    "action": "search",
+-   "target": "SQL injection",
++   "target": "sql injection",
+  }
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (D:\GuardianX\tests\voice-command.test.ts:28:68)
+✗ Voice Command Parser > parses 'search findings' commands [0.74ms]
+35 |   });
+36 |
+37 |   it("parses 'approve patch' commands", () => {
+38 |     const result = parseVoiceCommand("approve patch SP-2026-001");
+39 |     expect(result.action).toBe("approve");
+40 |     expect(result.target).toBe("SP-2026-001");
+                               ^
+error: expect(received).toBe(expected)
+
+Expected: "SP-2026-001"
+Received: "sp-2026-001"
+
+      at <anonymous> (D:\GuardianX\tests\voice-command.test.ts:40:27)
+✗ Voice Command Parser > parses 'approve patch' commands [0.63ms]
+✓ Voice Command Parser > parses 'status' commands [0.26ms]
+✓ Voice Command Parser > parses 'stop' command [0.14ms]
+✓ Voice Command Parser > returns unknown for unrecognized commands [0.10ms]
+✓ Voice Command Parser > handles empty input [0.06ms]
+
+10 tests failed:
+✗ Security Headers > sets X-Frame-Options [1505.11ms]
+✗ RBAC: canAccessClient (by ID) > viewer CAN access their OWN client by ID [4.44ms]
+✗ RBAC: viewer can create + see own client (end-to-end via route) > viewer POSTs a client → ownerId is set to viewer → viewer sees it in GET /api/clients [159.76ms]
+✗ RBAC: viewer can create + see own client (end-to-end via route) > viewer does NOT see admin's clients in GET /api/clients [10.30ms]
+✗ RBAC: viewer can create + see own client (end-to-end via route) > admin DOES see all clients (admin's + other viewers') in GET /api/clients [2.72ms]
+✗ RBAC: viewer can create + see own client (end-to-end via route) > viewer cannot access admin's client detail via GET /api/clients/[id] (403) [13.92ms]
+✗ RBAC: getVisibleClientIds > viewer returns only their own client IDs (excludes admin's + other viewers') [3.97ms]
+✗ Schema Validation (Prisma models) > schema.prisma has all required models [3.12ms]
+✗ Voice Command Parser > parses 'search findings' commands [0.74ms]
+✗ Voice Command Parser > parses 'approve patch' commands [0.63ms]
+
+ 118 pass
+ 10 fail
+ 185 expect() calls
+Ran 128 tests across 10 files. [5.48s]
+PS D:\GuardianX>
+PS D:\GuardianX> # 8. Start the dev server
+PS D:\GuardianX> bun run dev
+$ next dev -p 3000 2>&1 | tee dev.log
+bun: command not found: tee
+error: script "dev" exited with code 1
+PS D:\GuardianX>
