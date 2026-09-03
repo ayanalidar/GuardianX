@@ -36,14 +36,14 @@
 
 // ── snake_case → camelCase converter ──────────────────────────────────────
 
-function toCamelCase(key: string): string {
+export function toCamelCase(key: string): string {
   // Only convert keys that contain an underscore followed by a lowercase letter.
   // Leaves URLs, UUIDs, and already-camelCase keys untouched.
   if (!key.includes("_")) return key;
   return key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
 }
 
-function normalizeValue(value: unknown): unknown {
+export function normalizeValue(value: unknown): unknown {
   if (value === null || value === undefined) return value;
   if (Array.isArray(value)) return value.map(normalizeValue);
   if (typeof value === "object") {

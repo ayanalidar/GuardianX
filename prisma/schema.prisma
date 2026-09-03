@@ -475,6 +475,8 @@ model WebsiteScan {
   userAgent      String?
   duration       Int?
   completedAt    DateTime?
+  reportSent     Boolean  @default(false)
+  reportPath     String?
   createdAt      DateTime @default(now())
 
   @@index([createdAt])
