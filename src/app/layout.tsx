@@ -52,12 +52,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/favicon.ico", type: "image/x-icon" },
-      { url: "/guardianx-logo.png", type: "image/png" },
-      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16.png", type: "image/png", sizes: "16x16" },
+      { url: "/guardianx-logo.png", type: "image/png", sizes: "512x512" },
     ],
-    apple: [{ url: "/guardianx-logo.png" }],
-    shortcut: ["/favicon.ico"],
+    apple: [{ url: "/guardianx-logo.png", sizes: "180x180" }],
+    shortcut: ["/favicon-32.png"],
   },
   appleWebApp: {
     capable: true,
