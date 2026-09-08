@@ -33,12 +33,33 @@ const PUBLIC_ROUTES: RouteEntry[] = [
   { path: "/terms", priority: 0.8 },
 ];
 
+// Blog post slugs — must match the slugs in src/lib/blog-posts.ts
+const BLOG_POSTS = [
+  "top-10-sql-injection-prevention",
+  "dpdpa-compliance-checklist-startups",
+  "first-vapt-scan-with-guardianx",
+  "understanding-owasp-top-10-2021",
+  "guardianx-23-vulnerabilities-2-hours",
+  "ci-cd-security-with-guardianx",
+  "automating-owasp-top-10-with-ai",
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
-  return PUBLIC_ROUTES.map((route) => ({
+  const routes = PUBLIC_ROUTES.map((route) => ({
     url: `${BASE_URL}${route.path}`,
     lastModified: now,
     changeFrequency: "weekly" as const,
     priority: route.priority,
   }));
+
+  // Add blog posts with higher priority (content pages)
+  const blogEntries = BLOG_POSTS.map((slug) => ({
+    url: `${BASE_URL}/blog/${slug}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
+
+  return [...routes, ...blogEntries];
 }
