@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Film, GraduationCap, Terminal, Zap } from "lucide-react";
 import { GuardianXLogo } from "../guardianx-logo";
+import { ParticleLogo } from "./particle-logo";
 import { ParticleNetworkBackground } from "./particle-bg";
 import { GlowOrb } from "./glow-orb";
 import { TerminalTyping } from "./terminal-typing";
@@ -40,8 +41,18 @@ export function HeroSection({
         <ParticleNetworkBackground density={70} />
       </div>
 
-      {/* Center stage: glow orb behind logo */}
+      {/* Center stage: particle logo + headline */}
       <div className="relative mx-auto flex max-w-6xl flex-col items-center">
+        {/* Particle Logo — interactive, shatters on mouse hover */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.1 }}
+          className="mb-2"
+        >
+          <ParticleLogo size={380} />
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
