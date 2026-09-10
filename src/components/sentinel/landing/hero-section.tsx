@@ -99,9 +99,9 @@ export function HeroSection({
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="flex shrink-0 items-center justify-center -translate-y-[13%] -translate-x-[8%]"
+          className="flex shrink-0 items-center justify-center -translate-y-[17%] -translate-x-[3%]"
         >
-          <ParticleLogo size={560} />
+          <ParticleLogo size={620} />
         </motion.div>
       </div>
 
