@@ -101,7 +101,7 @@ export function HeroSection({
           transition={{ duration: 0.8, delay: 0.2 }}
           className="flex shrink-0 items-center justify-center"
         >
-          <ParticleLogo size={420} />
+          <ParticleLogo size={560} />
         </motion.div>
       </div>
 
