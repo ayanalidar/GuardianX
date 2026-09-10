@@ -104,56 +104,76 @@ export function HeroSection({
           <ParticleLogo size={420} />
         </motion.div>
       </div>
-            <div className="flex items-baseline gap-2">
-              <motion.span
-                key={Math.round(counterVal)}
-                className="text-4xl font-bold tabular-nums neon-red sm:text-5xl"
-              >
-                {formatInt(counterVal)}
-              </motion.span>
-              <span className="text-sm font-mono text-zinc-400">+ this month</span>
-            </div>
-            <div className="mt-2 text-xs text-zinc-400">
-              Vulnerabilities found across all GuardianX engagements this month.
-            </div>
-            {/* Mini trend bars */}
-            <div className="mt-4 flex h-12 items-end gap-1" role="img" aria-label="Mini bar chart of weekly threat counts">
-              {Array.from({ length: 18 }).map((_, i) => {
-                const h = 20 + ((i * 37) % 80);
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ height: 0 }}
-                    animate={{ height: `${h}%` }}
-                    transition={{ duration: 0.6, delay: 0.8 + i * 0.04 }}
-                    className="flex-1 rounded-sm bg-gradient-to-t from-red-500/30 to-red-400/80"
-                  />
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Terminal */}
-          <div className="holo-card-sharp hud-corners relative overflow-hidden p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-emerald-400/80">
-                <Terminal className="size-3" aria-hidden="true" /> Live scan in progress
-              </span>
-              <div className="flex items-center gap-1" aria-hidden="true">
-                <span className="size-2 rounded-full bg-red-500/70" />
-                <span className="size-2 rounded-full bg-amber-500/70" />
-                <span className="size-2 rounded-full bg-emerald-500/70" />
-              </div>
-            </div>
-            <TerminalTyping />
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-zinc-800/80 pt-2 font-mono text-[9px] text-zinc-400 sm:text-[10px]" aria-hidden="true">
-              <span className="text-emerald-400/80">● agent: redagent-1</span>
-              <span className="text-cyan-400/80">sandbox: running</span>
-              <span className="text-violet-400/80">attestation: pending</span>
+      {/* Threat counter + terminal */}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.55 }}
+        className="mx-auto mt-16 grid w-full max-w-5xl gap-4 lg:grid-cols-[1.1fr_1.4fr]"
+      >
+        {/* Threat counter */}
+        <div
+          ref={counterRef}
+          className="holo-card-sharp hud-corners relative overflow-hidden p-6"
+        >
+          <div className="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-red-400/80">
+            <span className="relative flex size-2" aria-hidden="true">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
+              <span className="relative inline-flex size-2 rounded-full bg-red-500" />
+            </span>
+            <span className="sr-only">Live: </span>
+            Live threat counter
+          </div>
+          <div className="flex items-baseline gap-2">
+            <motion.span
+              key={Math.round(counterVal)}
+              className="text-4xl font-bold tabular-nums neon-red sm:text-5xl"
+            >
+              {formatInt(counterVal)}
+            </motion.span>
+            <span className="text-sm font-mono text-zinc-400">+ this month</span>
+          </div>
+          <div className="mt-2 text-xs text-zinc-400">
+            Vulnerabilities found across all GuardianX engagements this month.
+          </div>
+          {/* Mini trend bars */}
+          <div className="mt-4 flex h-12 items-end gap-1" role="img" aria-label="Mini bar chart of weekly threat counts">
+            {Array.from({ length: 18 }).map((_, i) => {
+              const h = 20 + ((i * 37) % 80);
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ height: 0 }}
+                  animate={{ height: `${h}%` }}
+                  transition={{ duration: 0.6, delay: 0.8 + i * 0.04 }}
+                  className="flex-1 rounded-sm bg-gradient-to-t from-red-500/30 to-red-400/80"
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Terminal */}
+        <div className="holo-card-sharp hud-corners relative overflow-hidden p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-emerald-400/80">
+              <Terminal className="size-3" aria-hidden="true" /> Live scan in progress
+            </span>
+            <div className="flex items-center gap-1" aria-hidden="true">
+              <span className="size-2 rounded-full bg-red-500/70" />
+              <span className="size-2 rounded-full bg-amber-500/70" />
+              <span className="size-2 rounded-full bg-emerald-500/70" />
             </div>
           </div>
-        </motion.div>
-      </div>
+          <TerminalTyping />
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-zinc-800/80 pt-2 font-mono text-[9px] text-zinc-400 sm:text-[10px]" aria-hidden="true">
+            <span className="text-emerald-400/80">● agent: redagent-1</span>
+            <span className="text-cyan-400/80">sandbox: running</span>
+            <span className="text-violet-400/80">attestation: pending</span>
+          </div>
+        </div>
+      </motion.div>
     </section>
   );
 }
