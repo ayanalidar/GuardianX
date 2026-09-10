@@ -41,86 +41,69 @@ export function HeroSection({
         <ParticleNetworkBackground density={70} />
       </div>
 
-      {/* Center stage: particle logo + headline */}
-      <div className="relative mx-auto flex max-w-6xl flex-col items-center">
-        {/* Particle Logo — interactive, shatters on mouse hover */}
+      {/* Split layout: text left, particle logo right */}
+      <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-between">
+        {/* Left: headline + CTAs */}
+        <div className="flex-1 text-center lg:text-left">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+          >
+            <Badge className="mb-6 border-emerald-500/30 bg-emerald-500/10 text-emerald-300 neon-border">
+              <Zap className="size-3" aria-hidden="true" />
+              Autonomous Security Operations Platform
+            </Badge>
+            <h1 className="mx-auto max-w-2xl text-center text-4xl font-bold leading-tight tracking-tight text-zinc-50 sm:text-5xl lg:mx-0 lg:text-left lg:text-6xl">
+              Security that{" "}
+              <span className="neon-emerald">thinks</span>,{" "}
+              <span className="neon-red">attacks</span>, and{" "}
+              <span className="neon-violet">heals itself</span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-xl text-center text-base text-zinc-400 sm:text-lg lg:mx-0 lg:text-left">
+              The first platform to close the loop from code to live target to patch to report —
+              all AI-driven. Autonomous SAST, DAST, exploit generation, adversarial patching,
+              behavioral defense, virtual patching, and a self-improving R&D lab.
+            </p>
+          </motion.div>
+
+          {/* CTAs */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.35 }}
+            className="mt-10 flex flex-wrap items-center justify-center gap-4 lg:justify-start"
+          >
+            <GlowCTA onClick={onEnter} variant="solid">
+              <Terminal className="size-5" aria-hidden="true" />
+              Enter the Lab Console
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </GlowCTA>
+            <GlowCTA onClick={onTryDemo} variant="outline">
+              <Film className="size-5" aria-hidden="true" />
+              Try Demo
+            </GlowCTA>
+            <GlowCTA href="https://academy.guardianx.cloud" external variant="outline">
+              <GraduationCap className="size-5" aria-hidden="true" />
+              GuardianX Academy
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </GlowCTA>
+            <GlowCTA href="#features" variant="outline">
+              Explore 50+ Modules
+            </GlowCTA>
+          </motion.div>
+        </div>
+
+        {/* Right: particle logo */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.1 }}
-          className="mb-2"
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="flex shrink-0 items-center justify-center"
         >
-          <ParticleLogo size={380} />
+          <ParticleLogo size={420} />
         </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-        >
-          <Badge className="mb-6 border-emerald-500/30 bg-emerald-500/10 text-emerald-300 neon-border">
-            <Zap className="size-3" aria-hidden="true" />
-            Autonomous Security Operations Platform
-          </Badge>
-          <h1 className="mx-auto max-w-4xl text-center text-4xl font-bold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
-            Security that{" "}
-            <span className="neon-emerald">thinks</span>,{" "}
-            <span className="neon-red">attacks</span>, and{" "}
-            <span className="neon-violet">heals itself</span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-center text-base text-zinc-400 sm:text-lg">
-            The first platform to close the loop from code to live target to patch to report —
-            all AI-driven. Autonomous SAST, DAST, exploit generation, adversarial patching,
-            behavioral defense, virtual patching, and a self-improving R&D lab.
-          </p>
-        </motion.div>
-
-        {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.35 }}
-          className="mt-10 flex flex-wrap items-center justify-center gap-4"
-        >
-          <GlowCTA onClick={onEnter} variant="solid">
-            <Terminal className="size-5" aria-hidden="true" />
-            Enter the Lab Console
-            <ArrowRight className="size-4" aria-hidden="true" />
-          </GlowCTA>
-          <GlowCTA onClick={onTryDemo} variant="outline">
-            <Film className="size-5" aria-hidden="true" />
-            Try Demo
-          </GlowCTA>
-          <GlowCTA href="https://academy.guardianx.cloud" external variant="outline">
-            <GraduationCap className="size-5" aria-hidden="true" />
-            GuardianX Academy
-            <ArrowRight className="size-4" aria-hidden="true" />
-          </GlowCTA>
-          <GlowCTA href="#features" variant="outline">
-            Explore 50+ Modules
-          </GlowCTA>
-        </motion.div>
-
-        {/* Threat counter + terminal */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.55 }}
-          className="mt-16 grid w-full max-w-5xl gap-4 lg:grid-cols-[1.1fr_1.4fr]"
-        >
-          {/* Threat counter */}
-          <div
-          ref={counterRef}
-          className="holo-card-sharp hud-corners relative overflow-hidden p-6"
-          >
-            <div className="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-red-400/80">
-              <span className="relative flex size-2" aria-hidden="true">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-red-500" />
-              </span>
-              <span className="sr-only">Live: </span>
-              Live threat counter
-            </div>
+      </div>
             <div className="flex items-baseline gap-2">
               <motion.span
                 key={Math.round(counterVal)}
